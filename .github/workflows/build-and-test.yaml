@@ -1,0 +1,60 @@
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+name: Build and Test
+
+jobs:
+  build-and-test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt install -y -V ca-certificates lsb-release wget cmake valgrind
+          wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+          sudo apt-get install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+          sudo apt-get update
+          sudo apt-get install -y -V libarrow-dev
+          rm apache-arrow-apt-*.deb
+
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Debug  -DGEOARROW_CODE_COVERAGE=ON -DGEOARROW_BUILD_TESTS=ON
+          cmake --build .
+
+      - name: Test
+        run: |
+          cd build
+          ctest -T test --output-on-failure .
+
+      - name: Test with memcheck
+        run: |
+          cd build
+          ctest -T memcheck .
+
+      - name: Upload memcheck results
+        if: failure()
+        uses: actions/upload-artifact@main
+        with:
+          name: geoarrow-memcheck
+          path: build/Testing/Temporary/MemoryChecker.*.log
+
+      - name: Calculate coverage
+        run: |
+          SOURCE_PREFIX=`pwd`
+          mkdir build/cov
+          cd build/cov
+          gcov -abcfu --source-prefix=$SOURCE_PREFIX `find ../CMakeFiles/geoarrow.dir/ -name "*.gcno"`
+          rm nanoarrow.h.gcov nanoarrow.c.gcov
