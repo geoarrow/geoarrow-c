@@ -16,7 +16,7 @@ void ASSERT_ARROW_OK(Status status) {
 }
 
 TEST(ArrowTest, ArrowTestExtensionType) {
-  auto maybe_type = geoarrow::ExtensionType::Make(GEOARROW_TYPE_MULTIPOINT);
+  auto maybe_type = geoarrow::VectorType::Make(GEOARROW_TYPE_MULTIPOINT);
   ASSERT_ARROW_OK(maybe_type.status());
   auto type = maybe_type.ValueUnsafe();
   EXPECT_EQ(type->extension_name(), "geoarrow.multipoint");
@@ -29,13 +29,13 @@ TEST(ArrowTest, ArrowTestExtensionType) {
 
 TEST(ArrowTest, ArrowTestExtensionTypeRegister) {
   struct ArrowSchema schema;
-  ASSERT_ARROW_OK(geoarrow::ExtensionType::RegisterAll());
+  ASSERT_ARROW_OK(geoarrow::VectorType::RegisterAll());
   ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, GEOARROW_TYPE_MULTIPOINT), GEOARROW_OK);
   auto maybe_ext_type = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_ext_type.status());
   EXPECT_EQ(maybe_ext_type.ValueUnsafe()->id(), arrow::Type::EXTENSION);
 
-  ASSERT_ARROW_OK(geoarrow::ExtensionType::UnregisterAll());
+  ASSERT_ARROW_OK(geoarrow::VectorType::UnregisterAll());
   ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, GEOARROW_TYPE_MULTIPOINT), GEOARROW_OK);
   maybe_ext_type = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_ext_type.status());

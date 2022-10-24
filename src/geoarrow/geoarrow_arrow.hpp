@@ -8,12 +8,11 @@
 
 namespace geoarrow {
 
-class ExtensionType : public arrow::ExtensionType {
+class VectorType : public arrow::ExtensionType {
  public:
   static arrow::Status RegisterAll() {
     for (const auto& ext_name : all_ext_names()) {
-      auto dummy_type =
-          std::shared_ptr<geoarrow::ExtensionType>(new ExtensionType(ext_name));
+      auto dummy_type = std::shared_ptr<VectorType>(new VectorType(ext_name));
       ARROW_RETURN_NOT_OK(arrow::RegisterExtensionType(dummy_type));
     }
 
@@ -28,8 +27,7 @@ class ExtensionType : public arrow::ExtensionType {
     return arrow::Status::OK();
   }
 
-  static arrow::Result<std::shared_ptr<geoarrow::ExtensionType>> Make(
-      enum GeoArrowType type) {
+  static arrow::Result<std::shared_ptr<VectorType>> Make(enum GeoArrowType type) {
     struct ArrowSchema schema;
     int result = GeoArrowSchemaInit(&schema, type);
     if (result != GEOARROW_OK) {
@@ -38,7 +36,7 @@ class ExtensionType : public arrow::ExtensionType {
 
     auto maybe_arrow_type = arrow::ImportType(&schema);
     ARROW_RETURN_NOT_OK(maybe_arrow_type);
-    auto type_result = std::shared_ptr<geoarrow::ExtensionType>(new ExtensionType(
+    auto type_result = std::shared_ptr<VectorType>(new VectorType(
         GeoArrowExtensionNameFromType(type), "", maybe_arrow_type.ValueUnsafe()));
 
     ARROW_RETURN_NOT_OK(type_result->PopulateTypeAndSchemaView());
@@ -59,8 +57,8 @@ class ExtensionType : public arrow::ExtensionType {
   arrow::Result<std::shared_ptr<arrow::DataType>> Deserialize(
       std::shared_ptr<arrow::DataType> storage_type,
       const std::string& serialized_data) const override {
-    auto result = std::shared_ptr<geoarrow::ExtensionType>(
-        new ExtensionType(extension_name(), serialized_data, storage_type));
+    auto result = std::shared_ptr<VectorType>(
+        new VectorType(extension_name(), serialized_data, storage_type));
     ARROW_RETURN_NOT_OK(result->PopulateTypeAndSchemaView());
     return result;
   }
@@ -81,8 +79,8 @@ class ExtensionType : public arrow::ExtensionType {
   std::string extension_name_;
   std::string extension_metadata_;
 
-  ExtensionType(std::string extension_name, std::string extension_metadata = "",
-                const std::shared_ptr<arrow::DataType> storage_type = arrow::null())
+  VectorType(std::string extension_name, std::string extension_metadata = "",
+             const std::shared_ptr<arrow::DataType> storage_type = arrow::null())
       : arrow::ExtensionType(storage_type),
         extension_name_(extension_name),
         extension_metadata_(extension_metadata) {}
