@@ -17,8 +17,6 @@
 
 build/
 out/
-arrow-hpp
 .DS_Store
 CMakeUserPresets.json
 .vscode
-.Rproj.user
