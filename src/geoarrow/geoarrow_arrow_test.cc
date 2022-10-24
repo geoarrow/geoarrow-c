@@ -25,6 +25,11 @@ TEST(ArrowTest, ArrowTestExtensionType) {
   EXPECT_EQ(type->GeometryType(), GEOARROW_GEOMETRY_TYPE_MULTIPOINT);
   EXPECT_EQ(type->CoordType(), GEOARROW_COORD_TYPE_SEPARATE);
   EXPECT_EQ(type->Dimensions(), GEOARROW_DIMENSIONS_XY);
+
+  auto maybe_type2 = geoarrow::VectorType::Make(GEOARROW_GEOMETRY_TYPE_MULTIPOINT);
+  ASSERT_ARROW_OK(maybe_type.status());
+  auto type2 = maybe_type.ValueUnsafe();
+  EXPECT_TRUE(type->Equals(type2));
 }
 
 TEST(ArrowTest, ArrowTestExtensionTypeRegister) {
