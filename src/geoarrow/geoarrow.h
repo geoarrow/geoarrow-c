@@ -132,6 +132,16 @@ GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
 GeoArrowErrorCode GeoArrowSchemaViewInitFromType(struct GeoArrowSchemaView* schema_view,
                                                  enum GeoArrowType type);
 
+struct GeoArrowMetadataView {
+  struct GeoArrowStringView extension_metadata;
+  enum GeoArrowEdgeType edge_type;
+  enum GeoArrowCrsType crs_type;
+  struct GeoArrowStringView crs;
+};
+
+GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowStringView extension_metadata,
+                                           struct GeoArrowError* error);
+
 #ifdef __cplusplus
 }
 #endif
