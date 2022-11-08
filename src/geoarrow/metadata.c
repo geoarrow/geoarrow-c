@@ -39,12 +39,12 @@ static GeoArrowErrorCode GeoArrowMetadataViewInitDeprecated(
       continue;
     }
 
-    if (name_len >= 3 && strncmp(name, "crs", 3) == 0) {
+    if (name_len == 3 && strncmp(name, "crs", 3) == 0) {
       metadata_view->crs.n_bytes = value_len;
       metadata_view->crs.data = value;
       metadata_view->crs_type = GEOARROW_CRS_TYPE_UNKNOWN;
-    } else if (name_len >= 4 && strncmp(name, "edges", 4) == 0) {
-      if (value_len >= 9 && strncmp(value, "spherical", 9) == 0) {
+    } else if (name_len == 5 && strncmp(name, "edges", 5) == 0) {
+      if (value_len == 9 && strncmp(value, "spherical", 9) == 0) {
         metadata_view->edge_type = GEOARROW_EDGE_TYPE_SPHERICAL;
       } else {
         // unuspported value for 'edges' key
@@ -83,4 +83,57 @@ GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata
   }
 
   return GeoArrowMetadataViewInitJSON(metadata_view, error);
+}
+
+GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
+    struct ArrowSchema* schema, struct GeoArrowMetadataView* metadata_view) {
+  struct ArrowStringView value;
+  struct ArrowBuffer buffer;
+  NANOARROW_RETURN_NOT_OK(ArrowMetadataBuilderInit(&buffer, NULL));
+  int result;
+
+  switch (metadata_view->edge_type) {
+    case GEOARROW_EDGE_TYPE_SPHERICAL:
+      result = ArrowMetadataBuilderAppend(&buffer, ArrowCharView("edges"),
+                                          ArrowCharView("spherical"));
+      break;
+    default:
+      break;
+  }
+
+  if (result != GEOARROW_OK) {
+    ArrowBufferReset(&buffer);
+    return result;
+  }
+
+  if (metadata_view->crs.n_bytes > 0) {
+    value.data = metadata_view->crs.data;
+    value.n_bytes = metadata_view->crs.n_bytes;
+    result = ArrowMetadataBuilderAppend(&buffer, ArrowCharView("crs"), value);
+    if (result != GEOARROW_OK) {
+      ArrowBufferReset(&buffer);
+      return result;
+    }
+  }
+
+  struct ArrowBuffer existing_buffer;
+  result = ArrowMetadataBuilderInit(&existing_buffer, schema->metadata);
+  if (result != GEOARROW_OK) {
+    ArrowBufferReset(&buffer);
+    return result;
+  }
+
+  value.data = (const char*)buffer.data;
+  value.n_bytes = buffer.size_bytes;
+  result = ArrowMetadataBuilderSet(&existing_buffer,
+                                   ArrowCharView("ARROW:extension:metadata"), value);
+  ArrowBufferReset(&buffer);
+  if (result != GEOARROW_OK) {
+    ArrowBufferReset(&existing_buffer);
+    return result;
+  }
+
+  result = ArrowSchemaSetMetadata(schema, (const char*)existing_buffer.data);
+  ArrowBufferReset(&existing_buffer);
+  return result;
 }
