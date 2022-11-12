@@ -85,35 +85,93 @@ GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata
   return GeoArrowMetadataViewInitJSON(metadata_view, error);
 }
 
-GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
-    struct ArrowSchema* schema, struct GeoArrowMetadataView* metadata_view) {
-  struct ArrowStringView value;
-  struct ArrowBuffer buffer;
-  NANOARROW_RETURN_NOT_OK(ArrowMetadataBuilderInit(&buffer, NULL));
-  int result;
-
+static GeoArrowErrorCode GeoArrowMetadataSerializeDeprecated(
+    struct GeoArrowMetadataView* metadata_view, struct ArrowBuffer* buffer) {
   switch (metadata_view->edge_type) {
     case GEOARROW_EDGE_TYPE_SPHERICAL:
-      result = ArrowMetadataBuilderAppend(&buffer, ArrowCharView("edges"),
-                                          ArrowCharView("spherical"));
+      NANOARROW_RETURN_NOT_OK(ArrowMetadataBuilderAppend(buffer, ArrowCharView("edges"),
+                                                         ArrowCharView("spherical")));
       break;
     default:
       break;
   }
 
+  struct ArrowStringView crs_value;
+  if (metadata_view->crs.n_bytes > 0) {
+    crs_value.data = metadata_view->crs.data;
+    crs_value.n_bytes = metadata_view->crs.n_bytes;
+    NANOARROW_RETURN_NOT_OK(
+        ArrowMetadataBuilderAppend(buffer, ArrowCharView("crs"), crs_value));
+  }
+
+  return NANOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowMetadataSerialize(
+    struct GeoArrowMetadataView* metadata_view, struct ArrowBuffer* buffer) {
+  NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "{", 1));
+
+  int needs_leading_comma = 0;
+  const char* spherical_edges_json = "\"edges\":\"spherical\"";
+  switch (metadata_view->edge_type) {
+    case GEOARROW_EDGE_TYPE_SPHERICAL:
+      NANOARROW_RETURN_NOT_OK(
+          ArrowBufferAppend(buffer, spherical_edges_json, strlen(spherical_edges_json)));
+      needs_leading_comma = 1;
+      break;
+    default:
+      break;
+  }
+
+  if (metadata_view->crs_type != GEOARROW_CRS_TYPE_NONE && needs_leading_comma) {
+    NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, ",", 1));
+  }
+
+  if (metadata_view->crs_type != GEOARROW_CRS_TYPE_NONE) {
+    const char* crs_json_prefix = "\"crs\":";
+    NANOARROW_RETURN_NOT_OK(
+        ArrowBufferAppend(buffer, crs_json_prefix, strlen(crs_json_prefix)));
+  }
+
+  if (metadata_view->crs_type == GEOARROW_CRS_TYPE_PROJJSON) {
+    NANOARROW_RETURN_NOT_OK(
+        ArrowBufferAppend(buffer, metadata_view->crs.data, metadata_view->crs.n_bytes));
+  } else if (metadata_view->crs_type == GEOARROW_CRS_TYPE_UNKNOWN) {
+    NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\"", 1));
+
+    // Escape quotes in the string!
+    for (int64_t i = 0; i < metadata_view->crs.n_bytes; i++) {
+      char c = metadata_view->crs.data[i];
+      if (c == '\"') {
+        NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\\", 1));
+      }
+
+      NANOARROW_RETURN_NOT_OK(ArrowBufferAppendInt8(buffer, c));
+    }
+
+    NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\"", 1));
+  }
+
+  NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "}", 1));
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowSchemaSetMetadataInternal(
+    struct ArrowSchema* schema, struct GeoArrowMetadataView* metadata_view,
+    int use_deprecated) {
+  struct ArrowBuffer buffer;
+  ArrowBufferInit(&buffer);
+
+  int result = 0;
+  if (use_deprecated) {
+    result = GeoArrowMetadataSerializeDeprecated(metadata_view, &buffer);
+  } else {
+    result = GeoArrowMetadataSerialize(metadata_view, &buffer);
+  }
+
   if (result != GEOARROW_OK) {
     ArrowBufferReset(&buffer);
     return result;
-  }
-
-  if (metadata_view->crs.n_bytes > 0) {
-    value.data = metadata_view->crs.data;
-    value.n_bytes = metadata_view->crs.n_bytes;
-    result = ArrowMetadataBuilderAppend(&buffer, ArrowCharView("crs"), value);
-    if (result != GEOARROW_OK) {
-      ArrowBufferReset(&buffer);
-      return result;
-    }
   }
 
   struct ArrowBuffer existing_buffer;
@@ -123,6 +181,7 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
     return result;
   }
 
+  struct ArrowStringView value;
   value.data = (const char*)buffer.data;
   value.n_bytes = buffer.size_bytes;
   result = ArrowMetadataBuilderSet(&existing_buffer,
@@ -140,113 +199,10 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
 
 GeoArrowErrorCode GeoArrowSchemaSetMetadata(struct ArrowSchema* schema,
                                             struct GeoArrowMetadataView* metadata_view) {
-  struct ArrowStringView value;
-  struct ArrowBuffer buffer;
-  ArrowBufferInit(&buffer);
+  return GeoArrowSchemaSetMetadataInternal(schema, metadata_view, 0);
+}
 
-  int result = ArrowBufferAppend(&buffer, "{", 1);
-  if (result != NANOARROW_OK) {
-    ArrowBufferReset(&buffer);
-    return result;
-  }
-
-  int needs_leading_comma = 0;
-  const char* spherical_edges_json = "\"edges\":\"spherical\"";
-  switch (metadata_view->edge_type) {
-    case GEOARROW_EDGE_TYPE_SPHERICAL:
-      result =
-          ArrowBufferAppend(&buffer, spherical_edges_json, strlen(spherical_edges_json));
-      needs_leading_comma = 1;
-      break;
-    default:
-      break;
-  }
-
-  if (result != GEOARROW_OK) {
-    ArrowBufferReset(&buffer);
-    return result;
-  }
-
-  if (metadata_view->crs_type != GEOARROW_CRS_TYPE_NONE && needs_leading_comma) {
-    result = ArrowBufferAppend(&buffer, ",", 1);
-    if (result != NANOARROW_OK) {
-      ArrowBufferReset(&buffer);
-      return result;
-    }
-  }
-
-  if (metadata_view->crs_type != GEOARROW_CRS_TYPE_NONE) {
-    const char* crs_json_prefix = "\"crs\":";
-    result = ArrowBufferAppend(&buffer, crs_json_prefix, strlen(crs_json_prefix));
-    if (result != NANOARROW_OK) {
-      ArrowBufferReset(&buffer);
-      return result;
-    }
-  }
-
-  if (metadata_view->crs_type == GEOARROW_CRS_TYPE_PROJJSON) {
-    result =
-        ArrowBufferAppend(&buffer, metadata_view->crs.data, metadata_view->crs.n_bytes);
-    if (result != NANOARROW_OK) {
-      ArrowBufferReset(&buffer);
-      return result;
-    }
-  } else if (metadata_view->crs_type == GEOARROW_CRS_TYPE_UNKNOWN) {
-    result = ArrowBufferAppend(&buffer, "\"", 1);
-    if (result != NANOARROW_OK) {
-      ArrowBufferReset(&buffer);
-      return result;
-    }
-
-    // Escape quotes in the string!
-    for (int64_t i = 0; i < metadata_view->crs.n_bytes; i++) {
-      char c = metadata_view->crs.data[i];
-      if (c == '\"') {
-        result = ArrowBufferAppend(&buffer, "\\", 1);
-        if (result != NANOARROW_OK) {
-          ArrowBufferReset(&buffer);
-          return result;
-        }
-      }
-
-      result = ArrowBufferAppendInt8(&buffer, c);
-      if (result != NANOARROW_OK) {
-        ArrowBufferReset(&buffer);
-        return result;
-      }
-    }
-
-    result = ArrowBufferAppend(&buffer, "\"", 1);
-    if (result != NANOARROW_OK) {
-      ArrowBufferReset(&buffer);
-      return result;
-    }
-  }
-
-  result = ArrowBufferAppend(&buffer, "}", 1);
-  if (result != NANOARROW_OK) {
-    ArrowBufferReset(&buffer);
-    return result;
-  }
-
-  struct ArrowBuffer existing_buffer;
-  result = ArrowMetadataBuilderInit(&existing_buffer, schema->metadata);
-  if (result != GEOARROW_OK) {
-    ArrowBufferReset(&buffer);
-    return result;
-  }
-
-  value.data = (const char*)buffer.data;
-  value.n_bytes = buffer.size_bytes;
-  result = ArrowMetadataBuilderSet(&existing_buffer,
-                                   ArrowCharView("ARROW:extension:metadata"), value);
-  ArrowBufferReset(&buffer);
-  if (result != GEOARROW_OK) {
-    ArrowBufferReset(&existing_buffer);
-    return result;
-  }
-
-  result = ArrowSchemaSetMetadata(schema, (const char*)existing_buffer.data);
-  ArrowBufferReset(&existing_buffer);
-  return result;
+GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
+    struct ArrowSchema* schema, struct GeoArrowMetadataView* metadata_view) {
+  return GeoArrowSchemaSetMetadataInternal(schema, metadata_view, 1);
 }
