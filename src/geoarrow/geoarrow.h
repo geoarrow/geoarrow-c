@@ -143,6 +143,9 @@ GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata
                                            struct GeoArrowStringView metadata,
                                            struct GeoArrowError* error);
 
+GeoArrowErrorCode GeoArrowSchemaSetMetadata(struct ArrowSchema* schema,
+                                            struct GeoArrowMetadataView* metadata_view);
+
 GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
     struct ArrowSchema* schema, struct GeoArrowMetadataView* metadata_view);
 
