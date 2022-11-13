@@ -29,6 +29,13 @@ TEST(MetadataTest, MetadataTestBasicDeprecated) {
   struct GeoArrowMetadataView metadata_view;
   struct GeoArrowStringView metadata;
   metadata.data = simple_metadata;
+
+  // Make sure all the buffer range checks work
+  for (int64_t i = 1; i < sizeof(simple_metadata); i++) {
+    metadata.n_bytes = i;
+    EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), ENOTSUP);
+  }
+
   metadata.n_bytes = sizeof(simple_metadata);
 
   EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK);

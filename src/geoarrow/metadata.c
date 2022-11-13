@@ -5,33 +5,41 @@
 
 #include "geoarrow.h"
 
+#define CHECK_POS(n)         \
+  if ((pos + n) > pos_max) { \
+    return EINVAL;           \
+  }
+
 // A early draft implementation used something like the Arrow C Data interface
 // metadata specification instead of JSON. To help with the transition, this
 // bit of code parses the original metadata format.
 static GeoArrowErrorCode GeoArrowMetadataViewInitDeprecated(
     struct GeoArrowMetadataView* metadata_view, struct GeoArrowError* error) {
   const char* metadata = metadata_view->metadata.data;
+  int32_t pos_max = metadata_view->metadata.n_bytes;
   int32_t pos = 0;
   int32_t name_len;
   int32_t value_len;
   int32_t m;
 
-  // TODO: check metadata + pos against the known size of the metadata string
-  // to avoid buffer overrun
-
+  CHECK_POS(sizeof(int32_t));
   memcpy(&m, metadata + pos, sizeof(int32_t));
   pos += sizeof(int32_t);
 
   for (int j = 0; j < m; j++) {
+    CHECK_POS(sizeof(int32_t));
     memcpy(&name_len, metadata + pos, sizeof(int32_t));
     pos += sizeof(int32_t);
 
+    CHECK_POS(name_len)
     const char* name = metadata + pos;
     pos += name_len;
 
+    CHECK_POS(sizeof(int32_t))
     memcpy(&value_len, metadata + pos, sizeof(int32_t));
     pos += sizeof(int32_t);
 
+    CHECK_POS(value_len)
     const char* value = metadata + pos;
     pos += value_len;
 
