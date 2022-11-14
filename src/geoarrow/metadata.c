@@ -231,6 +231,7 @@ static GeoArrowErrorCode FindObject(struct ArrowStringView* s,
 static GeoArrowErrorCode ParseJSONMetadata(struct GeoArrowMetadataView* metadata_view,
                                            struct ArrowStringView* s) {
   NANOARROW_RETURN_NOT_OK(ParseChar(s, '{'));
+  SkipWhitespace(s);
   struct ArrowStringView k;
   struct ArrowStringView v;
 
@@ -273,6 +274,10 @@ static GeoArrowErrorCode ParseJSONMetadata(struct GeoArrowMetadataView* metadata
     }
 
     SkipUntil(s, ",}");
+    if (s->data[0] == ',') {
+      s->n_bytes--;
+      s->data++;
+    }
   }
 
   if (s->n_bytes > 0 && s->data[0] == '}') {
@@ -386,19 +391,21 @@ static GeoArrowErrorCode GeoArrowMetadataSerialize(
     NANOARROW_RETURN_NOT_OK(
         ArrowBufferAppend(buffer, metadata_view->crs.data, metadata_view->crs.n_bytes));
   } else if (metadata_view->crs_type == GEOARROW_CRS_TYPE_UNKNOWN) {
-    NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\"", 1));
-
-    // Escape quotes in the string!
-    for (int64_t i = 0; i < metadata_view->crs.n_bytes; i++) {
-      char c = metadata_view->crs.data[i];
-      if (c == '\"') {
-        NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\\", 1));
+    // Escape quotes in the string if the string does not start with '"'
+    if (metadata_view->crs.n_bytes > 0 && metadata_view->crs.data[0] == '\"') {
+      NANOARROW_RETURN_NOT_OK(
+          ArrowBufferAppend(buffer, metadata_view->crs.data, metadata_view->crs.n_bytes));
+    } else {
+      NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\"", 1));
+      for (int64_t i = 0; i < metadata_view->crs.n_bytes; i++) {
+        char c = metadata_view->crs.data[i];
+        if (c == '\"') {
+          NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\\", 1));
+        }
+        NANOARROW_RETURN_NOT_OK(ArrowBufferAppendInt8(buffer, c));
       }
-
-      NANOARROW_RETURN_NOT_OK(ArrowBufferAppendInt8(buffer, c));
+      NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\"", 1));
     }
-
-    NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\"", 1));
   }
 
   NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "}", 1));

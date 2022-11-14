@@ -56,7 +56,7 @@ TEST(MetadataTest, MetadataTestBasicDeprecated) {
   schema.release(&schema);
 }
 
-TEST(MetadataTest, MetadataTestReadJSON) {
+TEST(MetadataTest, MetadataTestReadJSONParsing) {
   struct GeoArrowError error;
   struct GeoArrowMetadataView metadata_view;
   struct GeoArrowStringView metadata;
@@ -100,6 +100,31 @@ TEST(MetadataTest, MetadataTestReadJSON) {
   EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK);
 }
 
+TEST(MetadataTest, MetadataTestReadJSON) {
+  struct GeoArrowError error;
+  struct GeoArrowMetadataView metadata_view;
+  struct GeoArrowStringView metadata;
+
+  const char* json_crs_projjson = "{\"edges\":\"spherical\",\"crs\":{}}";
+  metadata.data = json_crs_projjson;
+  metadata.n_bytes = strlen(json_crs_projjson);
+
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK);
+  EXPECT_EQ(metadata_view.edge_type, GEOARROW_EDGE_TYPE_SPHERICAL);
+  EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_PROJJSON);
+  EXPECT_EQ(std::string(metadata_view.crs.data, metadata_view.crs.n_bytes), "{}");
+
+  const char* json_crs_unknown = "{\"crs\":\"a string\"}";
+  metadata.data = json_crs_unknown;
+  metadata.n_bytes = strlen(json_crs_unknown);
+
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK);
+  EXPECT_EQ(metadata_view.edge_type, GEOARROW_EDGE_TYPE_PLANAR);
+  EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_UNKNOWN);
+  EXPECT_EQ(std::string(metadata_view.crs.data, metadata_view.crs.n_bytes),
+            "\"a string\"");
+}
+
 TEST(MetadataTest, MetadataTestWriteJSON) {
   struct GeoArrowMetadataView metadata_view;
   struct GeoArrowStringView metadata;
@@ -126,6 +151,17 @@ TEST(MetadataTest, MetadataTestWriteJSON) {
   const char* crs_value_with_quote = "crsval has \"quotes\"";
   metadata_view.crs.data = crs_value_with_quote;
   metadata_view.crs.n_bytes = strlen(crs_value_with_quote);
+  metadata_view.crs_type = GEOARROW_CRS_TYPE_UNKNOWN;
+  ASSERT_EQ(GeoArrowSchemaSetMetadata(&schema, &metadata_view), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowSchemaViewInit(&schema_view, &schema, NULL), GEOARROW_OK);
+  metadata_json = std::string(schema_view.extension_metadata.data,
+                              schema_view.extension_metadata.n_bytes);
+  EXPECT_EQ(metadata_json,
+            "{\"edges\":\"spherical\",\"crs\":\"crsval has \\\"quotes\\\"\"}");
+
+  const char* crs_value_with_preescaped_quote = "\"crsval has \\\"quotes\\\"\"";
+  metadata_view.crs.data = crs_value_with_preescaped_quote;
+  metadata_view.crs.n_bytes = strlen(crs_value_with_preescaped_quote);
   metadata_view.crs_type = GEOARROW_CRS_TYPE_UNKNOWN;
   ASSERT_EQ(GeoArrowSchemaSetMetadata(&schema, &metadata_view), GEOARROW_OK);
   ASSERT_EQ(GeoArrowSchemaViewInit(&schema_view, &schema, NULL), GEOARROW_OK);
