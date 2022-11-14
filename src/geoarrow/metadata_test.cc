@@ -33,7 +33,7 @@ TEST(MetadataTest, MetadataTestBasicDeprecated) {
   // Make sure all the buffer range checks work
   for (int64_t i = 1; i < sizeof(simple_metadata); i++) {
     metadata.n_bytes = i;
-    EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), ENOTSUP);
+    EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), EINVAL);
   }
 
   metadata.n_bytes = sizeof(simple_metadata);
@@ -60,11 +60,44 @@ TEST(MetadataTest, MetadataTestReadJSON) {
   struct GeoArrowError error;
   struct GeoArrowMetadataView metadata_view;
   struct GeoArrowStringView metadata;
+
+  metadata.data = "[";
+  metadata.n_bytes = 1;
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), EINVAL);
+  EXPECT_STREQ(error.message, "Expected valid GeoArrow JSON metadata but got '['");
+
+  metadata.data = "{";
+  metadata.n_bytes = 1;
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), EINVAL);
+  EXPECT_STREQ(error.message, "Expected valid GeoArrow JSON metadata but got '{'");
+
+  metadata.data = "{\"unterminated string\\\"";
+  metadata.n_bytes = 23;
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), EINVAL);
+  EXPECT_STREQ(
+      error.message,
+      "Expected valid GeoArrow JSON metadata but got '{\"unterminated string\\\"'");
+
+  metadata.data = "{\"key\": [";
+  metadata.n_bytes = 9;
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Expected valid GeoArrow JSON metadata but got '{\"key\": ['");
+
+  metadata.data = "{}abc";
+  metadata.n_bytes = 6;
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), EINVAL);
+  EXPECT_STREQ(
+      error.message,
+      "Expected JSON object with no trailing characters but found trailing 'abc'");
+
+  metadata.data = " \t\r\n{\"key\": [1, \"two\", {\"three\": 4}]} ";
+  metadata.n_bytes = 38;
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK);
+
   metadata.data = "{}";
   metadata.n_bytes = 2;
-
-  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), ENOTSUP);
-  EXPECT_STREQ(error.message, "JSON format not yet supported");
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK);
 }
 
 TEST(MetadataTest, MetadataTestWriteJSON) {
