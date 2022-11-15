@@ -1,5 +1,6 @@
 
 #include <errno.h>
+#include <stdio.h>
 
 #include "nanoarrow.h"
 
@@ -461,4 +462,52 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadata(struct ArrowSchema* schema,
 GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
     struct ArrowSchema* schema, struct GeoArrowMetadataView* metadata_view) {
   return GeoArrowSchemaSetMetadataInternal(schema, metadata_view, 1);
+}
+
+int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n) {
+  if (crs.n_bytes == 0) {
+    if (n > 0) {
+      out[0] = '\0';
+    }
+    return 0;
+  }
+
+  if (crs.data[0] != '\"') {
+    if (n > crs.n_bytes) {
+      memcpy(out, crs.data, crs.n_bytes);
+      out[crs.n_bytes] = '\0';
+    } else {
+      memcpy(out, crs.data, n);
+    }
+
+    return crs.n_bytes;
+  }
+
+  int64_t num_escapes = 0;
+  for (int64_t i = 1; i < (crs.n_bytes - 1); i++) {
+    if (crs.data[i] == '\\') {
+      i++;
+      num_escapes++;
+    }
+  }
+
+  int64_t out_i = 0;
+  for (int64_t i = 1; i < (crs.n_bytes - 1); i++) {
+    if (crs.data[i] == '\\') {
+      i++;
+      continue;
+    }
+
+    if (out_i < n) {
+      out[out_i] = crs.data[i];
+    }
+
+    out_i++;
+  }
+
+  if (out_i < n) {
+    out[out_i++] = '\0';
+  }
+
+  return out_i;
 }
