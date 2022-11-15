@@ -125,11 +125,12 @@ class VectorType : public arrow::ExtensionType {
     struct GeoArrowMetadataView metadata_view_copy = metadata_view_;
     metadata_view_copy.edge_type = edge_type;
 
-    // Need a better serialize method for metadata!
+    int64_t metadata_size = GeoArrowMetadataSerialize(&metadata_view_copy, nullptr, 0);
+    std::string metadata(metadata_size, '\0');
+    GeoArrowMetadataSerialize(&metadata_view_copy, metadata.data(), metadata_size);
 
-    auto new_type = std::shared_ptr<VectorType>(new VectorType(
-      extension_name(), Serialize(), storage_type()
-    ));
+    auto new_type = std::shared_ptr<VectorType>(
+        new VectorType(extension_name(), metadata, storage_type()));
     new_type->metadata_view_ = metadata_view_copy;
     new_type->schema_view_ = schema_view_;
     return new_type;
@@ -142,11 +143,12 @@ class VectorType : public arrow::ExtensionType {
     metadata_view_copy.crs.n_bytes = crs.size();
     metadata_view_copy.crs_type = crs_type;
 
-    // Need a better serialize method for metadata!
+    int64_t metadata_size = GeoArrowMetadataSerialize(&metadata_view_copy, nullptr, 0);
+    std::string metadata(metadata_size, '\0');
+    GeoArrowMetadataSerialize(&metadata_view_copy, metadata.data(), metadata_size);
 
-    auto new_type = std::shared_ptr<VectorType>(new VectorType(
-      extension_name(), Serialize(), storage_type()
-    ));
+    auto new_type = std::shared_ptr<VectorType>(
+        new VectorType(extension_name(), metadata, storage_type()));
     new_type->metadata_view_ = metadata_view_copy;
     new_type->schema_view_ = schema_view_;
     return new_type;

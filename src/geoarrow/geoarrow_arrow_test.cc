@@ -54,6 +54,29 @@ TEST(ArrowTest, ArrowTestExtensionTypeDeserialize) {
   EXPECT_EQ(result->Crs(), "OGC:CRS84");
 }
 
+TEST(ArrowTest, ArrowTestExtensionTypeModify) {
+  auto maybe_type = geoarrow::VectorType::Make(GEOARROW_TYPE_MULTIPOINT);
+  ASSERT_ARROW_OK(maybe_type.status());
+  auto type = maybe_type.ValueUnsafe();
+
+  auto new_type = type->WithGeometryType(GEOARROW_GEOMETRY_TYPE_POINT);
+  ASSERT_ARROW_OK(new_type.status());
+  EXPECT_EQ(new_type.ValueUnsafe()->GeometryType(), GEOARROW_GEOMETRY_TYPE_POINT);
+
+  new_type = type->WithDimensions(GEOARROW_DIMENSIONS_XYM);
+  ASSERT_ARROW_OK(new_type.status());
+  EXPECT_EQ(new_type.ValueUnsafe()->Dimensions(), GEOARROW_DIMENSIONS_XYM);
+
+  new_type = type->WithEdgeType(GEOARROW_EDGE_TYPE_SPHERICAL);
+  ASSERT_ARROW_OK(new_type.status());
+  EXPECT_EQ(new_type.ValueUnsafe()->EdgeType(), GEOARROW_EDGE_TYPE_SPHERICAL);
+
+  new_type = type->WithCrs("some crs value");
+  ASSERT_ARROW_OK(new_type.status());
+  EXPECT_EQ(new_type.ValueUnsafe()->Crs(), "some crs value");
+  EXPECT_EQ(new_type.ValueUnsafe()->CrsType(), GEOARROW_CRS_TYPE_UNKNOWN);
+}
+
 TEST(ArrowTest, ArrowTestExtensionTypeRegister) {
   struct ArrowSchema schema;
   ASSERT_ARROW_OK(geoarrow::VectorType::RegisterAll());
