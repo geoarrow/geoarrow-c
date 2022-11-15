@@ -188,3 +188,57 @@ TEST(MetadataTest, MetadataTestWriteJSON) {
 
   schema.release(&schema);
 }
+
+TEST(MetadataTest, MetadataTestUnescapeCRS) {
+  char out[1024];
+  memset(out, 'Z', sizeof(out));
+
+  struct GeoArrowStringView crs;
+  crs.data = nullptr;
+  crs.n_bytes = 0;
+
+  EXPECT_EQ(GeoArrowUnescapeCrs(crs, out, 0), 0);
+  EXPECT_EQ(out[0], 'Z');
+  EXPECT_EQ(GeoArrowUnescapeCrs(crs, out, 1), 0);
+  EXPECT_EQ(out[0], '\0');
+
+  // Check that an unquoted value is returned as is
+  const char* crs_unquoted = "some unquoted value";
+  crs.data = crs_unquoted;
+  crs.n_bytes = strlen(crs_unquoted);
+
+  // Basic length without ever writing to out
+  EXPECT_EQ(GeoArrowUnescapeCrs(crs, nullptr, 0), strlen(crs_unquoted));
+
+  // Write just enough characters to omit the null terminator
+  EXPECT_EQ(GeoArrowUnescapeCrs(crs, out, strlen(crs_unquoted)), strlen(crs_unquoted));
+  EXPECT_EQ(std::string(out, crs.n_bytes), crs_unquoted);
+  EXPECT_EQ(out[crs.n_bytes], 'Z');
+
+  // Make sure the null-terminator is written if possible
+  EXPECT_EQ(GeoArrowUnescapeCrs(crs, out, strlen(crs_unquoted) + 1),
+            strlen(crs_unquoted));
+  EXPECT_EQ(std::string(out, crs.n_bytes), crs_unquoted);
+  EXPECT_EQ(out[crs.n_bytes], '\0');
+
+  // Check a quoted value
+  const char* crs_quoted = "\"some quoted value with a \\\\ escape\"";
+  const char* crs_quoted_unescaped = "some quoted value with a \\ escape";
+  crs.data = crs_quoted;
+  crs.n_bytes = strlen(crs_quoted);
+
+  // Basic length without ever writing to out
+  EXPECT_EQ(GeoArrowUnescapeCrs(crs, nullptr, 0), strlen(crs_quoted_unescaped));
+
+  // Write just enough characters to omit the null terminator
+  EXPECT_EQ(GeoArrowUnescapeCrs(crs, out, strlen(crs_quoted_unescaped)),
+            strlen(crs_quoted_unescaped));
+  EXPECT_EQ(std::string(out, strlen(crs_quoted_unescaped)), crs_quoted_unescaped);
+  EXPECT_EQ(out[strlen(crs_quoted_unescaped)], 'Z');
+
+  // Make sure the null-terminator is written if possible
+  EXPECT_EQ(GeoArrowUnescapeCrs(crs, out, strlen(crs_quoted_unescaped) + 1),
+            strlen(crs_quoted_unescaped));
+  EXPECT_EQ(std::string(out, strlen(crs_quoted_unescaped)), crs_quoted_unescaped);
+  EXPECT_EQ(out[strlen(crs_quoted_unescaped)], '\0');
+}
