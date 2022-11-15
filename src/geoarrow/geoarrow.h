@@ -143,6 +143,9 @@ GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata
                                            struct GeoArrowStringView metadata,
                                            struct GeoArrowError* error);
 
+int64_t GeoArrowMetadataSerialize(struct GeoArrowMetadataView* metadata_view, char* out,
+                                  int64_t n);
+
 GeoArrowErrorCode GeoArrowSchemaSetMetadata(struct ArrowSchema* schema,
                                             struct GeoArrowMetadataView* metadata_view);
 

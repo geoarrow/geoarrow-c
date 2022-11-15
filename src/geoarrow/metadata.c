@@ -340,7 +340,7 @@ GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata
   return GeoArrowMetadataViewInitJSON(metadata_view, error);
 }
 
-static GeoArrowErrorCode GeoArrowMetadataSerializeDeprecated(
+static GeoArrowErrorCode GeoArrowMetadataSerializeInternalDeprecated(
     struct GeoArrowMetadataView* metadata_view, struct ArrowBuffer* buffer) {
   switch (metadata_view->edge_type) {
     case GEOARROW_EDGE_TYPE_SPHERICAL:
@@ -362,7 +362,7 @@ static GeoArrowErrorCode GeoArrowMetadataSerializeDeprecated(
   return NANOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowMetadataSerialize(
+static GeoArrowErrorCode GeoArrowMetadataSerializeInternal(
     struct GeoArrowMetadataView* metadata_view, struct ArrowBuffer* buffer) {
   NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "{", 1));
 
@@ -421,9 +421,9 @@ static GeoArrowErrorCode GeoArrowSchemaSetMetadataInternal(
 
   int result = 0;
   if (use_deprecated) {
-    result = GeoArrowMetadataSerializeDeprecated(metadata_view, &buffer);
+    result = GeoArrowMetadataSerializeInternalDeprecated(metadata_view, &buffer);
   } else {
-    result = GeoArrowMetadataSerialize(metadata_view, &buffer);
+    result = GeoArrowMetadataSerializeInternal(metadata_view, &buffer);
   }
 
   if (result != GEOARROW_OK) {
@@ -452,6 +452,41 @@ static GeoArrowErrorCode GeoArrowSchemaSetMetadataInternal(
   result = ArrowSchemaSetMetadata(schema, (const char*)existing_buffer.data);
   ArrowBufferReset(&existing_buffer);
   return result;
+}
+
+int64_t GeoArrowMetadataSerialize(struct GeoArrowMetadataView* metadata_view, char* out, int64_t n) {
+  struct ArrowBuffer buffer;
+  ArrowBufferInit(&buffer);
+  int result = ArrowBufferReserve(&buffer, n);
+  if (result != GEOARROW_OK) {
+    ArrowBufferReset(&buffer);
+    return -1;
+  }
+
+  result = GeoArrowMetadataSerializeInternal(metadata_view, &buffer);
+  if (result != GEOARROW_OK) {
+    ArrowBufferReset(&buffer);
+    return -1;
+  }
+
+  int64_t size_needed = buffer.size_bytes;
+  int64_t n_copy;
+  if (n >= size_needed) {
+    n_copy = size_needed;
+  } else {
+    n_copy = n;
+  }
+
+  if (n_copy > 0) {
+    memcpy(out, buffer.data, n_copy);
+  }
+
+  if (n > size_needed) {
+    out[size_needed] = '\0';
+  }
+
+  ArrowBufferReset(&buffer);
+  return size_needed;
 }
 
 GeoArrowErrorCode GeoArrowSchemaSetMetadata(struct ArrowSchema* schema,
