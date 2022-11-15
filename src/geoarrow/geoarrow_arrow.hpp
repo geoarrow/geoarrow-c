@@ -13,11 +13,13 @@ class VectorType : public arrow::ExtensionType {
   static arrow::Result<std::shared_ptr<VectorType>> Make(
       enum GeoArrowGeometryType geometry_type,
       enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY,
-      enum GeoArrowCoordType coord_type = GEOARROW_COORD_TYPE_SEPARATE) {
-    return Make(GeoArrowMakeType(geometry_type, dimensions, coord_type));
+      enum GeoArrowCoordType coord_type = GEOARROW_COORD_TYPE_SEPARATE,
+      const std::string& metadata = "") {
+    return Make(GeoArrowMakeType(geometry_type, dimensions, coord_type), metadata);
   }
 
-  static arrow::Result<std::shared_ptr<VectorType>> Make(enum GeoArrowType type) {
+  static arrow::Result<std::shared_ptr<VectorType>> Make(
+      enum GeoArrowType type, const std::string& metadata = "") {
     struct ArrowSchema schema;
     int result = GeoArrowSchemaInit(&schema, type);
     if (result != GEOARROW_OK) {
@@ -32,6 +34,14 @@ class VectorType : public arrow::ExtensionType {
     result = GeoArrowSchemaViewInitFromType(&type_result->schema_view_, type);
     if (result != GEOARROW_OK) {
       return arrow::Status::Invalid("Failed to initialize GeoArrowSchemaView");
+    }
+
+    struct GeoArrowError error;
+    result =
+        GeoArrowMetadataViewInit(&type_result->metadata_view_,
+                                 type_result->schema_view_.extension_metadata, &error);
+    if (result != GEOARROW_OK) {
+      return arrow::Status::Invalid(error.message);
     }
 
     return type_result;
@@ -58,8 +68,8 @@ class VectorType : public arrow::ExtensionType {
 
   bool ExtensionEquals(const arrow::ExtensionType& other) const override {
     return extension_name() == other.extension_name() &&
-     Serialize() == other.Serialize() &&
-     storage_type()->Equals(other.storage_type());
+           Serialize() == other.Serialize() &&
+           storage_type()->Equals(other.storage_type());
   }
 
   std::shared_ptr<arrow::Array> MakeArray(
@@ -86,9 +96,65 @@ class VectorType : public arrow::ExtensionType {
   }
   const enum GeoArrowCoordType CoordType() const { return schema_view_.coord_type; }
   const enum GeoArrowDimensions Dimensions() const { return schema_view_.dimensions; }
+  const enum GeoArrowEdgeType EdgeType() const { return metadata_view_.edge_type; }
+  const enum GeoArrowCrsType CrsType() const { return metadata_view_.crs_type; }
+  const std::string Crs() const {
+    int64_t len = GeoArrowUnescapeCrs(metadata_view_.crs, nullptr, 0);
+    std::string out(len, 0);
+    GeoArrowUnescapeCrs(metadata_view_.crs, out.data(), len);
+    return out;
+  }
+
+  arrow::Result<std::shared_ptr<VectorType>> WithGeometryType(
+      enum GeoArrowGeometryType geometry_type) const {
+    return Make(geometry_type, Dimensions(), CoordType(), Serialize());
+  }
+
+  arrow::Result<std::shared_ptr<VectorType>> WithCoordType(
+      enum GeoArrowCoordType coord_type) const {
+    return Make(GeometryType(), Dimensions(), coord_type, Serialize());
+  }
+
+  arrow::Result<std::shared_ptr<VectorType>> WithDimensions(
+      enum GeoArrowDimensions dimensions) const {
+    return Make(GeometryType(), dimensions, CoordType(), Serialize());
+  }
+
+  arrow::Result<std::shared_ptr<VectorType>> WithEdgeType(
+      enum GeoArrowEdgeType edge_type) {
+    struct GeoArrowMetadataView metadata_view_copy = metadata_view_;
+    metadata_view_copy.edge_type = edge_type;
+
+    // Need a better serialize method for metadata!
+
+    auto new_type = std::shared_ptr<VectorType>(new VectorType(
+      extension_name(), Serialize(), storage_type()
+    ));
+    new_type->metadata_view_ = metadata_view_copy;
+    new_type->schema_view_ = schema_view_;
+    return new_type;
+  }
+
+  arrow::Result<std::shared_ptr<VectorType>> WithCrs(
+      const std::string& crs, enum GeoArrowCrsType crs_type = GEOARROW_CRS_TYPE_UNKNOWN) {
+    struct GeoArrowMetadataView metadata_view_copy = metadata_view_;
+    metadata_view_copy.crs.data = crs.data();
+    metadata_view_copy.crs.n_bytes = crs.size();
+    metadata_view_copy.crs_type = crs_type;
+
+    // Need a better serialize method for metadata!
+
+    auto new_type = std::shared_ptr<VectorType>(new VectorType(
+      extension_name(), Serialize(), storage_type()
+    ));
+    new_type->metadata_view_ = metadata_view_copy;
+    new_type->schema_view_ = schema_view_;
+    return new_type;
+  }
 
  private:
   struct GeoArrowSchemaView schema_view_;
+  struct GeoArrowMetadataView metadata_view_;
   std::string extension_name_;
   std::string extension_metadata_;
 
@@ -109,6 +175,12 @@ class VectorType : public arrow::ExtensionType {
 
     schema_view_.schema = nullptr;
     schema.release(&schema);
+
+    if (GeoArrowMetadataViewInit(&metadata_view_, schema_view_.extension_metadata,
+                                 &error) != GEOARROW_OK) {
+      return arrow::Status::Invalid(error.message);
+    }
+
     return arrow::Status::OK();
   }
 

@@ -25,11 +25,33 @@ TEST(ArrowTest, ArrowTestExtensionType) {
   EXPECT_EQ(type->GeometryType(), GEOARROW_GEOMETRY_TYPE_MULTIPOINT);
   EXPECT_EQ(type->CoordType(), GEOARROW_COORD_TYPE_SEPARATE);
   EXPECT_EQ(type->Dimensions(), GEOARROW_DIMENSIONS_XY);
+  EXPECT_EQ(type->EdgeType(), GEOARROW_EDGE_TYPE_PLANAR);
+  EXPECT_EQ(type->CrsType(), GEOARROW_CRS_TYPE_NONE);
+  EXPECT_EQ(type->Crs(), "");
 
   auto maybe_type2 = geoarrow::VectorType::Make(GEOARROW_GEOMETRY_TYPE_MULTIPOINT);
   ASSERT_ARROW_OK(maybe_type.status());
   auto type2 = maybe_type.ValueUnsafe();
   EXPECT_TRUE(type->Equals(type2));
+}
+
+TEST(ArrowTest, ArrowTestExtensionTypeDeserialize) {
+  auto maybe_type = geoarrow::VectorType::Make(GEOARROW_TYPE_MULTIPOINT);
+  ASSERT_ARROW_OK(maybe_type.status());
+  auto type = maybe_type.ValueUnsafe();
+
+  auto maybe_result = type->Deserialize(
+      type->storage_type(), "{\"edges\": \"spherical\", \"crs\": \"OGC:CRS84\"}");
+  ASSERT_ARROW_OK(maybe_result.status());
+  auto result =
+      std::dynamic_pointer_cast<geoarrow::VectorType>(maybe_result.ValueUnsafe());
+  EXPECT_EQ(result->GeoArrowType(), GEOARROW_TYPE_MULTIPOINT);
+  EXPECT_EQ(result->GeometryType(), GEOARROW_GEOMETRY_TYPE_MULTIPOINT);
+  EXPECT_EQ(result->CoordType(), GEOARROW_COORD_TYPE_SEPARATE);
+  EXPECT_EQ(result->Dimensions(), GEOARROW_DIMENSIONS_XY);
+  EXPECT_EQ(result->EdgeType(), GEOARROW_EDGE_TYPE_SPHERICAL);
+  EXPECT_EQ(result->CrsType(), GEOARROW_CRS_TYPE_UNKNOWN);
+  EXPECT_EQ(result->Crs(), "OGC:CRS84");
 }
 
 TEST(ArrowTest, ArrowTestExtensionTypeRegister) {
