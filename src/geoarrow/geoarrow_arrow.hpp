@@ -100,9 +100,11 @@ class VectorType : public arrow::ExtensionType {
   const enum GeoArrowCrsType CrsType() const { return metadata_view_.crs_type; }
   const std::string Crs() const {
     int64_t len = GeoArrowUnescapeCrs(metadata_view_.crs, nullptr, 0);
-    std::string out(len, 0);
-    GeoArrowUnescapeCrs(metadata_view_.crs, out.data(), len);
-    return out;
+    char* out = reinterpret_cast<char*>(malloc(len));
+    GeoArrowUnescapeCrs(metadata_view_.crs, out, len);
+    std::string out_str(out, len);
+    free(out);
+    return out_str;
   }
 
   arrow::Result<std::shared_ptr<VectorType>> WithGeometryType(
@@ -126,8 +128,10 @@ class VectorType : public arrow::ExtensionType {
     metadata_view_copy.edge_type = edge_type;
 
     int64_t metadata_size = GeoArrowMetadataSerialize(&metadata_view_copy, nullptr, 0);
-    std::string metadata(metadata_size, '\0');
-    GeoArrowMetadataSerialize(&metadata_view_copy, metadata.data(), metadata_size);
+    char* out = reinterpret_cast<char*>(malloc(metadata_size));
+    GeoArrowMetadataSerialize(&metadata_view_copy, out, metadata_size);
+    std::string metadata(out, metadata_size);
+    free(out);
 
     auto new_type = std::shared_ptr<VectorType>(
         new VectorType(extension_name(), metadata, storage_type()));
@@ -144,8 +148,10 @@ class VectorType : public arrow::ExtensionType {
     metadata_view_copy.crs_type = crs_type;
 
     int64_t metadata_size = GeoArrowMetadataSerialize(&metadata_view_copy, nullptr, 0);
-    std::string metadata(metadata_size, '\0');
-    GeoArrowMetadataSerialize(&metadata_view_copy, metadata.data(), metadata_size);
+    char* out = reinterpret_cast<char*>(malloc(metadata_size));
+    GeoArrowMetadataSerialize(&metadata_view_copy, out, metadata_size);
+    std::string metadata(out, metadata_size);
+    free(out);
 
     auto new_type = std::shared_ptr<VectorType>(
         new VectorType(extension_name(), metadata, storage_type()));
