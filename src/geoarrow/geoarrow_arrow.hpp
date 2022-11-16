@@ -10,6 +10,9 @@ namespace geoarrow {
 
 class VectorType : public arrow::ExtensionType {
  public:
+  VectorType(const VectorType& other)
+      : VectorType(other.storage_type(), other.schema_view_, other.metadata_view_) {}
+
   static arrow::Result<std::shared_ptr<VectorType>> Make(
       enum GeoArrowGeometryType geometry_type,
       enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY,
@@ -28,28 +31,31 @@ class VectorType : public arrow::ExtensionType {
 
     auto maybe_arrow_type = arrow::ImportType(&schema);
     ARROW_RETURN_NOT_OK(maybe_arrow_type);
-    auto type_result = std::shared_ptr<VectorType>(new VectorType(
-        GeoArrowExtensionNameFromType(type), "", maybe_arrow_type.ValueUnsafe()));
 
-    result = GeoArrowSchemaViewInitFromType(&type_result->schema_view_, type);
+    struct GeoArrowSchemaView schema_view;
+    result = GeoArrowSchemaViewInitFromType(&schema_view, type);
     if (result != GEOARROW_OK) {
       return arrow::Status::Invalid("Failed to initialize GeoArrowSchemaView");
     }
 
+    struct GeoArrowStringView metadata_str_view = {metadata.data(),
+                                                   (int64_t)metadata.size()};
+    struct GeoArrowMetadataView metadata_view;
     struct GeoArrowError error;
-    result =
-        GeoArrowMetadataViewInit(&type_result->metadata_view_,
-                                 type_result->schema_view_.extension_metadata, &error);
+    result = GeoArrowMetadataViewInit(&metadata_view, metadata_str_view, &error);
     if (result != GEOARROW_OK) {
-      return arrow::Status::Invalid(error.message);
+      return arrow::Status::Invalid("Failed to initialize GeoArrowMetadataView: ",
+                                    error.message);
     }
 
-    return type_result;
+    return std::shared_ptr<VectorType>(
+        new VectorType(maybe_arrow_type.ValueUnsafe(), schema_view, metadata_view));
   }
 
   static arrow::Status RegisterAll() {
     for (const auto& ext_name : all_ext_names()) {
-      auto dummy_type = std::shared_ptr<VectorType>(new VectorType(ext_name));
+      auto dummy_type =
+          std::shared_ptr<VectorType>(new VectorType(arrow::null(), ext_name));
       ARROW_RETURN_NOT_OK(arrow::RegisterExtensionType(dummy_type));
     }
 
@@ -80,13 +86,40 @@ class VectorType : public arrow::ExtensionType {
   arrow::Result<std::shared_ptr<arrow::DataType>> Deserialize(
       std::shared_ptr<arrow::DataType> storage_type,
       const std::string& serialized_data) const override {
-    auto result = std::shared_ptr<VectorType>(
-        new VectorType(extension_name(), serialized_data, storage_type));
-    ARROW_RETURN_NOT_OK(result->PopulateTypeAndSchemaView());
-    return result;
+    struct ArrowSchema schema;
+    struct GeoArrowError error;
+    ARROW_RETURN_NOT_OK(ExportType(*storage_type, &schema));
+    struct GeoArrowStringView extension_name_view = {extension_name_.data(),
+                                                     (int64_t)extension_name_.size()};
+    struct GeoArrowSchemaView schema_view;
+    if (GeoArrowSchemaViewInitFromExtensionName(
+            &schema_view, &schema, extension_name_view, &error) != GEOARROW_OK) {
+      schema.release(&schema);
+      return arrow::Status::Invalid(error.message);
+    }
+    schema.release(&schema);
+
+    struct GeoArrowStringView metadata_str_view = {serialized_data.data(),
+                                                   (int64_t)serialized_data.size()};
+    struct GeoArrowMetadataView metadata_view;
+    int result = GeoArrowMetadataViewInit(&metadata_view, metadata_str_view, &error);
+    if (result != GEOARROW_OK) {
+      return arrow::Status::Invalid("Failed to initialize GeoArrowMetadataView: ",
+                                    error.message);
+    }
+
+    return std::shared_ptr<VectorType>(
+        new VectorType(storage_type, schema_view, metadata_view));
   }
 
-  std::string Serialize() const override { return extension_metadata_; }
+  std::string Serialize() const override {
+    int64_t metadata_size = GeoArrowMetadataSerialize(&metadata_view_, nullptr, 0);
+    char* out = reinterpret_cast<char*>(malloc(metadata_size));
+    GeoArrowMetadataSerialize(&metadata_view_, out, metadata_size);
+    std::string metadata(out, metadata_size);
+    free(out);
+    return metadata;
+  }
 
   std::string ToString() const override { return arrow::ExtensionType::ToString(); }
 
@@ -108,7 +141,7 @@ class VectorType : public arrow::ExtensionType {
   }
 
   arrow::Result<std::shared_ptr<VectorType>> WithGeometryType(
-      enum GeoArrowGeometryType geometry_type) const {
+      enum GeoArrowGeometryType geometry_type) {
     return Make(geometry_type, Dimensions(), CoordType(), Serialize());
   }
 
@@ -124,19 +157,8 @@ class VectorType : public arrow::ExtensionType {
 
   arrow::Result<std::shared_ptr<VectorType>> WithEdgeType(
       enum GeoArrowEdgeType edge_type) {
-    struct GeoArrowMetadataView metadata_view_copy = metadata_view_;
-    metadata_view_copy.edge_type = edge_type;
-
-    int64_t metadata_size = GeoArrowMetadataSerialize(&metadata_view_copy, nullptr, 0);
-    char* out = reinterpret_cast<char*>(malloc(metadata_size));
-    GeoArrowMetadataSerialize(&metadata_view_copy, out, metadata_size);
-    std::string metadata(out, metadata_size);
-    free(out);
-
-    auto new_type = std::shared_ptr<VectorType>(
-        new VectorType(extension_name(), metadata, storage_type()));
-    new_type->metadata_view_ = metadata_view_copy;
-    new_type->schema_view_ = schema_view_;
+    auto new_type = std::shared_ptr<VectorType>(new VectorType(*this));
+    new_type->metadata_view_.edge_type = edge_type;
     return new_type;
   }
 
@@ -147,49 +169,38 @@ class VectorType : public arrow::ExtensionType {
     metadata_view_copy.crs.n_bytes = crs.size();
     metadata_view_copy.crs_type = crs_type;
 
-    int64_t metadata_size = GeoArrowMetadataSerialize(&metadata_view_copy, nullptr, 0);
-    char* out = reinterpret_cast<char*>(malloc(metadata_size));
-    GeoArrowMetadataSerialize(&metadata_view_copy, out, metadata_size);
-    std::string metadata(out, metadata_size);
-    free(out);
-
-    auto new_type = std::shared_ptr<VectorType>(
-        new VectorType(extension_name(), metadata, storage_type()));
-    new_type->metadata_view_ = metadata_view_copy;
-    new_type->schema_view_ = schema_view_;
-    return new_type;
+    return std::shared_ptr<VectorType>(
+        new VectorType(storage_type(), schema_view_, metadata_view_copy));
   }
 
  private:
   struct GeoArrowSchemaView schema_view_;
   struct GeoArrowMetadataView metadata_view_;
   std::string extension_name_;
-  std::string extension_metadata_;
+  std::string crs_;
 
-  VectorType(std::string extension_name, std::string extension_metadata = "",
-             const std::shared_ptr<arrow::DataType> storage_type = arrow::null())
-      : arrow::ExtensionType(storage_type),
-        extension_name_(extension_name),
-        extension_metadata_(extension_metadata) {}
+  VectorType(const std::shared_ptr<arrow::DataType>& storage_type = arrow::null(),
+             std::string extension_name = "")
+      : arrow::ExtensionType(storage_type), extension_name_(extension_name) {
+    GeoArrowSchemaViewInitFromType(&schema_view_, GEOARROW_TYPE_UNINITIALIZED);
+    GeoArrowMetadataViewInit(&metadata_view_, {nullptr, 0}, nullptr);
+  }
 
-  arrow::Status PopulateTypeAndSchemaView() {
-    struct ArrowSchema schema;
-    struct GeoArrowError error;
-    ARROW_RETURN_NOT_OK(ExportType(*this, &schema));
-    if (GeoArrowSchemaViewInit(&schema_view_, &schema, &error) != GEOARROW_OK) {
-      schema.release(&schema);
-      return arrow::Status::Invalid(error.message);
-    }
+  VectorType(const std::shared_ptr<arrow::DataType>& storage_type,
+             struct GeoArrowSchemaView schema_view,
+             struct GeoArrowMetadataView metadata_view)
+      : VectorType(storage_type) {
+    schema_view_.geometry_type = schema_view.geometry_type;
+    schema_view_.dimensions = schema_view.dimensions;
+    schema_view_.coord_type = schema_view.coord_type;
+    schema_view_.type = schema_view.type;
+    extension_name_ = GeoArrowExtensionNameFromType(schema_view_.type);
 
-    schema_view_.schema = nullptr;
-    schema.release(&schema);
-
-    if (GeoArrowMetadataViewInit(&metadata_view_, schema_view_.extension_metadata,
-                                 &error) != GEOARROW_OK) {
-      return arrow::Status::Invalid(error.message);
-    }
-
-    return arrow::Status::OK();
+    metadata_view_.edge_type = metadata_view.edge_type;
+    crs_ = std::string(metadata_view.crs.data, metadata_view.crs.n_bytes);
+    metadata_view_.crs_type = metadata_view.crs_type;
+    metadata_view_.crs.data = crs_.data();
+    metadata_view_.crs.n_bytes = crs_.size();
   }
 
   static std::vector<std::string> all_ext_names() {

@@ -3,8 +3,8 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "nanoarrow.h"
 #include "geoarrow.h"
+#include "nanoarrow.h"
 
 static GeoArrowErrorCode GeoArrowParseNestedSchema(struct ArrowSchema* schema, int n,
                                                    struct GeoArrowSchemaView* schema_view,
@@ -80,20 +80,11 @@ static GeoArrowErrorCode GeoArrowParseNestedSchema(struct ArrowSchema* schema, i
   }
 }
 
-GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
-                                         struct ArrowSchema* schema,
-                                         struct GeoArrowError* error) {
-  struct ArrowError* na_error = (struct ArrowError*)error;
-  struct ArrowSchemaView na_schema_view;
-  NANOARROW_RETURN_NOT_OK(ArrowSchemaViewInit(&na_schema_view, schema, na_error));
-
-  const char* ext_name = na_schema_view.extension_name.data;
-  int64_t ext_len = na_schema_view.extension_name.n_bytes;
-
-  if (ext_name == NULL) {
-    ArrowErrorSet(na_error, "Expected extension type");
-    return EINVAL;
-  }
+static GeoArrowErrorCode GeoArrowSchemaViewInitInternal(
+    struct GeoArrowSchemaView* schema_view, struct ArrowSchema* schema,
+    struct ArrowSchemaView* na_schema_view, struct ArrowError* na_error) {
+  const char* ext_name = na_schema_view->extension_name.data;
+  int64_t ext_len = na_schema_view->extension_name.n_bytes;
 
   if (ext_len >= 14 && strncmp(ext_name, "geoarrow.point", 14) == 0) {
     schema_view->geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
@@ -132,7 +123,7 @@ GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
     schema_view->type = GeoArrowMakeType(
         schema_view->geometry_type, schema_view->dimensions, schema_view->coord_type);
   } else if (ext_len >= 12 && strncmp(ext_name, "geoarrow.wkb", 12) == 0) {
-    switch (na_schema_view.data_type) {
+    switch (na_schema_view->data_type) {
       case NANOARROW_TYPE_BINARY:
         schema_view->type = GEOARROW_TYPE_WKB;
         break;
@@ -155,12 +146,41 @@ GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
     return EINVAL;
   }
 
-  schema_view->extension_name.data = na_schema_view.extension_name.data;
-  schema_view->extension_name.n_bytes = na_schema_view.extension_name.n_bytes;
-  schema_view->extension_metadata.data = na_schema_view.extension_metadata.data;
-  schema_view->extension_metadata.n_bytes = na_schema_view.extension_metadata.n_bytes;
+  schema_view->extension_name.data = na_schema_view->extension_name.data;
+  schema_view->extension_name.n_bytes = na_schema_view->extension_name.n_bytes;
+  schema_view->extension_metadata.data = na_schema_view->extension_metadata.data;
+  schema_view->extension_metadata.n_bytes = na_schema_view->extension_metadata.n_bytes;
 
   return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
+                                         struct ArrowSchema* schema,
+                                         struct GeoArrowError* error) {
+  struct ArrowError* na_error = (struct ArrowError*)error;
+  struct ArrowSchemaView na_schema_view;
+  NANOARROW_RETURN_NOT_OK(ArrowSchemaViewInit(&na_schema_view, schema, na_error));
+
+  const char* ext_name = na_schema_view.extension_name.data;
+  int64_t ext_len = na_schema_view.extension_name.n_bytes;
+
+  if (ext_name == NULL) {
+    ArrowErrorSet(na_error, "Expected extension type");
+    return EINVAL;
+  }
+
+  return GeoArrowSchemaViewInitInternal(schema_view, schema, &na_schema_view, na_error);
+}
+
+GeoArrowErrorCode GeoArrowSchemaViewInitFromExtensionName(
+    struct GeoArrowSchemaView* schema_view, struct ArrowSchema* schema,
+    struct GeoArrowStringView extension_name, struct GeoArrowError* error) {
+  struct ArrowError* na_error = (struct ArrowError*)error;
+  struct ArrowSchemaView na_schema_view;
+  NANOARROW_RETURN_NOT_OK(ArrowSchemaViewInit(&na_schema_view, schema, na_error));
+  na_schema_view.extension_name.data = extension_name.data;
+  na_schema_view.extension_name.n_bytes = extension_name.n_bytes;
+  return GeoArrowSchemaViewInitInternal(schema_view, schema, &na_schema_view, na_error);
 }
 
 GeoArrowErrorCode GeoArrowSchemaViewInitFromType(struct GeoArrowSchemaView* schema_view,

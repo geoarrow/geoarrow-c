@@ -129,6 +129,10 @@ GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
                                          struct ArrowSchema* schema,
                                          struct GeoArrowError* error);
 
+GeoArrowErrorCode GeoArrowSchemaViewInitFromExtensionName(
+    struct GeoArrowSchemaView* schema_view, struct ArrowSchema* schema,
+    struct GeoArrowStringView extension_name, struct GeoArrowError* error);
+
 GeoArrowErrorCode GeoArrowSchemaViewInitFromType(struct GeoArrowSchemaView* schema_view,
                                                  enum GeoArrowType type);
 
@@ -143,8 +147,8 @@ GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata
                                            struct GeoArrowStringView metadata,
                                            struct GeoArrowError* error);
 
-int64_t GeoArrowMetadataSerialize(struct GeoArrowMetadataView* metadata_view, char* out,
-                                  int64_t n);
+int64_t GeoArrowMetadataSerialize(const struct GeoArrowMetadataView* metadata_view,
+                                  char* out, int64_t n);
 
 GeoArrowErrorCode GeoArrowSchemaSetMetadata(struct ArrowSchema* schema,
                                             struct GeoArrowMetadataView* metadata_view);

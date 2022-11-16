@@ -20,7 +20,7 @@ TEST(ArrowTest, ArrowTestExtensionType) {
   ASSERT_ARROW_OK(maybe_type.status());
   auto type = maybe_type.ValueUnsafe();
   EXPECT_EQ(type->extension_name(), "geoarrow.multipoint");
-  EXPECT_EQ(type->Serialize(), "");
+  EXPECT_EQ(type->Serialize(), "{}");
   EXPECT_EQ(type->GeoArrowType(), GEOARROW_TYPE_MULTIPOINT);
   EXPECT_EQ(type->GeometryType(), GEOARROW_GEOMETRY_TYPE_MULTIPOINT);
   EXPECT_EQ(type->CoordType(), GEOARROW_COORD_TYPE_SEPARATE);

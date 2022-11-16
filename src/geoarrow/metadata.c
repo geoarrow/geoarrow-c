@@ -363,7 +363,7 @@ static GeoArrowErrorCode GeoArrowMetadataSerializeInternalDeprecated(
 }
 
 static GeoArrowErrorCode GeoArrowMetadataSerializeInternal(
-    struct GeoArrowMetadataView* metadata_view, struct ArrowBuffer* buffer) {
+    const struct GeoArrowMetadataView* metadata_view, struct ArrowBuffer* buffer) {
   NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "{", 1));
 
   int needs_leading_comma = 0;
@@ -454,7 +454,8 @@ static GeoArrowErrorCode GeoArrowSchemaSetMetadataInternal(
   return result;
 }
 
-int64_t GeoArrowMetadataSerialize(struct GeoArrowMetadataView* metadata_view, char* out, int64_t n) {
+int64_t GeoArrowMetadataSerialize(const struct GeoArrowMetadataView* metadata_view,
+                                  char* out, int64_t n) {
   struct ArrowBuffer buffer;
   ArrowBufferInit(&buffer);
   int result = ArrowBufferReserve(&buffer, n);
