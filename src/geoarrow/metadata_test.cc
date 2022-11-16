@@ -131,6 +131,9 @@ TEST(MetadataTest, MetadataTestSetMetadata) {
   struct ArrowSchema schema;
   struct GeoArrowSchemaView schema_view;
   ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, GEOARROW_TYPE_WKB), GEOARROW_OK);
+  metadata.data = nullptr;
+  metadata.n_bytes = 0;
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, nullptr), GEOARROW_OK);
 
   metadata_view.crs.data = "{}";
   metadata_view.crs.n_bytes = 2;
