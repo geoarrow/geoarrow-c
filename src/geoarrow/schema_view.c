@@ -172,7 +172,7 @@ GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
   return GeoArrowSchemaViewInitInternal(schema_view, schema, &na_schema_view, na_error);
 }
 
-GeoArrowErrorCode GeoArrowSchemaViewInitFromExtensionName(
+GeoArrowErrorCode GeoArrowSchemaViewInitFromStorage(
     struct GeoArrowSchemaView* schema_view, struct ArrowSchema* schema,
     struct GeoArrowStringView extension_name, struct GeoArrowError* error) {
   struct ArrowError* na_error = (struct ArrowError*)error;

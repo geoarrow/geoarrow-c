@@ -92,8 +92,8 @@ class VectorType : public arrow::ExtensionType {
     struct GeoArrowStringView extension_name_view = {extension_name_.data(),
                                                      (int64_t)extension_name_.size()};
     struct GeoArrowSchemaView schema_view;
-    if (GeoArrowSchemaViewInitFromExtensionName(
-            &schema_view, &schema, extension_name_view, &error) != GEOARROW_OK) {
+    if (GeoArrowSchemaViewInitFromStorage(&schema_view, &schema, extension_name_view,
+                                          &error) != GEOARROW_OK) {
       schema.release(&schema);
       return arrow::Status::Invalid(error.message);
     }
