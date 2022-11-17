@@ -62,19 +62,38 @@ TEST(ArrowTest, ArrowTestExtensionTypeModify) {
   auto new_type = type->WithGeometryType(GEOARROW_GEOMETRY_TYPE_POINT);
   ASSERT_ARROW_OK(new_type.status());
   EXPECT_EQ(new_type.ValueUnsafe()->GeometryType(), GEOARROW_GEOMETRY_TYPE_POINT);
+  EXPECT_EQ(new_type.ValueUnsafe()->CoordType(), GEOARROW_COORD_TYPE_SEPARATE);
+  EXPECT_EQ(new_type.ValueUnsafe()->Dimensions(), GEOARROW_DIMENSIONS_XY);
+  EXPECT_EQ(new_type.ValueUnsafe()->EdgeType(), GEOARROW_EDGE_TYPE_PLANAR);
+  EXPECT_EQ(new_type.ValueUnsafe()->CrsType(), GEOARROW_CRS_TYPE_NONE);
+  EXPECT_EQ(new_type.ValueUnsafe()->Crs(), "");
 
   new_type = type->WithDimensions(GEOARROW_DIMENSIONS_XYM);
   ASSERT_ARROW_OK(new_type.status());
   EXPECT_EQ(new_type.ValueUnsafe()->Dimensions(), GEOARROW_DIMENSIONS_XYM);
+  EXPECT_EQ(new_type.ValueUnsafe()->GeometryType(), GEOARROW_GEOMETRY_TYPE_MULTIPOINT);
+  EXPECT_EQ(new_type.ValueUnsafe()->CoordType(), GEOARROW_COORD_TYPE_SEPARATE);
+  EXPECT_EQ(new_type.ValueUnsafe()->EdgeType(), GEOARROW_EDGE_TYPE_PLANAR);
+  EXPECT_EQ(new_type.ValueUnsafe()->CrsType(), GEOARROW_CRS_TYPE_NONE);
+  EXPECT_EQ(new_type.ValueUnsafe()->Crs(), "");
 
   new_type = type->WithEdgeType(GEOARROW_EDGE_TYPE_SPHERICAL);
   ASSERT_ARROW_OK(new_type.status());
   EXPECT_EQ(new_type.ValueUnsafe()->EdgeType(), GEOARROW_EDGE_TYPE_SPHERICAL);
+  EXPECT_EQ(new_type.ValueUnsafe()->GeometryType(), GEOARROW_GEOMETRY_TYPE_MULTIPOINT);
+  EXPECT_EQ(new_type.ValueUnsafe()->Dimensions(), GEOARROW_DIMENSIONS_XY);
+  EXPECT_EQ(new_type.ValueUnsafe()->CoordType(), GEOARROW_COORD_TYPE_SEPARATE);
+  EXPECT_EQ(new_type.ValueUnsafe()->CrsType(), GEOARROW_CRS_TYPE_NONE);
+  EXPECT_EQ(new_type.ValueUnsafe()->Crs(), "");
 
   new_type = type->WithCrs("some crs value");
   ASSERT_ARROW_OK(new_type.status());
   EXPECT_EQ(new_type.ValueUnsafe()->Crs(), "some crs value");
   EXPECT_EQ(new_type.ValueUnsafe()->CrsType(), GEOARROW_CRS_TYPE_UNKNOWN);
+  EXPECT_EQ(new_type.ValueUnsafe()->GeometryType(), GEOARROW_GEOMETRY_TYPE_MULTIPOINT);
+  EXPECT_EQ(new_type.ValueUnsafe()->Dimensions(), GEOARROW_DIMENSIONS_XY);
+  EXPECT_EQ(new_type.ValueUnsafe()->CoordType(), GEOARROW_COORD_TYPE_SEPARATE);
+  EXPECT_EQ(new_type.ValueUnsafe()->EdgeType(), GEOARROW_EDGE_TYPE_PLANAR);
 }
 
 TEST(ArrowTest, ArrowTestExtensionTypeRegister) {
