@@ -63,6 +63,14 @@ enum GeoArrowDimensions {
 
 enum GeoArrowCoordType { GEOARROW_COORD_TYPE_UNKNOWN, GEOARROW_COORD_TYPE_SEPARATE };
 
+enum GeoArrowEdgeType { GEOARROW_EDGE_TYPE_PLANAR, GEOARROW_EDGE_TYPE_SPHERICAL };
+
+enum GeoArrowCrsType {
+  GEOARROW_CRS_TYPE_NONE,
+  GEOARROW_CRS_TYPE_UNKNOWN,
+  GEOARROW_CRS_TYPE_PROJJSON
+};
+
 static inline const char* GeoArrowExtensionNameFromType(enum GeoArrowType type) {
   switch (type) {
     case GEOARROW_TYPE_WKB:

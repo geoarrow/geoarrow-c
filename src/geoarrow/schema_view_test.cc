@@ -45,6 +45,22 @@ TEST(SchemaViewTest, SchemaViewTestInitFromBadExtension) {
   schema.release(&schema);
 }
 
+TEST(SchemaViewTest, SchemaViewTestInitFromStorage) {
+  struct ArrowSchema schema;
+  struct GeoArrowSchemaView schema_view;
+  struct GeoArrowError error;
+
+  ASSERT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_POINT), GEOARROW_OK);
+  struct GeoArrowStringView ext;
+  ext.data = "geoarrow.point";
+  ext.n_bytes = 14;
+  EXPECT_EQ(GeoArrowSchemaViewInitFromStorage(&schema_view, &schema, ext, &error),
+            GEOARROW_OK);
+  EXPECT_EQ(schema_view.type, GEOARROW_TYPE_POINT);
+
+  schema.release(&schema);
+}
+
 class TypeParameterizedTestFixture : public ::testing::TestWithParam<enum GeoArrowType> {
  protected:
   enum GeoArrowType type;
@@ -153,7 +169,8 @@ TEST(SchemaViewTest, SchemaViewTestInitInvalidNested) {
   struct GeoArrowSchemaView schema_view;
   struct GeoArrowError error;
 
-  ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_LINESTRING), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_LINESTRING),
+            GEOARROW_OK);
 
   ASSERT_EQ(ArrowSchemaInit(&bad_schema, NANOARROW_TYPE_INT32), GEOARROW_OK);
   ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);

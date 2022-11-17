@@ -129,8 +129,34 @@ GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
                                          struct ArrowSchema* schema,
                                          struct GeoArrowError* error);
 
+GeoArrowErrorCode GeoArrowSchemaViewInitFromStorage(
+    struct GeoArrowSchemaView* schema_view, struct ArrowSchema* schema,
+    struct GeoArrowStringView extension_name, struct GeoArrowError* error);
+
 GeoArrowErrorCode GeoArrowSchemaViewInitFromType(struct GeoArrowSchemaView* schema_view,
                                                  enum GeoArrowType type);
+
+struct GeoArrowMetadataView {
+  struct GeoArrowStringView metadata;
+  enum GeoArrowEdgeType edge_type;
+  enum GeoArrowCrsType crs_type;
+  struct GeoArrowStringView crs;
+};
+
+GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata_view,
+                                           struct GeoArrowStringView metadata,
+                                           struct GeoArrowError* error);
+
+int64_t GeoArrowMetadataSerialize(const struct GeoArrowMetadataView* metadata_view,
+                                  char* out, int64_t n);
+
+GeoArrowErrorCode GeoArrowSchemaSetMetadata(struct ArrowSchema* schema,
+                                            struct GeoArrowMetadataView* metadata_view);
+
+GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
+    struct ArrowSchema* schema, struct GeoArrowMetadataView* metadata_view);
+
+int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n);
 
 #ifdef __cplusplus
 }
