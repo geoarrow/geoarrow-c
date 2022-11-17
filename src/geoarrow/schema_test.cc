@@ -256,22 +256,26 @@ TEST(SchemaTest, SchemaTestInitSchemaLinestring) {
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_LINESTRING), GEOARROW_OK);
   auto maybe_type = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type.status());
-  EXPECT_TRUE(maybe_type.ValueUnsafe()->Equals(list(coord_type("xy"))));
+  EXPECT_TRUE(
+      maybe_type.ValueUnsafe()->Equals(list(field("vertices", coord_type("xy")))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_LINESTRING_Z), GEOARROW_OK);
   auto maybe_type_z = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_z.status());
-  EXPECT_TRUE(maybe_type_z.ValueUnsafe()->Equals(list(coord_type("xyz"))));
+  EXPECT_TRUE(
+      maybe_type_z.ValueUnsafe()->Equals(list(field("vertices", coord_type("xyz")))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_LINESTRING_M), GEOARROW_OK);
   auto maybe_type_m = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_m.status());
-  EXPECT_TRUE(maybe_type_m.ValueUnsafe()->Equals(list(coord_type("xym"))));
+  EXPECT_TRUE(
+      maybe_type_m.ValueUnsafe()->Equals(list(field("vertices", coord_type("xym")))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_LINESTRING_ZM), GEOARROW_OK);
   auto maybe_type_zm = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_zm.status());
-  EXPECT_TRUE(maybe_type_zm.ValueUnsafe()->Equals(list(coord_type("xyzm"))));
+  EXPECT_TRUE(
+      maybe_type_zm.ValueUnsafe()->Equals(list(field("vertices", coord_type("xyzm")))));
 }
 
 TEST(SchemaTest, SchemaTestInitSchemaPolygon) {
@@ -280,22 +284,26 @@ TEST(SchemaTest, SchemaTestInitSchemaPolygon) {
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_POLYGON), GEOARROW_OK);
   auto maybe_type = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type.status());
-  EXPECT_TRUE(maybe_type.ValueUnsafe()->Equals(list(list(coord_type("xy")))));
+  EXPECT_TRUE(maybe_type.ValueUnsafe()->Equals(
+      list(field("rings", list(field("vertices", coord_type("xy")))))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_POLYGON_Z), GEOARROW_OK);
   auto maybe_type_z = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_z.status());
-  EXPECT_TRUE(maybe_type_z.ValueUnsafe()->Equals(list(list(coord_type("xyz")))));
+  EXPECT_TRUE(maybe_type_z.ValueUnsafe()->Equals(
+      list(field("rings", list(field("vertices", coord_type("xyz")))))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_POLYGON_M), GEOARROW_OK);
   auto maybe_type_m = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_m.status());
-  EXPECT_TRUE(maybe_type_m.ValueUnsafe()->Equals(list(list(coord_type("xym")))));
+  EXPECT_TRUE(maybe_type_m.ValueUnsafe()->Equals(
+      list(field("rings", list(field("vertices", coord_type("xym")))))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_POLYGON_ZM), GEOARROW_OK);
   auto maybe_type_zm = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_zm.status());
-  EXPECT_TRUE(maybe_type_zm.ValueUnsafe()->Equals(list(list(coord_type("xyzm")))));
+  EXPECT_TRUE(maybe_type_zm.ValueUnsafe()->Equals(
+      list(field("rings", list(field("vertices", coord_type("xyzm")))))));
 }
 
 TEST(SchemaTest, SchemaTestInitSchemaMultipoint) {
@@ -304,22 +312,25 @@ TEST(SchemaTest, SchemaTestInitSchemaMultipoint) {
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_MULTIPOINT), GEOARROW_OK);
   auto maybe_type = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type.status());
-  EXPECT_TRUE(maybe_type.ValueUnsafe()->Equals(list(coord_type("xy"))));
+  EXPECT_TRUE(maybe_type.ValueUnsafe()->Equals(list(field("points", coord_type("xy")))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_MULTIPOINT_Z), GEOARROW_OK);
   auto maybe_type_z = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_z.status());
-  EXPECT_TRUE(maybe_type_z.ValueUnsafe()->Equals(list(coord_type("xyz"))));
+  EXPECT_TRUE(
+      maybe_type_z.ValueUnsafe()->Equals(list(field("points", coord_type("xyz")))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_MULTIPOINT_M), GEOARROW_OK);
   auto maybe_type_m = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_m.status());
-  EXPECT_TRUE(maybe_type_m.ValueUnsafe()->Equals(list(coord_type("xym"))));
+  EXPECT_TRUE(
+      maybe_type_m.ValueUnsafe()->Equals(list(field("points", coord_type("xym")))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_MULTIPOINT_ZM), GEOARROW_OK);
   auto maybe_type_zm = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_zm.status());
-  EXPECT_TRUE(maybe_type_zm.ValueUnsafe()->Equals(list(coord_type("xyzm"))));
+  EXPECT_TRUE(
+      maybe_type_zm.ValueUnsafe()->Equals(list(field("points", coord_type("xyzm")))));
 }
 
 TEST(SchemaTest, SchemaTestInitSchemaMultilinestring) {
@@ -328,22 +339,26 @@ TEST(SchemaTest, SchemaTestInitSchemaMultilinestring) {
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_MULTILINESTRING), GEOARROW_OK);
   auto maybe_type = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type.status());
-  EXPECT_TRUE(maybe_type.ValueUnsafe()->Equals(list(list(coord_type("xy")))));
+  EXPECT_TRUE(maybe_type.ValueUnsafe()->Equals(
+      list(field("linestrings", list(field("vertices", coord_type("xy")))))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_MULTILINESTRING_Z), GEOARROW_OK);
   auto maybe_type_z = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_z.status());
-  EXPECT_TRUE(maybe_type_z.ValueUnsafe()->Equals(list(list(coord_type("xyz")))));
+  EXPECT_TRUE(maybe_type_z.ValueUnsafe()->Equals(
+      list(field("linestrings", list(field("vertices", coord_type("xyz")))))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_MULTILINESTRING_M), GEOARROW_OK);
   auto maybe_type_m = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_m.status());
-  EXPECT_TRUE(maybe_type_m.ValueUnsafe()->Equals(list(list(coord_type("xym")))));
+  EXPECT_TRUE(maybe_type_m.ValueUnsafe()->Equals(
+      list(field("linestrings", list(field("vertices", coord_type("xym")))))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_MULTILINESTRING_ZM), GEOARROW_OK);
   auto maybe_type_zm = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_zm.status());
-  EXPECT_TRUE(maybe_type_zm.ValueUnsafe()->Equals(list(list(coord_type("xyzm")))));
+  EXPECT_TRUE(maybe_type_zm.ValueUnsafe()->Equals(
+      list(field("linestrings", list(field("vertices", coord_type("xyzm")))))));
 }
 
 TEST(SchemaTest, SchemaTestInitSchemaMultipolygon) {
@@ -352,20 +367,24 @@ TEST(SchemaTest, SchemaTestInitSchemaMultipolygon) {
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_MULTIPOLYGON), GEOARROW_OK);
   auto maybe_type = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type.status());
-  EXPECT_TRUE(maybe_type.ValueUnsafe()->Equals(list(list(list(coord_type("xy"))))));
+  EXPECT_TRUE(maybe_type.ValueUnsafe()->Equals(list(field(
+      "polygons", list(field("rings", list(field("vertices", coord_type("xy")))))))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_MULTIPOLYGON_Z), GEOARROW_OK);
   auto maybe_type_z = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_z.status());
-  EXPECT_TRUE(maybe_type_z.ValueUnsafe()->Equals(list(list(list(coord_type("xyz"))))));
+  EXPECT_TRUE(maybe_type_z.ValueUnsafe()->Equals(list(field(
+      "polygons", list(field("rings", list(field("vertices", coord_type("xyz")))))))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_MULTIPOLYGON_M), GEOARROW_OK);
   auto maybe_type_m = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_m.status());
-  EXPECT_TRUE(maybe_type_m.ValueUnsafe()->Equals(list(list(list(coord_type("xym"))))));
+  EXPECT_TRUE(maybe_type_m.ValueUnsafe()->Equals(list(field(
+      "polygons", list(field("rings", list(field("vertices", coord_type("xym")))))))));
 
   EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_MULTIPOLYGON_ZM), GEOARROW_OK);
   auto maybe_type_zm = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_zm.status());
-  EXPECT_TRUE(maybe_type_zm.ValueUnsafe()->Equals(list(list(list(coord_type("xyzm"))))));
+  EXPECT_TRUE(maybe_type_zm.ValueUnsafe()->Equals(list(field(
+      "polygons", list(field("rings", list(field("vertices", coord_type("xyzm")))))))));
 }
