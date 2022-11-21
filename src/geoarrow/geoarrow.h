@@ -163,7 +163,7 @@ void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
 GeoArrowErrorCode GeoArrowWKTBuilderInit(struct GeoArrowVisitor* v);
 
-GeoArrowErrorCode GeoArrowWKTBuilderReset(struct GeoArrowVisitor* v);
+void GeoArrowWKTBuilderReset(struct GeoArrowVisitor* v);
 
 #ifdef __cplusplus
 }
