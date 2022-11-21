@@ -18,4 +18,5 @@ TEST(VisitorTest, VisitorTestVoid) {
   EXPECT_EQ(v.ring_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+  v.set_last_error(&v, "something");
 }

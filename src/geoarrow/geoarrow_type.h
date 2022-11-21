@@ -87,6 +87,8 @@ struct GeoArrowVisitor {
   int (*geom_end)(struct GeoArrowVisitor* v);
   int (*feat_end)(struct GeoArrowVisitor* v);
 
+  void (*set_last_error)(struct GeoArrowVisitor* v, const char* message);
+
   void* private_data;
 };
 

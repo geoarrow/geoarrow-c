@@ -161,6 +161,10 @@ int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n)
 
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
+GeoArrowErrorCode GeoArrowWKTBuilderInit(struct GeoArrowVisitor* v);
+
+GeoArrowErrorCode GeoArrowWKTBuilderReset(struct GeoArrowVisitor* v);
+
 #ifdef __cplusplus
 }
 #endif
