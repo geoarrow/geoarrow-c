@@ -25,8 +25,6 @@ static int geom_end_void(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
 
 static int feat_end_void(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
 
-static void set_last_error_void(struct GeoArrowVisitor* v, const char* message) {}
-
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v) {
   v->reserve_coord = &reserve_coord_void;
   v->reserve_feat = &reserve_feat_void;
@@ -38,6 +36,6 @@ void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v) {
   v->ring_end = &ring_end_void;
   v->geom_end = &geom_end_void;
   v->feat_end = &feat_end_void;
-  v->set_last_error = &set_last_error_void;
+  v->error = NULL;
   v->private_data = NULL;
 }
