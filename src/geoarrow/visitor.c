@@ -25,7 +25,7 @@ static int geom_end_void(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
 
 static int feat_end_void(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
 
-void GeoArrowVisitorInit(struct GeoArrowVisitor* v) {
+void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v) {
   v->reserve_coord = &reserve_coord_void;
   v->reserve_feat = &reserve_feat_void;
   v->feat_start = &feat_start_void;

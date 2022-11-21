@@ -6,7 +6,7 @@
 
 TEST(VisitorTest, VisitorTestVoid) {
   struct GeoArrowVisitor v;
-  GeoArrowVisitorInit(&v);
+  GeoArrowVisitorInitVoid(&v);
   EXPECT_EQ(v.private_data, nullptr);
   EXPECT_EQ(v.reserve_feat(&v, 0), GEOARROW_OK);
   EXPECT_EQ(v.reserve_coord(&v, 0), GEOARROW_OK);
