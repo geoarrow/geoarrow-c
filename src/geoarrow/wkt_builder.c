@@ -36,34 +36,55 @@ static int null_feat_wkt(struct GeoArrowVisitor* v) {
   return ArrowBitmapAppend(&builder->validity, 0, 1);
 }
 
-static int geom_start_wkt(struct GeoArrowVisitor* v, enum GeoArrowGeometryType geometry_type,
-                    enum GeoArrowDimensions dimensions) { return GEOARROW_OK; }
+static int geom_start_wkt(struct GeoArrowVisitor* v,
+                          enum GeoArrowGeometryType geometry_type,
+                          enum GeoArrowDimensions dimensions) {
+  struct WKTBuilder* builder = (struct WKTBuilder*)v->private_data;
+  return GEOARROW_OK;
+}
 
-static int ring_start_wkt(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
+static int ring_start_wkt(struct GeoArrowVisitor* v) {
+  struct WKTBuilder* builder = (struct WKTBuilder*)v->private_data;
+  return GEOARROW_OK;
+}
 
 static int coords_wkt(struct GeoArrowVisitor* v, const double** values, int64_t n_coords,
-                int32_t n_dims) { return GEOARROW_OK; }
+                      int32_t n_dims) {
+  struct WKTBuilder* builder = (struct WKTBuilder*)v->private_data;
+  return GEOARROW_OK;
+}
 
-static int ring_end_wkt(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
+static int ring_end_wkt(struct GeoArrowVisitor* v) {
+  struct WKTBuilder* builder = (struct WKTBuilder*)v->private_data;
+  return ArrowBufferAppendInt8(&builder->values, ')');
+  return GEOARROW_OK;
+}
 
-static int geom_end_wkt(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
+static int geom_end_wkt(struct GeoArrowVisitor* v) {
+  struct WKTBuilder* builder = (struct WKTBuilder*)v->private_data;
+  // TODO: check for zero coords and maybe spit out EMPTY here
+  return ArrowBufferAppendInt8(&builder->values, ')');
+}
 
-static int feat_end_wkt(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
+static int feat_end_wkt(struct GeoArrowVisitor* v) {
+  struct WKTBuilder* builder = (struct WKTBuilder*)v->private_data;
+  return GEOARROW_OK;
+}
 
 GeoArrowErrorCode GeoArrowWKTBuilderInit(struct GeoArrowVisitor* v) {
-    GeoArrowVisitorInitVoid(v);
-    struct WKTBuilder* builder = (struct WKTBuilder*)ArrowMalloc(sizeof(struct WKTBuilder));
-    if (builder == NULL) {
-      return ENOMEM;
-    }
+  GeoArrowVisitorInitVoid(v);
+  struct WKTBuilder* builder = (struct WKTBuilder*)ArrowMalloc(sizeof(struct WKTBuilder));
+  if (builder == NULL) {
+    return ENOMEM;
+  }
 
-    builder->storage_type = NANOARROW_TYPE_STRING;
-    ArrowBitmapInit(&builder->validity);
-    ArrowBufferInit(&builder->offsets);
-    ArrowBufferInit(&builder->values);
-    v->private_data = builder;
+  builder->storage_type = NANOARROW_TYPE_STRING;
+  ArrowBitmapInit(&builder->validity);
+  ArrowBufferInit(&builder->offsets);
+  ArrowBufferInit(&builder->values);
+  v->private_data = builder;
 
-    return GEOARROW_OK;
+  return GEOARROW_OK;
 }
 
 void GeoArrowWKTBuilderReset(struct GeoArrowVisitor* v) {
