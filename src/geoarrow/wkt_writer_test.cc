@@ -6,14 +6,16 @@
 #include "nanoarrow.h"
 
 TEST(WKTWriterTest, WKTWriterTestBasic) {
-  struct GeoArrowVisitor v;
-  GeoArrowWKTWriterInit(&v);
-  GeoArrowWKTWriterReset(&v);
+  struct GeoArrowWKTWriter writer;
+  GeoArrowWKTWriterInit(&writer);
+  GeoArrowWKTWriterReset(&writer);
 }
 
 TEST(WKTWriterTest, WKTWriterTestPointEmpty) {
+  struct GeoArrowWKTWriter writer;
   struct GeoArrowVisitor v;
-  GeoArrowWKTWriterInit(&v);
+  GeoArrowWKTWriterInit(&writer);
+  GeoArrowWKTWriterInitVisitor(&writer, &v);
 
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
@@ -22,7 +24,7 @@ TEST(WKTWriterTest, WKTWriterTestPointEmpty) {
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
   struct ArrowArray array;
-  EXPECT_EQ(GeoArrowWKTWriterFinish(&v, &array), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowWKTWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
 
   struct ArrowArrayView view;
   ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
@@ -33,5 +35,5 @@ TEST(WKTWriterTest, WKTWriterTestPointEmpty) {
 
   array.release(&array);
   ArrowArrayViewReset(&view);
-  GeoArrowWKTWriterReset(&v);
+  GeoArrowWKTWriterReset(&writer);
 }

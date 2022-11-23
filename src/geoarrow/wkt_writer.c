@@ -152,8 +152,7 @@ static int geom_end_wkt(struct GeoArrowVisitor* v) {
   return ArrowBufferAppendInt8(&builder->values, ')');
 }
 
-GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowVisitor* v) {
-  GeoArrowVisitorInitVoid(v);
+GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer) {
   struct WKTWriter* builder = (struct WKTWriter*)ArrowMalloc(sizeof(struct WKTWriter));
   if (builder == NULL) {
     return ENOMEM;
@@ -166,8 +165,15 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowVisitor* v) {
   ArrowBitmapInit(&builder->validity);
   ArrowBufferInit(&builder->offsets);
   ArrowBufferInit(&builder->values);
-  v->private_data = builder;
+  writer->private_data = builder;
 
+  return GEOARROW_OK;
+}
+
+void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
+                                  struct GeoArrowVisitor* v) {
+  GeoArrowVisitorInitVoid(v);
+  v->private_data = writer->private_data;
   v->reserve_feat = &reserve_feat_wkt;
   v->feat_start = &feat_start_wkt;
   v->null_feat = &null_feat_wkt;
@@ -176,13 +182,12 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowVisitor* v) {
   v->coords = &coords_wkt;
   v->ring_end = &ring_end_wkt;
   v->geom_end = &geom_end_wkt;
-
-  return GEOARROW_OK;
 }
 
-GeoArrowErrorCode GeoArrowWKTWriterFinish(struct GeoArrowVisitor* v,
-                                          struct ArrowArray* array) {
-  struct WKTWriter* builder = (struct WKTWriter*)v->private_data;
+GeoArrowErrorCode GeoArrowWKTWriterFinish(struct GeoArrowWKTWriter* writer,
+                                          struct ArrowArray* array,
+                                          struct GeoArrowError* error) {
+  struct WKTWriter* builder = (struct WKTWriter*)writer->private_data;
   array->release = NULL;
 
   NANOARROW_RETURN_NOT_OK(
@@ -193,14 +198,14 @@ GeoArrowErrorCode GeoArrowWKTWriterFinish(struct GeoArrowVisitor* v,
   NANOARROW_RETURN_NOT_OK(ArrowArraySetBuffer(array, 2, &builder->values));
   array->length = builder->length;
   array->null_count = builder->null_count;
-  return ArrowArrayFinishBuilding(array, (struct ArrowError*)v->error);
+  return ArrowArrayFinishBuilding(array, (struct ArrowError*)error);
 }
 
-void GeoArrowWKTWriterReset(struct GeoArrowVisitor* v) {
-  struct WKTWriter* builder = (struct WKTWriter*)v->private_data;
+void GeoArrowWKTWriterReset(struct GeoArrowWKTWriter* writer) {
+  struct WKTWriter* builder = (struct WKTWriter*)writer->private_data;
   ArrowBitmapReset(&builder->validity);
   ArrowBufferReset(&builder->offsets);
   ArrowBufferReset(&builder->values);
   ArrowFree(builder);
-  v->private_data = NULL;
+  writer->private_data = NULL;
 }
