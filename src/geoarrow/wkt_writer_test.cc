@@ -36,6 +36,62 @@ TEST(WKTWriterTest, WKTWriterTestBasic) {
   GeoArrowWKTWriterReset(&writer);
 }
 
+TEST(WKTWriterTest, WKTWriterTestOneNull) {
+  struct GeoArrowWKTWriter writer;
+  struct GeoArrowVisitor v;
+  GeoArrowWKTWriterInit(&writer);
+  GeoArrowWKTWriterInitVisitor(&writer, &v);
+
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.null_feat(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  struct ArrowArray array;
+  EXPECT_EQ(GeoArrowWKTWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+  EXPECT_EQ(array.length, 1);
+  EXPECT_EQ(array.null_count, 1);
+
+  struct ArrowArrayView view;
+  ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewSetArray(&view, &array, nullptr);
+
+  EXPECT_TRUE(ArrowArrayViewIsNull(&view, 0));
+
+  GeoArrowWKTWriterReset(&writer);
+}
+
+TEST(WKTWriterTest, WKTWriterTestOneValidOneNull) {
+  struct GeoArrowWKTWriter writer;
+  struct GeoArrowVisitor v;
+  GeoArrowWKTWriterInit(&writer);
+  GeoArrowWKTWriterInitVisitor(&writer, &v);
+
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY), GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.null_feat(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  struct ArrowArray array;
+  EXPECT_EQ(GeoArrowWKTWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+  EXPECT_EQ(array.length, 2);
+  EXPECT_EQ(array.null_count, 1);
+
+  struct ArrowArrayView view;
+  ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewSetArray(&view, &array, nullptr);
+
+  EXPECT_FALSE(ArrowArrayViewIsNull(&view, 0));
+  EXPECT_TRUE(ArrowArrayViewIsNull(&view, 1));
+  struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
+  EXPECT_EQ(std::string(value.data, value.n_bytes), "POINT EMPTY");
+
+  GeoArrowWKTWriterReset(&writer);
+}
+
 class GeometryTypeParameterizedTestFixture
     : public ::testing::TestWithParam<enum GeoArrowGeometryType> {
  protected:
@@ -74,6 +130,7 @@ TEST_P(GeometryTypeParameterizedTestFixture, WKTWriterTestEmpty) {
   EXPECT_EQ(GeoArrowWKTWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
   EXPECT_EQ(array.length, 4);
   EXPECT_EQ(array.null_count, 0);
+  EXPECT_EQ(array.buffers[0], nullptr);
 
   struct ArrowArrayView view;
   ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
