@@ -15,7 +15,7 @@ add_library(
   src/geoarrow/schema_view.c
   src/geoarrow/metadata.c
   src/geoarrow/visitor.c
-  src/geoarrow/wkt_builder.c
+  src/geoarrow/wkt_writer.c
   src/geoarrow/nanoarrow.c)
 
 if(GEOARROW_CODE_COVERAGE)
@@ -47,7 +47,7 @@ if (GEOARROW_BUILD_TESTS)
   add_executable(schema_view_test src/geoarrow/schema_view_test.cc)
   add_executable(metadata_test src/geoarrow/metadata_test.cc)
   add_executable(visitor_test src/geoarrow/visitor_test.cc)
-  add_executable(wkt_builder_test src/geoarrow/wkt_builder_test.cc)
+  add_executable(wkt_writer_test src/geoarrow/wkt_writer_test.cc)
   add_executable(geoarrow_arrow_test src/geoarrow/geoarrow_arrow_test.cc)
 
   if(GEOARROW_CODE_COVERAGE)
@@ -61,7 +61,7 @@ if (GEOARROW_BUILD_TESTS)
   target_link_libraries(schema_view_test geoarrow gtest_main)
   target_link_libraries(metadata_test geoarrow gtest_main)
   target_link_libraries(visitor_test geoarrow gtest_main)
-  target_link_libraries(wkt_builder_test geoarrow gtest_main)
+  target_link_libraries(wkt_writer_test geoarrow gtest_main)
   target_link_libraries(geoarrow_arrow_test geoarrow arrow_shared gtest_main)
 
   include(GoogleTest)
@@ -69,6 +69,6 @@ if (GEOARROW_BUILD_TESTS)
   gtest_discover_tests(schema_view_test)
   gtest_discover_tests(metadata_test)
   gtest_discover_tests(visitor_test)
-  gtest_discover_tests(wkt_builder_test)
+  gtest_discover_tests(wkt_writer_test)
   gtest_discover_tests(geoarrow_arrow_test)
 endif()
