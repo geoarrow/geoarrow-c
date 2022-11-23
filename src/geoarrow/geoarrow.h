@@ -158,10 +158,12 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
 
 int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n);
 
-
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
 GeoArrowErrorCode GeoArrowWKTBuilderInit(struct GeoArrowVisitor* v);
+
+GeoArrowErrorCode GeoArrowWKTBuilderFinish(struct GeoArrowVisitor* v,
+                                           struct ArrowArray* array);
 
 void GeoArrowWKTBuilderReset(struct GeoArrowVisitor* v);
 

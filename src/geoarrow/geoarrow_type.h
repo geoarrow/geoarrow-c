@@ -468,6 +468,28 @@ static inline enum GeoArrowType GeoArrowMakeType(enum GeoArrowGeometryType geome
   }
 }
 
+static inline const char* GeoArrowGeometryTypeString(
+    enum GeoArrowGeometryType geometry_type) {
+  switch (geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_POINT:
+      return "POINT";
+    case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+      return "LINESTRING";
+    case GEOARROW_GEOMETRY_TYPE_POLYGON:
+      return "POLYGON";
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+      return "MULTIPOINT";
+    case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+      return "MUTLTILINESTRING";
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+      return "MULTIPOLYGON";
+    case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
+      return "GEOMETRYCOLLECTION";
+    default:
+      return NULL;
+  }
+}
+
 #ifdef __cplusplus
 }
 #endif
