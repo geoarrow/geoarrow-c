@@ -5,7 +5,7 @@
 
 #include "geoarrow.h"
 
-struct WKTWriter {
+struct WKTWriterPrivate {
   enum ArrowType storage_type;
   struct ArrowBitmap validity;
   struct ArrowBuffer offsets;
@@ -17,59 +17,59 @@ struct WKTWriter {
   int64_t null_count;
 };
 
-static inline int WKTWriterCheckLevel(struct WKTWriter* builder) {
-  if (builder->level >= 0 && builder->level <= 32) {
+static inline int WKTWriterCheckLevel(struct WKTWriterPrivate* private) {
+  if (private->level >= 0 && private->level <= 32) {
     return GEOARROW_OK;
   } else {
     return EINVAL;
   }
 }
 
-static inline int WKTWriterWrite(struct WKTWriter* builder, const char* value) {
-  return ArrowBufferAppend(&builder->values, value, strlen(value));
+static inline int WKTWriterWrite(struct WKTWriterPrivate* private, const char* value) {
+  return ArrowBufferAppend(&private->values, value, strlen(value));
 }
 
 static int reserve_feat_wkt(struct GeoArrowVisitor* v, int64_t n) {
-  struct WKTWriter* builder = (struct WKTWriter*)v->private_data;
+  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
 
-  if (builder->validity.buffer.data != NULL) {
-    NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(&builder->validity, n));
+  if (private->validity.buffer.data != NULL) {
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(&private->validity, n));
   }
 
-  NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(&builder->offsets, n * sizeof(int32_t)));
-  return ArrowBufferReserve(&builder->values, n * strlen("POINT ()"));
+  NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(&private->offsets, n * sizeof(int32_t)));
+  return ArrowBufferReserve(&private->values, n * strlen("POINT ()"));
 }
 
 static int feat_start_wkt(struct GeoArrowVisitor* v) {
-  struct WKTWriter* builder = (struct WKTWriter*)v->private_data;
-  builder->level = 0;
-  builder->length++;
-  return ArrowBufferAppendInt32(&builder->offsets, builder->values.size_bytes);
+  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
+  private->level = 0;
+  private->length++;
+  return ArrowBufferAppendInt32(&private->offsets, private->values.size_bytes);
 }
 
 static int null_feat_wkt(struct GeoArrowVisitor* v) {
-  struct WKTWriter* builder = (struct WKTWriter*)v->private_data;
-  if (builder->validity.buffer.data == NULL && builder->length > 0) {
-    NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(&builder->validity, builder->length));
-    ArrowBitmapAppendUnsafe(&builder->validity, 1, builder->length - 1);
+  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
+  if (private->validity.buffer.data == NULL && private->length > 0) {
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(&private->validity, private->length));
+    ArrowBitmapAppendUnsafe(&private->validity, 1, private->length - 1);
   }
 
-  builder->null_count++;
-  return ArrowBitmapAppend(&builder->validity, 0, 1);
+  private->null_count++;
+  return ArrowBitmapAppend(&private->validity, 0, 1);
 }
 
 static int geom_start_wkt(struct GeoArrowVisitor* v,
                           enum GeoArrowGeometryType geometry_type,
                           enum GeoArrowDimensions dimensions) {
-  struct WKTWriter* builder = (struct WKTWriter*)v->private_data;
-  NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(builder));
+  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
+  NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(private));
 
-  if (builder->level > 0 && builder->i[builder->level - 1] > 0) {
-    NANOARROW_RETURN_NOT_OK(WKTWriterWrite(builder, ", "));
-    builder->i[builder->level - 1]++;
+  if (private->level > 0 && private->i[private->level - 1] > 0) {
+    NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, ", "));
+    private->i[private->level - 1]++;
   }
 
-  if (builder->level == 0 || builder->geometry_type[builder->level] ==
+  if (private->level == 0 || private->geometry_type[private->level] ==
                                  GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION) {
     const char* geometry_type_name = GeoArrowGeometryTypeString(geometry_type);
     if (geometry_type_name == NULL) {
@@ -78,19 +78,19 @@ static int geom_start_wkt(struct GeoArrowVisitor* v,
       return EINVAL;
     }
 
-    NANOARROW_RETURN_NOT_OK(WKTWriterWrite(builder, geometry_type_name));
+    NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, geometry_type_name));
 
     switch (dimensions) {
       case GEOARROW_DIMENSIONS_XY:
         break;
       case GEOARROW_DIMENSIONS_XYZ:
-        NANOARROW_RETURN_NOT_OK(WKTWriterWrite(builder, " Z"));
+        NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, " Z"));
         break;
       case GEOARROW_DIMENSIONS_XYM:
-        NANOARROW_RETURN_NOT_OK(WKTWriterWrite(builder, " M"));
+        NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, " M"));
         break;
       case GEOARROW_DIMENSIONS_XYZM:
-        NANOARROW_RETURN_NOT_OK(WKTWriterWrite(builder, " ZM"));
+        NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, " ZM"));
         break;
       default:
         ArrowErrorSet((struct ArrowError*)v->error,
@@ -99,73 +99,74 @@ static int geom_start_wkt(struct GeoArrowVisitor* v,
     }
   }
 
-  NANOARROW_RETURN_NOT_OK(WKTWriterWrite(builder, " "));
+  NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, " "));
 
-  builder->geometry_type[builder->level] = geometry_type;
-  builder->i[builder->level] = 0;
-  builder->level++;
+  private->geometry_type[private->level] = geometry_type;
+  private->i[private->level] = 0;
+  private->level++;
   return GEOARROW_OK;
 }
 
 static int ring_start_wkt(struct GeoArrowVisitor* v) {
-  struct WKTWriter* builder = (struct WKTWriter*)v->private_data;
-  NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(builder));
-  if (builder->level > 0 && builder->i[builder->level - 1] > 0) {
-    NANOARROW_RETURN_NOT_OK(WKTWriterWrite(builder, ", "));
-    builder->i[builder->level - 1]++;
+  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
+  NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(private));
+  if (private->level > 0 && private->i[private->level - 1] > 0) {
+    NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, ", "));
+    private->i[private->level - 1]++;
   }
 
-  builder->geometry_type[builder->level] = GEOARROW_GEOMETRY_TYPE_GEOMETRY;
-  builder->i[builder->level] = 0;
-  builder->level++;
+  private->geometry_type[private->level] = GEOARROW_GEOMETRY_TYPE_GEOMETRY;
+  private->i[private->level] = 0;
+  private->level++;
   return GEOARROW_OK;
 }
 
 static int coords_wkt(struct GeoArrowVisitor* v, const double** values, int64_t n_coords,
                       int32_t n_dims) {
-  struct WKTWriter* builder = (struct WKTWriter*)v->private_data;
+  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
   return GEOARROW_OK;
 }
 
 static int ring_end_wkt(struct GeoArrowVisitor* v) {
-  struct WKTWriter* builder = (struct WKTWriter*)v->private_data;
-  builder->level--;
-  NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(builder));
+  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
+  private->level--;
+  NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(private));
 
-  if (builder->i[builder->level] == 0) {
-    return WKTWriterWrite(builder, "EMPTY");
+  if (private->i[private->level] == 0) {
+    return WKTWriterWrite(private, "EMPTY");
   } else {
-    return WKTWriterWrite(builder, ")");
+    return WKTWriterWrite(private, ")");
   }
 }
 
 static int geom_end_wkt(struct GeoArrowVisitor* v) {
-  struct WKTWriter* builder = (struct WKTWriter*)v->private_data;
-  builder->level--;
-  NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(builder));
+  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
+  private->level--;
+  NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(private));
 
-  if (builder->i[builder->level] == 0) {
-    return WKTWriterWrite(builder, "EMPTY");
+  if (private->i[private->level] == 0) {
+    return WKTWriterWrite(private, "EMPTY");
   } else {
-    return WKTWriterWrite(builder, ")");
+    return WKTWriterWrite(private, ")");
   }
-  return ArrowBufferAppendInt8(&builder->values, ')');
+  return ArrowBufferAppendInt8(&private->values, ')');
 }
 
 GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer) {
-  struct WKTWriter* builder = (struct WKTWriter*)ArrowMalloc(sizeof(struct WKTWriter));
-  if (builder == NULL) {
+  struct WKTWriterPrivate* private =
+      (struct WKTWriterPrivate*)ArrowMalloc(sizeof(struct WKTWriterPrivate));
+  if (private == NULL) {
     return ENOMEM;
   }
 
-  builder->storage_type = NANOARROW_TYPE_STRING;
-  builder->length = 0;
-  builder->level = 0;
-  builder->null_count = 0;
-  ArrowBitmapInit(&builder->validity);
-  ArrowBufferInit(&builder->offsets);
-  ArrowBufferInit(&builder->values);
-  writer->private_data = builder;
+  private->storage_type = NANOARROW_TYPE_STRING;
+  private->length = 0;
+  private->level = 0;
+  private->null_count = 0;
+  ArrowBitmapInit(&private->validity);
+  ArrowBufferInit(&private->offsets);
+  ArrowBufferInit(&private->values);
+  writer->private_data = private;
 
   return GEOARROW_OK;
 }
@@ -187,25 +188,25 @@ void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
 GeoArrowErrorCode GeoArrowWKTWriterFinish(struct GeoArrowWKTWriter* writer,
                                           struct ArrowArray* array,
                                           struct GeoArrowError* error) {
-  struct WKTWriter* builder = (struct WKTWriter*)writer->private_data;
+  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
   array->release = NULL;
 
   NANOARROW_RETURN_NOT_OK(
-      ArrowBufferAppendInt32(&builder->offsets, builder->values.size_bytes));
-  NANOARROW_RETURN_NOT_OK(ArrowArrayInit(array, builder->storage_type));
-  ArrowArraySetValidityBitmap(array, &builder->validity);
-  NANOARROW_RETURN_NOT_OK(ArrowArraySetBuffer(array, 1, &builder->offsets));
-  NANOARROW_RETURN_NOT_OK(ArrowArraySetBuffer(array, 2, &builder->values));
-  array->length = builder->length;
-  array->null_count = builder->null_count;
+      ArrowBufferAppendInt32(&private->offsets, private->values.size_bytes));
+  NANOARROW_RETURN_NOT_OK(ArrowArrayInit(array, private->storage_type));
+  ArrowArraySetValidityBitmap(array, &private->validity);
+  NANOARROW_RETURN_NOT_OK(ArrowArraySetBuffer(array, 1, &private->offsets));
+  NANOARROW_RETURN_NOT_OK(ArrowArraySetBuffer(array, 2, &private->values));
+  array->length = private->length;
+  array->null_count = private->null_count;
   return ArrowArrayFinishBuilding(array, (struct ArrowError*)error);
 }
 
 void GeoArrowWKTWriterReset(struct GeoArrowWKTWriter* writer) {
-  struct WKTWriter* builder = (struct WKTWriter*)writer->private_data;
-  ArrowBitmapReset(&builder->validity);
-  ArrowBufferReset(&builder->offsets);
-  ArrowBufferReset(&builder->values);
-  ArrowFree(builder);
+  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
+  ArrowBitmapReset(&private->validity);
+  ArrowBufferReset(&private->offsets);
+  ArrowBufferReset(&private->values);
+  ArrowFree(private);
   writer->private_data = NULL;
 }
