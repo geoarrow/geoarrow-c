@@ -32,7 +32,8 @@ struct WKTWriterPrivate {
 };
 
 static inline int WKTWriterCheckLevel(struct WKTWriterPrivate* private) {
-  if (private->level >= 0 && private->level <= 32) {
+  printf("Checking level: %d\n", private->level);
+  if (private->level >= 0 && private->level <= 31) {
     return GEOARROW_OK;
   } else {
     return EINVAL;

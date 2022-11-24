@@ -97,6 +97,49 @@ TEST(WKTWriterTest, WKTWriterTestOneValidOneNull) {
   GeoArrowWKTWriterReset(&writer);
 }
 
+TEST(WKTWriterTest, WKTWriterTestErrors) {
+  struct GeoArrowWKTWriter writer;
+  struct GeoArrowVisitor v;
+  GeoArrowWKTWriterInit(&writer);
+  GeoArrowWKTWriterInitVisitor(&writer, &v);
+
+  // Invalid because level < 0
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.ring_end(&v), EINVAL);
+  EXPECT_EQ(v.coords(&v, nullptr, 0, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, nullptr, 1, 2), EINVAL);
+
+  GeoArrowWKTWriterReset(&writer);
+  GeoArrowWKTWriterInit(&writer);
+
+  // Invalid because of too much nesting
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  for (int i = 0; i < 32; i++) {
+    EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
+              GEOARROW_OK);
+  }
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
+            EINVAL);
+
+  GeoArrowWKTWriterReset(&writer);
+  GeoArrowWKTWriterInit(&writer);
+
+  // Invalid geometry type
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_GEOMETRY, GEOARROW_DIMENSIONS_XY),
+            EINVAL);
+
+  GeoArrowWKTWriterReset(&writer);
+  GeoArrowWKTWriterInit(&writer);
+
+  // Invalid dimensions
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_UNKNOWN),
+            EINVAL);
+
+  GeoArrowWKTWriterReset(&writer);
+}
+
 class GeometryTypeParameterizedTestFixture
     : public ::testing::TestWithParam<enum GeoArrowGeometryType> {
  protected:
@@ -578,8 +621,9 @@ TEST(WKTWriterTest, WKTWriterTestGeometrycollection) {
 
   // One point
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
-  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION, GEOARROW_DIMENSIONS_XY),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION, GEOARROW_DIMENSIONS_XY),
+      GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
   EXPECT_EQ(v.coords(&v, (const double**)coords, 1, 2), GEOARROW_OK);
@@ -589,8 +633,9 @@ TEST(WKTWriterTest, WKTWriterTestGeometrycollection) {
 
   // Two points
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
-  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION, GEOARROW_DIMENSIONS_XY),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION, GEOARROW_DIMENSIONS_XY),
+      GEOARROW_OK);
 
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
@@ -618,7 +663,8 @@ TEST(WKTWriterTest, WKTWriterTestGeometrycollection) {
   EXPECT_EQ(std::string(value.data, value.n_bytes), "GEOMETRYCOLLECTION (POINT (1 2))");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 1);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "GEOMETRYCOLLECTION (POINT (1 2), POINT (1 2))");
+  EXPECT_EQ(std::string(value.data, value.n_bytes),
+            "GEOMETRYCOLLECTION (POINT (1 2), POINT (1 2))");
 
   ArrowArrayViewReset(&view);
   array.release(&array);
