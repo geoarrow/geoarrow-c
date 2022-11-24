@@ -88,7 +88,6 @@ static int geom_start_wkt(struct GeoArrowVisitor* v,
 
   if (private->level > 0 && private->i[private->level - 1] > 0) {
     NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, ", "));
-    private->i[private->level - 1]++;
   }
 
   if (private->level == 0 || private->geometry_type[private->level] ==
@@ -123,6 +122,10 @@ static int geom_start_wkt(struct GeoArrowVisitor* v,
 
   NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, " "));
 
+  if (private->level > 0) {
+    private->i[private->level - 1]++;
+  }
+
   private->geometry_type[private->level] = geometry_type;
   private->i[private->level] = 0;
   return GEOARROW_OK;
@@ -135,6 +138,11 @@ static int ring_start_wkt(struct GeoArrowVisitor* v) {
 
   if (private->level > 0 && private->i[private->level - 1] > 0) {
     NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, ", "));
+  } else {
+    NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, "("));
+  }
+
+  if (private->level > 0) {
     private->i[private->level - 1]++;
   }
 
