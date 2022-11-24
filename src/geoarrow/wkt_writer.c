@@ -51,17 +51,6 @@ static inline void WKTWriterWriteDoubleUnsafe(struct WKTWriterPrivate* private,
                            ((char*)private->values.data) + private->values.size_bytes);
 }
 
-static int reserve_feat_wkt(struct GeoArrowVisitor* v, int64_t n) {
-  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
-
-  if (private->validity.buffer.data != NULL) {
-    NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(&private->validity, n));
-  }
-
-  NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(&private->offsets, n * sizeof(int32_t)));
-  return ArrowBufferReserve(&private->values, n * strlen("POINT ()"));
-}
-
 static int feat_start_wkt(struct GeoArrowVisitor* v) {
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
   private->level = -1;
@@ -241,7 +230,6 @@ void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
                                   struct GeoArrowVisitor* v) {
   GeoArrowVisitorInitVoid(v);
   v->private_data = writer->private_data;
-  v->reserve_feat = &reserve_feat_wkt;
   v->feat_start = &feat_start_wkt;
   v->null_feat = &null_feat_wkt;
   v->geom_start = &geom_start_wkt;
