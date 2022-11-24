@@ -1,9 +1,22 @@
 
+#include <stdio.h>
 #include <string.h>
 
 #include "nanoarrow.h"
 
 #include "geoarrow.h"
+
+// Using ryu for double -> char* is ~5x faster and is not locale dependent
+// could also use to_chars() if C++17 is available
+// https://github.com/paleolimbot/geoarrow/tree/58ccd0a9606f3f6e51f200e143d8c7672782e30a/src/ryu
+#ifndef geoarrow_d2s_fixed_n
+static inline int geoarrow_compat_d2s_fixed_n(double f, uint32_t precision,
+                                              char* result) {
+  return snprintf(result, 128, "%.*g", precision, f);
+}
+
+#define geoarrow_d2s_fixed_n geoarrow_compat_d2s_fixed_n
+#endif
 
 struct WKTWriterPrivate {
   enum ArrowType storage_type;
@@ -15,6 +28,7 @@ struct WKTWriterPrivate {
   int32_t level;
   int64_t length;
   int64_t null_count;
+  int significant_digits;
 };
 
 static inline int WKTWriterCheckLevel(struct WKTWriterPrivate* private) {
@@ -27,6 +41,13 @@ static inline int WKTWriterCheckLevel(struct WKTWriterPrivate* private) {
 
 static inline int WKTWriterWrite(struct WKTWriterPrivate* private, const char* value) {
   return ArrowBufferAppend(&private->values, value, strlen(value));
+}
+
+static inline void WKTWriterWriteDoubleUnsafe(struct WKTWriterPrivate* private,
+                                              double value) {
+  private->values.size_bytes +=
+      geoarrow_d2s_fixed_n(value, private->significant_digits,
+                           ((char*)private->values.data) + private->values.size_bytes);
 }
 
 static int reserve_feat_wkt(struct GeoArrowVisitor* v, int64_t n) {
@@ -42,7 +63,7 @@ static int reserve_feat_wkt(struct GeoArrowVisitor* v, int64_t n) {
 
 static int feat_start_wkt(struct GeoArrowVisitor* v) {
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
-  private->level = 0;
+  private->level = -1;
   private->length++;
   return ArrowBufferAppendInt32(&private->offsets, private->values.size_bytes);
 }
@@ -62,6 +83,7 @@ static int geom_start_wkt(struct GeoArrowVisitor* v,
                           enum GeoArrowGeometryType geometry_type,
                           enum GeoArrowDimensions dimensions) {
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
+  private->level++;
   NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(private));
 
   if (private->level > 0 && private->i[private->level - 1] > 0) {
@@ -103,13 +125,14 @@ static int geom_start_wkt(struct GeoArrowVisitor* v,
 
   private->geometry_type[private->level] = geometry_type;
   private->i[private->level] = 0;
-  private->level++;
   return GEOARROW_OK;
 }
 
 static int ring_start_wkt(struct GeoArrowVisitor* v) {
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
+  private->level++;
   NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(private));
+
   if (private->level > 0 && private->i[private->level - 1] > 0) {
     NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, ", "));
     private->i[private->level - 1]++;
@@ -117,39 +140,76 @@ static int ring_start_wkt(struct GeoArrowVisitor* v) {
 
   private->geometry_type[private->level] = GEOARROW_GEOMETRY_TYPE_GEOMETRY;
   private->i[private->level] = 0;
-  private->level++;
   return GEOARROW_OK;
 }
 
 static int coords_wkt(struct GeoArrowVisitor* v, const double** values, int64_t n_coords,
                       int32_t n_dims) {
+  if (n_coords == 0) {
+    return GEOARROW_OK;
+  }
+
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
+  NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(private));
+
+  int64_t max_chars_needed = (n_coords * 2) +  // space + comma after coordinate
+                             (n_coords * (n_dims - 1)) +  // spaces between ordinates
+                             ((private->significant_digits + 1) * n_coords *
+                              n_dims);  // significant digits + decimal
+  NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(&private->values, max_chars_needed));
+
+  // Write the first coordinate, possibly with a leading comma if there was
+  // a previous call to coords
+  if (private->i[private->level] != 0) {
+    ArrowBufferAppendUnsafe(&private->values, ", ", 2);
+  } else {
+    ArrowBufferAppendUnsafe(&private->values, "(", 1);
+  }
+
+  WKTWriterWriteDoubleUnsafe(private, values[0][0]);
+  for (int32_t j = 1; j < n_dims; j++) {
+    ArrowBufferAppendUnsafe(&private->values, " ", 1);
+    WKTWriterWriteDoubleUnsafe(private, values[j][0]);
+  }
+
+  // Write the remaining coordinates (which all have leading commas)
+  for (int64_t i = 1; i < n_coords; i++) {
+    ArrowBufferAppendUnsafe(&private->values, ", ", 2);
+    WKTWriterWriteDoubleUnsafe(private, values[0][i]);
+    for (int32_t j = 1; j < n_dims; j++) {
+      ArrowBufferAppendUnsafe(&private->values, " ", 1);
+      WKTWriterWriteDoubleUnsafe(private, values[j][i]);
+    }
+  }
+
+  private->i[private->level] += n_coords;
   return GEOARROW_OK;
 }
 
 static int ring_end_wkt(struct GeoArrowVisitor* v) {
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
-  private->level--;
   NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(private));
 
   if (private->i[private->level] == 0) {
+    private->level--;
     return WKTWriterWrite(private, "EMPTY");
   } else {
+    private->level--;
     return WKTWriterWrite(private, ")");
   }
 }
 
 static int geom_end_wkt(struct GeoArrowVisitor* v) {
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
-  private->level--;
   NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(private));
 
   if (private->i[private->level] == 0) {
+    private->level--;
     return WKTWriterWrite(private, "EMPTY");
   } else {
+    private->level--;
     return WKTWriterWrite(private, ")");
   }
-  return ArrowBufferAppendInt8(&private->values, ')');
 }
 
 GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer) {
@@ -166,6 +226,7 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer) {
   ArrowBitmapInit(&private->validity);
   ArrowBufferInit(&private->offsets);
   ArrowBufferInit(&private->values);
+  private->significant_digits = 16;
   writer->private_data = private;
 
   return GEOARROW_OK;
