@@ -416,6 +416,8 @@ TEST(WKTWriterTest, WKTWriterTestMultipoint) {
   ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
   ArrowArrayViewSetArray(&view, &array, nullptr);
 
+  // Note that this is not the preferred output for a MULTIPOINT yet,
+  // (most outputs omit the extra parentheses) but it is technically valid
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
   EXPECT_EQ(std::string(value.data, value.n_bytes), "MULTIPOINT ((1 2))");
 
