@@ -50,7 +50,8 @@ enum GeoArrowGeometryType {
   GEOARROW_GEOMETRY_TYPE_POLYGON = 3,
   GEOARROW_GEOMETRY_TYPE_MULTIPOINT = 4,
   GEOARROW_GEOMETRY_TYPE_MULTILINESTRING = 5,
-  GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON = 6
+  GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON = 6,
+  GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION = 7
 };
 
 enum GeoArrowDimensions {
@@ -69,6 +70,26 @@ enum GeoArrowCrsType {
   GEOARROW_CRS_TYPE_NONE,
   GEOARROW_CRS_TYPE_UNKNOWN,
   GEOARROW_CRS_TYPE_PROJJSON
+};
+
+struct GeoArrowVisitor {
+  int (*reserve_coord)(struct GeoArrowVisitor* v, int64_t n);
+  int (*reserve_feat)(struct GeoArrowVisitor* v, int64_t n);
+
+  int (*feat_start)(struct GeoArrowVisitor* v);
+  int (*null_feat)(struct GeoArrowVisitor* v);
+  int (*geom_start)(struct GeoArrowVisitor* v, enum GeoArrowGeometryType geometry_type,
+                    enum GeoArrowDimensions dimensions);
+  int (*ring_start)(struct GeoArrowVisitor* v);
+  int (*coords)(struct GeoArrowVisitor* v, const double** values, int64_t n_coords,
+                int32_t n_dims);
+  int (*ring_end)(struct GeoArrowVisitor* v);
+  int (*geom_end)(struct GeoArrowVisitor* v);
+  int (*feat_end)(struct GeoArrowVisitor* v);
+
+  struct GeoArrowError* error;
+
+  void* private_data;
 };
 
 static inline const char* GeoArrowExtensionNameFromType(enum GeoArrowType type) {
@@ -444,6 +465,28 @@ static inline enum GeoArrowType GeoArrowMakeType(enum GeoArrowGeometryType geome
       }
     default:
       return GEOARROW_TYPE_UNINITIALIZED;
+  }
+}
+
+static inline const char* GeoArrowGeometryTypeString(
+    enum GeoArrowGeometryType geometry_type) {
+  switch (geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_POINT:
+      return "POINT";
+    case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+      return "LINESTRING";
+    case GEOARROW_GEOMETRY_TYPE_POLYGON:
+      return "POLYGON";
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+      return "MULTIPOINT";
+    case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+      return "MULTILINESTRING";
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+      return "MULTIPOLYGON";
+    case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
+      return "GEOMETRYCOLLECTION";
+    default:
+      return NULL;
   }
 }
 

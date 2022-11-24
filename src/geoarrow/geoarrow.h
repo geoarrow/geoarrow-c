@@ -158,6 +158,23 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
 
 int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n);
 
+void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
+
+struct GeoArrowWKTWriter {
+  void* private_data;
+};
+
+GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer);
+
+void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
+                                  struct GeoArrowVisitor* v);
+
+GeoArrowErrorCode GeoArrowWKTWriterFinish(struct GeoArrowWKTWriter* writer,
+                                          struct ArrowArray* array,
+                                          struct GeoArrowError* error);
+
+void GeoArrowWKTWriterReset(struct GeoArrowWKTWriter* writer);
+
 #ifdef __cplusplus
 }
 #endif
