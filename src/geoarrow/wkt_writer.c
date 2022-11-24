@@ -88,9 +88,11 @@ static int geom_start_wkt(struct GeoArrowVisitor* v,
 
   if (private->level > 0 && private->i[private->level - 1] > 0) {
     NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, ", "));
+  } else if (private->level > 0) {
+    NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, "("));
   }
 
-  if (private->level == 0 || private->geometry_type[private->level] ==
+  if (private->level == 0 || private->geometry_type[private->level - 1] ==
                                  GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION) {
     const char* geometry_type_name = GeoArrowGeometryTypeString(geometry_type);
     if (geometry_type_name == NULL) {
@@ -118,9 +120,9 @@ static int geom_start_wkt(struct GeoArrowVisitor* v,
                       "WKTWriter::geom_start(): Unexpected `dimensions`");
         return EINVAL;
     }
-  }
 
-  NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, " "));
+    NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, " "));
+  }
 
   if (private->level > 0) {
     private->i[private->level - 1]++;
