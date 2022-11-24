@@ -111,6 +111,7 @@ TEST(WKTWriterTest, WKTWriterTestErrors) {
 
   GeoArrowWKTWriterReset(&writer);
   GeoArrowWKTWriterInit(&writer);
+  GeoArrowWKTWriterInitVisitor(&writer, &v);
 
   // Invalid because of too much nesting
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
@@ -123,6 +124,7 @@ TEST(WKTWriterTest, WKTWriterTestErrors) {
 
   GeoArrowWKTWriterReset(&writer);
   GeoArrowWKTWriterInit(&writer);
+  GeoArrowWKTWriterInitVisitor(&writer, &v);
 
   // Invalid geometry type
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
@@ -131,6 +133,7 @@ TEST(WKTWriterTest, WKTWriterTestErrors) {
 
   GeoArrowWKTWriterReset(&writer);
   GeoArrowWKTWriterInit(&writer);
+  GeoArrowWKTWriterInitVisitor(&writer, &v);
 
   // Invalid dimensions
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
