@@ -78,6 +78,8 @@ class WKTTester {
   struct GeoArrowError error_;
 };
 
+#define EXPECT_WKT_ROUNDTRIP(tester_, wkt_) EXPECT_EQ(tester_.test(wkt_), wkt_);
+
 TEST(WKTReaderTest, WKTReaderTestBasic) {
   struct GeoArrowWKTReader reader;
   GeoArrowWKTReaderInit(&reader);
@@ -86,5 +88,5 @@ TEST(WKTReaderTest, WKTReaderTestBasic) {
 
 TEST(WKTReaderTest, WKTReaderTestPoint) {
   WKTTester tester;
-  EXPECT_EQ(tester.test("POINT (0 1)"), "POINT (0 1)");
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT (0 1)")
 }
