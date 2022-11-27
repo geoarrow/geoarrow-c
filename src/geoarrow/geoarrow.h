@@ -175,6 +175,18 @@ GeoArrowErrorCode GeoArrowWKTWriterFinish(struct GeoArrowWKTWriter* writer,
 
 void GeoArrowWKTWriterReset(struct GeoArrowWKTWriter* writer);
 
+struct GeoArrowWKTReader {
+  void* private_data;
+};
+
+GeoArrowErrorCode GeoArrowWKTReaderInit(struct GeoArrowWKTReader* reader);
+
+GeoArrowErrorCode GeoArrowWKTReaderVisit(struct GeoArrowWKTReader* reader,
+                                         struct GeoArrowStringView s,
+                                         struct GeoArrowVisitor* v);
+
+void GeoArrowWKTReaderReset(struct GeoArrowWKTReader* reader);
+
 #ifdef __cplusplus
 }
 #endif
