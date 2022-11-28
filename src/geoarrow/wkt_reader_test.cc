@@ -81,7 +81,7 @@ class WKTTester {
   struct GeoArrowError error_;
 };
 
-#define EXPECT_WKT_ROUNDTRIP(tester_, wkt_) EXPECT_EQ(tester_.AsWKT(wkt_), wkt_);
+#define EXPECT_WKT_ROUNDTRIP(tester_, wkt_) EXPECT_EQ(tester_.AsWKT(wkt_), wkt_)
 
 TEST(WKTReaderTest, WKTReaderTestBasic) {
   struct GeoArrowWKTReader reader;
@@ -91,19 +91,19 @@ TEST(WKTReaderTest, WKTReaderTestBasic) {
 
 TEST(WKTReaderTest, WKTReaderTestPoint) {
   WKTTester tester;
-  EXPECT_WKT_ROUNDTRIP(tester, "POINT EMPTY")
-  EXPECT_WKT_ROUNDTRIP(tester, "POINT (0 1)")
-  EXPECT_WKT_ROUNDTRIP(tester, "POINT Z EMPTY")
-  EXPECT_WKT_ROUNDTRIP(tester, "POINT Z (0 1 2)")
-  EXPECT_WKT_ROUNDTRIP(tester, "POINT M EMPTY")
-  EXPECT_WKT_ROUNDTRIP(tester, "POINT M (0 1 3)")
-  EXPECT_WKT_ROUNDTRIP(tester, "POINT ZM EMPTY")
-  EXPECT_WKT_ROUNDTRIP(tester, "POINT ZM (0 1 2 3)")
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT EMPTY");
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT Z EMPTY");
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT M EMPTY");
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT ZM EMPTY");
+
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT (0 1)");
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT Z (0 1 2)");
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT M (0 1 3)");
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT ZM (0 1 2 3)");
 
   // Extra whitespace is OK; no whitepsace after POINT is OK
   EXPECT_EQ(tester.AsWKT(" POINT(0    1) "), "POINT (0 1)");
 
-  // Ways to specify invalid input
   EXPECT_THROW(tester.AsWKT("POINT A"), WKTTestException);
   EXPECT_EQ(tester.LastErrorMessage(), "Expected '(' or 'EMPTY' at byte 6");
   EXPECT_THROW(tester.AsWKT("POINT Z A"), WKTTestException);
@@ -116,4 +116,35 @@ TEST(WKTReaderTest, WKTReaderTestPoint) {
   EXPECT_EQ(tester.LastErrorMessage(), "Expected number at byte 9");
   EXPECT_THROW(tester.AsWKT("POINT (0 1) shouldbetheend"), WKTTestException);
   EXPECT_EQ(tester.LastErrorMessage(), "Expected end of input at byte 12");
+}
+
+TEST(WKTReaderTest, WKTReaderTestLinestring) {
+  WKTTester tester;
+  EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING EMPTY");
+  EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING Z EMPTY");
+  EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING M EMPTY");
+  EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING ZM EMPTY");
+  EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING (1 2)");
+  EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING (1 2, 2 3)");
+  EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING Z (1 2 3)");
+  EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING Z (1 2 3, 2 3 4)");
+  EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING M (1 2 3)");
+  EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING M (1 2 4, 2 3 5)");
+  EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING ZM (1 2 3 4)");
+  EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING ZM (1 2 3 4, 2 3 4 5)");
+
+  EXPECT_THROW(tester.AsWKT("LINESTRING (0)"), WKTTestException);
+  EXPECT_EQ(tester.LastErrorMessage(), "Expected whitespace at byte 13");
+  EXPECT_THROW(tester.AsWKT("LINESTRING (0 )"), WKTTestException);
+  EXPECT_EQ(tester.LastErrorMessage(), "Expected number at byte 14");
+  EXPECT_THROW(tester.AsWKT("LINESTRING (0 1()"), WKTTestException);
+  EXPECT_EQ(tester.LastErrorMessage(), "Expected ',' at byte 15");
+  EXPECT_THROW(tester.AsWKT("LINESTRING (0 1,)"), WKTTestException);
+  EXPECT_EQ(tester.LastErrorMessage(), "Expected number at byte 16");
+  EXPECT_THROW(tester.AsWKT("LINESTRING (0 1, )"), WKTTestException);
+  EXPECT_EQ(tester.LastErrorMessage(), "Expected number at byte 17");
+  EXPECT_THROW(tester.AsWKT("LINESTRING (0 1, 1)"), WKTTestException);
+  EXPECT_EQ(tester.LastErrorMessage(), "Expected whitespace at byte 18");
+  EXPECT_THROW(tester.AsWKT("LINESTRING (0 1, 1 )"), WKTTestException);
+  EXPECT_EQ(tester.LastErrorMessage(), "Expected number at byte 19");
 }

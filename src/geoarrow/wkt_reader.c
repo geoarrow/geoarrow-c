@@ -399,7 +399,7 @@ static inline int ReadTaggedGeometry(struct ParseSource* s, struct GeoArrowVisit
   enum GeoArrowGeometryType geometry_type;
   if (word.n_bytes == 5 && strncmp(word.data, "POINT", 5) == 0) {
     geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
-  } else if (word.n_bytes == 11 && strncmp(word.data, "LINESTRING", 11) == 0) {
+  } else if (word.n_bytes == 10 && strncmp(word.data, "LINESTRING", 10) == 0) {
     geometry_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
   } else if (word.n_bytes == 7 && strncmp(word.data, "POLYGON", 7) == 0) {
     geometry_type = GEOARROW_GEOMETRY_TYPE_POLYGON;
