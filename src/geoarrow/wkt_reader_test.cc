@@ -39,7 +39,7 @@ class WKTTester {
     ArrowArrayViewReset(&array_view_);
   }
 
-  std::string test(const std::string& str) {
+  std::string AsWKT(const std::string& str) {
     error_.message[0] = '\0';
     if (array_.release != nullptr) {
       array_.release(&array_);
@@ -78,7 +78,7 @@ class WKTTester {
   struct GeoArrowError error_;
 };
 
-#define EXPECT_WKT_ROUNDTRIP(tester_, wkt_) EXPECT_EQ(tester_.test(wkt_), wkt_);
+#define EXPECT_WKT_ROUNDTRIP(tester_, wkt_) EXPECT_EQ(tester_.AsWKT(wkt_), wkt_);
 
 TEST(WKTReaderTest, WKTReaderTestBasic) {
   struct GeoArrowWKTReader reader;
@@ -88,5 +88,6 @@ TEST(WKTReaderTest, WKTReaderTestBasic) {
 
 TEST(WKTReaderTest, WKTReaderTestPoint) {
   WKTTester tester;
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT EMPTY")
   EXPECT_WKT_ROUNDTRIP(tester, "POINT (0 1)")
 }

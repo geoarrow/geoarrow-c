@@ -253,6 +253,8 @@ GeoArrowErrorCode GeoArrowWKTWriterFinish(struct GeoArrowWKTWriter* writer,
   NANOARROW_RETURN_NOT_OK(ArrowArraySetBuffer(array, 2, &private->values));
   array->length = private->length;
   array->null_count = private->null_count;
+  private->length = 0;
+  private->null_count = 0;
   return ArrowArrayFinishBuilding(array, (struct ArrowError*)error);
 }
 
