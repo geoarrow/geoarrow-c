@@ -13,6 +13,10 @@ struct ParseSource {
 };
 
 int from_chars_internal(const char* first, const char* last, double* out) {
+  if (first == last) {
+    return EINVAL;
+  }
+
   char* end_ptr;
   *out = strtod(first, &end_ptr);
   if (end_ptr != last) {
@@ -90,6 +94,7 @@ static inline void SetParseErrorAuto(const char* expected, struct ParseSource* s
 
 static inline int AssertChar(struct ParseSource* s, char c, struct GeoArrowError* error) {
   if (s->n_bytes > 0 && s->data[0] == c) {
+    AdvanceUnsafe(s, 1);
     return GEOARROW_OK;
   } else {
     char expected[4] = {'\'', c, '\'', '\0'};
@@ -489,5 +494,12 @@ GeoArrowErrorCode GeoArrowWKTReaderVisit(struct GeoArrowWKTReader* reader,
 
   NANOARROW_RETURN_NOT_OK(v->feat_start(v));
   NANOARROW_RETURN_NOT_OK(ReadTaggedGeometry(&private->s, v));
-  return v->feat_end(v);
+  NANOARROW_RETURN_NOT_OK(v->feat_end(v));
+  SkipWhitespace(&private->s);
+  if (PeekChar(&private->s) != '\0') {
+    SetParseErrorAuto("end of input", &private->s, v->error);
+    return EINVAL;
+  }
+
+  return GEOARROW_OK;
 }

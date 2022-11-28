@@ -26,6 +26,7 @@ class WKTTester {
     GeoArrowWKTReaderInit(&reader_);
     GeoArrowWKTWriterInit(&writer_);
     GeoArrowWKTWriterInitVisitor(&writer_, &v_);
+    v_.error = &error_;
     array_.release = nullptr;
     ArrowArrayViewInit(&array_view_, NANOARROW_TYPE_STRING);
   }
@@ -38,6 +39,8 @@ class WKTTester {
     }
     ArrowArrayViewReset(&array_view_);
   }
+
+  std::string LastErrorMessage() { return std::string(error_.message); }
 
   std::string AsWKT(const std::string& str) {
     error_.message[0] = '\0';
@@ -90,4 +93,27 @@ TEST(WKTReaderTest, WKTReaderTestPoint) {
   WKTTester tester;
   EXPECT_WKT_ROUNDTRIP(tester, "POINT EMPTY")
   EXPECT_WKT_ROUNDTRIP(tester, "POINT (0 1)")
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT Z EMPTY")
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT Z (0 1 2)")
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT M EMPTY")
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT M (0 1 3)")
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT ZM EMPTY")
+  EXPECT_WKT_ROUNDTRIP(tester, "POINT ZM (0 1 2 3)")
+
+  // Extra whitespace is OK; no whitepsace after POINT is OK
+  EXPECT_EQ(tester.AsWKT(" POINT(0    1) "), "POINT (0 1)");
+
+  // Ways to specify invalid input
+  EXPECT_THROW(tester.AsWKT("POINT A"), WKTTestException);
+  EXPECT_EQ(tester.LastErrorMessage(), "Expected '(' or 'EMPTY' at byte 6");
+  EXPECT_THROW(tester.AsWKT("POINT Z A"), WKTTestException);
+  EXPECT_EQ(tester.LastErrorMessage(), "Expected '(' or 'EMPTY' at byte 8");
+  EXPECT_THROW(tester.AsWKT("POINT ZA"), WKTTestException);
+  EXPECT_EQ(tester.LastErrorMessage(), "Expected '(' or 'EMPTY' at byte 6");
+  EXPECT_THROW(tester.AsWKT("POINT (0)"), WKTTestException);
+  EXPECT_EQ(tester.LastErrorMessage(), "Expected whitespace at byte 8");
+  EXPECT_THROW(tester.AsWKT("POINT (0 )"), WKTTestException);
+  EXPECT_EQ(tester.LastErrorMessage(), "Expected number at byte 9");
+  EXPECT_THROW(tester.AsWKT("POINT (0 1) shouldbetheend"), WKTTestException);
+  EXPECT_EQ(tester.LastErrorMessage(), "Expected end of input at byte 12");
 }
