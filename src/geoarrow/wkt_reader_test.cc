@@ -148,3 +148,21 @@ TEST(WKTReaderTest, WKTReaderTestLinestring) {
   EXPECT_THROW(tester.AsWKT("LINESTRING (0 1, 1 )"), WKTTestException);
   EXPECT_EQ(tester.LastErrorMessage(), "Expected number at byte 19");
 }
+
+TEST(WKTReaderTest, WKTReaderTestPolygon) {
+  WKTTester tester;
+  EXPECT_WKT_ROUNDTRIP(tester, "POLYGON EMPTY");
+  EXPECT_WKT_ROUNDTRIP(tester, "POLYGON Z EMPTY");
+  EXPECT_WKT_ROUNDTRIP(tester, "POLYGON M EMPTY");
+  EXPECT_WKT_ROUNDTRIP(tester, "POLYGON ZM EMPTY");
+
+  EXPECT_WKT_ROUNDTRIP(tester, "POLYGON ((1 2, 2 3, 4 5, 1 2))");
+  EXPECT_WKT_ROUNDTRIP(tester, "POLYGON ((1 2, 2 3, 4 5, 1 2), (1 2, 2 3, 4 5, 1 2))");
+  EXPECT_WKT_ROUNDTRIP(tester, "POLYGON Z ((1 2 3, 2 3 4, 4 5 6, 1 2 3))");
+  EXPECT_WKT_ROUNDTRIP(tester, "POLYGON M ((1 2 4, 2 3 5, 4 5 7, 1 2 4))");
+  EXPECT_WKT_ROUNDTRIP(tester, "POLYGON ZM ((1 2 3 4, 2 3 4 5, 4 5 6 7, 1 2 3 4))");
+
+  // Not really valid WKT but happens to parse here
+  EXPECT_WKT_ROUNDTRIP(tester, "POLYGON (EMPTY)");
+  EXPECT_WKT_ROUNDTRIP(tester, "POLYGON (EMPTY, EMPTY)");
+}

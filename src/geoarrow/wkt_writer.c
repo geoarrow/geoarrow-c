@@ -188,8 +188,13 @@ static int coords_wkt(struct GeoArrowVisitor* v, const double** values, int64_t 
 static int ring_end_wkt(struct GeoArrowVisitor* v) {
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
   NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(private));
-  private->level--;
-  return WKTWriterWrite(private, ")");
+  if (private->i[private->level] == 0) {
+    private->level--;
+    return WKTWriterWrite(private, "EMPTY");
+  } else {
+    private->level--;
+    return WKTWriterWrite(private, ")");
+  }
 }
 
 static int geom_end_wkt(struct GeoArrowVisitor* v) {
