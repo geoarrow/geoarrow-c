@@ -362,9 +362,7 @@ static inline int ReadGeometryCollection(struct ParseSource* s,
     SkipWhitespace(s);
 
     // Read the first geometry (there must always be one)
-    NANOARROW_RETURN_NOT_OK(v->ring_start(v));
     NANOARROW_RETURN_NOT_OK(ReadTaggedGeometry(s, v));
-    NANOARROW_RETURN_NOT_OK(v->ring_end(v));
     SkipWhitespace(s);
 
     // Read the rest of the geometries
@@ -372,9 +370,7 @@ static inline int ReadGeometryCollection(struct ParseSource* s,
       SkipWhitespace(s);
       NANOARROW_RETURN_NOT_OK(AssertChar(s, ',', v->error));
       SkipWhitespace(s);
-      NANOARROW_RETURN_NOT_OK(v->ring_start(v));
       NANOARROW_RETURN_NOT_OK(ReadTaggedGeometry(s, v));
-      NANOARROW_RETURN_NOT_OK(v->ring_end(v));
       SkipWhitespace(s);
     }
 
