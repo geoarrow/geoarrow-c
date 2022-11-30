@@ -131,6 +131,7 @@ static inline int ReadOrdinate(struct ParseSource* s, double* out,
   SkipUntilSep(s);
   int result = from_chars_internal(start, s->data, out);
   if (result != GEOARROW_OK) {
+    s->n_bytes += s->data - start;
     s->data = start;
     SetParseErrorAuto("number", s, error);
   }
@@ -176,6 +177,31 @@ static inline int ReadEmptyOrCoordinates(struct ParseSource* s, struct GeoArrowV
   }
 
   return AssertWordEmpty(s, v->error);
+}
+
+static inline int ReadMultipointFlat(struct ParseSource* s, struct GeoArrowVisitor* v,
+                                     enum GeoArrowDimensions dimensions, int n_dims) {
+  NANOARROW_RETURN_NOT_OK(AssertChar(s, '(', v->error));
+
+  // Read the first coordinate (there must always be one)
+  NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POINT, dimensions));
+  NANOARROW_RETURN_NOT_OK(ReadCoordinate(s, v, n_dims));
+  NANOARROW_RETURN_NOT_OK(v->geom_end(v));
+  SkipWhitespace(s);
+
+  // Read the rest of the coordinates
+  while (PeekChar(s) != ')') {
+    SkipWhitespace(s);
+    NANOARROW_RETURN_NOT_OK(AssertChar(s, ',', v->error));
+    SkipWhitespace(s);
+    NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POINT, dimensions));
+    NANOARROW_RETURN_NOT_OK(ReadCoordinate(s, v, n_dims));
+    NANOARROW_RETURN_NOT_OK(v->geom_end(v));
+    SkipWhitespace(s);
+  }
+
+  AdvanceUnsafe(s, 1);
+  return GEOARROW_OK;
 }
 
 static inline int ReadEmptyOrPointCoordinate(struct ParseSource* s,
@@ -231,6 +257,14 @@ static inline int ReadMultipoint(struct ParseSource* s, struct GeoArrowVisitor* 
   if (PeekChar(s) == '(') {
     AdvanceUnsafe(s, 1);
     SkipWhitespace(s);
+
+    // Both MULTIPOINT (1 2, 2 3) and MULTIPOINT ((1 2), (2 3)) have to parse here
+    // if it doesn't look like the verbose version, try the flat version
+    if (PeekChar(s) != '(' && PeekChar(s) != 'E') {
+      s->data--;
+      s->n_bytes++;
+      return ReadMultipointFlat(s, v, dimensions, n_dims);
+    }
 
     // Read the first geometry (there must always be one)
     NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POINT, dimensions));

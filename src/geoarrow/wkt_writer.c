@@ -29,6 +29,7 @@ struct WKTWriterPrivate {
   int64_t length;
   int64_t null_count;
   int significant_digits;
+  int use_flat_multipoint;
 };
 
 static inline int WKTWriterCheckLevel(struct WKTWriterPrivate* private) {
@@ -158,10 +159,14 @@ static int coords_wkt(struct GeoArrowVisitor* v, const double** values, int64_t 
   NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(&private->values, max_chars_needed));
 
   // Write the first coordinate, possibly with a leading comma if there was
-  // a previous call to coords
+  // a previous call to coords, or the opening ( if it wasn't. Special case
+  // for the flat multipoint output MULTIPOINT (1 2, 3 4, ...) which doesn't
+  // have extra () for inner POINTs
   if (private->i[private->level] != 0) {
     ArrowBufferAppendUnsafe(&private->values, ", ", 2);
-  } else {
+  } else if (private->level < 1 || !private->use_flat_multipoint ||
+             private->geometry_type[private->level - 1] !=
+                 GEOARROW_GEOMETRY_TYPE_MULTIPOINT) {
     ArrowBufferAppendUnsafe(&private->values, "(", 1);
   }
 
@@ -204,9 +209,14 @@ static int geom_end_wkt(struct GeoArrowVisitor* v) {
   if (private->i[private->level] == 0) {
     private->level--;
     return WKTWriterWrite(private, "EMPTY");
-  } else {
+  } else if (private->level < 1 || !private->use_flat_multipoint ||
+             private->geometry_type[private->level - 1] !=
+                 GEOARROW_GEOMETRY_TYPE_MULTIPOINT) {
     private->level--;
     return WKTWriterWrite(private, ")");
+  } else {
+    private->level--;
+    return GEOARROW_OK;
   }
 }
 
@@ -225,6 +235,7 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer) {
   ArrowBufferInit(&private->offsets);
   ArrowBufferInit(&private->values);
   private->significant_digits = 16;
+  private->use_flat_multipoint = 1;
   writer->private_data = private;
 
   return GEOARROW_OK;
