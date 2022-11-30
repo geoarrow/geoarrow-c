@@ -161,6 +161,8 @@ int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n)
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
 struct GeoArrowWKTWriter {
+  int significant_digits;
+  int use_flat_multipoint;
   void* private_data;
 };
 

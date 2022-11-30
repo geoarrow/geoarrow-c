@@ -234,7 +234,9 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer) {
   ArrowBitmapInit(&private->validity);
   ArrowBufferInit(&private->offsets);
   ArrowBufferInit(&private->values);
+  writer->significant_digits = 16;
   private->significant_digits = 16;
+  writer->use_flat_multipoint = 1;
   private->use_flat_multipoint = 1;
   writer->private_data = private;
 
@@ -244,6 +246,11 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer) {
 void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
                                   struct GeoArrowVisitor* v) {
   GeoArrowVisitorInitVoid(v);
+
+  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
+  private->significant_digits = writer->significant_digits;
+  private->use_flat_multipoint = writer->use_flat_multipoint;
+
   v->private_data = writer->private_data;
   v->feat_start = &feat_start_wkt;
   v->null_feat = &null_feat_wkt;

@@ -22,9 +22,10 @@ class WKTTestException : public std::exception {
 
 class WKTTester {
  public:
-  WKTTester() {
+  WKTTester(bool use_flat_multipoint = true) {
     GeoArrowWKTReaderInit(&reader_);
     GeoArrowWKTWriterInit(&writer_);
+    writer_.use_flat_multipoint = use_flat_multipoint;
     GeoArrowWKTWriterInitVisitor(&writer_, &v_);
     v_.error = &error_;
     array_.release = nullptr;
@@ -167,8 +168,8 @@ TEST(WKTReaderTest, WKTReaderTestPolygon) {
   EXPECT_WKT_ROUNDTRIP(tester, "POLYGON (EMPTY, EMPTY)");
 }
 
-TEST(WKTReaderTest, WKTReaderTestMultipoint) {
-  WKTTester tester;
+TEST(WKTReaderTest, WKTReaderTestFlatMultipoint) {
+  WKTTester tester(true);
   EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT EMPTY");
   EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT Z EMPTY");
   EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT M EMPTY");
@@ -179,6 +180,20 @@ TEST(WKTReaderTest, WKTReaderTestMultipoint) {
   EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT Z (1 2 3)");
   EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT M (1 2 4)");
   EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT ZM (1 2 3 4)");
+}
+
+TEST(WKTReaderTest, WKTReaderTestMultipoint) {
+  WKTTester tester(false);
+  EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT EMPTY");
+  EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT Z EMPTY");
+  EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT M EMPTY");
+  EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT ZM EMPTY");
+
+  EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT ((1 2))");
+  EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT ((1 2), (2 3))");
+  EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT Z ((1 2 3))");
+  EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT M ((1 2 4))");
+  EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT ZM ((1 2 3 4))");
 
   // Not really valid WKT but happens to parse here
   EXPECT_WKT_ROUNDTRIP(tester, "MULTIPOINT (EMPTY)");
