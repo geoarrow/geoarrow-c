@@ -449,9 +449,17 @@ static inline int ReadTaggedGeometry(struct ParseSource* s, struct GeoArrowVisit
       NANOARROW_RETURN_NOT_OK(ReadPolygon(s, v, n_dims));
       break;
     case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+      NANOARROW_RETURN_NOT_OK(ReadMultipoint(s, v, dimensions, n_dims));
+      break;
     case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+      NANOARROW_RETURN_NOT_OK(ReadMultilinestring(s, v, dimensions, n_dims));
+      break;
     case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+      NANOARROW_RETURN_NOT_OK(ReadMultipolygon(s, v, dimensions, n_dims));
+      break;
     case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
+      NANOARROW_RETURN_NOT_OK(ReadGeometryCollection(s, v));
+      break;
     default:
       ArrowErrorSet((struct ArrowError*)v->error,
                     "Internal error: unrecognized geometry type id");
