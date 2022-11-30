@@ -114,6 +114,17 @@ static inline int AssertWhitespace(struct ParseSource* s, struct GeoArrowError* 
   }
 }
 
+static inline int AssertWordEmpty(struct ParseSource* s, struct GeoArrowError* error) {
+  struct ArrowStringView word = PeekUntilSep(s, 6);
+  if (word.n_bytes == 5 && strncmp(word.data, "EMPTY", 5) == 0) {
+    AdvanceUnsafe(s, 5);
+    return GEOARROW_OK;
+  }
+
+  SetParseErrorAuto("'(' or 'EMPTY'", s, error);
+  return EINVAL;
+}
+
 static inline int ReadOrdinate(struct ParseSource* s, double* out,
                                struct GeoArrowError* error) {
   const char* start = s->data;
@@ -164,14 +175,7 @@ static inline int ReadEmptyOrCoordinates(struct ParseSource* s, struct GeoArrowV
     return GEOARROW_OK;
   }
 
-  struct ArrowStringView word = PeekUntilSep(s, 6);
-  if (word.n_bytes == 5 && strncmp(word.data, "EMPTY", 5) == 0) {
-    AdvanceUnsafe(s, 5);
-    return GEOARROW_OK;
-  }
-
-  SetParseErrorAuto("'(' or 'EMPTY'", s, v->error);
-  return EINVAL;
+  return AssertWordEmpty(s, v->error);
 }
 
 static inline int ReadEmptyOrPointCoordinate(struct ParseSource* s,
@@ -187,14 +191,7 @@ static inline int ReadEmptyOrPointCoordinate(struct ParseSource* s,
     return GEOARROW_OK;
   }
 
-  struct ArrowStringView word = PeekUntilSep(s, 6);
-  if (word.n_bytes == 5 && strncmp(word.data, "EMPTY", 5) == 0) {
-    AdvanceUnsafe(s, 5);
-    return GEOARROW_OK;
-  }
-
-  SetParseErrorAuto("'(' or 'EMPTY'", s, v->error);
-  return EINVAL;
+  return AssertWordEmpty(s, v->error);
 }
 
 static inline int ReadPolygon(struct ParseSource* s, struct GeoArrowVisitor* v,
@@ -225,14 +222,7 @@ static inline int ReadPolygon(struct ParseSource* s, struct GeoArrowVisitor* v,
     return GEOARROW_OK;
   }
 
-  struct ArrowStringView word = PeekUntilSep(s, 6);
-  if (word.n_bytes == 5 && strncmp(word.data, "EMPTY", 5) == 0) {
-    AdvanceUnsafe(s, 5);
-    return GEOARROW_OK;
-  }
-
-  SetParseErrorAuto("'(' or 'EMPTY'", s, v->error);
-  return EINVAL;
+  return AssertWordEmpty(s, v->error);
 }
 
 static inline int ReadMultipoint(struct ParseSource* s, struct GeoArrowVisitor* v,
@@ -263,14 +253,7 @@ static inline int ReadMultipoint(struct ParseSource* s, struct GeoArrowVisitor* 
     return GEOARROW_OK;
   }
 
-  struct ArrowStringView word = PeekUntilSep(s, 6);
-  if (word.n_bytes == 5 && strncmp(word.data, "EMPTY", 5) == 0) {
-    AdvanceUnsafe(s, 5);
-    return GEOARROW_OK;
-  }
-
-  SetParseErrorAuto("'(' or 'EMPTY'", s, v->error);
-  return EINVAL;
+  return AssertWordEmpty(s, v->error);
 }
 
 static inline int ReadMultilinestring(struct ParseSource* s, struct GeoArrowVisitor* v,
@@ -303,14 +286,7 @@ static inline int ReadMultilinestring(struct ParseSource* s, struct GeoArrowVisi
     return GEOARROW_OK;
   }
 
-  struct ArrowStringView word = PeekUntilSep(s, 6);
-  if (word.n_bytes == 5 && strncmp(word.data, "EMPTY", 5) == 0) {
-    AdvanceUnsafe(s, 5);
-    return GEOARROW_OK;
-  }
-
-  SetParseErrorAuto("'(' or 'EMPTY'", s, v->error);
-  return EINVAL;
+  return AssertWordEmpty(s, v->error);
 }
 
 static inline int ReadMultipolygon(struct ParseSource* s, struct GeoArrowVisitor* v,
@@ -342,14 +318,7 @@ static inline int ReadMultipolygon(struct ParseSource* s, struct GeoArrowVisitor
     return GEOARROW_OK;
   }
 
-  struct ArrowStringView word = PeekUntilSep(s, 6);
-  if (word.n_bytes == 5 && strncmp(word.data, "EMPTY", 5) == 0) {
-    AdvanceUnsafe(s, 5);
-    return GEOARROW_OK;
-  }
-
-  SetParseErrorAuto("'(' or 'EMPTY'", s, v->error);
-  return EINVAL;
+  return AssertWordEmpty(s, v->error);
 }
 
 static inline int ReadTaggedGeometry(struct ParseSource* s, struct GeoArrowVisitor* v);
@@ -378,14 +347,7 @@ static inline int ReadGeometryCollection(struct ParseSource* s,
     return GEOARROW_OK;
   }
 
-  struct ArrowStringView word = PeekUntilSep(s, 6);
-  if (word.n_bytes == 5 && strncmp(word.data, "EMPTY", 5) == 0) {
-    AdvanceUnsafe(s, 5);
-    return GEOARROW_OK;
-  }
-
-  SetParseErrorAuto("'(' or 'EMPTY'", s, v->error);
-  return EINVAL;
+  return AssertWordEmpty(s, v->error);
 }
 
 static inline int ReadTaggedGeometry(struct ParseSource* s, struct GeoArrowVisitor* v) {
