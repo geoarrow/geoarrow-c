@@ -6,7 +6,7 @@
 
 #include "geoarrow.h"
 
-struct ParseSource {
+struct WKTReaderPrivate {
   const char* data;
   int64_t n_bytes;
   const char* data0;
@@ -26,12 +26,12 @@ int from_chars_internal(const char* first, const char* last, double* out) {
   return GEOARROW_OK;
 }
 
-static inline void AdvanceUnsafe(struct ParseSource* s, int64_t n) {
+static inline void AdvanceUnsafe(struct WKTReaderPrivate* s, int64_t n) {
   s->data += n;
   s->n_bytes -= n;
 }
 
-static inline void SkipWhitespace(struct ParseSource* s) {
+static inline void SkipWhitespace(struct WKTReaderPrivate* s) {
   while (s->n_bytes > 0) {
     char c = *(s->data);
     if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
@@ -43,7 +43,7 @@ static inline void SkipWhitespace(struct ParseSource* s) {
   }
 }
 
-static inline int SkipUntil(struct ParseSource* s, const char* items) {
+static inline int SkipUntil(struct WKTReaderPrivate* s, const char* items) {
   int n_items = strlen(items);
   while (s->n_bytes > 0) {
     char c = *(s->data);
@@ -64,9 +64,11 @@ static inline int SkipUntil(struct ParseSource* s, const char* items) {
   return 0;
 }
 
-static inline void SkipUntilSep(struct ParseSource* s) { SkipUntil(s, " \n\t\r,()"); }
+static inline void SkipUntilSep(struct WKTReaderPrivate* s) {
+  SkipUntil(s, " \n\t\r,()");
+}
 
-static inline char PeekChar(struct ParseSource* s) {
+static inline char PeekChar(struct WKTReaderPrivate* s) {
   if (s->n_bytes > 0) {
     return s->data[0];
   } else {
@@ -74,8 +76,9 @@ static inline char PeekChar(struct ParseSource* s) {
   }
 }
 
-static inline struct ArrowStringView PeekUntilSep(struct ParseSource* s, int max_chars) {
-  struct ParseSource tmp = *s;
+static inline struct ArrowStringView PeekUntilSep(struct WKTReaderPrivate* s,
+                                                  int max_chars) {
+  struct WKTReaderPrivate tmp = *s;
   if (tmp.n_bytes > max_chars) {
     tmp.n_bytes = max_chars;
   }
@@ -85,14 +88,15 @@ static inline struct ArrowStringView PeekUntilSep(struct ParseSource* s, int max
   return out;
 }
 
-static inline void SetParseErrorAuto(const char* expected, struct ParseSource* s,
+static inline void SetParseErrorAuto(const char* expected, struct WKTReaderPrivate* s,
                                      struct GeoArrowError* error) {
   long pos = s->data - s->data0;
   // TODO: "but found ..." from s
   ArrowErrorSet((struct ArrowError*)error, "Expected %s at byte %ld", expected, pos);
 }
 
-static inline int AssertChar(struct ParseSource* s, char c, struct GeoArrowError* error) {
+static inline int AssertChar(struct WKTReaderPrivate* s, char c,
+                             struct GeoArrowError* error) {
   if (s->n_bytes > 0 && s->data[0] == c) {
     AdvanceUnsafe(s, 1);
     return GEOARROW_OK;
@@ -103,7 +107,8 @@ static inline int AssertChar(struct ParseSource* s, char c, struct GeoArrowError
   }
 }
 
-static inline int AssertWhitespace(struct ParseSource* s, struct GeoArrowError* error) {
+static inline int AssertWhitespace(struct WKTReaderPrivate* s,
+                                   struct GeoArrowError* error) {
   if (s->n_bytes > 0 && (s->data[0] == ' ' || s->data[0] == '\t' || s->data[0] == '\r' ||
                          s->data[0] == '\n')) {
     SkipWhitespace(s);
@@ -114,7 +119,8 @@ static inline int AssertWhitespace(struct ParseSource* s, struct GeoArrowError* 
   }
 }
 
-static inline int AssertWordEmpty(struct ParseSource* s, struct GeoArrowError* error) {
+static inline int AssertWordEmpty(struct WKTReaderPrivate* s,
+                                  struct GeoArrowError* error) {
   struct ArrowStringView word = PeekUntilSep(s, 6);
   if (word.n_bytes == 5 && strncmp(word.data, "EMPTY", 5) == 0) {
     AdvanceUnsafe(s, 5);
@@ -125,7 +131,7 @@ static inline int AssertWordEmpty(struct ParseSource* s, struct GeoArrowError* e
   return EINVAL;
 }
 
-static inline int ReadOrdinate(struct ParseSource* s, double* out,
+static inline int ReadOrdinate(struct WKTReaderPrivate* s, double* out,
                                struct GeoArrowError* error) {
   const char* start = s->data;
   SkipUntilSep(s);
@@ -139,7 +145,7 @@ static inline int ReadOrdinate(struct ParseSource* s, double* out,
   return result;
 }
 
-static inline int ReadCoordinate(struct ParseSource* s, struct GeoArrowVisitor* v,
+static inline int ReadCoordinate(struct WKTReaderPrivate* s, struct GeoArrowVisitor* v,
                                  int n_dims) {
   double coords[4];
   NANOARROW_RETURN_NOT_OK(ReadOrdinate(s, coords + 0, v->error));
@@ -152,8 +158,8 @@ static inline int ReadCoordinate(struct ParseSource* s, struct GeoArrowVisitor* 
   return v->coords(v, (const double**)coord_ptr, 1, n_dims);
 }
 
-static inline int ReadEmptyOrCoordinates(struct ParseSource* s, struct GeoArrowVisitor* v,
-                                         int n_dims) {
+static inline int ReadEmptyOrCoordinates(struct WKTReaderPrivate* s,
+                                         struct GeoArrowVisitor* v, int n_dims) {
   SkipWhitespace(s);
   if (PeekChar(s) == '(') {
     AdvanceUnsafe(s, 1);
@@ -179,7 +185,8 @@ static inline int ReadEmptyOrCoordinates(struct ParseSource* s, struct GeoArrowV
   return AssertWordEmpty(s, v->error);
 }
 
-static inline int ReadMultipointFlat(struct ParseSource* s, struct GeoArrowVisitor* v,
+static inline int ReadMultipointFlat(struct WKTReaderPrivate* s,
+                                     struct GeoArrowVisitor* v,
                                      enum GeoArrowDimensions dimensions, int n_dims) {
   NANOARROW_RETURN_NOT_OK(AssertChar(s, '(', v->error));
 
@@ -204,7 +211,7 @@ static inline int ReadMultipointFlat(struct ParseSource* s, struct GeoArrowVisit
   return GEOARROW_OK;
 }
 
-static inline int ReadEmptyOrPointCoordinate(struct ParseSource* s,
+static inline int ReadEmptyOrPointCoordinate(struct WKTReaderPrivate* s,
                                              struct GeoArrowVisitor* v, int n_dims) {
   SkipWhitespace(s);
   if (PeekChar(s) == '(') {
@@ -220,7 +227,7 @@ static inline int ReadEmptyOrPointCoordinate(struct ParseSource* s,
   return AssertWordEmpty(s, v->error);
 }
 
-static inline int ReadPolygon(struct ParseSource* s, struct GeoArrowVisitor* v,
+static inline int ReadPolygon(struct WKTReaderPrivate* s, struct GeoArrowVisitor* v,
                               int n_dims) {
   SkipWhitespace(s);
   if (PeekChar(s) == '(') {
@@ -251,7 +258,7 @@ static inline int ReadPolygon(struct ParseSource* s, struct GeoArrowVisitor* v,
   return AssertWordEmpty(s, v->error);
 }
 
-static inline int ReadMultipoint(struct ParseSource* s, struct GeoArrowVisitor* v,
+static inline int ReadMultipoint(struct WKTReaderPrivate* s, struct GeoArrowVisitor* v,
                                  enum GeoArrowDimensions dimensions, int n_dims) {
   SkipWhitespace(s);
   if (PeekChar(s) == '(') {
@@ -290,7 +297,8 @@ static inline int ReadMultipoint(struct ParseSource* s, struct GeoArrowVisitor* 
   return AssertWordEmpty(s, v->error);
 }
 
-static inline int ReadMultilinestring(struct ParseSource* s, struct GeoArrowVisitor* v,
+static inline int ReadMultilinestring(struct WKTReaderPrivate* s,
+                                      struct GeoArrowVisitor* v,
                                       enum GeoArrowDimensions dimensions, int n_dims) {
   SkipWhitespace(s);
   if (PeekChar(s) == '(') {
@@ -323,7 +331,7 @@ static inline int ReadMultilinestring(struct ParseSource* s, struct GeoArrowVisi
   return AssertWordEmpty(s, v->error);
 }
 
-static inline int ReadMultipolygon(struct ParseSource* s, struct GeoArrowVisitor* v,
+static inline int ReadMultipolygon(struct WKTReaderPrivate* s, struct GeoArrowVisitor* v,
                                    enum GeoArrowDimensions dimensions, int n_dims) {
   SkipWhitespace(s);
   if (PeekChar(s) == '(') {
@@ -355,9 +363,10 @@ static inline int ReadMultipolygon(struct ParseSource* s, struct GeoArrowVisitor
   return AssertWordEmpty(s, v->error);
 }
 
-static inline int ReadTaggedGeometry(struct ParseSource* s, struct GeoArrowVisitor* v);
+static inline int ReadTaggedGeometry(struct WKTReaderPrivate* s,
+                                     struct GeoArrowVisitor* v);
 
-static inline int ReadGeometryCollection(struct ParseSource* s,
+static inline int ReadGeometryCollection(struct WKTReaderPrivate* s,
                                          struct GeoArrowVisitor* v) {
   SkipWhitespace(s);
   if (PeekChar(s) == '(') {
@@ -384,7 +393,8 @@ static inline int ReadGeometryCollection(struct ParseSource* s,
   return AssertWordEmpty(s, v->error);
 }
 
-static inline int ReadTaggedGeometry(struct ParseSource* s, struct GeoArrowVisitor* v) {
+static inline int ReadTaggedGeometry(struct WKTReaderPrivate* s,
+                                     struct GeoArrowVisitor* v) {
   SkipWhitespace(s);
 
   struct ArrowStringView word = PeekUntilSep(s, 19);
@@ -461,22 +471,18 @@ static inline int ReadTaggedGeometry(struct ParseSource* s, struct GeoArrowVisit
   return v->geom_end(v);
 }
 
-struct WKTReaderPrivate {
-  struct ParseSource s;
-};
-
 GeoArrowErrorCode GeoArrowWKTReaderInit(struct GeoArrowWKTReader* reader) {
-  struct WKTReaderPrivate* private =
+  struct WKTReaderPrivate* s =
       (struct WKTReaderPrivate*)ArrowMalloc(sizeof(struct WKTReaderPrivate));
 
-  if (private == NULL) {
+  if (s == NULL) {
     return ENOMEM;
   }
 
-  private->s.data0 = NULL;
-  private->s.data = NULL;
-  private->s.n_bytes = 0;
-  reader->private_data = private;
+  s->data0 = NULL;
+  s->data = NULL;
+  s->n_bytes = 0;
+  reader->private_data = s;
   return GEOARROW_OK;
 }
 
@@ -485,19 +491,19 @@ void GeoArrowWKTReaderReset(struct GeoArrowWKTReader* reader) {
 }
 
 GeoArrowErrorCode GeoArrowWKTReaderVisit(struct GeoArrowWKTReader* reader,
-                                         struct GeoArrowStringView s,
+                                         struct GeoArrowStringView src,
                                          struct GeoArrowVisitor* v) {
-  struct WKTReaderPrivate* private = (struct WKTReaderPrivate*)reader->private_data;
-  private->s.data0 = s.data;
-  private->s.data = s.data;
-  private->s.n_bytes = s.n_bytes;
+  struct WKTReaderPrivate* s = (struct WKTReaderPrivate*)reader->private_data;
+  s->data0 = src.data;
+  s->data = src.data;
+  s->n_bytes = src.n_bytes;
 
   NANOARROW_RETURN_NOT_OK(v->feat_start(v));
-  NANOARROW_RETURN_NOT_OK(ReadTaggedGeometry(&private->s, v));
+  NANOARROW_RETURN_NOT_OK(ReadTaggedGeometry(s, v));
   NANOARROW_RETURN_NOT_OK(v->feat_end(v));
-  SkipWhitespace(&private->s);
-  if (PeekChar(&private->s) != '\0') {
-    SetParseErrorAuto("end of input", &private->s, v->error);
+  SkipWhitespace(s);
+  if (PeekChar(s) != '\0') {
+    SetParseErrorAuto("end of input", s, v->error);
     return EINVAL;
   }
 
