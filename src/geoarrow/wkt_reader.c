@@ -10,6 +10,8 @@ struct WKTReaderPrivate {
   const char* data;
   int64_t n_bytes;
   const char* data0;
+  double coords[64];
+  double* coords_ptr[4];
 };
 
 int from_chars_internal(const char* first, const char* last, double* out) {
@@ -147,15 +149,13 @@ static inline int ReadOrdinate(struct WKTReaderPrivate* s, double* out,
 
 static inline int ReadCoordinate(struct WKTReaderPrivate* s, struct GeoArrowVisitor* v,
                                  int n_dims) {
-  double coords[4];
-  NANOARROW_RETURN_NOT_OK(ReadOrdinate(s, coords + 0, v->error));
+  NANOARROW_RETURN_NOT_OK(ReadOrdinate(s, s->coords_ptr[0], v->error));
   for (int i = 1; i < n_dims; i++) {
     NANOARROW_RETURN_NOT_OK(AssertWhitespace(s, v->error));
-    NANOARROW_RETURN_NOT_OK(ReadOrdinate(s, coords + i, v->error));
+    NANOARROW_RETURN_NOT_OK(ReadOrdinate(s, s->coords_ptr[i], v->error));
   }
 
-  double* coord_ptr[] = {coords + 0, coords + 1, coords + 2, coords + 3};
-  return v->coords(v, (const double**)coord_ptr, 1, n_dims);
+  return v->coords(v, (const double**)s->coords_ptr, 1, n_dims);
 }
 
 static inline int ReadEmptyOrCoordinates(struct WKTReaderPrivate* s,
@@ -482,6 +482,10 @@ GeoArrowErrorCode GeoArrowWKTReaderInit(struct GeoArrowWKTReader* reader) {
   s->data0 = NULL;
   s->data = NULL;
   s->n_bytes = 0;
+  for (int i = 0; i < 4; i++) {
+    s->coords_ptr[i] = s->coords + ((i * sizeof(s->coords)) / 4);
+  }
+
   reader->private_data = s;
   return GEOARROW_OK;
 }
