@@ -35,6 +35,8 @@ jobs:
           cmake --build .
 
       - name: Test
+        env:
+          GEOARROW_TESTING_DIR: ${{ env.GITHUB_WORKSPACE }}/testing
         run: |
           cd build
           ctest -T test --output-on-failure .
