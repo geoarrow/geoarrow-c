@@ -17,7 +17,7 @@ struct WKTReaderPrivate {
   double* coords_ptr[4];
 };
 
-int from_chars_internal(const char* first, const char* last, double* out) {
+static inline int from_chars_internal(const char* first, const char* last, double* out) {
   if (first == last) {
     return EINVAL;
   }
@@ -30,6 +30,10 @@ int from_chars_internal(const char* first, const char* last, double* out) {
 
   return GEOARROW_OK;
 }
+
+#ifndef GEOARROW_FROM_CHARS
+#define GEOARROW_FROM_CHARS from_chars_internal
+#endif
 
 static inline void AdvanceUnsafe(struct WKTReaderPrivate* s, int64_t n) {
   s->data += n;
@@ -140,7 +144,7 @@ static inline int ReadOrdinate(struct WKTReaderPrivate* s, double* out,
                                struct GeoArrowError* error) {
   const char* start = s->data;
   SkipUntilSep(s);
-  int result = from_chars_internal(start, s->data, out);
+  int result = GEOARROW_FROM_CHARS(start, s->data, out);
   if (result != GEOARROW_OK) {
     s->n_bytes += s->data - start;
     s->data = start;
