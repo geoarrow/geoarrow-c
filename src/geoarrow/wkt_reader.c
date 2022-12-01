@@ -17,6 +17,8 @@ struct WKTReaderPrivate {
   double* coords_ptr[4];
 };
 
+// Using fastfloat for char* -> double is ~5x faster and is not locale dependent
+#ifndef GEOARROW_FROM_CHARS
 static inline int from_chars_internal(const char* first, const char* last, double* out) {
   if (first == last) {
     return EINVAL;
@@ -31,7 +33,6 @@ static inline int from_chars_internal(const char* first, const char* last, doubl
   return GEOARROW_OK;
 }
 
-#ifndef GEOARROW_FROM_CHARS
 #define GEOARROW_FROM_CHARS from_chars_internal
 #endif
 
