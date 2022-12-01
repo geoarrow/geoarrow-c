@@ -255,3 +255,36 @@ TEST(WKTReaderTest, WKTReaderTestGeometrycollection) {
   EXPECT_WKT_ROUNDTRIP(tester, "GEOMETRYCOLLECTION M (POINT M (1 2 4))");
   EXPECT_WKT_ROUNDTRIP(tester, "GEOMETRYCOLLECTION ZM (POINT ZM (1 2 3 4))");
 }
+
+TEST(WKTReaderTest, WKTReaderTestManyCoordinates) {
+  // The reader uses an internal coordinate buffer of 64 coordinates; however,
+  // none of the above tests have enough coordinates to run into a situation
+  // where it must be flushed.
+
+  // Make a big linestring;
+  std::stringstream ss;
+  ss << "LINESTRING (0 1";
+  for (int i = 1; i < 128; i++) {
+    ss << ", " << i << " " << (i + 1);
+  }
+  ss << ")";
+
+  WKTTester tester;
+  EXPECT_WKT_ROUNDTRIP(tester, ss.str());
+}
+
+TEST(WKTReaderTest, WKTReaderTestLongCoordinates) {
+  // All of the readers above use integer coordinates. This tests really
+  // long coordinates that always use all 16 precision spaces.
+
+  std::stringstream ss;
+  ss << std::setprecision(16);
+  ss << "LINESTRING (" << (1.0 / 3.0) << " " << (1 + (1.0 / 3.0));
+  for (int i = 1; i < 10; i++) {
+    ss << ", " << (i + (1.0 / 3.0)) << " " << (i + 1 + (1.0 / 3.0));
+  }
+  ss << ")";
+
+  WKTTester tester;
+  EXPECT_WKT_ROUNDTRIP(tester, ss.str());
+}

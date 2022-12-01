@@ -6,11 +6,14 @@
 
 #include "geoarrow.h"
 
+#define COORD_CACHE_SIZE_COORDS 64
+
 struct WKTReaderPrivate {
   const char* data;
   int64_t n_bytes;
   const char* data0;
-  double coords[64];
+  int coord_i;
+  double coords[4 * COORD_CACHE_SIZE_COORDS];
   double* coords_ptr[4];
 };
 
@@ -147,15 +150,33 @@ static inline int ReadOrdinate(struct WKTReaderPrivate* s, double* out,
   return result;
 }
 
+static inline void ResetCoordCache(struct WKTReaderPrivate* s) { s->coord_i = 0; }
+
+static inline int FlushCoordCache(struct WKTReaderPrivate* s, struct GeoArrowVisitor* v,
+                                  int n_dims) {
+  if (s->coord_i > 0) {
+    int result = v->coords(v, (const double**)s->coords_ptr, s->coord_i, n_dims);
+    s->coord_i = 0;
+    return result;
+  } else {
+    return GEOARROW_OK;
+  }
+}
+
 static inline int ReadCoordinate(struct WKTReaderPrivate* s, struct GeoArrowVisitor* v,
                                  int n_dims) {
-  NANOARROW_RETURN_NOT_OK(ReadOrdinate(s, s->coords_ptr[0], v->error));
-  for (int i = 1; i < n_dims; i++) {
-    NANOARROW_RETURN_NOT_OK(AssertWhitespace(s, v->error));
-    NANOARROW_RETURN_NOT_OK(ReadOrdinate(s, s->coords_ptr[i], v->error));
+  if (s->coord_i == COORD_CACHE_SIZE_COORDS) {
+    NANOARROW_RETURN_NOT_OK(FlushCoordCache(s, v, n_dims));
   }
 
-  return v->coords(v, (const double**)s->coords_ptr, 1, n_dims);
+  NANOARROW_RETURN_NOT_OK(ReadOrdinate(s, s->coords_ptr[0] + s->coord_i, v->error));
+  for (int i = 1; i < n_dims; i++) {
+    NANOARROW_RETURN_NOT_OK(AssertWhitespace(s, v->error));
+    NANOARROW_RETURN_NOT_OK(ReadOrdinate(s, s->coords_ptr[i] + s->coord_i, v->error));
+  }
+
+  s->coord_i++;
+  return NANOARROW_OK;
 }
 
 static inline int ReadEmptyOrCoordinates(struct WKTReaderPrivate* s,
@@ -164,6 +185,8 @@ static inline int ReadEmptyOrCoordinates(struct WKTReaderPrivate* s,
   if (PeekChar(s) == '(') {
     AdvanceUnsafe(s, 1);
     SkipWhitespace(s);
+
+    ResetCoordCache(s);
 
     // Read the first coordinate (there must always be one)
     NANOARROW_RETURN_NOT_OK(ReadCoordinate(s, v, n_dims));
@@ -177,6 +200,8 @@ static inline int ReadEmptyOrCoordinates(struct WKTReaderPrivate* s,
       NANOARROW_RETURN_NOT_OK(ReadCoordinate(s, v, n_dims));
       SkipWhitespace(s);
     }
+
+    NANOARROW_RETURN_NOT_OK(FlushCoordCache(s, v, n_dims));
 
     AdvanceUnsafe(s, 1);
     return GEOARROW_OK;
@@ -192,7 +217,9 @@ static inline int ReadMultipointFlat(struct WKTReaderPrivate* s,
 
   // Read the first coordinate (there must always be one)
   NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POINT, dimensions));
+  ResetCoordCache(s);
   NANOARROW_RETURN_NOT_OK(ReadCoordinate(s, v, n_dims));
+  NANOARROW_RETURN_NOT_OK(FlushCoordCache(s, v, n_dims));
   NANOARROW_RETURN_NOT_OK(v->geom_end(v));
   SkipWhitespace(s);
 
@@ -202,7 +229,9 @@ static inline int ReadMultipointFlat(struct WKTReaderPrivate* s,
     NANOARROW_RETURN_NOT_OK(AssertChar(s, ',', v->error));
     SkipWhitespace(s);
     NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POINT, dimensions));
+    ResetCoordCache(s);
     NANOARROW_RETURN_NOT_OK(ReadCoordinate(s, v, n_dims));
+    NANOARROW_RETURN_NOT_OK(FlushCoordCache(s, v, n_dims));
     NANOARROW_RETURN_NOT_OK(v->geom_end(v));
     SkipWhitespace(s);
   }
@@ -218,7 +247,9 @@ static inline int ReadEmptyOrPointCoordinate(struct WKTReaderPrivate* s,
     AdvanceUnsafe(s, 1);
 
     SkipWhitespace(s);
+    ResetCoordCache(s);
     NANOARROW_RETURN_NOT_OK(ReadCoordinate(s, v, n_dims));
+    NANOARROW_RETURN_NOT_OK(FlushCoordCache(s, v, n_dims));
     SkipWhitespace(s);
     NANOARROW_RETURN_NOT_OK(AssertChar(s, ')', v->error));
     return GEOARROW_OK;
@@ -482,8 +513,9 @@ GeoArrowErrorCode GeoArrowWKTReaderInit(struct GeoArrowWKTReader* reader) {
   s->data0 = NULL;
   s->data = NULL;
   s->n_bytes = 0;
-  for (int i = 0; i < 4; i++) {
-    s->coords_ptr[i] = s->coords + ((i * sizeof(s->coords)) / 4);
+  s->coords_ptr[0] = s->coords;
+  for (int i = 1; i < 4; i++) {
+    s->coords_ptr[i] = s->coords_ptr[i - 1] + COORD_CACHE_SIZE_COORDS;
   }
 
   reader->private_data = s;
