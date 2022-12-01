@@ -154,8 +154,8 @@ static int coords_wkt(struct GeoArrowVisitor* v, const double** values, int64_t 
 
   int64_t max_chars_needed = (n_coords * 2) +  // space + comma after coordinate
                              (n_coords * (n_dims - 1)) +  // spaces between ordinates
-                             ((private->significant_digits + 1) * n_coords *
-                              n_dims);  // significant digits + decimal
+                             ((private->significant_digits + 1 + 5) * n_coords *
+                              n_dims);  // significant digits + decimal + exponent
   NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(&private->values, max_chars_needed));
 
   // Write the first coordinate, possibly with a leading comma if there was

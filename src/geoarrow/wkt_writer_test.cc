@@ -748,3 +748,36 @@ TEST(WKTWriterTest, WKTWriterTestStreamingCoords) {
   array.release(&array);
   GeoArrowWKTWriterReset(&writer);
 }
+
+TEST(WKTWriterTest, WKTWriterTestVeryLongCoords) {
+  struct GeoArrowWKTWriter writer;
+  struct GeoArrowVisitor v;
+  GeoArrowWKTWriterInit(&writer);
+  GeoArrowWKTWriterInitVisitor(&writer, &v);
+
+  double thirds[1024];
+  for (int i = 0; i < 1024; i++) {
+    // The longest ordinate I can think of
+    thirds[i] = 1.333333333333333e-100;
+  }
+  double* coords[] = {thirds, thirds, thirds, thirds};
+
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+
+  for (int i = 0; i < 128; i++) {
+    EXPECT_EQ(v.coords(&v, (const double**)coords, 1024, 2), GEOARROW_OK);
+  }
+
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  struct ArrowArray array;
+  EXPECT_EQ(GeoArrowWKTWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+  EXPECT_EQ(array.length, 1);
+  EXPECT_EQ(array.null_count, 0);
+
+  array.release(&array);
+  GeoArrowWKTWriterReset(&writer);
+}
