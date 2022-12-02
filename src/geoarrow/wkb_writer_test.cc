@@ -165,13 +165,12 @@ TEST(WKBWriterTest, WKBWriterTestErrors) {
 
   // Invalid because of too much nesting
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
-  for (int i = 0; i < 32; i++) {
+  for (int i = 0; i < 31; i++) {
     EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
               GEOARROW_OK);
   }
-  // FIXME!!!
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
-            GEOARROW_OK);
+            EINVAL);
 
   GeoArrowWKBWriterReset(&writer);
 }

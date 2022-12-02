@@ -33,7 +33,7 @@ static uint8_t kWKBWriterEmptyPointCoords4[] = {
     0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f};
 
 static inline int WKBWriterCheckLevel(struct WKBWriterPrivate* private) {
-  if (private->level >= 0 && private->level <= 31) {
+  if (private->level >= 0 && private->level <= 30) {
     return GEOARROW_OK;
   } else {
     return EINVAL;
