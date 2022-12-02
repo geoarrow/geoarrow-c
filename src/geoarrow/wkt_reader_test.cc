@@ -1,7 +1,7 @@
 
-#include <stdexcept>
 #include <filesystem>
 #include <fstream>
+#include <stdexcept>
 
 #include <gtest/gtest.h>
 
@@ -293,12 +293,13 @@ TEST(WKTReaderTest, WKTReaderTestLongCoordinates) {
 
 TEST(WKTReaderTest, WKTReaderTestRoundtripTestingFiles) {
   const char* testing_dir = getenv("GEOARROW_TESTING_DIR");
-  if (testing_dir == nullptr) {
+  if (testing_dir == nullptr || strlen(testing_dir) == 0) {
     GTEST_SKIP();
   }
 
   WKTTester tester(false);
-  for (const auto& item: std::filesystem::directory_iterator(testing_dir)) {
+  int n_tested = 0;
+  for (const auto& item : std::filesystem::directory_iterator(testing_dir)) {
     // Make sure we have a .wkt file
     std::string path = item.path();
     if (path.size() < 4) {
@@ -315,5 +316,10 @@ TEST(WKTReaderTest, WKTReaderTestRoundtripTestingFiles) {
     while (std::getline(infile, line)) {
       EXPECT_WKT_ROUNDTRIP(tester, line);
     }
+
+    n_tested++;
   }
+
+  // Make sure at least one file was tested
+  EXPECT_GT(n_tested, 0);
 }
