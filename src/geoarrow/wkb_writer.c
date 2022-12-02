@@ -11,6 +11,7 @@ struct WKBWriterPrivate {
   struct ArrowBuffer offsets;
   struct ArrowBuffer values;
   enum GeoArrowGeometryType geometry_type[32];
+  enum GeoArrowDimensions dimensions[32];
   int64_t size_pos[32];
   uint32_t size[32];
   int32_t level;
@@ -54,6 +55,7 @@ static int geom_start_wkb(struct GeoArrowVisitor* v,
   private->size[private->level]++;
   private->level++;
   private->geometry_type[private->level] = geometry_type;
+  private->dimensions[private->level] = dimensions;
 
   NANOARROW_RETURN_NOT_OK(
       ArrowBufferAppendUInt8(&private->values, GEOARROW_NATIVE_ENDIAN));
@@ -115,6 +117,9 @@ static int geom_end_wkb(struct GeoArrowVisitor* v) {
   if (private->geometry_type[private->level] != GEOARROW_GEOMETRY_TYPE_POINT) {
     memcpy(private->values.data + private->size_pos[private->level],
            private->size + private->level, sizeof(uint32_t));
+  } else if (private->size[private->level] == 0) {
+    // TODO: Write the requisite number of nans
+    return ENOTSUP;
   }
 
   private->level--;

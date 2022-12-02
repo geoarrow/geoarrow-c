@@ -5,6 +5,81 @@
 #include "geoarrow.h"
 #include "nanoarrow.h"
 
+class WKTTestException : public std::exception {
+ public:
+  WKTTestException(const char* step, int code, const char* msg) {
+    std::stringstream ss;
+    ss << step << "(" << code << "): " << msg;
+    message = ss.str();
+  }
+
+  const char* what() const noexcept { return message.c_str(); }
+
+ private:
+  std::string message;
+};
+
+class WKBTester {
+ public:
+  WKBTester() {
+    GeoArrowWKTReaderInit(&reader_);
+    GeoArrowWKBWriterInit(&writer_);
+    GeoArrowWKBWriterInitVisitor(&writer_, &v_);
+    v_.error = &error_;
+    array_.release = nullptr;
+    ArrowArrayViewInit(&array_view_, NANOARROW_TYPE_BINARY);
+  }
+
+  ~WKBTester() {
+    GeoArrowWKTReaderReset(&reader_);
+    GeoArrowWKBWriterReset(&writer_);
+    if (array_.release != nullptr) {
+      array_.release(&array_);
+    }
+    ArrowArrayViewReset(&array_view_);
+  }
+
+  std::string LastErrorMessage() { return std::string(error_.message); }
+
+  std::basic_string<uint8_t> AsWKB(const std::string& str) {
+    error_.message[0] = '\0';
+    if (array_.release != nullptr) {
+      array_.release(&array_);
+    }
+
+    struct GeoArrowStringView str_view;
+    str_view.data = str.data();
+    str_view.n_bytes = str.size();
+
+    int result = GeoArrowWKTReaderVisit(&reader_, str_view, &v_);
+    if (result != GEOARROW_OK) {
+      throw WKTTestException("GeoArrowWKTReaderVisit", result, error_.message);
+    }
+
+    result = GeoArrowWKBWriterFinish(&writer_, &array_, &error_);
+    if (result != GEOARROW_OK) {
+      throw WKTTestException("GeoArrowWKBWriterFinish", result, error_.message);
+    }
+
+    result = ArrowArrayViewSetArray(&array_view_, &array_,
+                                    reinterpret_cast<struct ArrowError*>(&error_));
+    if (result != GEOARROW_OK) {
+      throw WKTTestException("ArrowArrayViewSetArray", result, error_.message);
+    }
+
+    struct ArrowBufferView answer = ArrowArrayViewGetBytesUnsafe(&array_view_, 0);
+    return std::basic_string<uint8_t>(answer.data.as_uint8, answer.n_bytes);
+  }
+
+ private:
+  struct GeoArrowWKTReader reader_;
+  struct GeoArrowWKBWriter writer_;
+  struct GeoArrowVisitor v_;
+  struct ArrowArray array_;
+  struct ArrowArrayView array_view_;
+  struct GeoArrowError error_;
+};
+
 TEST(WKBWriterTest, WKBWriterTestBasic) {
   struct GeoArrowWKBWriter writer;
   GeoArrowWKBWriterInit(&writer);
@@ -46,7 +121,8 @@ TEST(WKBWriterTest, WKBWriterTestOneValidOneNull) {
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  // TODO: support the empty point
+  EXPECT_EQ(v.geom_end(&v), ENOTSUP);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
@@ -96,4 +172,13 @@ TEST(WKBWriterTest, WKBWriterTestErrors) {
             EINVAL);
 
   GeoArrowWKBWriterReset(&writer);
+}
+
+TEST(WKBWriterTest, WKBWriterTestPoint) {
+  WKBTester tester;
+
+  EXPECT_EQ(tester.AsWKB("POINT (30 10)"),
+            std::basic_string<uint8_t>({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40}));
 }
