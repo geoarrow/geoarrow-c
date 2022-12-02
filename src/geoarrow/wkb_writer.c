@@ -50,6 +50,7 @@ static int geom_start_wkb(struct GeoArrowVisitor* v,
                           enum GeoArrowGeometryType geometry_type,
                           enum GeoArrowDimensions dimensions) {
   struct WKBWriterPrivate* private = (struct WKBWriterPrivate*)v->private_data;
+  NANOARROW_RETURN_NOT_OK(WKBWriterCheckLevel(private));
   private->size[private->level]++;
   private->level++;
   private->geometry_type[private->level] = geometry_type;
@@ -68,6 +69,7 @@ static int geom_start_wkb(struct GeoArrowVisitor* v,
 
 static int ring_start_wkb(struct GeoArrowVisitor* v) {
   struct WKBWriterPrivate* private = (struct WKBWriterPrivate*)v->private_data;
+  NANOARROW_RETURN_NOT_OK(WKBWriterCheckLevel(private));
   private->size[private->level]++;
   private->level++;
   private->geometry_type[private->level] = GEOARROW_GEOMETRY_TYPE_GEOMETRY;
@@ -78,6 +80,7 @@ static int ring_start_wkb(struct GeoArrowVisitor* v) {
 static int coords_wkb(struct GeoArrowVisitor* v, const double** values, int64_t n_coords,
                       int32_t n_dims) {
   struct WKBWriterPrivate* private = (struct WKBWriterPrivate*)v->private_data;
+  NANOARROW_RETURN_NOT_OK(WKBWriterCheckLevel(private));
   private->size[private->level] += n_coords;
   NANOARROW_RETURN_NOT_OK(
       ArrowBufferReserve(&private->values, n_dims * n_coords * sizeof(double)));
@@ -92,6 +95,10 @@ static int coords_wkb(struct GeoArrowVisitor* v, const double** values, int64_t 
 
 static int ring_end_wkb(struct GeoArrowVisitor* v) {
   struct WKBWriterPrivate* private = (struct WKBWriterPrivate*)v->private_data;
+  NANOARROW_RETURN_NOT_OK(WKBWriterCheckLevel(private));
+  if (private->values.data == NULL) {
+    return EINVAL;
+  }
   memcpy(private->values.data + private->size_pos[private->level],
          private->size + private->level, sizeof(uint32_t));
   private->level--;
@@ -100,6 +107,10 @@ static int ring_end_wkb(struct GeoArrowVisitor* v) {
 
 static int geom_end_wkb(struct GeoArrowVisitor* v) {
   struct WKBWriterPrivate* private = (struct WKBWriterPrivate*)v->private_data;
+  NANOARROW_RETURN_NOT_OK(WKBWriterCheckLevel(private));
+  if (private->values.data == NULL) {
+    return EINVAL;
+  }
 
   if (private->geometry_type[private->level] != GEOARROW_GEOMETRY_TYPE_POINT) {
     memcpy(private->values.data + private->size_pos[private->level],
