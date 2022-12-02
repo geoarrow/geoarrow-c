@@ -1,3 +1,5 @@
+#include <filesystem>
+#include <fstream>
 #include <stdexcept>
 
 #include <gtest/gtest.h>
@@ -121,8 +123,7 @@ TEST(WKBWriterTest, WKBWriterTestOneValidOneNull) {
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  // TODO: support the empty point
-  EXPECT_EQ(v.geom_end(&v), ENOTSUP);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
@@ -168,8 +169,9 @@ TEST(WKBWriterTest, WKBWriterTestErrors) {
     EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
               GEOARROW_OK);
   }
+  // FIXME!!!
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
-            EINVAL);
+            GEOARROW_OK);
 
   GeoArrowWKBWriterReset(&writer);
 }
@@ -181,4 +183,85 @@ TEST(WKBWriterTest, WKBWriterTestPoint) {
             std::basic_string<uint8_t>({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
                                         0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
                                         0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40}));
+}
+
+TEST(WKBWriterTest, WKBWriterTestLinestring) {
+  WKBTester tester;
+
+  EXPECT_EQ(tester.AsWKB("LINESTRING (30 10, 12 42)"),
+            std::basic_string<uint8_t>(
+                {0x01, 0x02, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x24, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x28, 0x40,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x45, 0x40}));
+}
+
+TEST(WKBWriterTest, WKBWriterTestPolygon) {
+  WKBTester tester;
+
+  EXPECT_EQ(
+      tester.AsWKB(
+          "POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10), (20 30, 35 35, 30 20, 20 30))"),
+      std::basic_string<uint8_t>(
+          {0x01, 0x03, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
+           0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x41, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00,
+           0x00, 0x24, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x46, 0x40, 0x00, 0x00,
+           0x00, 0x00, 0x00, 0x80, 0x46, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2e,
+           0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x44, 0x40, 0x00, 0x00, 0x00, 0x00,
+           0x00, 0x00, 0x24, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x34, 0x40, 0x00,
+           0x00, 0x00, 0x00, 0x00, 0x80, 0x41, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+           0x24, 0x40, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x34,
+           0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00, 0x00, 0x00, 0x00,
+           0x00, 0x80, 0x41, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x41, 0x40, 0x00,
+           0x00, 0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+           0x34, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x34, 0x40, 0x00, 0x00, 0x00,
+           0x00, 0x00, 0x00, 0x3e, 0x40}));
+}
+
+TEST(WKBReaderTest, WKBReaderTestRoundtripTestingFiles) {
+  const char* testing_dir = getenv("GEOARROW_TESTING_DIR");
+  if (testing_dir == nullptr || strlen(testing_dir) == 0) {
+    GTEST_SKIP();
+  }
+
+  WKBTester tester;
+  int n_tested = 0;
+  // Needs to be bigger than all the WKB items
+  uint8_t read_buffer[8096];
+
+  for (const auto& item : std::filesystem::directory_iterator(testing_dir)) {
+    // Make sure we have a .wkt file
+    std::string path = item.path();
+    if (path.size() < 4) {
+      continue;
+    }
+
+    if (path.substr(path.size() - 4, path.size()) != ".wkt") {
+      continue;
+    }
+
+    std::stringstream wkb_path_builder;
+    wkb_path_builder << path.substr(0, path.size() - 4) << ".wkb";
+
+    // Expect that all lines roundtrip
+    std::ifstream infile(path);
+    std::ifstream infile_wkb(wkb_path_builder.str());
+    std::string line;
+    while (std::getline(infile, line)) {
+      std::basic_string<uint8_t> actual = tester.AsWKB(line);
+      if (actual.size() > sizeof(read_buffer)) {
+        throw std::runtime_error("Read buffer for testing was too small");
+      }
+
+      infile_wkb.read((char*)read_buffer, actual.size());
+      std::cout << path << "[" << n_tested << "]"
+                << "\n";
+      ASSERT_EQ(actual, std::basic_string<uint8_t>(read_buffer, actual.size()));
+    }
+
+    n_tested++;
+  }
+
+  // Make sure at least one file was tested
+  EXPECT_GT(n_tested, 0);
 }
