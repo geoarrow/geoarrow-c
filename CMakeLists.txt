@@ -15,6 +15,7 @@ add_library(
   src/geoarrow/schema_view.c
   src/geoarrow/metadata.c
   src/geoarrow/visitor.c
+  src/geoarrow/wkt_reader.c
   src/geoarrow/wkt_writer.c
   src/geoarrow/nanoarrow.c)
 
@@ -30,7 +31,7 @@ if (GEOARROW_BUILD_TESTS)
   include(CTest)
   include(FetchContent)
 
-  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
   find_package(Arrow REQUIRED)
@@ -47,6 +48,7 @@ if (GEOARROW_BUILD_TESTS)
   add_executable(schema_view_test src/geoarrow/schema_view_test.cc)
   add_executable(metadata_test src/geoarrow/metadata_test.cc)
   add_executable(visitor_test src/geoarrow/visitor_test.cc)
+  add_executable(wkt_reader_test src/geoarrow/wkt_reader_test.cc)
   add_executable(wkt_writer_test src/geoarrow/wkt_writer_test.cc)
   add_executable(geoarrow_arrow_test src/geoarrow/geoarrow_arrow_test.cc)
 
@@ -61,6 +63,7 @@ if (GEOARROW_BUILD_TESTS)
   target_link_libraries(schema_view_test geoarrow gtest_main)
   target_link_libraries(metadata_test geoarrow gtest_main)
   target_link_libraries(visitor_test geoarrow gtest_main)
+  target_link_libraries(wkt_reader_test geoarrow gtest_main)
   target_link_libraries(wkt_writer_test geoarrow gtest_main)
   target_link_libraries(geoarrow_arrow_test geoarrow arrow_shared gtest_main)
 
@@ -69,6 +72,7 @@ if (GEOARROW_BUILD_TESTS)
   gtest_discover_tests(schema_view_test)
   gtest_discover_tests(metadata_test)
   gtest_discover_tests(visitor_test)
+  gtest_discover_tests(wkt_reader_test)
   gtest_discover_tests(wkt_writer_test)
   gtest_discover_tests(geoarrow_arrow_test)
 endif()

@@ -161,6 +161,8 @@ int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n)
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
 struct GeoArrowWKTWriter {
+  int significant_digits;
+  int use_flat_multipoint;
   void* private_data;
 };
 
@@ -174,6 +176,18 @@ GeoArrowErrorCode GeoArrowWKTWriterFinish(struct GeoArrowWKTWriter* writer,
                                           struct GeoArrowError* error);
 
 void GeoArrowWKTWriterReset(struct GeoArrowWKTWriter* writer);
+
+struct GeoArrowWKTReader {
+  void* private_data;
+};
+
+GeoArrowErrorCode GeoArrowWKTReaderInit(struct GeoArrowWKTReader* reader);
+
+GeoArrowErrorCode GeoArrowWKTReaderVisit(struct GeoArrowWKTReader* reader,
+                                         struct GeoArrowStringView s,
+                                         struct GeoArrowVisitor* v);
+
+void GeoArrowWKTReaderReset(struct GeoArrowWKTReader* reader);
 
 #ifdef __cplusplus
 }

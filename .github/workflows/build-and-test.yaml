@@ -37,7 +37,7 @@ jobs:
       - name: Test
         run: |
           cd build
-          ctest -T test --output-on-failure .
+          GEOARROW_TESTING_DIR=$GITHUB_WORKSPACE/testing ctest -T test --output-on-failure .
 
       - name: Test with memcheck
         run: |
