@@ -189,6 +189,21 @@ GeoArrowErrorCode GeoArrowWKTReaderVisit(struct GeoArrowWKTReader* reader,
 
 void GeoArrowWKTReaderReset(struct GeoArrowWKTReader* reader);
 
+struct GeoArrowWKBWriter {
+  void* private_data;
+};
+
+GeoArrowErrorCode GeoArrowWKBWriterInit(struct GeoArrowWKBWriter* writer);
+
+void GeoArrowWKBWriterInitVisitor(struct GeoArrowWKBWriter* writer,
+                                  struct GeoArrowVisitor* v);
+
+GeoArrowErrorCode GeoArrowWKBWriterFinish(struct GeoArrowWKBWriter* writer,
+                                          struct ArrowArray* array,
+                                          struct GeoArrowError* error);
+
+void GeoArrowWKBWriterReset(struct GeoArrowWKBWriter* writer);
+
 #ifdef __cplusplus
 }
 #endif
