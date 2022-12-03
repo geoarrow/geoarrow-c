@@ -147,11 +147,14 @@ TEST(WKTWriterTest, WKTWriterTestErrors) {
   GeoArrowWKTWriterInit(&writer);
   GeoArrowWKTWriterInitVisitor(&writer, &v);
 
+  TestCoords coords({}, {});
+
   // Invalid because level < 0
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.ring_end(&v), EINVAL);
-  EXPECT_EQ(v.coords(&v, nullptr, 0, 2), GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, nullptr, 1, 2), EINVAL);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
+  coords.view()->n_coords = 1;
+  EXPECT_EQ(v.coords(&v, coords.view()), EINVAL);
 
   GeoArrowWKTWriterReset(&writer);
   GeoArrowWKTWriterInit(&writer);
@@ -273,7 +276,7 @@ TEST(WKTWriterTest, WKTWriterTestPoint) {
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 1, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
@@ -281,7 +284,7 @@ TEST(WKTWriterTest, WKTWriterTestPoint) {
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XYZ),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 1, 3), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
@@ -289,7 +292,7 @@ TEST(WKTWriterTest, WKTWriterTestPoint) {
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XYM),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 1, 3), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
@@ -297,7 +300,7 @@ TEST(WKTWriterTest, WKTWriterTestPoint) {
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XYZM),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 1, 4), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
@@ -339,7 +342,7 @@ TEST(WKTWriterTest, WKTWriterTestLinestring) {
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 4, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
@@ -347,7 +350,7 @@ TEST(WKTWriterTest, WKTWriterTestLinestring) {
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XYZ),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 4, 3), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
@@ -355,7 +358,7 @@ TEST(WKTWriterTest, WKTWriterTestLinestring) {
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XYM),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 4, 3), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
@@ -363,7 +366,7 @@ TEST(WKTWriterTest, WKTWriterTestLinestring) {
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XYZM),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 4, 4), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
@@ -409,7 +412,7 @@ TEST(WKTWriterTest, WKTWriterTestPolygon) {
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POLYGON, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
   EXPECT_EQ(v.ring_start(&v), GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 4, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.ring_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
@@ -419,10 +422,10 @@ TEST(WKTWriterTest, WKTWriterTestPolygon) {
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POLYGON, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
   EXPECT_EQ(v.ring_start(&v), GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 4, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.ring_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.ring_start(&v), GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 4, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.ring_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
@@ -462,7 +465,7 @@ TEST(WKTWriterTest, WKTWriterTestMultipoint) {
             GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 1, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
@@ -474,12 +477,12 @@ TEST(WKTWriterTest, WKTWriterTestMultipoint) {
 
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 1, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
 
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 1, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
 
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
@@ -495,7 +498,7 @@ TEST(WKTWriterTest, WKTWriterTestMultipoint) {
             GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 1, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
@@ -507,12 +510,12 @@ TEST(WKTWriterTest, WKTWriterTestMultipoint) {
 
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 1, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
 
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 1, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
 
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
@@ -559,7 +562,7 @@ TEST(WKTWriterTest, WKTWriterTestMultilinestring) {
       GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 2, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
@@ -572,12 +575,12 @@ TEST(WKTWriterTest, WKTWriterTestMultilinestring) {
 
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 2, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
 
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 2, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
 
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
@@ -619,7 +622,7 @@ TEST(WKTWriterTest, WKTWriterTestMultipolygon) {
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POLYGON, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
   EXPECT_EQ(v.ring_start(&v), GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 4, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.ring_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
@@ -632,14 +635,14 @@ TEST(WKTWriterTest, WKTWriterTestMultipolygon) {
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POLYGON, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
   EXPECT_EQ(v.ring_start(&v), GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 4, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.ring_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
 
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
   EXPECT_EQ(v.ring_start(&v), GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 4, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.ring_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
 
@@ -683,7 +686,7 @@ TEST(WKTWriterTest, WKTWriterTestGeometrycollection) {
       GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 1, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
@@ -696,12 +699,12 @@ TEST(WKTWriterTest, WKTWriterTestGeometrycollection) {
 
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 1, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
 
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 1, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
 
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
@@ -739,8 +742,8 @@ TEST(WKTWriterTest, WKTWriterTestStreamingCoords) {
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 2, 2), GEOARROW_OK);
-  EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 2, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
@@ -779,7 +782,7 @@ TEST(WKTWriterTest, WKTWriterTestVeryLongCoords) {
             GEOARROW_OK);
 
   for (int i = 0; i < 128; i++) {
-    EXPECT_EQ(v.coords(&v, (const double**)coords.view()->values, 1024, 2), GEOARROW_OK);
+    EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
   }
 
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);

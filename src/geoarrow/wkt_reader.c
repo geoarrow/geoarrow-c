@@ -160,8 +160,7 @@ static inline void ResetCoordCache(struct WKTReaderPrivate* s) {
 
 static inline int FlushCoordCache(struct WKTReaderPrivate* s, struct GeoArrowVisitor* v) {
   if (s->coord_view.n_coords > 0) {
-    int result = v->coords(v, (const double**)&s->coord_view.values,
-                           s->coord_view.n_coords, s->coord_view.n_values);
+    int result = v->coords(v, &s->coord_view);
     s->coord_view.n_coords = 0;
     return result;
   } else {

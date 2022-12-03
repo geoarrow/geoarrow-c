@@ -88,8 +88,7 @@ struct GeoArrowVisitor {
   int (*geom_start)(struct GeoArrowVisitor* v, enum GeoArrowGeometryType geometry_type,
                     enum GeoArrowDimensions dimensions);
   int (*ring_start)(struct GeoArrowVisitor* v);
-  int (*coords)(struct GeoArrowVisitor* v, const double** values, int64_t n_coords,
-                int32_t n_dims);
+  int (*coords)(struct GeoArrowVisitor* v, const struct GeoArrowCoordView* coords);
   int (*ring_end)(struct GeoArrowVisitor* v);
   int (*geom_end)(struct GeoArrowVisitor* v);
   int (*feat_end)(struct GeoArrowVisitor* v);

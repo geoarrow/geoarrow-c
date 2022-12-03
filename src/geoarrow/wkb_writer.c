@@ -93,16 +93,15 @@ static int ring_start_wkb(struct GeoArrowVisitor* v) {
   return ArrowBufferAppendUInt32(&private->values, 0);
 }
 
-static int coords_wkb(struct GeoArrowVisitor* v, const double** values, int64_t n_coords,
-                      int32_t n_dims) {
+static int coords_wkb(struct GeoArrowVisitor* v, const struct GeoArrowCoordView* coords) {
   struct WKBWriterPrivate* private = (struct WKBWriterPrivate*)v->private_data;
   NANOARROW_RETURN_NOT_OK(WKBWriterCheckLevel(private));
-  private->size[private->level] += n_coords;
-  NANOARROW_RETURN_NOT_OK(
-      ArrowBufferReserve(&private->values, n_dims * n_coords * sizeof(double)));
-  for (int64_t i = 0; i < n_coords; i++) {
-    for (int32_t j = 0; j < n_dims; j++) {
-      ArrowBufferAppendUnsafe(&private->values, values[j] + i, sizeof(double));
+  private->size[private->level] += coords->n_coords;
+  NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(
+      &private->values, coords->n_values * coords->n_coords * sizeof(double)));
+  for (int64_t i = 0; i < coords->n_coords; i++) {
+    for (int32_t j = 0; j < coords->n_values; j++) {
+      ArrowBufferAppendUnsafe(&private->values, coords->values[j] + i, sizeof(double));
     }
   }
 
