@@ -72,6 +72,13 @@ enum GeoArrowCrsType {
   GEOARROW_CRS_TYPE_PROJJSON
 };
 
+struct GeoArrowCoordView {
+  double* values[4];
+  int64_t n_coords;
+  int32_t n_values;
+  int32_t coords_stride;
+};
+
 struct GeoArrowVisitor {
   int (*reserve_coord)(struct GeoArrowVisitor* v, int64_t n);
   int (*reserve_feat)(struct GeoArrowVisitor* v, int64_t n);

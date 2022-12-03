@@ -14,7 +14,7 @@ struct WKTReaderPrivate {
   const char* data0;
   int coord_i;
   double coords[4 * COORD_CACHE_SIZE_COORDS];
-  double* coords_ptr[4];
+  struct GeoArrowCoordView coord_view;
 };
 
 // Using fastfloat for char* -> double is ~5x faster and is not locale dependent
@@ -160,7 +160,7 @@ static inline void ResetCoordCache(struct WKTReaderPrivate* s) { s->coord_i = 0;
 static inline int FlushCoordCache(struct WKTReaderPrivate* s, struct GeoArrowVisitor* v,
                                   int n_dims) {
   if (s->coord_i > 0) {
-    int result = v->coords(v, (const double**)s->coords_ptr, s->coord_i, n_dims);
+    int result = v->coords(v, &s->coord_view.values, s->coord_i, n_dims);
     s->coord_i = 0;
     return result;
   } else {
@@ -174,10 +174,12 @@ static inline int ReadCoordinate(struct WKTReaderPrivate* s, struct GeoArrowVisi
     NANOARROW_RETURN_NOT_OK(FlushCoordCache(s, v, n_dims));
   }
 
-  NANOARROW_RETURN_NOT_OK(ReadOrdinate(s, s->coords_ptr[0] + s->coord_i, v->error));
+  NANOARROW_RETURN_NOT_OK(
+      ReadOrdinate(s, s->coord_view.values[0] + s->coord_i, v->error));
   for (int i = 1; i < n_dims; i++) {
     NANOARROW_RETURN_NOT_OK(AssertWhitespace(s, v->error));
-    NANOARROW_RETURN_NOT_OK(ReadOrdinate(s, s->coords_ptr[i] + s->coord_i, v->error));
+    NANOARROW_RETURN_NOT_OK(
+        ReadOrdinate(s, s->coord_view.values[i] + s->coord_i, v->error));
   }
 
   s->coord_i++;
@@ -518,9 +520,9 @@ GeoArrowErrorCode GeoArrowWKTReaderInit(struct GeoArrowWKTReader* reader) {
   s->data0 = NULL;
   s->data = NULL;
   s->n_bytes = 0;
-  s->coords_ptr[0] = s->coords;
+  s->coord_view.values[0] = s->coords;
   for (int i = 1; i < 4; i++) {
-    s->coords_ptr[i] = s->coords_ptr[i - 1] + COORD_CACHE_SIZE_COORDS;
+    s->coord_view.values[i] = s->coord_view.values[i - 1] + COORD_CACHE_SIZE_COORDS;
   }
 
   reader->private_data = s;
