@@ -180,10 +180,10 @@ static int coords_wkt(struct GeoArrowVisitor* v, const struct GeoArrowCoordView*
   // Write the remaining coordinates (which all have leading commas)
   for (int64_t i = 1; i < n_coords; i++) {
     ArrowBufferAppendUnsafe(&private->values, ", ", 2);
-    WKTWriterWriteDoubleUnsafe(private, coords->values[0][i]);
+    WKTWriterWriteDoubleUnsafe(private, coords->values[0][i * coords->coords_stride]);
     for (int32_t j = 1; j < n_dims; j++) {
       ArrowBufferAppendUnsafe(&private->values, " ", 1);
-      WKTWriterWriteDoubleUnsafe(private, coords->values[j][i]);
+      WKTWriterWriteDoubleUnsafe(private, coords->values[j][i * coords->coords_stride]);
     }
   }
 

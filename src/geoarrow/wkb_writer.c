@@ -101,7 +101,9 @@ static int coords_wkb(struct GeoArrowVisitor* v, const struct GeoArrowCoordView*
       &private->values, coords->n_values * coords->n_coords * sizeof(double)));
   for (int64_t i = 0; i < coords->n_coords; i++) {
     for (int32_t j = 0; j < coords->n_values; j++) {
-      ArrowBufferAppendUnsafe(&private->values, coords->values[j] + i, sizeof(double));
+      ArrowBufferAppendUnsafe(&private->values,
+                              coords->values[j] + i * coords->coords_stride,
+                              sizeof(double));
     }
   }
 
