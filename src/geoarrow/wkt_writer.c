@@ -143,8 +143,9 @@ static int ring_start_wkt(struct GeoArrowVisitor* v) {
   return GEOARROW_OK;
 }
 
-static int coords_wkt(struct GeoArrowVisitor* v, const double** values, int64_t n_coords,
-                      int32_t n_dims) {
+static int coords_wkt(struct GeoArrowVisitor* v, const struct GeoArrowCoordView* coords) {
+  int64_t n_coords = coords->n_coords;
+  int32_t n_dims = coords->n_values;
   if (n_coords == 0) {
     return GEOARROW_OK;
   }
@@ -170,19 +171,19 @@ static int coords_wkt(struct GeoArrowVisitor* v, const double** values, int64_t 
     ArrowBufferAppendUnsafe(&private->values, "(", 1);
   }
 
-  WKTWriterWriteDoubleUnsafe(private, values[0][0]);
+  WKTWriterWriteDoubleUnsafe(private, coords->values[0][0]);
   for (int32_t j = 1; j < n_dims; j++) {
     ArrowBufferAppendUnsafe(&private->values, " ", 1);
-    WKTWriterWriteDoubleUnsafe(private, values[j][0]);
+    WKTWriterWriteDoubleUnsafe(private, coords->values[j][0]);
   }
 
   // Write the remaining coordinates (which all have leading commas)
   for (int64_t i = 1; i < n_coords; i++) {
     ArrowBufferAppendUnsafe(&private->values, ", ", 2);
-    WKTWriterWriteDoubleUnsafe(private, values[0][i]);
+    WKTWriterWriteDoubleUnsafe(private, coords->values[0][i * coords->coords_stride]);
     for (int32_t j = 1; j < n_dims; j++) {
       ArrowBufferAppendUnsafe(&private->values, " ", 1);
-      WKTWriterWriteDoubleUnsafe(private, values[j][i]);
+      WKTWriterWriteDoubleUnsafe(private, coords->values[j][i * coords->coords_stride]);
     }
   }
 

@@ -154,10 +154,15 @@ TEST(WKBWriterTest, WKBWriterTestErrors) {
   GeoArrowWKBWriterInit(&writer);
   GeoArrowWKBWriterInitVisitor(&writer, &v);
 
+  struct GeoArrowCoordView coords;
+  coords.n_coords = 0;
+  coords.n_values = 2;
+  coords.coords_stride = 1;
+
   // Invalid because level < 0
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.ring_end(&v), EINVAL);
-  EXPECT_EQ(v.coords(&v, nullptr, 0, 2), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, &coords), GEOARROW_OK);
 
   GeoArrowWKBWriterReset(&writer);
   GeoArrowWKBWriterInit(&writer);
