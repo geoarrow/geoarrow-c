@@ -12,7 +12,6 @@ struct WKTReaderPrivate {
   const char* data;
   int64_t n_bytes;
   const char* data0;
-  int coord_i;
   double coords[4 * COORD_CACHE_SIZE_COORDS];
   struct GeoArrowCoordView coord_view;
 };
@@ -155,13 +154,16 @@ static inline int ReadOrdinate(struct WKTReaderPrivate* s, double* out,
   return result;
 }
 
-static inline void ResetCoordCache(struct WKTReaderPrivate* s) { s->coord_i = 0; }
+static inline void ResetCoordCache(struct WKTReaderPrivate* s) {
+  s->coord_view.n_coords = 0;
+}
 
 static inline int FlushCoordCache(struct WKTReaderPrivate* s, struct GeoArrowVisitor* v,
                                   int n_dims) {
-  if (s->coord_i > 0) {
-    int result = v->coords(v, &s->coord_view.values, s->coord_i, n_dims);
-    s->coord_i = 0;
+  if (s->coord_view.n_coords > 0) {
+    int result = v->coords(v, (const double**)&s->coord_view.values,
+                           s->coord_view.n_coords, n_dims);
+    s->coord_view.n_coords = 0;
     return result;
   } else {
     return GEOARROW_OK;
@@ -170,19 +172,19 @@ static inline int FlushCoordCache(struct WKTReaderPrivate* s, struct GeoArrowVis
 
 static inline int ReadCoordinate(struct WKTReaderPrivate* s, struct GeoArrowVisitor* v,
                                  int n_dims) {
-  if (s->coord_i == COORD_CACHE_SIZE_COORDS) {
+  if (s->coord_view.n_coords == COORD_CACHE_SIZE_COORDS) {
     NANOARROW_RETURN_NOT_OK(FlushCoordCache(s, v, n_dims));
   }
 
   NANOARROW_RETURN_NOT_OK(
-      ReadOrdinate(s, s->coord_view.values[0] + s->coord_i, v->error));
+      ReadOrdinate(s, s->coord_view.values[0] + s->coord_view.n_coords, v->error));
   for (int i = 1; i < n_dims; i++) {
     NANOARROW_RETURN_NOT_OK(AssertWhitespace(s, v->error));
     NANOARROW_RETURN_NOT_OK(
-        ReadOrdinate(s, s->coord_view.values[i] + s->coord_i, v->error));
+        ReadOrdinate(s, s->coord_view.values[i] + s->coord_view.n_coords, v->error));
   }
 
-  s->coord_i++;
+  s->coord_view.n_coords++;
   return NANOARROW_OK;
 }
 
@@ -460,18 +462,22 @@ static inline int ReadTaggedGeometry(struct WKTReaderPrivate* s,
   SkipWhitespace(s);
 
   enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY;
+  s->coord_view.n_values = 2;
   int n_dims = 2;
   word = PeekUntilSep(s, 3);
   if (word.n_bytes == 1 && strncmp(word.data, "Z", 1) == 0) {
     dimensions = GEOARROW_DIMENSIONS_XYZ;
+    s->coord_view.n_values = 3;
     n_dims = 3;
     AdvanceUnsafe(s, 1);
   } else if (word.n_bytes == 1 && strncmp(word.data, "M", 1) == 0) {
     dimensions = GEOARROW_DIMENSIONS_XYM;
+    s->coord_view.n_values = 3;
     n_dims = 3;
     AdvanceUnsafe(s, 1);
   } else if (word.n_bytes == 2 && strncmp(word.data, "ZM", 2) == 0) {
     dimensions = GEOARROW_DIMENSIONS_XYZM;
+    s->coord_view.n_values = 4;
     n_dims = 4;
     AdvanceUnsafe(s, 2);
   }
@@ -520,6 +526,8 @@ GeoArrowErrorCode GeoArrowWKTReaderInit(struct GeoArrowWKTReader* reader) {
   s->data0 = NULL;
   s->data = NULL;
   s->n_bytes = 0;
+
+  s->coord_view.coords_stride = 1;
   s->coord_view.values[0] = s->coords;
   for (int i = 1; i < 4; i++) {
     s->coord_view.values[i] = s->coord_view.values[i - 1] + COORD_CACHE_SIZE_COORDS;
