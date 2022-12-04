@@ -19,7 +19,9 @@ struct WKBWriterPrivate {
   int64_t null_count;
 };
 
+#ifndef GEOARROW_NATIVE_ENDIAN
 #define GEOARROW_NATIVE_ENDIAN 0x01
+#endif
 
 static uint8_t kWKBWriterEmptyPointCoords2[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                                 0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00,

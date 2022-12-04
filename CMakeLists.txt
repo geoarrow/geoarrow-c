@@ -15,6 +15,7 @@ add_library(
   src/geoarrow/schema_view.c
   src/geoarrow/metadata.c
   src/geoarrow/visitor.c
+  src/geoarrow/wkb_reader.c
   src/geoarrow/wkb_writer.c
   src/geoarrow/wkt_reader.c
   src/geoarrow/wkt_writer.c

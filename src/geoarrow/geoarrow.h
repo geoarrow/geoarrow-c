@@ -97,19 +97,6 @@ struct ArrowArrayStream {
 #endif  // ARROW_C_STREAM_INTERFACE
 #endif  // ARROW_FLAG_DICTIONARY_ORDERED
 
-typedef int GeoArrowErrorCode;
-
-#define GEOARROW_OK 0
-
-struct GeoArrowStringView {
-  const char* data;
-  int64_t n_bytes;
-};
-
-struct GeoArrowError {
-  char message[1024];
-};
-
 GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowType type);
 
 GeoArrowErrorCode GeoArrowSchemaInitExtension(struct ArrowSchema* schema,
@@ -203,6 +190,18 @@ GeoArrowErrorCode GeoArrowWKBWriterFinish(struct GeoArrowWKBWriter* writer,
                                           struct GeoArrowError* error);
 
 void GeoArrowWKBWriterReset(struct GeoArrowWKBWriter* writer);
+
+struct GeoArrowWKBReader {
+  void* private_data;
+};
+
+GeoArrowErrorCode GeoArrowWKBReaderInit(struct GeoArrowWKBReader* reader);
+
+void GeoArrowWKBReaderReset(struct GeoArrowWKBReader* reader);
+
+GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
+                                         struct GeoArrowBufferView src,
+                                         struct GeoArrowVisitor* v);
 
 #ifdef __cplusplus
 }

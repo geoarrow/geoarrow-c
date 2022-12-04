@@ -8,6 +8,24 @@
 extern "C" {
 #endif
 
+typedef int GeoArrowErrorCode;
+
+#define GEOARROW_OK 0
+
+struct GeoArrowStringView {
+  const char* data;
+  int64_t n_bytes;
+};
+
+struct GeoArrowBufferView {
+  const uint8_t* data;
+  int64_t n_bytes;
+};
+
+struct GeoArrowError {
+  char message[1024];
+};
+
 enum GeoArrowType {
   GEOARROW_TYPE_UNINITIALIZED,
 
