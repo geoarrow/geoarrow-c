@@ -7,9 +7,9 @@
 #include "geoarrow.h"
 #include "nanoarrow.h"
 
-class WKTTestException : public std::exception {
+class WKBTestException : public std::exception {
  public:
-  WKTTestException(const char* step, int code, const char* msg) {
+  WKBTestException(const char* step, int code, const char* msg) {
     std::stringstream ss;
     ss << step << "(" << code << "): " << msg;
     message = ss.str();
@@ -55,18 +55,18 @@ class WKBTester {
 
     int result = GeoArrowWKTReaderVisit(&reader_, str_view, &v_);
     if (result != GEOARROW_OK) {
-      throw WKTTestException("GeoArrowWKTReaderVisit", result, error_.message);
+      throw WKBTestException("GeoArrowWKTReaderVisit", result, error_.message);
     }
 
     result = GeoArrowWKBWriterFinish(&writer_, &array_, &error_);
     if (result != GEOARROW_OK) {
-      throw WKTTestException("GeoArrowWKBWriterFinish", result, error_.message);
+      throw WKBTestException("GeoArrowWKBWriterFinish", result, error_.message);
     }
 
     result = ArrowArrayViewSetArray(&array_view_, &array_,
                                     reinterpret_cast<struct ArrowError*>(&error_));
     if (result != GEOARROW_OK) {
-      throw WKTTestException("ArrowArrayViewSetArray", result, error_.message);
+      throw WKBTestException("ArrowArrayViewSetArray", result, error_.message);
     }
 
     struct ArrowBufferView answer = ArrowArrayViewGetBytesUnsafe(&array_view_, 0);

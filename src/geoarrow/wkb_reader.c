@@ -47,7 +47,7 @@ struct WKBReaderPrivate {
 static inline int WKBReaderReadEndian(struct WKBReaderPrivate* s,
                                       struct GeoArrowError* error) {
   if (s->n_bytes > 0) {
-    s->need_swapping = s->data[0] == GEOARROW_NATIVE_ENDIAN;
+    s->need_swapping = s->data[0] != GEOARROW_NATIVE_ENDIAN;
     s->data++;
     s->n_bytes--;
     return GEOARROW_OK;
@@ -112,7 +112,7 @@ static int WKBReaderReadCoordinates(struct WKBReaderPrivate* s, int64_t n_coords
   }
 
   // Process the last chunk
-  int64_t remaining_bytes = n_coords * s->coord_view.n_values;
+  int64_t remaining_bytes = n_coords * s->coord_view.n_values * sizeof(double);
   memcpy(s->coords, s->data, remaining_bytes);
   s->data += remaining_bytes;
   s->n_bytes -= remaining_bytes;
@@ -198,9 +198,10 @@ static int WKBReaderReadGeometry(struct WKBReaderPrivate* s, struct GeoArrowVisi
         uint32_t ring_size;
         NANOARROW_RETURN_NOT_OK(WKBReaderReadUInt32(s, &ring_size, v->error));
         NANOARROW_RETURN_NOT_OK(v->ring_start(v));
-        NANOARROW_RETURN_NOT_OK(WKBReaderReadCoordinates(s, size, v));
+        NANOARROW_RETURN_NOT_OK(WKBReaderReadCoordinates(s, ring_size, v));
         NANOARROW_RETURN_NOT_OK(v->ring_end(v));
       }
+      break;
     case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
     case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
     case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
@@ -236,9 +237,9 @@ GeoArrowErrorCode GeoArrowWKBReaderInit(struct GeoArrowWKBReader* reader) {
   s->coord_view.n_values = 2;
   s->coord_view.n_coords = 0;
   s->coord_view.values[0] = s->coords + 0;
-  s->coord_view.values[0] = s->coords + 1;
-  s->coord_view.values[0] = s->coords + 2;
-  s->coord_view.values[0] = s->coords + 3;
+  s->coord_view.values[1] = s->coords + 1;
+  s->coord_view.values[2] = s->coords + 2;
+  s->coord_view.values[3] = s->coords + 3;
 
   reader->private_data = s;
   return GEOARROW_OK;
