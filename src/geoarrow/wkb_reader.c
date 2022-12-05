@@ -117,7 +117,7 @@ static int WKBReaderReadCoordinates(struct WKBReaderPrivate* s, int64_t n_coords
   s->data += remaining_bytes;
   s->n_bytes -= remaining_bytes;
   s->coord_view.n_coords = n_coords;
-  WKBReaderMaybeBswapCoords(s, n_coords);
+  WKBReaderMaybeBswapCoords(s, n_coords * s->coord_view.n_values);
   return v->coords(v, &s->coord_view);
 }
 
