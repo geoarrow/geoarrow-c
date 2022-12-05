@@ -1,86 +1,10 @@
-#include <filesystem>
-#include <fstream>
-#include <stdexcept>
 
 #include <gtest/gtest.h>
 
 #include "geoarrow.h"
 #include "nanoarrow.h"
 
-class WKTTestException : public std::exception {
- public:
-  WKTTestException(const char* step, int code, const char* msg) {
-    std::stringstream ss;
-    ss << step << "(" << code << "): " << msg;
-    message = ss.str();
-  }
-
-  const char* what() const noexcept { return message.c_str(); }
-
- private:
-  std::string message;
-};
-
-class WKBTester {
- public:
-  WKBTester() {
-    GeoArrowWKTReaderInit(&reader_);
-    GeoArrowWKBWriterInit(&writer_);
-    GeoArrowWKBWriterInitVisitor(&writer_, &v_);
-    v_.error = &error_;
-    array_.release = nullptr;
-    ArrowArrayViewInit(&array_view_, NANOARROW_TYPE_BINARY);
-  }
-
-  ~WKBTester() {
-    GeoArrowWKTReaderReset(&reader_);
-    GeoArrowWKBWriterReset(&writer_);
-    if (array_.release != nullptr) {
-      array_.release(&array_);
-    }
-    ArrowArrayViewReset(&array_view_);
-  }
-
-  std::string LastErrorMessage() { return std::string(error_.message); }
-
-  std::basic_string<uint8_t> AsWKB(const std::string& str) {
-    error_.message[0] = '\0';
-    if (array_.release != nullptr) {
-      array_.release(&array_);
-    }
-
-    struct GeoArrowStringView str_view;
-    str_view.data = str.data();
-    str_view.n_bytes = str.size();
-
-    int result = GeoArrowWKTReaderVisit(&reader_, str_view, &v_);
-    if (result != GEOARROW_OK) {
-      throw WKTTestException("GeoArrowWKTReaderVisit", result, error_.message);
-    }
-
-    result = GeoArrowWKBWriterFinish(&writer_, &array_, &error_);
-    if (result != GEOARROW_OK) {
-      throw WKTTestException("GeoArrowWKBWriterFinish", result, error_.message);
-    }
-
-    result = ArrowArrayViewSetArray(&array_view_, &array_,
-                                    reinterpret_cast<struct ArrowError*>(&error_));
-    if (result != GEOARROW_OK) {
-      throw WKTTestException("ArrowArrayViewSetArray", result, error_.message);
-    }
-
-    struct ArrowBufferView answer = ArrowArrayViewGetBytesUnsafe(&array_view_, 0);
-    return std::basic_string<uint8_t>(answer.data.as_uint8, answer.n_bytes);
-  }
-
- private:
-  struct GeoArrowWKTReader reader_;
-  struct GeoArrowWKBWriter writer_;
-  struct GeoArrowVisitor v_;
-  struct ArrowArray array_;
-  struct ArrowArrayView array_view_;
-  struct GeoArrowError error_;
-};
+#include "wkx_testing.hpp"
 
 TEST(WKBWriterTest, WKBWriterTestBasic) {
   struct GeoArrowWKBWriter writer;
@@ -181,7 +105,7 @@ TEST(WKBWriterTest, WKBWriterTestErrors) {
 }
 
 TEST(WKBWriterTest, WKBWriterTestPoint) {
-  WKBTester tester;
+  WKXTester tester;
 
   EXPECT_EQ(tester.AsWKB("POINT (30 10)"),
             std::basic_string<uint8_t>({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -190,7 +114,7 @@ TEST(WKBWriterTest, WKBWriterTestPoint) {
 }
 
 TEST(WKBWriterTest, WKBWriterTestLinestring) {
-  WKBTester tester;
+  WKXTester tester;
 
   EXPECT_EQ(tester.AsWKB("LINESTRING (30 10, 12 42)"),
             std::basic_string<uint8_t>(
@@ -201,7 +125,7 @@ TEST(WKBWriterTest, WKBWriterTestLinestring) {
 }
 
 TEST(WKBWriterTest, WKBWriterTestPolygon) {
-  WKBTester tester;
+  WKXTester tester;
 
   EXPECT_EQ(
       tester.AsWKB(
@@ -223,7 +147,7 @@ TEST(WKBWriterTest, WKBWriterTestPolygon) {
 }
 
 TEST(WKBWriterTest, WKBWriterTestMultipoint) {
-  WKBTester tester;
+  WKXTester tester;
 
   EXPECT_EQ(tester.AsWKB("MULTIPOINT ((10 40), (40 30), (20 20), (30 10))"),
             std::basic_string<uint8_t>(
@@ -238,7 +162,7 @@ TEST(WKBWriterTest, WKBWriterTestMultipoint) {
 }
 
 TEST(WKBWriterTest, WKBWriterTestNestedCollection) {
-  WKBTester tester;
+  WKXTester tester;
 
   EXPECT_EQ(
       tester.AsWKB("GEOMETRYCOLLECTION (POINT (40 10), LINESTRING(10 10, 20 20, 10 40), "
@@ -274,52 +198,4 @@ TEST(WKBWriterTest, WKBWriterTestNestedCollection) {
            0x00, 0x44, 0x40, 0x01, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
            0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40}));
-}
-
-TEST(WKBReaderTest, WKBReaderTestRoundtripTestingFiles) {
-  const char* testing_dir = getenv("GEOARROW_TESTING_DIR");
-  if (testing_dir == nullptr || strlen(testing_dir) == 0) {
-    GTEST_SKIP();
-  }
-
-  WKBTester tester;
-  int n_tested = 0;
-  // Needs to be bigger than all the WKB items
-  uint8_t read_buffer[8096];
-
-  for (const auto& item : std::filesystem::directory_iterator(testing_dir)) {
-    // Make sure we have a .wkt file
-    std::string path = item.path();
-    if (path.size() < 4) {
-      continue;
-    }
-
-    if (path.substr(path.size() - 4, path.size()) != ".wkt") {
-      continue;
-    }
-
-    std::stringstream wkb_path_builder;
-    wkb_path_builder << path.substr(0, path.size() - 4) << ".wkb";
-
-    // Expect that all lines roundtrip
-    std::ifstream infile(path);
-    std::ifstream infile_wkb(wkb_path_builder.str());
-    std::string line;
-    while (std::getline(infile, line)) {
-      std::basic_string<uint8_t> actual = tester.AsWKB(line);
-      if (actual.size() > sizeof(read_buffer)) {
-        throw std::runtime_error("Read buffer for testing was too small");
-      }
-
-      infile_wkb.read((char*)read_buffer, actual.size());
-      std::cout << path << "[" << n_tested << "]"
-                << "\n";
-      ASSERT_EQ(actual, std::basic_string<uint8_t>(read_buffer, actual.size()));
-    }
-
-    n_tested++;
-  }
-
-  // Make sure at least one file was tested
-  EXPECT_GT(n_tested, 0);
 }

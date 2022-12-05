@@ -1,9 +1,10 @@
-#include <stdexcept>
 
 #include <gtest/gtest.h>
 
 #include "geoarrow.h"
 #include "nanoarrow.h"
+
+#include "wkx_testing.hpp"
 
 std::string WKTEmpty(enum GeoArrowGeometryType geometry_type,
                      enum GeoArrowDimensions dimensions) {
@@ -29,50 +30,6 @@ std::string WKTEmpty(enum GeoArrowGeometryType geometry_type,
   ss << " EMPTY";
   return ss.str();
 }
-
-class TestCoords {
- public:
-  TestCoords(std::vector<double> x1, std::vector<double> x2) : storage_(2) {
-    storage_[0] = std::move(x1);
-    storage_[1] = std::move(x2);
-    setup_view();
-  }
-
-  TestCoords(std::vector<double> x1, std::vector<double> x2, std::vector<double> x3)
-      : storage_(3) {
-    storage_[0] = std::move(x1);
-    storage_[1] = std::move(x2);
-    storage_[2] = std::move(x3);
-    setup_view();
-  }
-
-  TestCoords(std::vector<double> x1, std::vector<double> x2, std::vector<double> x3,
-             std::vector<double> x4)
-      : storage_(4) {
-    storage_[0] = std::move(x1);
-    storage_[1] = std::move(x2);
-    storage_[2] = std::move(x3);
-    storage_[3] = std::move(x4);
-    setup_view();
-  }
-
-  struct GeoArrowCoordView* view() {
-    return &coord_view_;
-  }
-
- private:
-  std::vector<std::vector<double>> storage_;
-  struct GeoArrowCoordView coord_view_;
-
-  void setup_view() {
-    coord_view_.coords_stride = 1;
-    coord_view_.n_coords = storage_[0].size();
-    coord_view_.n_values = storage_.size();
-    for (size_t i = 0; i < storage_.size(); i++) {
-      coord_view_.values[i] = storage_[i].data();
-    }
-  }
-};
 
 TEST(WKTWriterTest, WKTWriterTestBasic) {
   struct GeoArrowWKTWriter writer;
