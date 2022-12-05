@@ -102,16 +102,6 @@ GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowTy
 GeoArrowErrorCode GeoArrowSchemaInitExtension(struct ArrowSchema* schema,
                                               enum GeoArrowType type);
 
-struct GeoArrowSchemaView {
-  struct ArrowSchema* schema;
-  struct GeoArrowStringView extension_name;
-  struct GeoArrowStringView extension_metadata;
-  enum GeoArrowType type;
-  enum GeoArrowGeometryType geometry_type;
-  enum GeoArrowDimensions dimensions;
-  enum GeoArrowCoordType coord_type;
-};
-
 GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
                                          struct ArrowSchema* schema,
                                          struct GeoArrowError* error);
@@ -122,13 +112,6 @@ GeoArrowErrorCode GeoArrowSchemaViewInitFromStorage(
 
 GeoArrowErrorCode GeoArrowSchemaViewInitFromType(struct GeoArrowSchemaView* schema_view,
                                                  enum GeoArrowType type);
-
-struct GeoArrowMetadataView {
-  struct GeoArrowStringView metadata;
-  enum GeoArrowEdgeType edge_type;
-  enum GeoArrowCrsType crs_type;
-  struct GeoArrowStringView crs;
-};
 
 GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata_view,
                                            struct GeoArrowStringView metadata,
@@ -206,5 +189,7 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
 #ifdef __cplusplus
 }
 #endif
+
+#include "geoarrow_type_inline.h"
 
 #endif
