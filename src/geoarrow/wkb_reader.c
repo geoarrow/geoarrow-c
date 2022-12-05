@@ -103,11 +103,11 @@ static int WKBReaderReadCoordinates(struct WKBReaderPrivate* s, int64_t n_coords
 
   // Process full chunks
   while (n_coords > chunk_size) {
-    memcpy(s->coords, s->data, sizeof(v->coords));
+    memcpy(s->coords, s->data, COORD_CACHE_SIZE_ELEMENTS * sizeof(double));
     WKBReaderMaybeBswapCoords(s, COORD_CACHE_SIZE_ELEMENTS);
     NANOARROW_RETURN_NOT_OK(v->coords(v, &s->coord_view));
-    s->data += sizeof(v->coords);
-    s->n_bytes -= sizeof(v->coords);
+    s->data += COORD_CACHE_SIZE_ELEMENTS * sizeof(double);
+    s->n_bytes -= COORD_CACHE_SIZE_ELEMENTS * sizeof(double);
     n_coords -= chunk_size;
   }
 

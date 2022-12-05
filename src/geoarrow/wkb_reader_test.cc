@@ -204,3 +204,21 @@ TEST(WKBReaderTest, WKBReaderTestNestedCollection) {
            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
            0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40}));
 }
+
+TEST(WKTReaderTest, WKTReaderTestManyCoordinates) {
+  // The reader uses an internal coordinate buffer of 3072 ordinates; however,
+  // none of the above tests have enough coordinates to run into a situation
+  // where it must be flushed.
+
+  // Make a big linestring
+  std::stringstream ss;
+  ss << "LINESTRING (0 1";
+  for (int i = 1; i < 1537; i++) {
+    ss << ", " << i << " " << (i + 1);
+  }
+  ss << ")";
+
+  WKXTester tester;
+  std::basic_string<uint8_t> big_linestring_wkb = tester.AsWKB(ss.str());
+  EXPECT_WKB_ROUNDTRIP(tester, big_linestring_wkb);
+}
