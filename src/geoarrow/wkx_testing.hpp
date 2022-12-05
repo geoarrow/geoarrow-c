@@ -97,7 +97,7 @@ class WKXTester {
       array_.release(&array_);
     }
 
-    GeoArrowWKBWriterInitVisitor(&wkb_writer_, &v_);
+    GeoArrowWKTWriterInitVisitor(&wkt_writer_, &v_);
     v_.error = &error_;
 
     struct GeoArrowBufferView str_view;
