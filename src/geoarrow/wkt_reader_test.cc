@@ -1,8 +1,4 @@
 
-#include <filesystem>
-#include <fstream>
-#include <stdexcept>
-
 #include <gtest/gtest.h>
 
 #include "geoarrow.h"

@@ -52,13 +52,29 @@ TEST(WKXFilesTest, WKXFilesTestFiles) {
       std::basic_string<uint8_t> line_ewkb(read_buffer, wkb_size);
 
       ASSERT_EQ(wkb_from_line_wkt, line_wkb);
-      ASSERT_EQ(tester.AsWKT(line_wkt), line_wkt);
-      // tester.AsWKT(line_wkb);
+      EXPECT_EQ(tester.AsWKT(line_wkt), line_wkt);
 
-      // EXPECT_EQ(tester.AsWKT(line_wkb), line_wkt);
-      // EXPECT_EQ(tester.AsWKT(line_ewkb), line_wkt);
-      // EXPECT_EQ(tester.AsWKB(line_wkb), line_wkb);
-      // EXPECT_EQ(tester.AsWKB(line_ewkb), line_wkb);
+      EXPECT_EQ(tester.AsWKB(line_wkb), line_wkb);
+      EXPECT_EQ(tester.AsWKB(line_ewkb), line_wkb);
+
+      // Special case the empty point, which translates from WKB to
+      // WKT as POINT [Z[M]] (nan nan [nan [nan]]) instead of EMPTY
+      if (line_wkt == "POINT EMPTY") {
+        EXPECT_EQ(tester.AsWKT(line_wkb), "POINT (nan nan)");
+        EXPECT_EQ(tester.AsWKT(line_ewkb), "POINT (nan nan)");
+      } else if (line_wkt == "POINT Z EMPTY") {
+        EXPECT_EQ(tester.AsWKT(line_wkb), "POINT Z (nan nan nan)");
+        EXPECT_EQ(tester.AsWKT(line_ewkb), "POINT Z (nan nan nan)");
+      } else if (line_wkt == "POINT M EMPTY") {
+        EXPECT_EQ(tester.AsWKT(line_wkb), "POINT M (nan nan nan)");
+        EXPECT_EQ(tester.AsWKT(line_ewkb), "POINT M (nan nan nan)");
+      } else if (line_wkt == "POINT ZM EMPTY") {
+        EXPECT_EQ(tester.AsWKT(line_wkb), "POINT ZM (nan nan nan nan)");
+        EXPECT_EQ(tester.AsWKT(line_ewkb), "POINT ZM (nan nan nan nan)");
+      } else {
+        EXPECT_EQ(tester.AsWKT(line_wkb), line_wkt);
+        EXPECT_EQ(tester.AsWKT(line_ewkb), line_wkt);
+      }
     }
 
     n_tested++;
