@@ -24,6 +24,60 @@ TEST(WKBReaderTest, WKBReaderTestPoint) {
   EXPECT_EQ(tester.AsWKT(point), "POINT (30 10)");
 }
 
+TEST(WKBReaderTest, WKBReaderTestPointZM) {
+  WKXTester tester;
+
+  std::basic_string<uint8_t> point_z({0x01, 0xe9, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0xf0, 0x3f, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0x08, 0x40});
+
+  std::basic_string<uint8_t> point_m({0x01, 0xd1, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0xf0, 0x3f, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0x08, 0x40});
+
+  std::basic_string<uint8_t> point_zm(
+      {0x01, 0xb9, 0x0b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x08, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x40});
+
+  EXPECT_EQ(tester.AsWKT(point_z), "POINT Z (1 2 3)");
+  EXPECT_EQ(tester.AsWKT(point_m), "POINT M (1 2 3)");
+  EXPECT_EQ(tester.AsWKT(point_zm), "POINT ZM (1 2 3 4)");
+}
+
+TEST(WKBReaderTest, WKBReaderTestPointInvalid) {
+  WKXTester tester;
+
+  std::basic_string<uint8_t> short_point1({});
+
+  std::basic_string<uint8_t> short_point2({0x01, 0x01, 0x00, 0x00});
+
+  std::basic_string<uint8_t> short_point3({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                           0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
+                                           0x00, 0x00, 0x00, 0x00, 0x00, 0x24});
+
+  std::basic_string<uint8_t> bad_point({0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
+
+  EXPECT_THROW(tester.AsWKB(short_point1), WKXTestException);
+  EXPECT_EQ(tester.LastErrorMessage(),
+            "Expected endian byte but found end of buffer at byte 0");
+  EXPECT_THROW(tester.AsWKB(short_point2), WKXTestException);
+  EXPECT_EQ(tester.LastErrorMessage(),
+            "Expected uint32 but found end of buffer at byte 1");
+  EXPECT_THROW(tester.AsWKB(short_point3), WKXTestException);
+  EXPECT_EQ(tester.LastErrorMessage(),
+            "Expected coordinate sequence of 1 coords (16 bytes) but found 15 bytes "
+            "remaining at byte 5");
+
+  EXPECT_THROW(tester.AsWKB(bad_point), WKXTestException);
+  EXPECT_EQ(tester.LastErrorMessage(),
+            "Expected valid geometry type code but found 257 at byte 1");
+}
+
 TEST(WKBReaderTest, WKBReaderTestPointBigEndian) {
   WKXTester tester;
 

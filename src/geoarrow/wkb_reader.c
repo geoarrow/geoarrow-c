@@ -53,7 +53,7 @@ static inline int WKBReaderReadEndian(struct WKBReaderPrivate* s,
     return GEOARROW_OK;
   } else {
     ArrowErrorSet((struct ArrowError*)error,
-                  "Expected endian byte but found end of buffer at byte",
+                  "Expected endian byte but found end of buffer at byte %ld",
                   (long)(s->data - s->data0));
     return EINVAL;
   }
@@ -71,7 +71,7 @@ static inline int WKBReaderReadUInt32(struct WKBReaderPrivate* s, uint32_t* out,
     return GEOARROW_OK;
   } else {
     ArrowErrorSet((struct ArrowError*)error,
-                  "Expected uint32 but found end of buffer at byte",
+                  "Expected uint32 but found end of buffer at byte %ld",
                   (long)(s->data - s->data0));
     return EINVAL;
   }
@@ -93,7 +93,7 @@ static int WKBReaderReadCoordinates(struct WKBReaderPrivate* s, int64_t n_coords
     ArrowErrorSet(
         (struct ArrowError*)v->error,
         "Expected coordinate sequence of %ld coords (%ld bytes) but found %ld bytes "
-        "remaining at byte",
+        "remaining at byte %ld",
         (long)n_coords, (long)bytes_needed, (long)s->n_bytes, (long)(s->data - s->data0));
     return EINVAL;
   }
