@@ -61,6 +61,7 @@ class WKXTester {
     }
 
     GeoArrowWKTWriterInitVisitor(&wkt_writer_, &v_);
+    v_.error = &error_;
 
     struct GeoArrowStringView str_view;
     str_view.data = str.data();
@@ -97,6 +98,7 @@ class WKXTester {
     }
 
     GeoArrowWKBWriterInitVisitor(&wkb_writer_, &v_);
+    v_.error = &error_;
 
     struct GeoArrowBufferView str_view;
     str_view.data = str.data();
@@ -133,6 +135,7 @@ class WKXTester {
     }
 
     GeoArrowWKBWriterInitVisitor(&wkb_writer_, &v_);
+    v_.error = &error_;
 
     struct GeoArrowStringView str_view;
     str_view.data = str.data();
@@ -165,6 +168,7 @@ class WKXTester {
     }
 
     GeoArrowWKBWriterInitVisitor(&wkb_writer_, &v_);
+    v_.error = &error_;
 
     struct GeoArrowBufferView str_view;
     str_view.data = str.data();

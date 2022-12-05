@@ -33,8 +33,6 @@ TEST(WKTReaderTest, WKTReaderTestPoint) {
   // Extra whitespace is OK; no whitepsace after POINT is OK
   EXPECT_EQ(tester.AsWKT(" POINT(0    1) "), "POINT (0 1)");
 
-  GTEST_SKIP();
-
   EXPECT_THROW(tester.AsWKT("POINT A"), WKXTestException);
   EXPECT_EQ(tester.LastErrorMessage(), "Expected '(' or 'EMPTY' at byte 6");
   EXPECT_THROW(tester.AsWKT("POINT Z A"), WKXTestException);
@@ -63,8 +61,6 @@ TEST(WKTReaderTest, WKTReaderTestLinestring) {
   EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING M (1 2 4, 2 3 5)");
   EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING ZM (1 2 3 4)");
   EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING ZM (1 2 3 4, 2 3 4 5)");
-
-  GTEST_SKIP();
 
   EXPECT_THROW(tester.AsWKT("LINESTRING (0)"), WKXTestException);
   EXPECT_EQ(tester.LastErrorMessage(), "Expected whitespace at byte 13");
