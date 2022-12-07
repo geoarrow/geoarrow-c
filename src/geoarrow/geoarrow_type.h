@@ -81,9 +81,9 @@ enum GeoArrowDimensions {
 };
 
 enum GeoArrowCoordType {
-  GEOARROW_COORD_TYPE_UNKNOWN,
-  GEOARROW_COORD_TYPE_SEPARATE,
-  GEOARROW_COORD_TYPE_INTERLEAVED
+  GEOARROW_COORD_TYPE_UNKNOWN = 0,
+  GEOARROW_COORD_TYPE_SEPARATE = 1,
+  GEOARROW_COORD_TYPE_INTERLEAVED = 2
 };
 
 enum GeoArrowEdgeType { GEOARROW_EDGE_TYPE_PLANAR, GEOARROW_EDGE_TYPE_SPHERICAL };
@@ -120,7 +120,6 @@ struct GeoArrowCoordView {
 
 struct GeoArrowArrayView {
   struct GeoArrowSchemaView schema_view;
-  int64_t offset;
   int64_t length;
   const uint8_t* validity_bitmap;
   int32_t n_offsets;
