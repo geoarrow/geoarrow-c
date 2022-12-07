@@ -1,6 +1,7 @@
 
 #include <gtest/gtest.h>
 
+#include "nanoarrow.h"
 #include "geoarrow.h"
 
 // Such that kNumOffsets[geometry_type] gives the right answer
@@ -33,6 +34,36 @@ TEST_P(TypeParameterizedTestFixture, ArrayViewTestInitType) {
     EXPECT_EQ(array_view.coords.coords_stride,
               kNumDimensions[array_view.schema_view.dimensions]);
   }
+}
+
+TEST_P(TypeParameterizedTestFixture, ArrayViewTestInitSchema) {
+  struct GeoArrowArrayView array_view;
+  struct ArrowSchema schema;
+  enum GeoArrowType type = GetParam();
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, type), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewInitFromSchema(&array_view, &schema, nullptr), GEOARROW_OK);
+  EXPECT_EQ(array_view.schema_view.type, type);
+
+  schema.release(&schema);
+}
+
+TEST_P(TypeParameterizedTestFixture, ArrayViewTestInitEmptyArray) {
+  struct GeoArrowArrayView array_view;
+  struct ArrowSchema schema;
+  struct ArrowArray array;
+  enum GeoArrowType type = GetParam();
+
+  ASSERT_EQ(GeoArrowSchemaInit(&schema, type), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuilding(&array, nullptr), GEOARROW_OK);
+
+  EXPECT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+
+  schema.release(&schema);
+  array.release(&array);
 }
 
 INSTANTIATE_TEST_SUITE_P(

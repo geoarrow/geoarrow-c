@@ -132,6 +132,13 @@ int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n)
 GeoArrowErrorCode GeoArrowArrayViewInitFromType(struct GeoArrowArrayView* array_view,
                                                 enum GeoArrowType type);
 
+GeoArrowErrorCode GeoArrowArrayViewInitFromSchema(struct GeoArrowArrayView* array_view,
+                                                  struct ArrowSchema* schema,
+                                                  struct GeoArrowError* error);
+
+GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view,
+                                            struct ArrowArray* array,
+                                            struct GeoArrowError* error);
 
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 

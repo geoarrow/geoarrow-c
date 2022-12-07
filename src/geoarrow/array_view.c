@@ -80,9 +80,9 @@ GeoArrowErrorCode GeoArrowArrayViewInitFromType(struct GeoArrowArrayView* array_
   return GeoArrowArrayViewInitInternal(array_view, NULL);
 }
 
-GeoArrowErrorCode GeoArrowArrayViewInit(struct GeoArrowArrayView* array_view,
-                                        struct ArrowSchema* schema,
-                                        struct GeoArrowError* error) {
+GeoArrowErrorCode GeoArrowArrayViewInitFromSchema(struct GeoArrowArrayView* array_view,
+                                                  struct ArrowSchema* schema,
+                                                  struct GeoArrowError* error) {
   NANOARROW_RETURN_NOT_OK(
       GeoArrowSchemaViewInit(&array_view->schema_view, schema, error));
   return GeoArrowArrayViewInitInternal(array_view, error);
