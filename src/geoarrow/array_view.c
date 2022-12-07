@@ -167,14 +167,16 @@ static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_vie
   }
 
   if (array->n_buffers != 2) {
-    ArrowErrorSet((struct ArrowError*)error,
-                  "Unexpected number of buffers in GeoArrowArrayViewSetArray()");
+    ArrowErrorSet(
+        (struct ArrowError*)error,
+        "Unexpected number of buffers in list array in GeoArrowArrayViewSetArray()");
     return EINVAL;
   }
 
   if (array->n_children != 1) {
-    ArrowErrorSet((struct ArrowError*)error,
-                  "Unexpected number of children in GeoArrowArrayViewSetArray()");
+    ArrowErrorSet(
+        (struct ArrowError*)error,
+        "Unexpected number of children in list array in GeoArrowArrayViewSetArray()");
     return EINVAL;
   }
 

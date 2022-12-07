@@ -1,8 +1,8 @@
 
 #include <gtest/gtest.h>
 
-#include "nanoarrow.h"
 #include "geoarrow.h"
+#include "nanoarrow.h"
 
 // Such that kNumOffsets[geometry_type] gives the right answer
 static int kNumOffsets[] = {-1, 0, 1, 2, 1, 2, 3, -1};
@@ -83,3 +83,60 @@ INSTANTIATE_TEST_SUITE_P(
                       GEOARROW_TYPE_POINT_ZM, GEOARROW_TYPE_LINESTRING_ZM,
                       GEOARROW_TYPE_POLYGON_ZM, GEOARROW_TYPE_MULTIPOINT_ZM,
                       GEOARROW_TYPE_MULTILINESTRING_ZM, GEOARROW_TYPE_MULTIPOLYGON_ZM));
+
+TEST(ArrayViewTest, ArrayViewTestInitErrors) {
+  struct GeoArrowArrayView array_view;
+  struct GeoArrowError error;
+  struct ArrowSchema schema;
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, GEOARROW_TYPE_WKB), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewInitFromSchema(&array_view, &schema, &error), EINVAL);
+  EXPECT_STREQ(error.message, "Unsupported geometry type in GeoArrowArrayViewInit()");
+  schema.release(&schema);
+}
+
+TEST(ArrayViewTest, ArrayViewTestSetArrayErrors) {
+  struct GeoArrowArrayView array_view;
+  struct GeoArrowError error;
+  struct ArrowArray array;
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT), GEOARROW_OK);
+  array.offset = 1;
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), ENOTSUP);
+  EXPECT_STREQ(
+      error.message,
+      "ArrowArray with offset != 0 is not yet supported in GeoArrowArrayViewSetArray()");
+
+  array.offset = 0;
+  array.n_children = 1;
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Unexpected number of children for struct coordinate array in "
+               "GeoArrowArrayViewSetArray()");
+
+  struct ArrowArray dummy_childx;
+  struct ArrowArray dummy_childy;
+  struct ArrowArray* children[] = {&dummy_childx, &dummy_childy};
+  array.n_children = 2;
+  array.children = reinterpret_cast<struct ArrowArray**>(children);
+  dummy_childx.n_buffers = 1;
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Unexpected number of buffers for struct coordinate array child in "
+               "GeoArrowArrayViewSetArray()");
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_LINESTRING),
+            GEOARROW_OK);
+  array.n_buffers = 0;
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
+  EXPECT_STREQ(
+      error.message,
+      "Unexpected number of buffers in list array in GeoArrowArrayViewSetArray()");
+
+  array.n_buffers = 2;
+  array.n_children = 0;
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
+  EXPECT_STREQ(
+      error.message,
+      "Unexpected number of children in list array in GeoArrowArrayViewSetArray()");
+}
