@@ -9,9 +9,14 @@ static int kNumOffsets[] = {-1, 0, 1, 2, 1, 2, 3, -1};
 // Such that kNumDimensions[dimensions] gives the right answer
 static int kNumDimensions[] = {-1, 2, 3, 3, 4};
 
-TEST(ArrayViewTest, ArrayViewTestInitType) {
+class TypeParameterizedTestFixture : public ::testing::TestWithParam<enum GeoArrowType> {
+ protected:
+  enum GeoArrowType type;
+};
+
+TEST_P(TypeParameterizedTestFixture, ArrayViewTestInitType) {
   struct GeoArrowArrayView array_view;
-  enum GeoArrowType type = GEOARROW_TYPE_POINT;
+  enum GeoArrowType type = GetParam();
 
   EXPECT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
   EXPECT_EQ(array_view.schema_view.type, type);
@@ -19,11 +24,31 @@ TEST(ArrayViewTest, ArrayViewTestInitType) {
   EXPECT_EQ(array_view.validity_bitmap, nullptr);
   EXPECT_EQ(array_view.n_offsets, kNumOffsets[array_view.schema_view.geometry_type]);
   EXPECT_EQ(array_view.coords.n_coords, 0);
-  EXPECT_EQ(array_view.coords.n_values, kNumDimensions[array_view.schema_view.dimensions]);
+  EXPECT_EQ(array_view.coords.n_values,
+            kNumDimensions[array_view.schema_view.dimensions]);
 
   if (array_view.schema_view.coord_type == GEOARROW_COORD_TYPE_SEPARATE) {
     EXPECT_EQ(array_view.coords.coords_stride, 1);
   } else {
-    EXPECT_EQ(array_view.coords.coords_stride, kNumDimensions[array_view.schema_view.dimensions]);
+    EXPECT_EQ(array_view.coords.coords_stride,
+              kNumDimensions[array_view.schema_view.dimensions]);
   }
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    ArrayViewTest, TypeParameterizedTestFixture,
+    ::testing::Values(GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING,
+                      GEOARROW_TYPE_POLYGON, GEOARROW_TYPE_MULTIPOINT,
+                      GEOARROW_TYPE_MULTILINESTRING, GEOARROW_TYPE_MULTIPOLYGON,
+
+                      GEOARROW_TYPE_POINT_Z, GEOARROW_TYPE_LINESTRING_Z,
+                      GEOARROW_TYPE_POLYGON_Z, GEOARROW_TYPE_MULTIPOINT_Z,
+                      GEOARROW_TYPE_MULTILINESTRING_Z, GEOARROW_TYPE_MULTIPOLYGON_Z,
+
+                      GEOARROW_TYPE_POINT_M, GEOARROW_TYPE_LINESTRING_M,
+                      GEOARROW_TYPE_POLYGON_M, GEOARROW_TYPE_MULTIPOINT_M,
+                      GEOARROW_TYPE_MULTILINESTRING_M, GEOARROW_TYPE_MULTIPOLYGON_M,
+
+                      GEOARROW_TYPE_POINT_ZM, GEOARROW_TYPE_LINESTRING_ZM,
+                      GEOARROW_TYPE_POLYGON_ZM, GEOARROW_TYPE_MULTIPOINT_ZM,
+                      GEOARROW_TYPE_MULTILINESTRING_ZM, GEOARROW_TYPE_MULTIPOLYGON_ZM));
