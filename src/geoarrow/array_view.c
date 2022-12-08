@@ -198,6 +198,7 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
                                             struct ArrowArray* array,
                                             struct GeoArrowError* error) {
   NANOARROW_RETURN_NOT_OK(GeoArrowArrayViewSetArrayInternal(array_view, array, error, 0));
-
+  array_view->validity_bitmap = array->buffers[0];
+  array_view->length = array->length;
   return GEOARROW_OK;
 }

@@ -140,3 +140,36 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayErrors) {
       error.message,
       "Unexpected number of children in list array in GeoArrowArrayViewSetArray()");
 }
+
+TEST(ArrayViewTest, ArrayViewTestSetArrayValid) {
+  struct ArrowSchema schema;
+  struct ArrowArray array;
+  enum GeoArrowType type = GEOARROW_TYPE_POINT;
+
+  // Build the array for [POINT (30 10), null]
+  ASSERT_EQ(GeoArrowSchemaInit(&schema, type), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], 30), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[1], 10), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayFinishBuilding(&array, nullptr), GEOARROW_OK);
+
+  // Set the array view
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+
+  // Check its contents
+  EXPECT_EQ(array_view.length, 2);
+  EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
+  EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 1));
+  EXPECT_EQ(array_view.coords.values[0][0], 30);
+  EXPECT_EQ(array_view.coords.values[1][0], 10);
+
+  schema.release(&schema);
+  array.release(&array);
+}
