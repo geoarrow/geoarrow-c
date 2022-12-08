@@ -102,9 +102,9 @@ static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_vie
   if (level == array_view->n_offsets) {
     // We're at the coord array!
 
-    // n_coords is lengths[level - 1] or array->length if level == 0
+    // n_coords is last_offset[level - 1] or array->length if level == 0
     if (level > 0) {
-      array_view->coords.n_coords = array_view->lengths[level - 1];
+      array_view->coords.n_coords = array_view->last_offset[level - 1];
     } else {
       array_view->coords.n_coords = array->length;
     }
@@ -180,14 +180,14 @@ static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_vie
     return EINVAL;
   }
 
-  // Set the offsets buffer and the lengths value of level + 1
+  // Set the offsets buffer and the last_offset value of level
   if (array->length > 0) {
     array_view->offsets[level] = (const int32_t*)array->buffers[1];
-    array_view->lengths[level + 1] =
+    array_view->last_offset[level] =
         array_view->offsets[level][array->offset + array->length];
   } else {
     array_view->offsets[level] = &kZeroInt32;
-    array_view->lengths[level + 1] = 0;
+    array_view->last_offset[level] = 0;
   }
 
   return GeoArrowArrayViewSetArrayInternal(array_view, array->children[0], error,

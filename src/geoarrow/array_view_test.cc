@@ -141,7 +141,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayErrors) {
       "Unexpected number of children in list array in GeoArrowArrayViewSetArray()");
 }
 
-TEST(ArrayViewTest, ArrayViewTestSetArrayValid) {
+TEST(ArrayViewTest, ArrayViewTestSetArrayValidPoint) {
   struct ArrowSchema schema;
   struct ArrowArray array;
   enum GeoArrowType type = GEOARROW_TYPE_POINT;
@@ -167,8 +167,55 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValid) {
   EXPECT_EQ(array_view.length, 2);
   EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
   EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 1));
+  EXPECT_EQ(array_view.coords.n_coords, 2);
   EXPECT_EQ(array_view.coords.values[0][0], 30);
   EXPECT_EQ(array_view.coords.values[1][0], 10);
+
+  schema.release(&schema);
+  array.release(&array);
+}
+
+TEST(ArrayViewTest, ArrayViewTestSetArrayValidLinestring) {
+  struct ArrowSchema schema;
+  struct ArrowArray array;
+  enum GeoArrowType type = GEOARROW_TYPE_LINESTRING;
+
+  // Build the array for [LINESTRING (30 10, 0 1), null, null]
+  ASSERT_EQ(GeoArrowSchemaInit(&schema, type), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0], 30), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[1], 10), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(array.children[0]), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0], 0), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[1], 1), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(array.children[0]), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendNull(&array, 2), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayFinishBuilding(&array, nullptr), GEOARROW_OK);
+
+  // Set the array view
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+
+  // Check its contents
+  EXPECT_EQ(array_view.length, 3);
+  EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
+  EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 1));
+  EXPECT_EQ(array_view.n_offsets, 1);
+  EXPECT_EQ(array_view.last_offset[0], 2);
+  EXPECT_EQ(array_view.offsets[0][0], 0);
+  EXPECT_EQ(array_view.offsets[0][1], 2);
+
+  EXPECT_EQ(array_view.coords.n_coords, 2);
+  EXPECT_EQ(array_view.coords.values[0][0], 30);
+  EXPECT_EQ(array_view.coords.values[1][0], 10);
+  EXPECT_EQ(array_view.coords.values[0][1], 0);
+  EXPECT_EQ(array_view.coords.values[1][1], 1);
 
   schema.release(&schema);
   array.release(&array);

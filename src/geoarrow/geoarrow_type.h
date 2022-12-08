@@ -124,7 +124,7 @@ struct GeoArrowArrayView {
   const uint8_t* validity_bitmap;
   int32_t n_offsets;
   const int32_t* offsets[3];
-  int32_t lengths[3];
+  int32_t last_offset[3];
   struct GeoArrowCoordView coords;
 };
 
