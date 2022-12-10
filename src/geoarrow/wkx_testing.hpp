@@ -120,7 +120,7 @@ class WKXTester {
     return &v_;
   }
 
-  std::string WKTValue() {
+  std::vector<std::string> WKTValues(const std::string& null_sentinel = "") {
     if (array_.release != nullptr) {
       array_.release(&array_);
     }
@@ -136,15 +136,31 @@ class WKXTester {
       throw WKXTestException("ArrowArrayViewSetArray", result, error_.message);
     }
 
-    struct ArrowStringView answer = ArrowArrayViewGetStringUnsafe(&wkt_array_view_, 0);
-    if (answer.n_bytes == 0) {
-      return "";
+    std::vector<std::string> out(array_.length);
+    for (int64_t i = 0; i < array_.length; i++) {
+      if (ArrowArrayViewIsNull(&wkt_array_view_, i)) {
+        out[i] = null_sentinel;
+      } else {
+        struct ArrowStringView answer =
+            ArrowArrayViewGetStringUnsafe(&wkt_array_view_, i);
+        if (answer.n_bytes == 0) {
+          out[i] = "";
+        } else {
+          out[i] = std::string(answer.data, answer.n_bytes);
+        }
+      }
     }
 
-    return std::string(answer.data, answer.n_bytes);
+    return out;
   }
 
-  std::basic_string<uint8_t> WKBValue() {
+  std::string WKTValue(int64_t i = 0, const std::string& null_sentinel = "") {
+    auto values = WKTValues(null_sentinel);
+    return values[i];
+  }
+
+  std::vector<std::basic_string<uint8_t>> WKBValues(
+      const std::basic_string<uint8_t>& null_sentinel = {}) {
     if (array_.release != nullptr) {
       array_.release(&array_);
     }
@@ -160,8 +176,23 @@ class WKXTester {
       throw WKXTestException("ArrowArrayViewSetArray", result, error_.message);
     }
 
-    struct ArrowBufferView answer = ArrowArrayViewGetBytesUnsafe(&wkb_array_view_, 0);
-    return std::basic_string<uint8_t>(answer.data.as_uint8, answer.n_bytes);
+    std::vector<std::basic_string<uint8_t>> out(array_.length);
+    for (int64_t i = 0; i < array_.length; i++) {
+      if (ArrowArrayViewIsNull(&wkb_array_view_, i)) {
+        out[i] = null_sentinel;
+      } else {
+        struct ArrowBufferView answer = ArrowArrayViewGetBytesUnsafe(&wkb_array_view_, i);
+        out[i] = std::basic_string<uint8_t>(answer.data.as_uint8, answer.n_bytes);
+      }
+    }
+
+    return out;
+  }
+
+  std::basic_string<uint8_t> WKBValue(
+      int64_t i = 0, const std::basic_string<uint8_t>& null_sentinel = {}) {
+    auto values = WKBValues(null_sentinel);
+    return values[i];
   }
 
  private:
