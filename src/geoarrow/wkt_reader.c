@@ -174,11 +174,11 @@ static inline int ReadCoordinate(struct WKTReaderPrivate* s, struct GeoArrowVisi
   }
 
   NANOARROW_RETURN_NOT_OK(
-      ReadOrdinate(s, s->coord_view.values[0] + s->coord_view.n_coords, v->error));
+      ReadOrdinate(s, (double*)s->coord_view.values[0] + s->coord_view.n_coords, v->error));
   for (int i = 1; i < s->coord_view.n_values; i++) {
     NANOARROW_RETURN_NOT_OK(AssertWhitespace(s, v->error));
     NANOARROW_RETURN_NOT_OK(
-        ReadOrdinate(s, s->coord_view.values[i] + s->coord_view.n_coords, v->error));
+        ReadOrdinate(s, (double*)s->coord_view.values[i] + s->coord_view.n_coords, v->error));
   }
 
   s->coord_view.n_coords++;

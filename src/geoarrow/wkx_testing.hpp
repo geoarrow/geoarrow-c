@@ -55,61 +55,77 @@ class WKXTester {
   std::string LastErrorMessage() { return std::string(error_.message); }
 
   std::string AsWKT(const std::string& str) {
-    error_.message[0] = '\0';
-    if (array_.release != nullptr) {
-      array_.release(&array_);
-    }
-
-    GeoArrowWKTWriterInitVisitor(&wkt_writer_, &v_);
-    v_.error = &error_;
-
     struct GeoArrowStringView str_view;
     str_view.data = str.data();
     str_view.n_bytes = str.size();
 
-    int result = GeoArrowWKTReaderVisit(&wkt_reader_, str_view, &v_);
+    int result = GeoArrowWKTReaderVisit(&wkt_reader_, str_view, WKTVisitor());
     if (result != GEOARROW_OK) {
-      throw WKXTestException("GeoArrowWKTReaderVisit", result, error_.message);
+      throw WKXTestException("GeoArrowWKBReaderVisit", result, error_.message);
     }
 
-    result = GeoArrowWKTWriterFinish(&wkt_writer_, &array_, &error_);
-    if (result != GEOARROW_OK) {
-      throw WKXTestException("GeoArrowWKTWriterFinish", result, error_.message);
-    }
-
-    result = ArrowArrayViewSetArray(&wkt_array_view_, &array_,
-                                    reinterpret_cast<struct ArrowError*>(&error_));
-    if (result != GEOARROW_OK) {
-      throw WKXTestException("ArrowArrayViewSetArray", result, error_.message);
-    }
-
-    struct ArrowStringView answer = ArrowArrayViewGetStringUnsafe(&wkt_array_view_, 0);
-    if (answer.n_bytes == 0) {
-      return "";
-    }
-
-    return std::string(answer.data, answer.n_bytes);
+    return WKTValue();
   }
 
   std::string AsWKT(const std::basic_string<uint8_t>& str) {
-    error_.message[0] = '\0';
-    if (array_.release != nullptr) {
-      array_.release(&array_);
-    }
-
-    GeoArrowWKTWriterInitVisitor(&wkt_writer_, &v_);
-    v_.error = &error_;
-
     struct GeoArrowBufferView str_view;
     str_view.data = str.data();
     str_view.n_bytes = str.size();
 
-    int result = GeoArrowWKBReaderVisit(&wkb_reader_, str_view, &v_);
+    int result = GeoArrowWKBReaderVisit(&wkb_reader_, str_view, WKTVisitor());
     if (result != GEOARROW_OK) {
       throw WKXTestException("GeoArrowWKBReaderVisit", result, error_.message);
     }
 
-    result = GeoArrowWKTWriterFinish(&wkt_writer_, &array_, &error_);
+    return WKTValue();
+  }
+
+  std::basic_string<uint8_t> AsWKB(const std::string& str) {
+    struct GeoArrowStringView str_view;
+    str_view.data = str.data();
+    str_view.n_bytes = str.size();
+
+    int result = GeoArrowWKTReaderVisit(&wkt_reader_, str_view, WKBVisitor());
+    if (result != GEOARROW_OK) {
+      throw WKXTestException("GeoArrowWKTReaderVisit", result, error_.message);
+    }
+
+    return WKBValue();
+  }
+
+  std::basic_string<uint8_t> AsWKB(const std::basic_string<uint8_t>& str) {
+    struct GeoArrowBufferView str_view;
+    str_view.data = str.data();
+    str_view.n_bytes = str.size();
+
+    int result = GeoArrowWKBReaderVisit(&wkb_reader_, str_view, WKBVisitor());
+    if (result != GEOARROW_OK) {
+      throw WKXTestException("GeoArrowWKBReaderVisit", result, error_.message);
+    }
+
+    return WKBValue();
+  }
+
+  struct GeoArrowVisitor* WKTVisitor() {
+    error_.message[0] = '\0';
+    GeoArrowWKTWriterInitVisitor(&wkt_writer_, &v_);
+    v_.error = &error_;
+    return &v_;
+  }
+
+  struct GeoArrowVisitor* WKBVisitor() {
+    error_.message[0] = '\0';
+    GeoArrowWKBWriterInitVisitor(&wkb_writer_, &v_);
+    v_.error = &error_;
+    return &v_;
+  }
+
+  std::vector<std::string> WKTValues(const std::string& null_sentinel = "") {
+    if (array_.release != nullptr) {
+      array_.release(&array_);
+    }
+
+    int result = GeoArrowWKTWriterFinish(&wkt_writer_, &array_, &error_);
     if (result != GEOARROW_OK) {
       throw WKXTestException("GeoArrowWKTWriterFinish", result, error_.message);
     }
@@ -120,33 +136,36 @@ class WKXTester {
       throw WKXTestException("ArrowArrayViewSetArray", result, error_.message);
     }
 
-    struct ArrowStringView answer = ArrowArrayViewGetStringUnsafe(&wkt_array_view_, 0);
-    if (answer.n_bytes == 0) {
-      return "";
+    std::vector<std::string> out(array_.length);
+    for (int64_t i = 0; i < array_.length; i++) {
+      if (ArrowArrayViewIsNull(&wkt_array_view_, i)) {
+        out[i] = null_sentinel;
+      } else {
+        struct ArrowStringView answer =
+            ArrowArrayViewGetStringUnsafe(&wkt_array_view_, i);
+        if (answer.n_bytes == 0) {
+          out[i] = "";
+        } else {
+          out[i] = std::string(answer.data, answer.n_bytes);
+        }
+      }
     }
 
-    return std::string(answer.data, answer.n_bytes);
+    return out;
   }
 
-  std::basic_string<uint8_t> AsWKB(const std::string& str) {
-    error_.message[0] = '\0';
+  std::string WKTValue(int64_t i = 0, const std::string& null_sentinel = "") {
+    auto values = WKTValues(null_sentinel);
+    return values[i];
+  }
+
+  std::vector<std::basic_string<uint8_t>> WKBValues(
+      const std::basic_string<uint8_t>& null_sentinel = {}) {
     if (array_.release != nullptr) {
       array_.release(&array_);
     }
 
-    GeoArrowWKBWriterInitVisitor(&wkb_writer_, &v_);
-    v_.error = &error_;
-
-    struct GeoArrowStringView str_view;
-    str_view.data = str.data();
-    str_view.n_bytes = str.size();
-
-    int result = GeoArrowWKTReaderVisit(&wkt_reader_, str_view, &v_);
-    if (result != GEOARROW_OK) {
-      throw WKXTestException("GeoArrowWKTReaderVisit", result, error_.message);
-    }
-
-    result = GeoArrowWKBWriterFinish(&wkb_writer_, &array_, &error_);
+    int result = GeoArrowWKBWriterFinish(&wkb_writer_, &array_, &error_);
     if (result != GEOARROW_OK) {
       throw WKXTestException("GeoArrowWKBWriterFinish", result, error_.message);
     }
@@ -157,41 +176,23 @@ class WKXTester {
       throw WKXTestException("ArrowArrayViewSetArray", result, error_.message);
     }
 
-    struct ArrowBufferView answer = ArrowArrayViewGetBytesUnsafe(&wkb_array_view_, 0);
-    return std::basic_string<uint8_t>(answer.data.as_uint8, answer.n_bytes);
+    std::vector<std::basic_string<uint8_t>> out(array_.length);
+    for (int64_t i = 0; i < array_.length; i++) {
+      if (ArrowArrayViewIsNull(&wkb_array_view_, i)) {
+        out[i] = null_sentinel;
+      } else {
+        struct ArrowBufferView answer = ArrowArrayViewGetBytesUnsafe(&wkb_array_view_, i);
+        out[i] = std::basic_string<uint8_t>(answer.data.as_uint8, answer.n_bytes);
+      }
+    }
+
+    return out;
   }
 
-  std::basic_string<uint8_t> AsWKB(const std::basic_string<uint8_t>& str) {
-    error_.message[0] = '\0';
-    if (array_.release != nullptr) {
-      array_.release(&array_);
-    }
-
-    GeoArrowWKBWriterInitVisitor(&wkb_writer_, &v_);
-    v_.error = &error_;
-
-    struct GeoArrowBufferView str_view;
-    str_view.data = str.data();
-    str_view.n_bytes = str.size();
-
-    int result = GeoArrowWKBReaderVisit(&wkb_reader_, str_view, &v_);
-    if (result != GEOARROW_OK) {
-      throw WKXTestException("GeoArrowWKBReaderVisit", result, error_.message);
-    }
-
-    result = GeoArrowWKBWriterFinish(&wkb_writer_, &array_, &error_);
-    if (result != GEOARROW_OK) {
-      throw WKXTestException("GeoArrowWKBWriterFinish", result, error_.message);
-    }
-
-    result = ArrowArrayViewSetArray(&wkb_array_view_, &array_,
-                                    reinterpret_cast<struct ArrowError*>(&error_));
-    if (result != GEOARROW_OK) {
-      throw WKXTestException("ArrowArrayViewSetArray", result, error_.message);
-    }
-
-    struct ArrowBufferView answer = ArrowArrayViewGetBytesUnsafe(&wkb_array_view_, 0);
-    return std::basic_string<uint8_t>(answer.data.as_uint8, answer.n_bytes);
+  std::basic_string<uint8_t> WKBValue(
+      int64_t i = 0, const std::basic_string<uint8_t>& null_sentinel = {}) {
+    auto values = WKBValues(null_sentinel);
+    return values[i];
   }
 
  private:

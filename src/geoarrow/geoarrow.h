@@ -102,16 +102,6 @@ GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowTy
 GeoArrowErrorCode GeoArrowSchemaInitExtension(struct ArrowSchema* schema,
                                               enum GeoArrowType type);
 
-struct GeoArrowSchemaView {
-  struct ArrowSchema* schema;
-  struct GeoArrowStringView extension_name;
-  struct GeoArrowStringView extension_metadata;
-  enum GeoArrowType type;
-  enum GeoArrowGeometryType geometry_type;
-  enum GeoArrowDimensions dimensions;
-  enum GeoArrowCoordType coord_type;
-};
-
 GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
                                          struct ArrowSchema* schema,
                                          struct GeoArrowError* error);
@@ -122,13 +112,6 @@ GeoArrowErrorCode GeoArrowSchemaViewInitFromStorage(
 
 GeoArrowErrorCode GeoArrowSchemaViewInitFromType(struct GeoArrowSchemaView* schema_view,
                                                  enum GeoArrowType type);
-
-struct GeoArrowMetadataView {
-  struct GeoArrowStringView metadata;
-  enum GeoArrowEdgeType edge_type;
-  enum GeoArrowCrsType crs_type;
-  struct GeoArrowStringView crs;
-};
 
 GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata_view,
                                            struct GeoArrowStringView metadata,
@@ -144,6 +127,22 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
     struct ArrowSchema* schema, struct GeoArrowMetadataView* metadata_view);
 
 int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n);
+
+
+GeoArrowErrorCode GeoArrowArrayViewInitFromType(struct GeoArrowArrayView* array_view,
+                                                enum GeoArrowType type);
+
+GeoArrowErrorCode GeoArrowArrayViewInitFromSchema(struct GeoArrowArrayView* array_view,
+                                                  struct ArrowSchema* schema,
+                                                  struct GeoArrowError* error);
+
+GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view,
+                                            struct ArrowArray* array,
+                                            struct GeoArrowError* error);
+
+GeoArrowErrorCode GeoArrowArrayViewVisit(struct GeoArrowArrayView* array_view,
+                                         int64_t offset, int64_t length,
+                                         struct GeoArrowVisitor* v);
 
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
@@ -203,8 +202,12 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowBufferView src,
                                          struct GeoArrowVisitor* v);
 
+
+
 #ifdef __cplusplus
 }
 #endif
+
+#include "geoarrow_type_inline.h"
 
 #endif
