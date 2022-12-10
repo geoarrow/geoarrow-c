@@ -4,6 +4,8 @@
 #include "geoarrow.h"
 #include "nanoarrow.h"
 
+#include "wkx_testing.hpp"
+
 // Such that kNumOffsets[geometry_type] gives the right answer
 static int kNumOffsets[] = {-1, 0, 1, 2, 1, 2, 3, -1};
 
@@ -170,6 +172,10 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPoint) {
   EXPECT_EQ(array_view.coords.n_coords, 2);
   EXPECT_EQ(array_view.coords.values[0][0], 30);
   EXPECT_EQ(array_view.coords.values[1][0], 10);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, 1, tester.WKTVisitor()), GEOARROW_OK);
+  EXPECT_EQ(tester.WKTValue(), "POINT (30 10)");
 
   schema.release(&schema);
   array.release(&array);

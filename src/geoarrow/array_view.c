@@ -202,3 +202,44 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
   array_view->length = array->length;
   return GEOARROW_OK;
 }
+
+static GeoArrowErrorCode GeoArrowArrayViewVisitPoint(struct GeoArrowArrayView* array_view,
+                                                     int64_t offset, int64_t length,
+                                                     struct GeoArrowVisitor* v) {
+  struct GeoArrowCoordView coords = array_view->coords;
+  coords.n_coords = 1;
+  for (int j = 0; j < coords.n_values; j++) {
+    coords.values[j] += coords.coords_stride * offset;
+  }
+
+  for (int64_t i = 0; i < length; i++) {
+    NANOARROW_RETURN_NOT_OK(v->feat_start(v));
+    if (ArrowBitGet(array_view->validity_bitmap, offset + i)) {
+      NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POINT,
+                                          array_view->schema_view.dimensions));
+      NANOARROW_RETURN_NOT_OK(v->coords(v, &coords));
+      NANOARROW_RETURN_NOT_OK(v->geom_end(v));
+    } else {
+      NANOARROW_RETURN_NOT_OK(v->null_feat(v));
+    }
+
+    NANOARROW_RETURN_NOT_OK(v->feat_end(v));
+
+    for (int j = 0; j < coords.n_values; j++) {
+      coords.values[j] += coords.coords_stride;
+    }
+  }
+
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowArrayViewVisit(struct GeoArrowArrayView* array_view,
+                                         int64_t offset, int64_t length,
+                                         struct GeoArrowVisitor* v) {
+  switch (array_view->schema_view.geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_POINT:
+      return GeoArrowArrayViewVisitPoint(array_view, offset, length, v);
+    default:
+      return ENOTSUP;
+  }
+}

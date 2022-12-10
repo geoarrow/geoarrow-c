@@ -140,6 +140,10 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
                                             struct ArrowArray* array,
                                             struct GeoArrowError* error);
 
+GeoArrowErrorCode GeoArrowArrayViewVisit(struct GeoArrowArrayView* array_view,
+                                         int64_t offset, int64_t length,
+                                         struct GeoArrowVisitor* v);
+
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
 struct GeoArrowWKTWriter {
