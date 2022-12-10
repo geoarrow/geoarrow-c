@@ -251,17 +251,25 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPolygon) {
   ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[0], 1), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[1], 2), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[0], 1),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[1], 2),
+            GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishElement(array.children[0]->children[0]), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[0], 2), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[1], 3), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[0], 2),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[1], 3),
+            GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishElement(array.children[0]->children[0]), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[0], 4), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[1], 5), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[0], 4),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[1], 5),
+            GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishElement(array.children[0]->children[0]), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[0], 1), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[1], 2), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[0], 1),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[1], 2),
+            GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishElement(array.children[0]->children[0]), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishElement(array.children[0]), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
@@ -304,6 +312,62 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPolygon) {
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
   EXPECT_EQ(values[0], "POLYGON ((1 2, 2 3, 4 5, 1 2))");
+  EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(values[2], "<null value>");
+
+  schema.release(&schema);
+  array.release(&array);
+}
+
+TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultipoint) {
+  struct ArrowSchema schema;
+  struct ArrowArray array;
+  enum GeoArrowType type = GEOARROW_TYPE_MULTIPOINT;
+
+  // Build the array for [MULTIPOINT (30 10, 0 1), null, null]
+  ASSERT_EQ(GeoArrowSchemaInit(&schema, type), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0], 30), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[1], 10), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(array.children[0]), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0], 0), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[1], 1), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(array.children[0]), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendNull(&array, 2), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayFinishBuilding(&array, nullptr), GEOARROW_OK);
+
+  // Set the array view
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+
+  // Check its contents
+  EXPECT_EQ(array_view.length, 3);
+  EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
+  EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 1));
+  EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 2));
+  EXPECT_EQ(array_view.n_offsets, 1);
+  EXPECT_EQ(array_view.last_offset[0], 2);
+  EXPECT_EQ(array_view.offsets[0][0], 0);
+  EXPECT_EQ(array_view.offsets[0][1], 2);
+
+  EXPECT_EQ(array_view.coords.n_coords, 2);
+  EXPECT_EQ(array_view.coords.values[0][0], 30);
+  EXPECT_EQ(array_view.coords.values[1][0], 10);
+  EXPECT_EQ(array_view.coords.values[0][1], 0);
+  EXPECT_EQ(array_view.coords.values[1][1], 1);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "MULTIPOINT ((30 10), (0 1))");
   EXPECT_EQ(values[1], "<null value>");
   EXPECT_EQ(values[2], "<null value>");
 
