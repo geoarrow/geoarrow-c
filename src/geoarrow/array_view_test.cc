@@ -223,6 +223,10 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidLinestring) {
   EXPECT_EQ(array_view.coords.values[0][1], 0);
   EXPECT_EQ(array_view.coords.values[1][1], 1);
 
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, 1, tester.WKTVisitor()), GEOARROW_OK);
+  EXPECT_EQ(tester.WKTValue(), "LINESTRING (30 10, 0 1)");
+
   schema.release(&schema);
   array.release(&array);
 }
