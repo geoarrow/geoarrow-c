@@ -174,8 +174,12 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPoint) {
   EXPECT_EQ(array_view.coords.values[1][0], 10);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, 1, tester.WKTVisitor()), GEOARROW_OK);
-  EXPECT_EQ(tester.WKTValue(), "POINT (30 10)");
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 2);
+  EXPECT_EQ(values[0], "POINT (30 10)");
+  EXPECT_EQ(values[1], "<null value>");
 
   schema.release(&schema);
   array.release(&array);
@@ -224,8 +228,13 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidLinestring) {
   EXPECT_EQ(array_view.coords.values[1][1], 1);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, 1, tester.WKTVisitor()), GEOARROW_OK);
-  EXPECT_EQ(tester.WKTValue(), "LINESTRING (30 10, 0 1)");
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "LINESTRING (30 10, 0 1)");
+  EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(values[2], "<null value>");
 
   schema.release(&schema);
   array.release(&array);
