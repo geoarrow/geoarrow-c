@@ -268,6 +268,44 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitLinestring(
   return GEOARROW_OK;
 }
 
+static GeoArrowErrorCode GeoArrowArrayViewVisitPolygon(
+    struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
+    struct GeoArrowVisitor* v) {
+  struct GeoArrowCoordView coords = array_view->coords;
+
+  int64_t ring_offset;
+  int64_t n_rings;
+  int64_t coord_offset;
+  int64_t n_coords;
+  for (int64_t i = 0; i < length; i++) {
+    NANOARROW_RETURN_NOT_OK(v->feat_start(v));
+    if (!array_view->validity_bitmap ||
+        ArrowBitGet(array_view->validity_bitmap, offset + i)) {
+      NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POLYGON,
+                                            array_view->schema_view.dimensions));
+      ring_offset = array_view->offsets[0][offset + i];
+      n_rings = array_view->offsets[0][offset + i + 1] - ring_offset;
+
+      for (int64_t j = 0; j < n_rings; j++) {
+        NANOARROW_RETURN_NOT_OK(v->ring_start(v));
+        coord_offset = array_view->offsets[1][ring_offset + j];
+        n_coords = array_view->offsets[1][ring_offset + j + 1] - coord_offset;
+        GeoArrowCoordViewUpdate(&array_view->coords, &coords, coord_offset, n_coords);
+        NANOARROW_RETURN_NOT_OK(v->coords(v, &coords));
+        NANOARROW_RETURN_NOT_OK(v->ring_end(v));
+      }
+
+      NANOARROW_RETURN_NOT_OK(v->geom_end(v));
+    } else {
+      NANOARROW_RETURN_NOT_OK(v->null_feat(v));
+    }
+
+    NANOARROW_RETURN_NOT_OK(v->feat_end(v));
+  }
+
+  return GEOARROW_OK;
+}
+
 GeoArrowErrorCode GeoArrowArrayViewVisit(struct GeoArrowArrayView* array_view,
                                          int64_t offset, int64_t length,
                                          struct GeoArrowVisitor* v) {
