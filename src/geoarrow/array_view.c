@@ -314,6 +314,8 @@ GeoArrowErrorCode GeoArrowArrayViewVisit(struct GeoArrowArrayView* array_view,
       return GeoArrowArrayViewVisitPoint(array_view, offset, length, v);
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
       return GeoArrowArrayViewVisitLinestring(array_view, offset, length, v);
+    case GEOARROW_GEOMETRY_TYPE_POLYGON:
+      return GeoArrowArrayViewVisitPolygon(array_view, offset, length, v);
     default:
       return ENOTSUP;
   }
