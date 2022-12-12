@@ -29,5 +29,5 @@ TEST(ArrayTest, ArrayTestEmpty) {
   EXPECT_EQ(array.array.release, nullptr);
 
   GeoArrowArrayReset(&array);
-  // array_out.release(&array_out);
+  array_out.release(&array_out);
 }
