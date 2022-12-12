@@ -70,6 +70,7 @@ TEST(ArrayTest, ArrayTestSetBuffersPoint) {
   struct GeoArrowArray array;
   struct ArrowArray array_out;
 
+  // Build the array for [POINT (30 10), null, null]
   struct GeoArrowBufferView b;
   std::vector<uint8_t> is_valid = {0b00000001};
   std::vector<double> xs = {30, 0, 0};
@@ -88,7 +89,7 @@ TEST(ArrayTest, ArrayTestSetBuffersPoint) {
   b.n_bytes = ys.size() * sizeof(double);
   EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 2, b), GEOARROW_OK);
 
-  // Should find a better way to set these lengths
+  // Should find a better way to set these lengths (probably by automatically inferring them)
   array.array.length = 3;
   array.array.children[0]->length = 3;
   array.array.children[1]->length = 3;
