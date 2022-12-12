@@ -130,7 +130,7 @@ int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n)
 
 struct GeoArrowArray {
   struct GeoArrowSchemaView schema_view;
-  void* private_data;
+  struct ArrowArray array;
 };
 
 GeoArrowErrorCode GeoArrowArrayInitFromType(struct GeoArrowArray* array,
@@ -140,7 +140,8 @@ GeoArrowErrorCode GeoArrowArrayInitFromSchema(struct GeoArrowArray* array,
                                               struct ArrowSchema* schema,
                                               struct GeoArrowError* error);
 
-void GeoArrowArrayInitVisitor(struct GeoArrowArray* array, struct GeoArrowVisitor* v);
+GeoArrowErrorCode GeoArrowArraySetBufferCopy(struct GeoArrowArray* array, int64_t i,
+                                             struct GeoArrowBufferView value);
 
 GeoArrowErrorCode GeoArrowArrayFinish(struct GeoArrowArray* array,
                                       struct ArrowArray* array_out,
