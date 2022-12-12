@@ -4,6 +4,8 @@
 #include "geoarrow.h"
 #include "nanoarrow.h"
 
+#include "wkx_testing.hpp"
+
 class TypeParameterizedTestFixture : public ::testing::TestWithParam<enum GeoArrowType> {
  protected:
   enum GeoArrowType type;
@@ -63,3 +65,50 @@ INSTANTIATE_TEST_SUITE_P(
                       GEOARROW_TYPE_POINT_ZM, GEOARROW_TYPE_LINESTRING_ZM,
                       GEOARROW_TYPE_POLYGON_ZM, GEOARROW_TYPE_MULTIPOINT_ZM,
                       GEOARROW_TYPE_MULTILINESTRING_ZM, GEOARROW_TYPE_MULTIPOLYGON_ZM));
+
+TEST(ArrayTest, ArrayTestSetBuffersPoint) {
+  struct GeoArrowArray array;
+  struct ArrowArray array_out;
+
+  struct GeoArrowBufferView b;
+  std::vector<uint8_t> is_valid = {0b00000001};
+  std::vector<double> xs = {30, 0, 0};
+  std::vector<double> ys = {10, 0, 0};
+
+  ASSERT_EQ(GeoArrowArrayInitFromType(&array, GEOARROW_TYPE_POINT), GEOARROW_OK);
+  b.data = is_valid.data();
+  b.n_bytes = is_valid.size() * sizeof(uint8_t);
+  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 0, b), GEOARROW_OK);
+
+  b.data = (const uint8_t*)xs.data();
+  b.n_bytes = xs.size() * sizeof(double);
+  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 1, b), GEOARROW_OK);
+
+  b.data = (const uint8_t*)ys.data();
+  b.n_bytes = ys.size() * sizeof(double);
+  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 2, b), GEOARROW_OK);
+
+  // Should find a better way to set these lengths
+  array.array.length = 3;
+  array.array.children[0]->length = 3;
+  array.array.children[1]->length = 3;
+
+  struct GeoArrowError error;
+  EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, &error), GEOARROW_OK);
+  GeoArrowArrayReset(&array);
+
+  struct GeoArrowArrayView array_view;
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "POINT (30 10)");
+  EXPECT_EQ(values[1], "<null value>");
+
+  array_out.release(&array_out);
+}
