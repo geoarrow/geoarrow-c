@@ -19,7 +19,7 @@ GeoArrowErrorCode GeoArrowArrayInitFromType(struct GeoArrowArray* array,
   NANOARROW_RETURN_NOT_OK(GeoArrowSchemaViewInitFromType(&array->schema_view, type));
   struct ArrowSchema schema;
   NANOARROW_RETURN_NOT_OK(GeoArrowSchemaInit(&schema, type));
-  int result = GeoArrowArrayInitFromSchema(array, &schema, NULL);
+  int result = ArrowArrayInitFromSchema(&array->array, &schema, NULL);
   schema.release(&schema);
   return result;
 }
@@ -30,6 +30,7 @@ GeoArrowErrorCode GeoArrowArrayFinish(struct GeoArrowArray* array,
   NANOARROW_RETURN_NOT_OK(
       ArrowArrayFinishBuilding(&array->array, (struct ArrowError*)error));
   memcpy(array_out, &array->array, sizeof(struct ArrowArray));
+  array->array.release = NULL;
   return GEOARROW_OK;
 }
 
