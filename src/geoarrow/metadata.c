@@ -341,7 +341,7 @@ GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata
 }
 
 static GeoArrowErrorCode GeoArrowMetadataSerializeInternalDeprecated(
-    struct GeoArrowMetadataView* metadata_view, struct ArrowBuffer* buffer) {
+    const struct GeoArrowMetadataView* metadata_view, struct ArrowBuffer* buffer) {
   switch (metadata_view->edge_type) {
     case GEOARROW_EDGE_TYPE_SPHERICAL:
       NANOARROW_RETURN_NOT_OK(ArrowMetadataBuilderAppend(buffer, ArrowCharView("edges"),
@@ -414,7 +414,7 @@ static GeoArrowErrorCode GeoArrowMetadataSerializeInternal(
 }
 
 static GeoArrowErrorCode GeoArrowSchemaSetMetadataInternal(
-    struct ArrowSchema* schema, struct GeoArrowMetadataView* metadata_view,
+    struct ArrowSchema* schema, const struct GeoArrowMetadataView* metadata_view,
     int use_deprecated) {
   struct ArrowBuffer buffer;
   ArrowBufferInit(&buffer);
@@ -491,12 +491,12 @@ int64_t GeoArrowMetadataSerialize(const struct GeoArrowMetadataView* metadata_vi
 }
 
 GeoArrowErrorCode GeoArrowSchemaSetMetadata(struct ArrowSchema* schema,
-                                            struct GeoArrowMetadataView* metadata_view) {
+                                            const struct GeoArrowMetadataView* metadata_view) {
   return GeoArrowSchemaSetMetadataInternal(schema, metadata_view, 0);
 }
 
 GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
-    struct ArrowSchema* schema, struct GeoArrowMetadataView* metadata_view) {
+    struct ArrowSchema* schema, const struct GeoArrowMetadataView* metadata_view) {
   return GeoArrowSchemaSetMetadataInternal(schema, metadata_view, 1);
 }
 

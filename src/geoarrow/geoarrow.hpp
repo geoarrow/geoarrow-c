@@ -2,8 +2,9 @@
 #ifndef GEOARROW_HPP_INCLUDED
 #define GEOARROW_HPP_INCLUDED
 
-#include <string>
+#include <cerrno>
 #include <sstream>
+#include <string>
 
 #include "geoarrow.h"
 
@@ -13,6 +14,7 @@ class VectorType {
   VectorType(const VectorType& other)
       : VectorType(other.schema_view_, other.metadata_view_) {}
 
+  /// \brief Make a VectorType from a geometry type, dimensions, and coordinate type.
   static VectorType Make(enum GeoArrowGeometryType geometry_type,
                          enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY,
                          enum GeoArrowCoordType coord_type = GEOARROW_COORD_TYPE_SEPARATE,
@@ -20,6 +22,7 @@ class VectorType {
     return Make(GeoArrowMakeType(geometry_type, dimensions, coord_type), metadata);
   }
 
+  /// \brief Make a VectorType from a type identifier and optional extension metadata.
   static VectorType Make(enum GeoArrowType type, const std::string& metadata = "") {
     struct ArrowSchema schema;
     int result = GeoArrowSchemaInit(&schema, type);
@@ -47,11 +50,79 @@ class VectorType {
     return VectorType(schema_view, metadata_view);
   }
 
-  static VectorType Invalid(const std::string& err = "invalid") {
-    return VectorType(err);
+  /// \brief Make a VectorType from an ArrowSchema extension type
+  ///
+  /// The caller retains ownership of schema.
+  static VectorType Make(struct ArrowSchema* schema) {
+    struct GeoArrowSchemaView schema_view;
+    struct GeoArrowError error;
+    int result = GeoArrowSchemaViewInit(&schema_view, schema, &error);
+    if (result != GEOARROW_OK) {
+      std::stringstream ss;
+      ss << "Failed to initialize GeoArrowSchemaView: " << error.message;
+      return Invalid(ss.str());
+    }
+
+    struct GeoArrowMetadataView metadata_view;
+    result =
+        GeoArrowMetadataViewInit(&metadata_view, schema_view.extension_metadata, &error);
+    if (result != GEOARROW_OK) {
+      std::stringstream ss;
+      ss << "Failed to initialize GeoArrowMetadataView: " << error.message;
+      return Invalid(ss.str());
+    }
+
+    return VectorType(schema_view, metadata_view);
   }
 
-  bool valid() const { return error_.size() > 0; }
+  /// \brief Make a VectorType from an ArrowSchema storage type
+  ///
+  /// The caller retains ownership of schema. If schema is an extension type,
+  /// any extension type or metadata is ignored.
+  static VectorType Make(struct ArrowSchema* schema, const std::string& extension_name,
+                         const std::string& metadata = "") {
+    struct GeoArrowSchemaView schema_view;
+    struct GeoArrowError error;
+    struct GeoArrowStringView extension_name_view = {extension_name.data(),
+                                                     (int64_t)extension_name.size()};
+    int result = GeoArrowSchemaViewInitFromStorage(&schema_view, schema,
+                                                   extension_name_view, &error);
+    if (result != GEOARROW_OK) {
+      std::stringstream ss;
+      ss << "Failed to initialize GeoArrowSchemaView: " << error.message;
+      return Invalid(ss.str());
+    }
+
+    struct GeoArrowStringView metadata_str_view = {metadata.data(),
+                                                   (int64_t)metadata.size()};
+    struct GeoArrowMetadataView metadata_view;
+    result = GeoArrowMetadataViewInit(&metadata_view, metadata_str_view, &error);
+    if (result != GEOARROW_OK) {
+      std::stringstream ss;
+      ss << "Failed to initialize GeoArrowMetadataView: " << error.message;
+      return Invalid(ss.str());
+    }
+
+    return VectorType(schema_view, metadata_view);
+  }
+
+  /// \brief Make an invalid VectorType for which valid() returns false.
+  static VectorType Invalid(const std::string& err = "") { return VectorType(err); }
+
+  GeoArrowErrorCode InitSchema(struct ArrowSchema* schema_out) const {
+    if (!valid()) {
+      return EINVAL;
+    }
+
+    int result = GeoArrowSchemaInitExtension(schema_out, schema_view_.type);
+    if (result != GEOARROW_OK) {
+      return result;
+    }
+
+    return GeoArrowSchemaSetMetadata(schema_out, &metadata_view_);
+  }
+
+  bool valid() const { return schema_view_.type != GEOARROW_TYPE_UNINITIALIZED; }
 
   std::string error() const { return error_; }
 
