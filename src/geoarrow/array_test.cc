@@ -89,14 +89,13 @@ TEST(ArrayTest, ArrayTestSetBuffersPoint) {
   b.n_bytes = ys.size() * sizeof(double);
   EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 2, b), GEOARROW_OK);
 
-  // Should find a better way to set these lengths (probably by automatically inferring them)
-  array.array.length = 3;
-  array.array.children[0]->length = 3;
-  array.array.children[1]->length = 3;
-
   struct GeoArrowError error;
   EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, &error), GEOARROW_OK);
   GeoArrowArrayReset(&array);
+
+  EXPECT_EQ(array.array.length, 3);
+  EXPECT_EQ(array.array.children[0]->length, 3);
+  EXPECT_EQ(array.array.children[1]->length, 3);
 
   struct GeoArrowArrayView array_view;
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT), GEOARROW_OK);
