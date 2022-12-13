@@ -174,11 +174,11 @@ GeoArrowErrorCode GeoArrowArrayFinish(struct GeoArrowArray* array,
       break;
     case GEOARROW_GEOMETRY_TYPE_POLYGON:
     case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
-      array->array.children[0]->length =
+      array->array.children[0]->children[0]->length =
           array->array.children[0]->children[0]->children[0]->length;
       break;
     case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
-      array->array.children[0]->length =
+      array->array.children[0]->children[0]->children[0]->length =
           array->array.children[0]->children[0]->children[0]->children[0]->length;
       break;
     default:
