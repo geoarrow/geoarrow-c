@@ -93,13 +93,7 @@ class VectorExtensionType : public arrow::ExtensionType {
 
   std::string ToString() const override { return arrow::ExtensionType::ToString(); }
 
-  const enum GeoArrowType GeoArrowType() const { return type_.id(); }
-  const enum GeoArrowGeometryType GeometryType() const { return type_.geometry_type(); }
-  const enum GeoArrowCoordType CoordType() const { return type_.coord_type(); }
-  const enum GeoArrowDimensions Dimensions() const { return type_.dimensions(); }
-  const enum GeoArrowEdgeType EdgeType() const { return type_.edge_type(); }
-  const enum GeoArrowCrsType CrsType() const { return type_.crs_type(); }
-  const std::string Crs() const { return type_.crs(); }
+  const VectorType& GeoArrowType() const { return type_; }
 
   arrow::Result<std::shared_ptr<VectorExtensionType>> WithGeometryType(
       enum GeoArrowGeometryType geometry_type) {
