@@ -12,6 +12,8 @@ namespace geoarrow {
 
 class VectorType {
  public:
+  VectorType(): VectorType("") {}
+
   VectorType(const VectorType& other)
       : VectorType(other.schema_view_, other.metadata_view_) {}
 
@@ -196,7 +198,7 @@ class VectorType {
   std::string crs_;
   std::string error_;
 
-  VectorType(const std::string& err = "") : crs_(""), error_(err) {
+  VectorType(const std::string& err) : crs_(""), error_(err) {
     memset(&schema_view_, 0, sizeof(struct GeoArrowSchemaView));
     memset(&metadata_view_, 0, sizeof(struct GeoArrowMetadataView));
   }
