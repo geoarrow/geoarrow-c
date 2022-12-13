@@ -46,6 +46,7 @@ TEST_P(TypeParameterizedTestFixture, ArrayTestEmpty) {
 
   ArrowArrayViewReset(&array_view);
   array_out.release(&array_out);
+  schema.release(&schema);
 }
 
 INSTANTIATE_TEST_SUITE_P(
