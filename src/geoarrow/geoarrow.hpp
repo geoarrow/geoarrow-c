@@ -27,14 +27,8 @@ class VectorType {
 
   /// \brief Make a VectorType from a type identifier and optional extension metadata.
   static VectorType Make(enum GeoArrowType type, const std::string& metadata = "") {
-    struct ArrowSchema schema;
-    int result = GeoArrowSchemaInit(&schema, type);
-    if (result != GEOARROW_OK) {
-      return Invalid("Invalid input GeoArrow type");
-    }
-
     struct GeoArrowSchemaView schema_view;
-    result = GeoArrowSchemaViewInitFromType(&schema_view, type);
+    int result = GeoArrowSchemaViewInitFromType(&schema_view, type);
     if (result != GEOARROW_OK) {
       return Invalid("Failed to initialize GeoArrowSchemaView");
     }
@@ -112,7 +106,7 @@ class VectorType {
   /// \brief Make an invalid VectorType for which valid() returns false.
   static VectorType Invalid(const std::string& err = "") { return VectorType(err); }
 
-  VectorType WithGeometryType(enum GeoArrowGeometryType geometry_type) {
+  VectorType WithGeometryType(enum GeoArrowGeometryType geometry_type) const {
     return Make(geometry_type, dimensions(), coord_type(), extension_metadata());
   }
 
@@ -124,7 +118,7 @@ class VectorType {
     return Make(geometry_type(), dimensions, coord_type(), extension_metadata());
   }
 
-  VectorType WithEdgeType(enum GeoArrowEdgeType edge_type) {
+  VectorType WithEdgeType(enum GeoArrowEdgeType edge_type) const {
     VectorType new_type(*this);
     new_type.metadata_view_.edge_type = edge_type;
     return new_type;
@@ -138,6 +132,54 @@ class VectorType {
     metadata_view_copy.crs_type = crs_type;
 
     return VectorType(schema_view_, metadata_view_copy);
+  }
+
+  VectorType XY() const {
+    return WithDimensions(GEOARROW_DIMENSIONS_XY);
+  }
+
+  VectorType XYZ() const {
+    return WithDimensions(GEOARROW_DIMENSIONS_XYZ);
+  }
+
+  VectorType XYM() const {
+    return WithDimensions(GEOARROW_DIMENSIONS_XYM);
+  }
+
+  VectorType XYZM() const {
+    return WithDimensions(GEOARROW_DIMENSIONS_XYZM);
+  }
+
+  VectorType Simple() const {
+    switch (geometry_type()) {
+      case GEOARROW_GEOMETRY_TYPE_POINT:
+      case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+        return WithGeometryType(GEOARROW_GEOMETRY_TYPE_POINT);
+      case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+      case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+        return WithGeometryType(GEOARROW_GEOMETRY_TYPE_LINESTRING);
+      case GEOARROW_GEOMETRY_TYPE_POLYGON:
+      case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+        return WithGeometryType(GEOARROW_GEOMETRY_TYPE_POLYGON);
+    default:
+      return Invalid("Can't make simple type type");
+    }
+  }
+
+  VectorType Multi() const {
+    switch (geometry_type()) {
+      case GEOARROW_GEOMETRY_TYPE_POINT:
+      case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+        return WithGeometryType(GEOARROW_GEOMETRY_TYPE_MULTIPOINT);
+      case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+      case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+        return WithGeometryType(GEOARROW_GEOMETRY_TYPE_MULTILINESTRING);
+      case GEOARROW_GEOMETRY_TYPE_POLYGON:
+      case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+        return WithGeometryType(GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON);
+    default:
+      return Invalid("Can't make multi type");
+    }
   }
 
   GeoArrowErrorCode InitSchema(struct ArrowSchema* schema_out) const {
@@ -218,6 +260,16 @@ class VectorType {
     metadata_view_.crs.n_bytes = crs_.size();
   }
 };
+
+static inline VectorType wkb() { return VectorType::Make(GEOARROW_TYPE_WKB); }
+
+static inline VectorType large_wkb() { return VectorType::Make(GEOARROW_TYPE_LARGE_WKB); }
+
+static inline VectorType point() { return VectorType::Make(GEOARROW_TYPE_POINT); }
+
+static inline VectorType linestring() { return VectorType::Make(GEOARROW_TYPE_LINESTRING); }
+
+static inline VectorType polygon() { return VectorType::Make(GEOARROW_TYPE_POLYGON); }
 
 }  // namespace geoarrow
 

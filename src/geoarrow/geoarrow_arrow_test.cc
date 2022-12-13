@@ -62,7 +62,8 @@ TEST(ArrowTest, ArrowTestExtensionTypeModify) {
 
   auto new_type = type->WithGeometryType(GEOARROW_GEOMETRY_TYPE_POINT);
   ASSERT_ARROW_OK(new_type.status());
-  EXPECT_EQ(new_type.ValueUnsafe()->GeoArrowType().id(), GEOARROW_GEOMETRY_TYPE_POINT);
+  EXPECT_EQ(new_type.ValueUnsafe()->GeoArrowType().geometry_type(),
+            GEOARROW_GEOMETRY_TYPE_POINT);
   EXPECT_EQ(new_type.ValueUnsafe()->GeoArrowType().coord_type(),
             GEOARROW_COORD_TYPE_SEPARATE);
   EXPECT_EQ(new_type.ValueUnsafe()->GeoArrowType().dimensions(), GEOARROW_DIMENSIONS_XY);
