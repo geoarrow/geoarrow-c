@@ -127,10 +127,6 @@ class VectorExtensionType : public arrow::ExtensionType {
 
  private:
   VectorType type_;
-  struct GeoArrowSchemaView schema_view_;
-  struct GeoArrowMetadataView metadata_view_;
-  std::string crs_;
-  std::string error_;
   std::string extension_name_;
 
   VectorExtensionType(const std::shared_ptr<arrow::DataType>& storage_type,
