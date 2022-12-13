@@ -109,6 +109,24 @@ class VectorType {
   /// \brief Make an invalid VectorType for which valid() returns false.
   static VectorType Invalid(const std::string& err = "") { return VectorType(err); }
 
+  VectorType WithGeometryType(enum GeoArrowGeometryType geometry_type) {
+    return Make(geometry_type, dimensions(), coord_type(), extension_metadata());
+  }
+
+  VectorType WithCoordType(enum GeoArrowCoordType coord_type) const {
+    return Make(geometry_type(), dimensions(), coord_type, extension_metadata());
+  }
+
+  VectorType WithDimensions(enum GeoArrowDimensions dimensions) const {
+    return Make(geometry_type(), dimensions, coord_type(), extension_metadata());
+  }
+
+  VectorType WithEdgeType(enum GeoArrowEdgeType edge_type) {
+    VectorType new_type(*this);
+    new_type.metadata_view_.edge_type = edge_type;
+    return new_type;
+  }
+
   GeoArrowErrorCode InitSchema(struct ArrowSchema* schema_out) const {
     if (!valid()) {
       return EINVAL;
@@ -128,6 +146,15 @@ class VectorType {
 
   std::string extension_name() const {
     return GeoArrowExtensionNameFromType(schema_view_.type);
+  }
+
+  std::string extension_metadata() const {
+    int64_t metadata_size = GeoArrowMetadataSerialize(&metadata_view_, nullptr, 0);
+    char* out = reinterpret_cast<char*>(malloc(metadata_size));
+    GeoArrowMetadataSerialize(&metadata_view_, out, metadata_size);
+    std::string metadata(out, metadata_size);
+    free(out);
+    return metadata;
   }
 
   const enum GeoArrowType id() const { return schema_view_.type; }
