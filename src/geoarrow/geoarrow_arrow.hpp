@@ -8,12 +8,13 @@
 
 namespace geoarrow {
 
-class VectorType : public arrow::ExtensionType {
+class VectorExtensionType : public arrow::ExtensionType {
  public:
-  VectorType(const VectorType& other)
-      : VectorType(other.storage_type(), other.schema_view_, other.metadata_view_) {}
+  VectorExtensionType(const VectorExtensionType& other)
+      : VectorExtensionType(other.storage_type(), other.schema_view_,
+                            other.metadata_view_) {}
 
-  static arrow::Result<std::shared_ptr<VectorType>> Make(
+  static arrow::Result<std::shared_ptr<VectorExtensionType>> Make(
       enum GeoArrowGeometryType geometry_type,
       enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY,
       enum GeoArrowCoordType coord_type = GEOARROW_COORD_TYPE_SEPARATE,
@@ -21,7 +22,7 @@ class VectorType : public arrow::ExtensionType {
     return Make(GeoArrowMakeType(geometry_type, dimensions, coord_type), metadata);
   }
 
-  static arrow::Result<std::shared_ptr<VectorType>> Make(
+  static arrow::Result<std::shared_ptr<VectorExtensionType>> Make(
       enum GeoArrowType type, const std::string& metadata = "") {
     struct ArrowSchema schema;
     int result = GeoArrowSchemaInit(&schema, type);
@@ -48,14 +49,14 @@ class VectorType : public arrow::ExtensionType {
                                     error.message);
     }
 
-    return std::shared_ptr<VectorType>(
-        new VectorType(maybe_arrow_type.ValueUnsafe(), schema_view, metadata_view));
+    return std::shared_ptr<VectorExtensionType>(new VectorExtensionType(
+        maybe_arrow_type.ValueUnsafe(), schema_view, metadata_view));
   }
 
   static arrow::Status RegisterAll() {
     for (const auto& ext_name : all_ext_names()) {
-      auto dummy_type =
-          std::shared_ptr<VectorType>(new VectorType(arrow::null(), ext_name));
+      auto dummy_type = std::shared_ptr<VectorExtensionType>(
+          new VectorExtensionType(arrow::null(), ext_name));
       ARROW_RETURN_NOT_OK(arrow::RegisterExtensionType(dummy_type));
     }
 
@@ -108,8 +109,8 @@ class VectorType : public arrow::ExtensionType {
                                     error.message);
     }
 
-    return std::shared_ptr<VectorType>(
-        new VectorType(storage_type, schema_view, metadata_view));
+    return std::shared_ptr<VectorExtensionType>(
+        new VectorExtensionType(storage_type, schema_view, metadata_view));
   }
 
   std::string Serialize() const override {
@@ -140,37 +141,37 @@ class VectorType : public arrow::ExtensionType {
     return out_str;
   }
 
-  arrow::Result<std::shared_ptr<VectorType>> WithGeometryType(
+  arrow::Result<std::shared_ptr<VectorExtensionType>> WithGeometryType(
       enum GeoArrowGeometryType geometry_type) {
     return Make(geometry_type, Dimensions(), CoordType(), Serialize());
   }
 
-  arrow::Result<std::shared_ptr<VectorType>> WithCoordType(
+  arrow::Result<std::shared_ptr<VectorExtensionType>> WithCoordType(
       enum GeoArrowCoordType coord_type) const {
     return Make(GeometryType(), Dimensions(), coord_type, Serialize());
   }
 
-  arrow::Result<std::shared_ptr<VectorType>> WithDimensions(
+  arrow::Result<std::shared_ptr<VectorExtensionType>> WithDimensions(
       enum GeoArrowDimensions dimensions) const {
     return Make(GeometryType(), dimensions, CoordType(), Serialize());
   }
 
-  arrow::Result<std::shared_ptr<VectorType>> WithEdgeType(
+  arrow::Result<std::shared_ptr<VectorExtensionType>> WithEdgeType(
       enum GeoArrowEdgeType edge_type) {
-    auto new_type = std::shared_ptr<VectorType>(new VectorType(*this));
+    auto new_type = std::shared_ptr<VectorExtensionType>(new VectorExtensionType(*this));
     new_type->metadata_view_.edge_type = edge_type;
     return new_type;
   }
 
-  arrow::Result<std::shared_ptr<VectorType>> WithCrs(
+  arrow::Result<std::shared_ptr<VectorExtensionType>> WithCrs(
       const std::string& crs, enum GeoArrowCrsType crs_type = GEOARROW_CRS_TYPE_UNKNOWN) {
     struct GeoArrowMetadataView metadata_view_copy = metadata_view_;
     metadata_view_copy.crs.data = crs.data();
     metadata_view_copy.crs.n_bytes = crs.size();
     metadata_view_copy.crs_type = crs_type;
 
-    return std::shared_ptr<VectorType>(
-        new VectorType(storage_type(), schema_view_, metadata_view_copy));
+    return std::shared_ptr<VectorExtensionType>(
+        new VectorExtensionType(storage_type(), schema_view_, metadata_view_copy));
   }
 
  private:
@@ -179,17 +180,18 @@ class VectorType : public arrow::ExtensionType {
   std::string extension_name_;
   std::string crs_;
 
-  VectorType(const std::shared_ptr<arrow::DataType>& storage_type = arrow::null(),
-             std::string extension_name = "")
+  VectorExtensionType(
+      const std::shared_ptr<arrow::DataType>& storage_type = arrow::null(),
+      std::string extension_name = "")
       : arrow::ExtensionType(storage_type), extension_name_(extension_name) {
     GeoArrowSchemaViewInitFromType(&schema_view_, GEOARROW_TYPE_UNINITIALIZED);
     GeoArrowMetadataViewInit(&metadata_view_, {nullptr, 0}, nullptr);
   }
 
-  VectorType(const std::shared_ptr<arrow::DataType>& storage_type,
-             struct GeoArrowSchemaView schema_view,
-             struct GeoArrowMetadataView metadata_view)
-      : VectorType(storage_type) {
+  VectorExtensionType(const std::shared_ptr<arrow::DataType>& storage_type,
+                      struct GeoArrowSchemaView schema_view,
+                      struct GeoArrowMetadataView metadata_view)
+      : VectorExtensionType(storage_type) {
     schema_view_.geometry_type = schema_view.geometry_type;
     schema_view_.dimensions = schema_view.dimensions;
     schema_view_.coord_type = schema_view.coord_type;
