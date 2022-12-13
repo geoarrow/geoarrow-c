@@ -250,3 +250,11 @@ class TestCoords {
     }
   }
 };
+
+template <typename T>
+static inline struct GeoArrowBufferView MakeBufferView(const std::vector<T>& v) {
+  struct GeoArrowBufferView buffer_view;
+  buffer_view.data = (const uint8_t*)v.data();
+  buffer_view.n_bytes = v.size() * sizeof(T);
+  return buffer_view;
+}

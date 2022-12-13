@@ -128,6 +128,26 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
 
 int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n);
 
+struct GeoArrowArray {
+  struct GeoArrowSchemaView schema_view;
+  struct ArrowArray array;
+};
+
+GeoArrowErrorCode GeoArrowArrayInitFromType(struct GeoArrowArray* array,
+                                            enum GeoArrowType type);
+
+GeoArrowErrorCode GeoArrowArrayInitFromSchema(struct GeoArrowArray* array,
+                                              struct ArrowSchema* schema,
+                                              struct GeoArrowError* error);
+
+GeoArrowErrorCode GeoArrowArraySetBuffer(struct GeoArrowArray* array, int64_t i,
+                                         struct GeoArrowBufferView value);
+
+GeoArrowErrorCode GeoArrowArrayFinish(struct GeoArrowArray* array,
+                                      struct ArrowArray* array_out,
+                                      struct GeoArrowError* error);
+
+void GeoArrowArrayReset(struct GeoArrowArray* array);
 
 GeoArrowErrorCode GeoArrowArrayViewInitFromType(struct GeoArrowArrayView* array_view,
                                                 enum GeoArrowType type);
@@ -201,8 +221,6 @@ void GeoArrowWKBReaderReset(struct GeoArrowWKBReader* reader);
 GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowBufferView src,
                                          struct GeoArrowVisitor* v);
-
-
 
 #ifdef __cplusplus
 }
