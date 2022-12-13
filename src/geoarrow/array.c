@@ -98,6 +98,7 @@ static void GeoArrowSetArrayLengthFromBufferLength(struct GeoArrowSchemaView* sc
       break;
     case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
       coord_level = 3;
+      break;
     default:
       return;
   }
