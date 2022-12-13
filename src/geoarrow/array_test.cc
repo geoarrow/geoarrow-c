@@ -168,9 +168,7 @@ TEST(ArrayTest, ArrayTestSetBuffersPolygon) {
   EXPECT_EQ(GeoArrowArraySetBuffer(&array, 3, MakeBufferView(xs)), GEOARROW_OK);
   EXPECT_EQ(GeoArrowArraySetBuffer(&array, 4, MakeBufferView(ys)), GEOARROW_OK);
 
-  struct GeoArrowError err;
-  EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, &err), GEOARROW_OK);
-  std::string theerr(err.message);
+  EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, nullptr), GEOARROW_OK);
   GeoArrowArrayReset(&array);
 
   EXPECT_EQ(array.array.length, 3);
