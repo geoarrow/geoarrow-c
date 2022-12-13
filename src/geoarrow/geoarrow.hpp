@@ -11,6 +11,7 @@
 namespace geoarrow {
 
 class VectorType {
+ public:
   VectorType(const VectorType& other)
       : VectorType(other.schema_view_, other.metadata_view_) {}
 
@@ -125,6 +126,16 @@ class VectorType {
     VectorType new_type(*this);
     new_type.metadata_view_.edge_type = edge_type;
     return new_type;
+  }
+
+  VectorType WithCrs(const std::string& crs,
+                     enum GeoArrowCrsType crs_type = GEOARROW_CRS_TYPE_UNKNOWN) {
+    struct GeoArrowMetadataView metadata_view_copy = metadata_view_;
+    metadata_view_copy.crs.data = crs.data();
+    metadata_view_copy.crs.n_bytes = crs.size();
+    metadata_view_copy.crs_type = crs_type;
+
+    return VectorType(schema_view_, metadata_view_copy);
   }
 
   GeoArrowErrorCode InitSchema(struct ArrowSchema* schema_out) const {
