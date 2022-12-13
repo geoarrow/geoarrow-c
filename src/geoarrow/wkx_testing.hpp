@@ -237,15 +237,6 @@ class TestCoords {
     return &coord_view_;
   }
 
-  int num_dimensions() { return storage_.size(); }
-
-  struct GeoArrowBufferView buffer_view(int i) {
-    struct GeoArrowBufferView buffer_view;
-    buffer_view.data = (const uint8_t*)storage_[i].data();
-    buffer_view.n_bytes = storage_[i].size() * sizeof(double);
-    return buffer_view;
-  }
-
  private:
   std::vector<std::vector<double>> storage_;
   struct GeoArrowCoordView coord_view_;
@@ -259,3 +250,11 @@ class TestCoords {
     }
   }
 };
+
+template <typename T>
+static inline struct GeoArrowBufferView MakeBufferView(const std::vector<T>& v) {
+  struct GeoArrowBufferView buffer_view;
+  buffer_view.data = (const uint8_t*)v.data();
+  buffer_view.n_bytes = v.size() * sizeof(T);
+  return buffer_view;
+}

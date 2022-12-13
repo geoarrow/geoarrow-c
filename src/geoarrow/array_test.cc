@@ -71,17 +71,18 @@ TEST(ArrayTest, ArrayTestSetBuffersPoint) {
   struct ArrowArray array_out;
 
   // Build the array for [POINT (30 10), null, null]
-  struct GeoArrowBufferView b;
   std::vector<uint8_t> is_valid = {0b00000001};
-  TestCoords coords({30, 0, 0}, {10, 0, 0});
+  std::vector<double> xs = {30, 0, 0};
+  std::vector<double> ys = {10, 0, 0};
 
   ASSERT_EQ(GeoArrowArrayInitFromType(&array, GEOARROW_TYPE_POINT), GEOARROW_OK);
 
-  b.data = is_valid.data();
-  b.n_bytes = is_valid.size() * sizeof(uint8_t);
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 0, b), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 1, coords.buffer_view(0)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 2, coords.buffer_view(1)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 0, MakeBufferView<uint8_t>(is_valid)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 1, MakeBufferView<double>(xs)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 2, MakeBufferView<double>(ys)),
+            GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, nullptr), GEOARROW_OK);
   GeoArrowArrayReset(&array);
