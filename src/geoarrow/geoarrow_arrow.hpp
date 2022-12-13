@@ -5,6 +5,7 @@
 #include <arrow/type.h>
 
 #include "geoarrow.h"
+#include "geoarrow.hpp"
 
 namespace geoarrow {
 
@@ -177,8 +178,9 @@ class VectorExtensionType : public arrow::ExtensionType {
  private:
   struct GeoArrowSchemaView schema_view_;
   struct GeoArrowMetadataView metadata_view_;
-  std::string extension_name_;
   std::string crs_;
+  std::string error_;
+  std::string extension_name_;
 
   VectorExtensionType(
       const std::shared_ptr<arrow::DataType>& storage_type = arrow::null(),
