@@ -111,8 +111,8 @@ static void GeoArrowSetArrayLengthFromBufferLength(struct GeoArrowSchemaView* sc
   }
 }
 
-GeoArrowErrorCode GeoArrowArraySetBufferCopy(struct GeoArrowArray* array, int64_t i,
-                                             struct GeoArrowBufferView value) {
+GeoArrowErrorCode GeoArrowArraySetBuffer(struct GeoArrowArray* array, int64_t i,
+                                         struct GeoArrowBufferView value) {
   struct GeoArrowFindBufferResult res;
   res.array = 0;
   res.level = -1;

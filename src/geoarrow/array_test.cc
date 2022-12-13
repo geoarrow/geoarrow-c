@@ -78,9 +78,9 @@ TEST(ArrayTest, ArrayTestSetBuffersPoint) {
 
   ASSERT_EQ(GeoArrowArrayInitFromType(&array, GEOARROW_TYPE_POINT), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 0, MakeBufferView(is_valid)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 1, MakeBufferView(xs)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 2, MakeBufferView(ys)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 0, MakeBufferView(is_valid)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 1, MakeBufferView(xs)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 2, MakeBufferView(ys)), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, nullptr), GEOARROW_OK);
   GeoArrowArrayReset(&array);
@@ -118,10 +118,10 @@ TEST(ArrayTest, ArrayTestSetBuffersLinestring) {
 
   ASSERT_EQ(GeoArrowArrayInitFromType(&array, GEOARROW_TYPE_LINESTRING), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 0, MakeBufferView(is_valid)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 1, MakeBufferView(offset0)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 2, MakeBufferView(xs)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 3, MakeBufferView(ys)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 0, MakeBufferView(is_valid)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 1, MakeBufferView(offset0)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 2, MakeBufferView(xs)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 3, MakeBufferView(ys)), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, nullptr), GEOARROW_OK);
   GeoArrowArrayReset(&array);
@@ -162,11 +162,11 @@ TEST(ArrayTest, ArrayTestSetBuffersPolygon) {
 
   ASSERT_EQ(GeoArrowArrayInitFromType(&array, GEOARROW_TYPE_POLYGON), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 0, MakeBufferView(is_valid)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 1, MakeBufferView(offset0)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 2, MakeBufferView(offset1)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 3, MakeBufferView(xs)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 4, MakeBufferView(ys)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 0, MakeBufferView(is_valid)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 1, MakeBufferView(offset0)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 2, MakeBufferView(offset1)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 3, MakeBufferView(xs)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 4, MakeBufferView(ys)), GEOARROW_OK);
 
   struct GeoArrowError err;
   EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, &err), GEOARROW_OK);

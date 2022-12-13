@@ -140,8 +140,8 @@ GeoArrowErrorCode GeoArrowArrayInitFromSchema(struct GeoArrowArray* array,
                                               struct ArrowSchema* schema,
                                               struct GeoArrowError* error);
 
-GeoArrowErrorCode GeoArrowArraySetBufferCopy(struct GeoArrowArray* array, int64_t i,
-                                             struct GeoArrowBufferView value);
+GeoArrowErrorCode GeoArrowArraySetBuffer(struct GeoArrowArray* array, int64_t i,
+                                         struct GeoArrowBufferView value);
 
 GeoArrowErrorCode GeoArrowArrayFinish(struct GeoArrowArray* array,
                                       struct ArrowArray* array_out,
