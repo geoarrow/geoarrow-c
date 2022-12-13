@@ -77,12 +77,9 @@ TEST(ArrayTest, ArrayTestSetBuffersPoint) {
 
   ASSERT_EQ(GeoArrowArrayInitFromType(&array, GEOARROW_TYPE_POINT), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 0, MakeBufferView<uint8_t>(is_valid)),
-            GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 1, MakeBufferView<double>(xs)),
-            GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 2, MakeBufferView<double>(ys)),
-            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 0, MakeBufferView(is_valid)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 1, MakeBufferView(xs)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 2, MakeBufferView(ys)), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, nullptr), GEOARROW_OK);
   GeoArrowArrayReset(&array);
@@ -103,6 +100,50 @@ TEST(ArrayTest, ArrayTestSetBuffersPoint) {
   ASSERT_EQ(values.size(), 3);
   EXPECT_EQ(values[0], "POINT (30 10)");
   EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(values[2], "<null value>");
+
+  array_out.release(&array_out);
+}
+
+TEST(ArrayTest, ArrayTestSetBuffersLinestring) {
+  struct GeoArrowArray array;
+  struct ArrowArray array_out;
+
+  // Build the array for [LINESTRING (30 10, 0 1), null, null]
+  std::vector<uint8_t> is_valid = {0b00000001};
+  std::vector<int32_t> offset0 = {0, 2, 2, 2};
+  std::vector<double> xs = {30, 0};
+  std::vector<double> ys = {10, 1};
+
+  ASSERT_EQ(GeoArrowArrayInitFromType(&array, GEOARROW_TYPE_LINESTRING), GEOARROW_OK);
+
+  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 0, MakeBufferView(is_valid)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 1, MakeBufferView(offset0)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 2, MakeBufferView(xs)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArraySetBufferCopy(&array, 3, MakeBufferView(ys)), GEOARROW_OK);
+
+  EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowArrayReset(&array);
+
+  EXPECT_EQ(array.array.length, 3);
+  EXPECT_EQ(array.array.children[0]->length, 2);
+  EXPECT_EQ(array.array.children[0]->children[0]->length, 2);
+  EXPECT_EQ(array.array.children[0]->children[1]->length, 2);
+
+  struct GeoArrowArrayView array_view;
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_LINESTRING),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "LINESTRING (30 10, 0 1)");
+  EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(values[2], "<null value>");
 
   array_out.release(&array_out);
 }
