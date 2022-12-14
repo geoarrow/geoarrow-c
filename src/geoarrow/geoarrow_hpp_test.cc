@@ -57,3 +57,38 @@ TEST(GeoArrowHppTest, GeoArrowHppTestVectorTypeModify) {
   EXPECT_EQ(new_type.coord_type(), GEOARROW_COORD_TYPE_SEPARATE);
   EXPECT_EQ(new_type.edge_type(), GEOARROW_EDGE_TYPE_PLANAR);
 }
+
+TEST(GeoArrowHppTest, GeoArrowHppTestVectorTypeModifyXYZM) {
+  EXPECT_EQ(geoarrow::Point().XYZ().id(), GEOARROW_TYPE_POINT_Z);
+  EXPECT_EQ(geoarrow::Point().XYM().id(), GEOARROW_TYPE_POINT_M);
+  EXPECT_EQ(geoarrow::Point().XYZM().id(), GEOARROW_TYPE_POINT_ZM);
+  EXPECT_EQ(geoarrow::Point().XYZ().XY().id(), GEOARROW_TYPE_POINT);
+}
+
+TEST(GeoArrowHppTest, GeoArrowHppTestVectorTypeModifyMultipoint) {
+  EXPECT_EQ(geoarrow::Point().Multi().id(), GEOARROW_TYPE_MULTIPOINT);
+  EXPECT_EQ(geoarrow::Point().Multi().Multi().id(), GEOARROW_TYPE_MULTIPOINT);
+  EXPECT_EQ(geoarrow::Point().Simple().id(), GEOARROW_TYPE_POINT);
+  EXPECT_EQ(geoarrow::Point().Multi().Simple().id(), GEOARROW_TYPE_POINT);
+}
+
+TEST(GeoArrowHppTest, GeoArrowHppTestVectorTypeModifyMultilinestring) {
+  EXPECT_EQ(geoarrow::Linestring().Multi().id(), GEOARROW_TYPE_MULTILINESTRING);
+  EXPECT_EQ(geoarrow::Linestring().Multi().Multi().id(), GEOARROW_TYPE_MULTILINESTRING);
+  EXPECT_EQ(geoarrow::Linestring().Simple().id(), GEOARROW_TYPE_LINESTRING);
+  EXPECT_EQ(geoarrow::Linestring().Multi().Simple().id(), GEOARROW_TYPE_LINESTRING);
+}
+
+TEST(GeoArrowHppTest, GeoArrowHppTestVectorTypeModifyMultipolygon) {
+  EXPECT_EQ(geoarrow::Polygon().Multi().id(), GEOARROW_TYPE_MULTIPOLYGON);
+  EXPECT_EQ(geoarrow::Polygon().Multi().Multi().id(), GEOARROW_TYPE_MULTIPOLYGON);
+  EXPECT_EQ(geoarrow::Polygon().Simple().id(), GEOARROW_TYPE_POLYGON);
+  EXPECT_EQ(geoarrow::Polygon().Multi().Simple().id(), GEOARROW_TYPE_POLYGON);
+}
+
+TEST(GeoArrowHppTest, GeoArrowHppTestTypeConstructors) {
+  EXPECT_EQ(geoarrow::Wkb().id(), GEOARROW_TYPE_WKB);
+  EXPECT_EQ(geoarrow::Point().id(), GEOARROW_TYPE_POINT);
+  EXPECT_EQ(geoarrow::Linestring().id(), GEOARROW_TYPE_LINESTRING);
+  EXPECT_EQ(geoarrow::Polygon().id(), GEOARROW_TYPE_POLYGON);
+}

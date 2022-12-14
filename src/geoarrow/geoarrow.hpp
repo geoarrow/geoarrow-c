@@ -261,15 +261,13 @@ class VectorType {
   }
 };
 
-static inline VectorType wkb() { return VectorType::Make(GEOARROW_TYPE_WKB); }
+static inline VectorType Wkb() { return VectorType::Make(GEOARROW_TYPE_WKB); }
 
-static inline VectorType large_wkb() { return VectorType::Make(GEOARROW_TYPE_LARGE_WKB); }
+static inline VectorType Point() { return VectorType::Make(GEOARROW_TYPE_POINT); }
 
-static inline VectorType point() { return VectorType::Make(GEOARROW_TYPE_POINT); }
+static inline VectorType Linestring() { return VectorType::Make(GEOARROW_TYPE_LINESTRING); }
 
-static inline VectorType linestring() { return VectorType::Make(GEOARROW_TYPE_LINESTRING); }
-
-static inline VectorType polygon() { return VectorType::Make(GEOARROW_TYPE_POLYGON); }
+static inline VectorType Polygon() { return VectorType::Make(GEOARROW_TYPE_POLYGON); }
 
 }  // namespace geoarrow
 
