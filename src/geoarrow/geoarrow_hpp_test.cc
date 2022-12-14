@@ -92,3 +92,11 @@ TEST(GeoArrowHppTest, GeoArrowHppTestTypeConstructors) {
   EXPECT_EQ(geoarrow::Linestring().id(), GEOARROW_TYPE_LINESTRING);
   EXPECT_EQ(geoarrow::Polygon().id(), GEOARROW_TYPE_POLYGON);
 }
+
+TEST(GeoArrowHppTest, GeoArrowHppTestModifyInvalid) {
+  auto invalid = geoarrow::VectorType::Invalid();
+  EXPECT_FALSE(invalid.WithGeometryType(GEOARROW_GEOMETRY_TYPE_GEOMETRY).valid());
+  EXPECT_FALSE(invalid.WithDimensions(GEOARROW_DIMENSIONS_XY).valid());
+  EXPECT_FALSE(invalid.WithEdgeType(GEOARROW_EDGE_TYPE_SPHERICAL).valid());
+  EXPECT_FALSE(invalid.WithCrs("abcd1234").valid());
+}
