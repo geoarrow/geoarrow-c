@@ -12,10 +12,12 @@ namespace geoarrow {
 
 class VectorType {
  public:
-  VectorType(): VectorType("") {}
+  VectorType() : VectorType("") {}
 
   VectorType(const VectorType& other)
-      : VectorType(other.schema_view_, other.metadata_view_) {}
+      : VectorType(other.schema_view_, other.metadata_view_) {
+    error_ = other.error_;
+  }
 
   /// \brief Make a VectorType from a geometry type, dimensions, and coordinate type.
   static VectorType Make(enum GeoArrowGeometryType geometry_type,
@@ -134,21 +136,13 @@ class VectorType {
     return VectorType(schema_view_, metadata_view_copy);
   }
 
-  VectorType XY() const {
-    return WithDimensions(GEOARROW_DIMENSIONS_XY);
-  }
+  VectorType XY() const { return WithDimensions(GEOARROW_DIMENSIONS_XY); }
 
-  VectorType XYZ() const {
-    return WithDimensions(GEOARROW_DIMENSIONS_XYZ);
-  }
+  VectorType XYZ() const { return WithDimensions(GEOARROW_DIMENSIONS_XYZ); }
 
-  VectorType XYM() const {
-    return WithDimensions(GEOARROW_DIMENSIONS_XYM);
-  }
+  VectorType XYM() const { return WithDimensions(GEOARROW_DIMENSIONS_XYM); }
 
-  VectorType XYZM() const {
-    return WithDimensions(GEOARROW_DIMENSIONS_XYZM);
-  }
+  VectorType XYZM() const { return WithDimensions(GEOARROW_DIMENSIONS_XYZM); }
 
   VectorType Simple() const {
     switch (geometry_type()) {
@@ -161,8 +155,8 @@ class VectorType {
       case GEOARROW_GEOMETRY_TYPE_POLYGON:
       case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
         return WithGeometryType(GEOARROW_GEOMETRY_TYPE_POLYGON);
-    default:
-      return Invalid("Can't make simple type type");
+      default:
+        return Invalid("Can't make simple type type");
     }
   }
 
@@ -177,8 +171,8 @@ class VectorType {
       case GEOARROW_GEOMETRY_TYPE_POLYGON:
       case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
         return WithGeometryType(GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON);
-    default:
-      return Invalid("Can't make multi type");
+      default:
+        return Invalid("Can't make multi type");
     }
   }
 
@@ -221,6 +215,20 @@ class VectorType {
 
   const enum GeoArrowDimensions dimensions() const { return schema_view_.dimensions; }
 
+  int num_dimensions() const {
+    switch (dimensions()) {
+      case GEOARROW_DIMENSIONS_XY:
+        return 2;
+      case GEOARROW_DIMENSIONS_XYZ:
+      case GEOARROW_DIMENSIONS_XYM:
+        return 3;
+      case GEOARROW_DIMENSIONS_XYZM:
+        return 4;
+      default:
+        return -1;
+    }
+  }
+
   const enum GeoArrowEdgeType edge_type() const { return metadata_view_.edge_type; }
 
   const enum GeoArrowCrsType crs_type() const { return metadata_view_.crs_type; }
@@ -261,13 +269,167 @@ class VectorType {
   }
 };
 
+class VectorArray {
+ public:
+  VectorArray(const VectorType& type = VectorType::Invalid()) : type_(type) {
+    array_.release = nullptr;
+    array_view_.schema_view.type = GEOARROW_TYPE_UNINITIALIZED;
+  }
+
+  VectorArray(VectorArray&& rhs) : VectorArray(rhs.type(), rhs.get()) {
+    array_view_ = rhs.array_view_;
+  }
+
+  VectorArray(VectorArray& rhs) = delete;
+
+  VectorArray(const VectorType& type, struct ArrowArray* array) : type_(type) {
+    memcpy(&array_, array, sizeof(struct ArrowArray));
+    array->release = nullptr;
+    if (GeoArrowArrayViewInitFromType(&array_view_, type.id()) != GEOARROW_OK) {
+      type_ = VectorType::Invalid("GeoArrowArrayViewInitFromType failed");
+    }
+    array_view_.schema_view.type = GEOARROW_TYPE_UNINITIALIZED;
+  }
+
+  struct ArrowArray* get() {
+    return &array_;
+  }
+
+  struct ArrowArray* operator->() {
+    return &array_;
+  }
+
+  void reset() {
+    if (array_.release != nullptr) {
+      array_.release(&array_);
+    }
+  }
+
+  ~VectorArray() { reset(); }
+
+  const VectorType& type() { return type_; }
+
+  bool valid() { return type_.valid() && array_.release != nullptr; }
+
+  std::string error() {
+    if (array_.release != nullptr || !type_.valid()) {
+      return type_.error();
+    } else {
+      return "VectorArray is released";
+    }
+  }
+
+  struct GeoArrowArrayView* view() {
+    MaybeInitArrayView();
+    return &array_view_;
+  }
+
+  static VectorArray FromBuffers(VectorType type,
+                                 const std::vector<struct GeoArrowBufferView>& buffers) {
+    struct GeoArrowArray builder;
+    int result = GeoArrowArrayInitFromType(&builder, type.id());
+    if (result != GEOARROW_OK) {
+      return VectorArray(VectorType::Invalid("GeoArrowArrayInitFromType failed"));
+    }
+
+    for (size_t i = 0; i < buffers.size(); i++) {
+      if (buffers[i].data == nullptr) {
+        continue;
+      }
+
+      result = GeoArrowArraySetBuffer(&builder, i, buffers[i]);
+      if (result != GEOARROW_OK) {
+        GeoArrowArrayReset(&builder);
+        return VectorArray(VectorType::Invalid("GeoArrowArraySetBuffer failed"));
+        ;
+      }
+    }
+
+    struct GeoArrowError error;
+    VectorArray out(type);
+    result = GeoArrowArrayFinish(&builder, out.get(), &error);
+    if (result != GEOARROW_OK) {
+      GeoArrowArrayReset(&builder);
+      return VectorArray(VectorType::Invalid(error.message));
+    }
+
+    return out;
+  }
+
+ private:
+  VectorType type_;
+  struct ArrowArray array_;
+  struct GeoArrowArrayView array_view_;
+
+  bool MaybeInitArrayView() {
+    if (valid() && array_view_.schema_view.type == GEOARROW_TYPE_UNINITIALIZED) {
+      int result = GeoArrowArrayViewInitFromType(&array_view_, type_.id());
+      if (result != GEOARROW_OK) {
+        type_ = VectorType::Invalid("GeoArrowArrayViewInitFromType failed");
+      }
+
+      result = GeoArrowArrayViewSetArray(&array_view_, &array_, nullptr);
+      if (result != GEOARROW_OK) {
+        type_ = VectorType::Invalid("GeoArrowArrayViewSetArray failed");
+      }
+    }
+
+    return valid();
+  }
+};
+
 static inline VectorType Wkb() { return VectorType::Make(GEOARROW_TYPE_WKB); }
 
 static inline VectorType Point() { return VectorType::Make(GEOARROW_TYPE_POINT); }
 
-static inline VectorType Linestring() { return VectorType::Make(GEOARROW_TYPE_LINESTRING); }
+static inline VectorType Linestring() {
+  return VectorType::Make(GEOARROW_TYPE_LINESTRING);
+}
 
 static inline VectorType Polygon() { return VectorType::Make(GEOARROW_TYPE_POLYGON); }
+
+namespace internal {
+
+template <typename T>
+static inline struct GeoArrowBufferView BufferView(const std::vector<T>& v) {
+  if (v.size() == 0) {
+    return {nullptr, 0};
+  } else {
+    return {(const uint8_t*)v.data(), (int64_t)(v.size() * sizeof(T))};
+  }
+}
+
+}  // namespace internal
+
+static inline VectorArray ArrayFromVectors(
+    const VectorType& type, const std::vector<std::vector<double>>& coords,
+    const std::vector<std::vector<int32_t>> offsets = {},
+    const std::vector<uint8_t> validity_bitmap = {}) {
+  std::vector<struct GeoArrowBufferView> buffers;
+  buffers.push_back(internal::BufferView(validity_bitmap));
+
+  for (const auto& v : offsets) {
+    buffers.push_back(internal::BufferView(v));
+  }
+
+  for (const auto& v : coords) {
+    buffers.push_back(internal::BufferView(v));
+  }
+
+  return VectorArray::FromBuffers(type, buffers);
+}
+
+static inline VectorArray ArrayFromVectors(
+    const VectorType& type, const std::vector<uint8_t> data,
+    const std::vector<std::vector<int32_t>> offsets,
+    const std::vector<uint8_t> validity_bitmap = {}) {
+  std::vector<struct GeoArrowBufferView> buffers;
+  buffers.push_back(internal::BufferView(validity_bitmap));
+  buffers.push_back(internal::BufferView(data));
+  buffers.push_back(internal::BufferView(offsets));
+
+  return VectorArray::FromBuffers(type, buffers);
+}
 
 }  // namespace geoarrow
 

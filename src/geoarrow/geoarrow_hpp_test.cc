@@ -100,3 +100,28 @@ TEST(GeoArrowHppTest, GeoArrowHppTestModifyInvalid) {
   EXPECT_FALSE(invalid.WithEdgeType(GEOARROW_EDGE_TYPE_SPHERICAL).valid());
   EXPECT_FALSE(invalid.WithCrs("abcd1234").valid());
 }
+
+TEST(GeoArrowHppTest, GeoArrowHppTestVectorArray) {
+  geoarrow::VectorArray array(geoarrow::VectorType::Invalid("some message"));
+  EXPECT_FALSE(array.valid());
+  EXPECT_EQ(array.error(), "some message");
+  EXPECT_EQ(array->release, nullptr);
+
+  geoarrow::VectorArray array2(geoarrow::Point());
+  EXPECT_FALSE(array2.valid());
+  EXPECT_EQ(array2.error(), "VectorArray is released");
+}
+
+TEST(GeoArrowHppTest, GeoArrowHppTestArrayFromVectors) {
+  auto array = geoarrow::ArrayFromVectors(
+    geoarrow::Point(),
+    {{1, 2, 3, 4}, {5, 6, 7, 8}}
+  );
+
+  EXPECT_EQ(array.type().id(), GEOARROW_TYPE_POINT);
+  ASSERT_EQ(array.view()->length, 4);
+  ASSERT_EQ(array.view()->coords.n_coords, 4);
+  ASSERT_EQ(array.view()->coords.n_values, 2);
+  EXPECT_EQ(array.view()->coords.values[0][0], 1);
+  EXPECT_EQ(array.view()->coords.values[1][0], 5);
+}
