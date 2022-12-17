@@ -120,11 +120,11 @@ GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata
 int64_t GeoArrowMetadataSerialize(const struct GeoArrowMetadataView* metadata_view,
                                   char* out, int64_t n);
 
-GeoArrowErrorCode GeoArrowSchemaSetMetadata(struct ArrowSchema* schema,
-                                            struct GeoArrowMetadataView* metadata_view);
+GeoArrowErrorCode GeoArrowSchemaSetMetadata(
+    struct ArrowSchema* schema, const struct GeoArrowMetadataView* metadata_view);
 
 GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
-    struct ArrowSchema* schema, struct GeoArrowMetadataView* metadata_view);
+    struct ArrowSchema* schema, const struct GeoArrowMetadataView* metadata_view);
 
 int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n);
 
