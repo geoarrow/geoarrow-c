@@ -222,6 +222,27 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowBufferView src,
                                          struct GeoArrowVisitor* v);
 
+struct GeoArrowBuilder {
+  struct GeoArrowArrayView view;
+  void* private_data;
+};
+
+GeoArrowErrorCode GeoArrowBuilderInitFromType(struct GeoArrowBuilder* builder,
+                                              enum GeoArrowType type);
+
+GeoArrowErrorCode GeoArrowBuilderInitFromSchema(struct GeoArrowBuilder* builder,
+                                                struct ArrowSchema* schema,
+                                                struct GeoArrowError* error);
+
+void GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
+                                struct GeoArrowVisitor* v);
+
+GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
+                                        struct ArrowArray* array,
+                                        struct GeoArrowError* error);
+
+void GeoArrowBuilderReset(struct GeoArrowBuilder* builder);
+
 #ifdef __cplusplus
 }
 #endif
