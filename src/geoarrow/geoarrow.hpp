@@ -278,6 +278,7 @@ class VectorArray {
 
   VectorArray(VectorArray&& rhs) : VectorArray(rhs.type(), rhs.get()) {
     array_view_ = rhs.array_view_;
+    rhs.array_view_.schema_view.type = GEOARROW_TYPE_UNINITIALIZED;
   }
 
   VectorArray(VectorArray& rhs) = delete;
@@ -341,7 +342,6 @@ class VectorArray {
       if (result != GEOARROW_OK) {
         GeoArrowArrayReset(&builder);
         return VectorArray(VectorType::Invalid("GeoArrowArraySetBuffer failed"));
-        ;
       }
     }
 
