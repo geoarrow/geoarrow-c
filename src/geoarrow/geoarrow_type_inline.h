@@ -2,6 +2,8 @@
 #ifndef GEOARROW_GEOARROW_TYPES_INLINE_H_INCLUDED
 #define GEOARROW_GEOARROW_TYPES_INLINE_H_INCLUDED
 
+#include <string.h>
+
 #include "geoarrow_type.h"
 
 #ifdef __cplusplus
@@ -406,6 +408,20 @@ static inline const char* GeoArrowGeometryTypeString(
   }
 }
 
+static inline int GeoArrowBuilderBufferCheck(struct GeoArrowBuilder* builder, int64_t i,
+                                             int64_t additional_size_bytes) {
+  return builder->view.buffers[i].capacity_bytes >=
+         (builder->view.buffers[i].size_bytes + additional_size_bytes);
+}
+
+static inline void GeoArrowBuilderAppendBufferUnsafe(struct GeoArrowBuilder* builder,
+                                                     int64_t i,
+                                                     struct GeoArrowBufferView value) {
+  struct GeoArrowWritableBufferView* buffer = builder->view.buffers + i;
+  memcpy(buffer->data.as_uint8 + buffer->size_bytes, value.data, value.n_bytes);
+  buffer->size_bytes += value.n_bytes;
+}
+
 struct _GeoArrowFindBufferResult {
   struct ArrowArray* array;
   int level;
@@ -413,8 +429,8 @@ struct _GeoArrowFindBufferResult {
 };
 
 static inline int _GeoArrowArrayFindBuffer(struct ArrowArray* array,
-                                   struct _GeoArrowFindBufferResult* res, int i, int level,
-                                   int skip_first) {
+                                           struct _GeoArrowFindBufferResult* res, int i,
+                                           int level, int skip_first) {
   int total_buffers = (array->n_buffers - skip_first);
   if (i < total_buffers) {
     res->array = array;

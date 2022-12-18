@@ -115,6 +115,20 @@ GeoArrowErrorCode GeoArrowBuilderInitFromSchema(struct GeoArrowBuilder* builder,
   return GeoArrowBuilderInitInternal(builder);
 }
 
+GeoArrowErrorCode GeoArrowBuilderReserveBuffer(struct GeoArrowBuilder* builder, int64_t i,
+                                               int64_t additional_size_bytes) {
+  // Use nanoarrow's buffer reserve logic
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+  struct ArrowBuffer* buffer_src = private->buffers[i];
+  NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(buffer_src, additional_size_bytes));
+
+  // ...but sync that information back to the writable view so that our appenders
+  // can do appends from static inline functions
+  builder->view.buffers[i].data.data = buffer_src->data;
+  builder->view.buffers[i].capacity_bytes = buffer_src->capacity_bytes;
+  return GEOARROW_OK;
+}
+
 void GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
                                 struct GeoArrowVisitor* v) {
   return;
