@@ -19,6 +19,8 @@ struct BuilderPrivate {
   // needed by various builder types.
 
   // Fields to keep track of states when using the visitor pattern
+  // 32 is the maximum recursion depth for nested collections (could
+  // almost certainly be much lower).
   enum GeoArrowGeometryType geometry_type[32];
   enum GeoArrowDimensions dimensions[32];
   int64_t size_pos[32];
@@ -118,14 +120,42 @@ void GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
   return;
 }
 
+static void GeoArrowSetArrayLengthFromBufferLength(struct GeoArrowSchemaView* schema_view,
+                                                   struct _GeoArrowFindBufferResult* res,
+                                                   int64_t size_bytes);
+
+static void GeoArrowSetCoordContainerLength(struct GeoArrowBuilder* builder);
+
 GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
                                         struct ArrowArray* array,
                                         struct GeoArrowError* error) {
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+
+  // Set array lengths from buffer sizes
+  struct _GeoArrowFindBufferResult res;
+  for (int64_t i = 0; i < builder->view.n_buffers; i++) {
+    res.array = NULL;
+    _GeoArrowArrayFindBuffer(&private->array, &res, i, 0, 0);
+    if (res.array == NULL) {
+      return EINVAL;
+    }
+
+    GeoArrowSetArrayLengthFromBufferLength(&builder->view.schema_view, &res,
+                                           private->buffers[i]->size_bytes);
+  }
+
+  // Set the struct or fixed-size list container length
+  GeoArrowSetCoordContainerLength(builder);
+
+  // Call finish building, which will flush the buffer pointers into the array
+  // and validate sizes.
   NANOARROW_RETURN_NOT_OK(
       ArrowArrayFinishBuilding(&private->array, (struct ArrowError*)error));
+
+  // Move the result
   memcpy(array, &private->array, sizeof(struct ArrowArray));
   private->array.release = NULL;
+
   return GEOARROW_OK;
 }
 
@@ -138,5 +168,112 @@ void GeoArrowBuilderReset(struct GeoArrowBuilder* builder) {
 
     ArrowFree(private);
     builder->private_data = NULL;
+  }
+}
+
+static void GeoArrowSetArrayLengthFromBufferLength(struct GeoArrowSchemaView* schema_view,
+                                                   struct _GeoArrowFindBufferResult* res,
+                                                   int64_t size_bytes) {
+  // By luck, buffer index 1 for every array is the one we use to infer the length;
+  // however, this is a slightly different formula for each type/depth
+  if (res->i != 1) {
+    return;
+  }
+
+  switch (schema_view->type) {
+    case GEOARROW_TYPE_WKB:
+      res->array->length = (size_bytes / sizeof(int32_t)) - 1;
+      return;
+    case GEOARROW_TYPE_LARGE_WKB:
+      res->array->length = (size_bytes / sizeof(int64_t)) - 1;
+      return;
+    default:
+      break;
+  }
+
+  int coord_level;
+  switch (schema_view->geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_POINT:
+      coord_level = 0;
+      break;
+    case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+      coord_level = 1;
+      break;
+    case GEOARROW_GEOMETRY_TYPE_POLYGON:
+    case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+      coord_level = 2;
+      break;
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+      coord_level = 3;
+      break;
+    default:
+      return;
+  }
+
+  if (res->level < coord_level) {
+    // This is an offset buffer
+    res->array->length = (size_bytes / sizeof(int32_t)) - 1;
+  } else {
+    // This is a data buffer
+    res->array->length = size_bytes / sizeof(double);
+  }
+}
+
+static void GeoArrowSetCoordContainerLength(struct GeoArrowBuilder* builder) {
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+
+  // At this point all the array lengths should be set except for the
+  // fixed-size list or struct parent to the coordinate array(s).
+  int scale;
+  switch (builder->view.schema_view.coord_type) {
+    case GEOARROW_COORD_TYPE_SEPARATE:
+      scale = 1;
+      break;
+    case GEOARROW_COORD_TYPE_INTERLEAVED:
+      switch (builder->view.schema_view.dimensions) {
+        case GEOARROW_DIMENSIONS_XY:
+          scale = 2;
+          break;
+        case GEOARROW_DIMENSIONS_XYZ:
+        case GEOARROW_DIMENSIONS_XYM:
+          scale = 3;
+          break;
+        case GEOARROW_DIMENSIONS_XYZM:
+          scale = 4;
+          break;
+        default:
+          return;
+      }
+      break;
+    default:
+      // e.g., WKB
+      break;
+  }
+
+  switch (builder->view.schema_view.geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_POINT:
+      private
+      ->array.length = private->array.children[0]->length;
+      break;
+    case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+      private
+      ->array.children[0]->length = private->array.children[0]->children[0]->length;
+      break;
+    case GEOARROW_GEOMETRY_TYPE_POLYGON:
+    case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+      private
+      ->array.children[0]->children[0]->length =
+          private->array.children[0]->children[0]->children[0]->length;
+      break;
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+      private
+      ->array.children[0]->children[0]->children[0]->length =
+          private->array.children[0]->children[0]->children[0]->children[0]->length;
+      break;
+    default:
+      // e.g., WKB
+      break;
   }
 }
