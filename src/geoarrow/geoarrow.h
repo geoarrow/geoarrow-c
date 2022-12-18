@@ -223,7 +223,7 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowVisitor* v);
 
 struct GeoArrowBuilder {
-  struct GeoArrowArrayView view;
+  struct GeoArrowWritableArrayView view;
   void* private_data;
 };
 

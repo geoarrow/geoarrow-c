@@ -22,6 +22,18 @@ struct GeoArrowBufferView {
   int64_t n_bytes;
 };
 
+struct GeoArrowWritableBufferView {
+  union {
+    void* data;
+    char* as_char;
+    uint8_t* as_uint8;
+    int32_t* as_int32;
+    double* as_double;
+  } data;
+  int64_t size_bytes;
+  int64_t capacity_bytes;
+};
+
 struct GeoArrowError {
   char message[1024];
 };
@@ -118,6 +130,17 @@ struct GeoArrowCoordView {
   int32_t coords_stride;
 };
 
+struct GeoArrowWritableCoordView {
+  double* values[4];
+  int64_t size_coords;
+  int64_t capacity_coords;
+  int32_t n_values;
+  int32_t coords_stride;
+};
+
+#define GEOARROW_COORD_VIEW_VALUE(coords_, row_, col_) \
+  coords_->values[col_][row_ * coords_->coords_stride]
+
 struct GeoArrowArrayView {
   struct GeoArrowSchemaView schema_view;
   int64_t length;
@@ -126,6 +149,14 @@ struct GeoArrowArrayView {
   const int32_t* offsets[3];
   int32_t last_offset[3];
   struct GeoArrowCoordView coords;
+};
+
+struct GeoArrowWritableArrayView {
+  struct GeoArrowSchemaView schema_view;
+  int64_t length;
+  int64_t n_buffers;
+  struct GeoArrowWritableBufferView buffers[8];
+  struct GeoArrowWritableCoordView coords;
 };
 
 struct GeoArrowVisitor {
