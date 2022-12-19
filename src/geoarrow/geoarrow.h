@@ -238,7 +238,7 @@ GeoArrowErrorCode GeoArrowBuilderReserveBuffer(struct GeoArrowBuilder* builder, 
                                                int64_t additional_size_bytes);
 
 static inline int GeoArrowBuilderBufferCheck(struct GeoArrowBuilder* builder, int64_t i,
-                                                   int64_t additional_size_bytes);
+                                             int64_t additional_size_bytes);
 
 static inline void GeoArrowBuilderAppendBufferUnsafe(struct GeoArrowBuilder* builder,
                                                      int64_t i,
