@@ -327,10 +327,10 @@ class VectorArray {
 
   static VectorArray FromBuffers(VectorType type,
                                  const std::vector<struct GeoArrowBufferView>& buffers) {
-    struct GeoArrowArray builder;
-    int result = GeoArrowArrayInitFromType(&builder, type.id());
+    struct GeoArrowBuilder builder;
+    int result = GeoArrowBuilderInitFromType(&builder, type.id());
     if (result != GEOARROW_OK) {
-      return VectorArray(VectorType::Invalid("GeoArrowArrayInitFromType failed"));
+      return VectorArray(VectorType::Invalid("GeoArrowBuilderInitFromType failed"));
     }
 
     for (size_t i = 0; i < buffers.size(); i++) {
@@ -338,18 +338,18 @@ class VectorArray {
         continue;
       }
 
-      result = GeoArrowArraySetBuffer(&builder, i, buffers[i]);
+      result = GeoArrowBuilderAppendBuffer(&builder, i, buffers[i]);
       if (result != GEOARROW_OK) {
-        GeoArrowArrayReset(&builder);
-        return VectorArray(VectorType::Invalid("GeoArrowArraySetBuffer failed"));
+        GeoArrowBuilderReset(&builder);
+        return VectorArray(VectorType::Invalid("GeoArrowBuilderAppendBuffer failed"));
       }
     }
 
     struct GeoArrowError error;
     VectorArray out(type);
-    result = GeoArrowArrayFinish(&builder, out.get(), &error);
+    result = GeoArrowBuilderFinish(&builder, out.get(), &error);
     if (result != GEOARROW_OK) {
-      GeoArrowArrayReset(&builder);
+      GeoArrowBuilderReset(&builder);
       return VectorArray(VectorType::Invalid(error.message));
     }
 
