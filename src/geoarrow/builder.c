@@ -117,13 +117,17 @@ GeoArrowErrorCode GeoArrowBuilderInitFromSchema(struct GeoArrowBuilder* builder,
 
 GeoArrowErrorCode GeoArrowBuilderReserveBuffer(struct GeoArrowBuilder* builder, int64_t i,
                                                int64_t additional_size_bytes) {
-  // Use nanoarrow's buffer reserve logic
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   struct ArrowBuffer* buffer_src = private->buffers[i];
+  struct GeoArrowWritableBufferView* buffer_dst = builder->view.buffers + i;
+
+  // Sync any changes from the builder's view of the buffer to nanoarrow's
+  buffer_src->size_bytes = buffer_dst->size_bytes;
+
+  // Use nanoarrow's reserve
   NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(buffer_src, additional_size_bytes));
 
-  // ...but sync that information back to the writable view so that our appenders
-  // can do appends from static inline functions
+  // Sync any changes back to the builder's view
   builder->view.buffers[i].data.data = buffer_src->data;
   builder->view.buffers[i].capacity_bytes = buffer_src->capacity_bytes;
   return GEOARROW_OK;
@@ -145,9 +149,11 @@ GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
                                         struct GeoArrowError* error) {
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
 
-  // Set array lengths from buffer sizes
+  // Sync builder buffer's back to the array; set array lengths from buffer sizes
   struct _GeoArrowFindBufferResult res;
   for (int64_t i = 0; i < builder->view.n_buffers; i++) {
+    private->buffers[i]->size_bytes = builder->view.buffers[i].size_bytes;
+
     res.array = NULL;
     _GeoArrowArrayFindBuffer(&private->array, &res, i, 0, 0);
     if (res.array == NULL) {

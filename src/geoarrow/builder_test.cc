@@ -12,30 +12,30 @@ class TypeParameterizedTestFixture : public ::testing::TestWithParam<enum GeoArr
 };
 
 TEST_P(TypeParameterizedTestFixture, BuilderTestInit) {
-  struct GeoArrowBuilder array;
+  struct GeoArrowBuilder builder;
   struct ArrowSchema schema;
   enum GeoArrowType type = GetParam();
 
-  EXPECT_EQ(GeoArrowBuilderInitFromType(&array, type), GEOARROW_OK);
-  EXPECT_EQ(array.view.schema_view.type, type);
-  GeoArrowBuilderReset(&array);
+  EXPECT_EQ(GeoArrowBuilderInitFromType(&builder, type), GEOARROW_OK);
+  EXPECT_EQ(builder.view.schema_view.type, type);
+  GeoArrowBuilderReset(&builder);
 
   ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, type), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowBuilderInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
-  GeoArrowBuilderReset(&array);
+  EXPECT_EQ(GeoArrowBuilderInitFromSchema(&builder, &schema, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
   schema.release(&schema);
 }
 
 TEST_P(TypeParameterizedTestFixture, BuilderTestEmpty) {
-  struct GeoArrowBuilder array;
+  struct GeoArrowBuilder builder;
   struct ArrowArray array_out;
   array_out.release = nullptr;
   enum GeoArrowType type = GetParam();
 
-  EXPECT_EQ(GeoArrowBuilderInitFromType(&array, type), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowBuilderFinish(&array, &array_out, nullptr), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderInitFromType(&builder, type), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
   EXPECT_NE(array_out.release, nullptr);
-  GeoArrowBuilderReset(&array);
+  GeoArrowBuilderReset(&builder);
 
   // Make sure this is a valid zero-length array
   struct ArrowArrayView array_view;
@@ -65,3 +65,42 @@ INSTANTIATE_TEST_SUITE_P(
                       GEOARROW_TYPE_POINT_ZM, GEOARROW_TYPE_LINESTRING_ZM,
                       GEOARROW_TYPE_POLYGON_ZM, GEOARROW_TYPE_MULTIPOINT_ZM,
                       GEOARROW_TYPE_MULTILINESTRING_ZM, GEOARROW_TYPE_MULTIPOLYGON_ZM));
+
+TEST(ArrayTest, ArrayTestSetBuffersPoint) {
+  struct GeoArrowBuilder builder;
+  struct ArrowArray array_out;
+
+  // Build the array for [POINT (30 10), null, null]
+  std::vector<uint8_t> is_valid = {0b00000001};
+  std::vector<double> xs = {30, 0, 0};
+  std::vector<double> ys = {10, 0, 0};
+
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_POINT), GEOARROW_OK);
+
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 0, MakeBufferView(is_valid)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 1, MakeBufferView(xs)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 2, MakeBufferView(ys)), GEOARROW_OK);
+
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
+
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.children[0]->length, 3);
+  EXPECT_EQ(array_out.children[1]->length, 3);
+
+  struct GeoArrowArrayView array_view;
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "POINT (30 10)");
+  EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(values[2], "<null value>");
+
+  array_out.release(&array_out);
+}
