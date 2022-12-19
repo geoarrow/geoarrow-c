@@ -66,7 +66,7 @@ INSTANTIATE_TEST_SUITE_P(
                       GEOARROW_TYPE_POLYGON_ZM, GEOARROW_TYPE_MULTIPOINT_ZM,
                       GEOARROW_TYPE_MULTILINESTRING_ZM, GEOARROW_TYPE_MULTIPOLYGON_ZM));
 
-TEST(ArrayTest, ArrayTestSetBuffersPoint) {
+TEST(BuilderTest, BuilerTestSetBuffersPoint) {
   struct GeoArrowBuilder builder;
   struct ArrowArray array_out;
 
