@@ -348,8 +348,8 @@ class VectorArray {
     struct GeoArrowError error;
     VectorArray out(type);
     result = GeoArrowBuilderFinish(&builder, out.get(), &error);
+    GeoArrowBuilderReset(&builder);
     if (result != GEOARROW_OK) {
-      GeoArrowBuilderReset(&builder);
       return VectorArray(VectorType::Invalid(error.message));
     }
 
