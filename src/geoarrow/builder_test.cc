@@ -11,32 +11,31 @@ class TypeParameterizedTestFixture : public ::testing::TestWithParam<enum GeoArr
   enum GeoArrowType type;
 };
 
-TEST_P(TypeParameterizedTestFixture, ArrayTestInit) {
-  struct GeoArrowArray array;
+TEST_P(TypeParameterizedTestFixture, BuilderTestInit) {
+  struct GeoArrowBuilder builder;
   struct ArrowSchema schema;
   enum GeoArrowType type = GetParam();
 
-  EXPECT_EQ(GeoArrowArrayInitFromType(&array, type), GEOARROW_OK);
-  EXPECT_EQ(array.schema_view.type, type);
-  GeoArrowArrayReset(&array);
+  EXPECT_EQ(GeoArrowBuilderInitFromType(&builder, type), GEOARROW_OK);
+  EXPECT_EQ(builder.view.schema_view.type, type);
+  GeoArrowBuilderReset(&builder);
 
   ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, type), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
-  GeoArrowArrayReset(&array);
+  EXPECT_EQ(GeoArrowBuilderInitFromSchema(&builder, &schema, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
   schema.release(&schema);
 }
 
-TEST_P(TypeParameterizedTestFixture, ArrayTestEmpty) {
-  struct GeoArrowArray array;
+TEST_P(TypeParameterizedTestFixture, BuilderTestEmpty) {
+  struct GeoArrowBuilder builder;
   struct ArrowArray array_out;
   array_out.release = nullptr;
   enum GeoArrowType type = GetParam();
 
-  EXPECT_EQ(GeoArrowArrayInitFromType(&array, type), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, nullptr), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderInitFromType(&builder, type), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
   EXPECT_NE(array_out.release, nullptr);
-  EXPECT_EQ(array.array.release, nullptr);
-  GeoArrowArrayReset(&array);
+  GeoArrowBuilderReset(&builder);
 
   // Make sure this is a valid zero-length array
   struct ArrowArrayView array_view;
@@ -50,7 +49,7 @@ TEST_P(TypeParameterizedTestFixture, ArrayTestEmpty) {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    ArrayTest, TypeParameterizedTestFixture,
+    BuilderTest, TypeParameterizedTestFixture,
     ::testing::Values(GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING,
                       GEOARROW_TYPE_POLYGON, GEOARROW_TYPE_MULTIPOINT,
                       GEOARROW_TYPE_MULTILINESTRING, GEOARROW_TYPE_MULTIPOLYGON,
@@ -67,8 +66,8 @@ INSTANTIATE_TEST_SUITE_P(
                       GEOARROW_TYPE_POLYGON_ZM, GEOARROW_TYPE_MULTIPOINT_ZM,
                       GEOARROW_TYPE_MULTILINESTRING_ZM, GEOARROW_TYPE_MULTIPOLYGON_ZM));
 
-TEST(ArrayTest, ArrayTestSetBuffersPoint) {
-  struct GeoArrowArray array;
+TEST(BuilderTest, BuilerTestSetBuffersPoint) {
+  struct GeoArrowBuilder builder;
   struct ArrowArray array_out;
 
   // Build the array for [POINT (30 10), null, null]
@@ -76,18 +75,19 @@ TEST(ArrayTest, ArrayTestSetBuffersPoint) {
   std::vector<double> xs = {30, 0, 0};
   std::vector<double> ys = {10, 0, 0};
 
-  ASSERT_EQ(GeoArrowArrayInitFromType(&array, GEOARROW_TYPE_POINT), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_POINT), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 0, MakeBufferView(is_valid)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 1, MakeBufferView(xs)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 2, MakeBufferView(ys)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 0, MakeBufferView(is_valid)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 1, MakeBufferView(xs)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 2, MakeBufferView(ys)), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, nullptr), GEOARROW_OK);
-  GeoArrowArrayReset(&array);
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
 
-  EXPECT_EQ(array.array.length, 3);
-  EXPECT_EQ(array.array.children[0]->length, 3);
-  EXPECT_EQ(array.array.children[1]->length, 3);
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.children[0]->length, 3);
+  EXPECT_EQ(array_out.children[1]->length, 3);
 
   struct GeoArrowArrayView array_view;
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT), GEOARROW_OK);
@@ -106,8 +106,8 @@ TEST(ArrayTest, ArrayTestSetBuffersPoint) {
   array_out.release(&array_out);
 }
 
-TEST(ArrayTest, ArrayTestSetBuffersLinestring) {
-  struct GeoArrowArray array;
+TEST(BuilderTest, BuilderTestSetBuffersLinestring) {
+  struct GeoArrowBuilder builder;
   struct ArrowArray array_out;
 
   // Build the array for [LINESTRING (30 10, 0 1), null, null]
@@ -116,20 +116,22 @@ TEST(ArrayTest, ArrayTestSetBuffersLinestring) {
   std::vector<double> xs = {30, 0};
   std::vector<double> ys = {10, 1};
 
-  ASSERT_EQ(GeoArrowArrayInitFromType(&array, GEOARROW_TYPE_LINESTRING), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_LINESTRING), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 0, MakeBufferView(is_valid)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 1, MakeBufferView(offset0)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 2, MakeBufferView(xs)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 3, MakeBufferView(ys)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 0, MakeBufferView(is_valid)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 1, MakeBufferView(offset0)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 2, MakeBufferView(xs)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 3, MakeBufferView(ys)), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, nullptr), GEOARROW_OK);
-  GeoArrowArrayReset(&array);
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
 
-  EXPECT_EQ(array.array.length, 3);
-  EXPECT_EQ(array.array.children[0]->length, 2);
-  EXPECT_EQ(array.array.children[0]->children[0]->length, 2);
-  EXPECT_EQ(array.array.children[0]->children[1]->length, 2);
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.children[0]->length, 2);
+  EXPECT_EQ(array_out.children[0]->children[0]->length, 2);
+  EXPECT_EQ(array_out.children[0]->children[1]->length, 2);
 
   struct GeoArrowArrayView array_view;
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_LINESTRING),
@@ -149,8 +151,8 @@ TEST(ArrayTest, ArrayTestSetBuffersLinestring) {
   array_out.release(&array_out);
 }
 
-TEST(ArrayTest, ArrayTestSetBuffersPolygon) {
-  struct GeoArrowArray array;
+TEST(BuilderTest, BuilderTestSetBuffersPolygon) {
+  struct GeoArrowBuilder builder;
   struct ArrowArray array_out;
 
   // Build the array for [POLYGON ((1 2, 2 3, 4 5, 1 2)), null, null]
@@ -160,22 +162,25 @@ TEST(ArrayTest, ArrayTestSetBuffersPolygon) {
   std::vector<double> xs = {1, 2, 4, 1};
   std::vector<double> ys = {2, 3, 5, 2};
 
-  ASSERT_EQ(GeoArrowArrayInitFromType(&array, GEOARROW_TYPE_POLYGON), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_POLYGON), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 0, MakeBufferView(is_valid)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 1, MakeBufferView(offset0)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 2, MakeBufferView(offset1)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 3, MakeBufferView(xs)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 4, MakeBufferView(ys)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 0, MakeBufferView(is_valid)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 1, MakeBufferView(offset0)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 2, MakeBufferView(offset1)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 3, MakeBufferView(xs)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 4, MakeBufferView(ys)), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, nullptr), GEOARROW_OK);
-  GeoArrowArrayReset(&array);
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
 
-  EXPECT_EQ(array.array.length, 3);
-  EXPECT_EQ(array.array.children[0]->length, 1);
-  EXPECT_EQ(array.array.children[0]->children[0]->length, 4);
-  EXPECT_EQ(array.array.children[0]->children[0]->children[0]->length, 4);
-  EXPECT_EQ(array.array.children[0]->children[0]->children[1]->length, 4);
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.children[0]->length, 1);
+  EXPECT_EQ(array_out.children[0]->children[0]->length, 4);
+  EXPECT_EQ(array_out.children[0]->children[0]->children[0]->length, 4);
+  EXPECT_EQ(array_out.children[0]->children[0]->children[1]->length, 4);
 
   struct GeoArrowArrayView array_view;
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POLYGON),
@@ -195,8 +200,8 @@ TEST(ArrayTest, ArrayTestSetBuffersPolygon) {
   array_out.release(&array_out);
 }
 
-TEST(ArrayTest, ArrayTestSetBuffersMultipoint) {
-  struct GeoArrowArray array;
+TEST(BuilderTest, BuilderTestSetBuffersMultipoint) {
+  struct GeoArrowBuilder builder;
   struct ArrowArray array_out;
 
   // Build the array for [MULTIPOINT (30 10, 0 1), null, null]
@@ -205,20 +210,22 @@ TEST(ArrayTest, ArrayTestSetBuffersMultipoint) {
   std::vector<double> xs = {30, 0};
   std::vector<double> ys = {10, 1};
 
-  ASSERT_EQ(GeoArrowArrayInitFromType(&array, GEOARROW_TYPE_MULTIPOINT), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_MULTIPOINT), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 0, MakeBufferView(is_valid)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 1, MakeBufferView(offset0)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 2, MakeBufferView(xs)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 3, MakeBufferView(ys)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 0, MakeBufferView(is_valid)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 1, MakeBufferView(offset0)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 2, MakeBufferView(xs)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 3, MakeBufferView(ys)), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, nullptr), GEOARROW_OK);
-  GeoArrowArrayReset(&array);
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
 
-  EXPECT_EQ(array.array.length, 3);
-  EXPECT_EQ(array.array.children[0]->length, 2);
-  EXPECT_EQ(array.array.children[0]->children[0]->length, 2);
-  EXPECT_EQ(array.array.children[0]->children[1]->length, 2);
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.children[0]->length, 2);
+  EXPECT_EQ(array_out.children[0]->children[0]->length, 2);
+  EXPECT_EQ(array_out.children[0]->children[1]->length, 2);
 
   struct GeoArrowArrayView array_view;
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_MULTIPOINT),
@@ -239,7 +246,7 @@ TEST(ArrayTest, ArrayTestSetBuffersMultipoint) {
 }
 
 TEST(ArrayTest, ArrayTestSetBuffersMultilinestring) {
-  struct GeoArrowArray array;
+  struct GeoArrowBuilder builder;
   struct ArrowArray array_out;
 
   // Build the array for [MULTILINESTRING ((1 2, 2 3, 4 5, 1 2)), null, null]
@@ -249,22 +256,26 @@ TEST(ArrayTest, ArrayTestSetBuffersMultilinestring) {
   std::vector<double> xs = {1, 2, 4, 1};
   std::vector<double> ys = {2, 3, 5, 2};
 
-  ASSERT_EQ(GeoArrowArrayInitFromType(&array, GEOARROW_TYPE_MULTILINESTRING), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_MULTILINESTRING),
+            GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 0, MakeBufferView(is_valid)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 1, MakeBufferView(offset0)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 2, MakeBufferView(offset1)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 3, MakeBufferView(xs)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 4, MakeBufferView(ys)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 0, MakeBufferView(is_valid)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 1, MakeBufferView(offset0)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 2, MakeBufferView(offset1)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 3, MakeBufferView(xs)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 4, MakeBufferView(ys)), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, nullptr), GEOARROW_OK);
-  GeoArrowArrayReset(&array);
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
 
-  EXPECT_EQ(array.array.length, 3);
-  EXPECT_EQ(array.array.children[0]->length, 1);
-  EXPECT_EQ(array.array.children[0]->children[0]->length, 4);
-  EXPECT_EQ(array.array.children[0]->children[0]->children[0]->length, 4);
-  EXPECT_EQ(array.array.children[0]->children[0]->children[1]->length, 4);
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.children[0]->length, 1);
+  EXPECT_EQ(array_out.children[0]->children[0]->length, 4);
+  EXPECT_EQ(array_out.children[0]->children[0]->children[0]->length, 4);
+  EXPECT_EQ(array_out.children[0]->children[0]->children[1]->length, 4);
 
   struct GeoArrowArrayView array_view;
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_MULTILINESTRING),
@@ -284,8 +295,8 @@ TEST(ArrayTest, ArrayTestSetBuffersMultilinestring) {
   array_out.release(&array_out);
 }
 
-TEST(ArrayTest, ArrayTestSetBuffersMultipolygon) {
-  struct GeoArrowArray array;
+TEST(BuilderTest, BuilderTestSetBuffersMultipolygon) {
+  struct GeoArrowBuilder builder;
   struct ArrowArray array_out;
 
   // Build the array for [MULTIPOLYGON (((1 2, 2 3, 4 5, 1 2))), null, null]
@@ -296,24 +307,29 @@ TEST(ArrayTest, ArrayTestSetBuffersMultipolygon) {
   std::vector<double> xs = {1, 2, 4, 1};
   std::vector<double> ys = {2, 3, 5, 2};
 
-  ASSERT_EQ(GeoArrowArrayInitFromType(&array, GEOARROW_TYPE_MULTIPOLYGON), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_MULTIPOLYGON),
+            GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 0, MakeBufferView(is_valid)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 1, MakeBufferView(offset0)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 2, MakeBufferView(offset1)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 3, MakeBufferView(offset2)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 4, MakeBufferView(xs)), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArraySetBuffer(&array, 5, MakeBufferView(ys)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 0, MakeBufferView(is_valid)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 1, MakeBufferView(offset0)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 2, MakeBufferView(offset1)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 3, MakeBufferView(offset2)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 4, MakeBufferView(xs)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 5, MakeBufferView(ys)), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowArrayFinish(&array, &array_out, nullptr), GEOARROW_OK);
-  GeoArrowArrayReset(&array);
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
 
-  EXPECT_EQ(array.array.length, 3);
-  EXPECT_EQ(array.array.children[0]->length, 1);
-  EXPECT_EQ(array.array.children[0]->children[0]->length, 1);
-  EXPECT_EQ(array.array.children[0]->children[0]->children[0]->length, 4);
-  EXPECT_EQ(array.array.children[0]->children[0]->children[0]->children[0]->length, 4);
-  EXPECT_EQ(array.array.children[0]->children[0]->children[0]->children[1]->length, 4);
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.children[0]->length, 1);
+  EXPECT_EQ(array_out.children[0]->children[0]->length, 1);
+  EXPECT_EQ(array_out.children[0]->children[0]->children[0]->length, 4);
+  EXPECT_EQ(array_out.children[0]->children[0]->children[0]->children[0]->length, 4);
+  EXPECT_EQ(array_out.children[0]->children[0]->children[0]->children[1]->length, 4);
 
   struct GeoArrowArrayView array_view;
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_MULTIPOLYGON),

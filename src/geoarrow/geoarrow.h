@@ -222,6 +222,50 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowBufferView src,
                                          struct GeoArrowVisitor* v);
 
+struct GeoArrowBuilder {
+  struct GeoArrowWritableArrayView view;
+  void* private_data;
+};
+
+GeoArrowErrorCode GeoArrowBuilderInitFromType(struct GeoArrowBuilder* builder,
+                                              enum GeoArrowType type);
+
+GeoArrowErrorCode GeoArrowBuilderInitFromSchema(struct GeoArrowBuilder* builder,
+                                                struct ArrowSchema* schema,
+                                                struct GeoArrowError* error);
+
+GeoArrowErrorCode GeoArrowBuilderReserveBuffer(struct GeoArrowBuilder* builder, int64_t i,
+                                               int64_t additional_size_bytes);
+
+static inline int GeoArrowBuilderBufferCheck(struct GeoArrowBuilder* builder, int64_t i,
+                                             int64_t additional_size_bytes);
+
+static inline void GeoArrowBuilderAppendBufferUnsafe(struct GeoArrowBuilder* builder,
+                                                     int64_t i,
+                                                     struct GeoArrowBufferView value);
+
+static inline GeoArrowErrorCode GeoArrowBuilderAppendBuffer(
+    struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value) {
+  if (!GeoArrowBuilderBufferCheck(builder, i, value.n_bytes)) {
+    int result = GeoArrowBuilderReserveBuffer(builder, i, value.n_bytes);
+    if (result != GEOARROW_OK) {
+      return result;
+    }
+  }
+
+  GeoArrowBuilderAppendBufferUnsafe(builder, i, value);
+  return GEOARROW_OK;
+}
+
+void GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
+                                struct GeoArrowVisitor* v);
+
+GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
+                                        struct ArrowArray* array,
+                                        struct GeoArrowError* error);
+
+void GeoArrowBuilderReset(struct GeoArrowBuilder* builder);
+
 #ifdef __cplusplus
 }
 #endif
