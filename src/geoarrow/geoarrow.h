@@ -222,10 +222,6 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowBufferView src,
                                          struct GeoArrowVisitor* v);
 
-struct GeoArrowBuilder {
-  struct GeoArrowWritableArrayView view;
-  void* private_data;
-};
 
 GeoArrowErrorCode GeoArrowBuilderInitFromType(struct GeoArrowBuilder* builder,
                                               enum GeoArrowType type);
