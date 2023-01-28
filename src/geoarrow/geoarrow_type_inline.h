@@ -491,7 +491,9 @@ static uint8_t _GeoArrowkEmptyPointCoords[] = {
 
 // Copies coordinates from one view to another keeping dimensions the same.
 // This function fills dimensions in dst but not in src with NAN; dimensions
-// in src but not in dst are dropped.
+// in src but not in dst are dropped. This is useful for generic copying of
+// small sequences (e.g., the builder) but shouldn't be used when there is some
+// prior knowledge of the coordinate type.
 static inline void GeoArrowCoordViewCopy(struct GeoArrowCoordView* src,
                                          enum GeoArrowDimensions src_dim,
                                          int64_t src_offset,
