@@ -428,6 +428,120 @@ static inline void GeoArrowBuilderAppendBufferUnsafe(struct GeoArrowBuilder* bui
   buffer->size_bytes += value.n_bytes;
 }
 
+// This could probably be or use a lookup table at some point
+static inline void GeoArrowMapDimensions(enum GeoArrowDimensions src_dim,
+                                    enum GeoArrowDimensions dst_dim, int* dim_map) {
+  dim_map[0] = 0;
+  dim_map[1] = 1;
+  dim_map[2] = -1;
+  dim_map[3] = -1;
+
+  switch (dst_dim) {
+    case GEOARROW_DIMENSIONS_XYM:
+      switch (src_dim) {
+        case GEOARROW_DIMENSIONS_XYM:
+          dim_map[2] = 2;
+          break;
+        case GEOARROW_DIMENSIONS_XYZM:
+          dim_map[2] = 3;
+          break;
+        default:
+          break;
+      }
+      break;
+
+    case GEOARROW_DIMENSIONS_XYZ:
+      switch (src_dim) {
+        case GEOARROW_DIMENSIONS_XYZ:
+        case GEOARROW_DIMENSIONS_XYZM:
+          dim_map[2] = 2;
+          break;
+        default:
+          break;
+      }
+      break;
+
+    case GEOARROW_DIMENSIONS_XYZM:
+      switch (src_dim) {
+        case GEOARROW_DIMENSIONS_XYZ:
+          dim_map[2] = 2;
+          break;
+        case GEOARROW_DIMENSIONS_XYM:
+          dim_map[3] = 2;
+          break;
+        case GEOARROW_DIMENSIONS_XYZM:
+          dim_map[2] = 2;
+          dim_map[3] = 3;
+          break;
+        default:
+          break;
+      }
+      break;
+
+    default:
+      break;
+  }
+}
+
+// Four little-endian NANs
+static uint8_t _GeoArrowkEmptyPointCoords[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f};
+
+// Copies coordinates from one view to another keeping dimensions the same.
+// This function fills dimensions in dst but not in src with NAN; dimensions
+// in src but not in dst are dropped.
+static inline void GeoArrowCoordViewCopy(struct GeoArrowCoordView* src,
+                                         enum GeoArrowDimensions src_dim,
+                                         int64_t src_offset,
+                                         struct GeoArrowWritableCoordView* dst,
+                                         enum GeoArrowDimensions dst_dim,
+                                         int64_t dst_offset, int64_t n) {
+  // Copy the XYs
+  for (int64_t i = 0; i < n; i++) {
+    GEOARROW_COORD_VIEW_VALUE(dst, dst_offset + i, 0) =
+        GEOARROW_COORD_VIEW_VALUE(src, src_offset + i, 0);
+    GEOARROW_COORD_VIEW_VALUE(dst, dst_offset + i, 1) =
+        GEOARROW_COORD_VIEW_VALUE(src, src_offset + i, 1);
+  }
+
+  if (dst->n_values == 2) {
+    return;
+  }
+
+  int dst_dim_map[4];
+  GeoArrowMapDimensions(src_dim, dst_dim, dst_dim_map);
+
+  if (dst_dim_map[2] == -1) {
+    for (int64_t i = 0; i < n; i++) {
+      memcpy(&(GEOARROW_COORD_VIEW_VALUE(dst, dst_offset + i, 2)),
+             _GeoArrowkEmptyPointCoords, sizeof(double));
+    }
+  } else {
+    for (int64_t i = 0; i < n; i++) {
+      GEOARROW_COORD_VIEW_VALUE(dst, dst_offset + i, 2) =
+          GEOARROW_COORD_VIEW_VALUE(src, src_offset + i, dst_dim_map[2]);
+    }
+  }
+
+  if (dst->n_values == 3) {
+    return;
+  }
+
+  if (dst_dim_map[3] == -1) {
+    for (int64_t i = 0; i < n; i++) {
+      memcpy(&(GEOARROW_COORD_VIEW_VALUE(dst, dst_offset + i, 3)),
+             _GeoArrowkEmptyPointCoords, sizeof(double));
+    }
+  } else {
+    for (int64_t i = 0; i < n; i++) {
+      GEOARROW_COORD_VIEW_VALUE(dst, dst_offset + i, 3) =
+          GEOARROW_COORD_VIEW_VALUE(src, src_offset + i, dst_dim_map[3]);
+    }
+  }
+}
+
 struct _GeoArrowFindBufferResult {
   struct ArrowArray* array;
   int level;
