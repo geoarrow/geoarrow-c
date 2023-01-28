@@ -5,6 +5,15 @@
 
 #include "geoarrow.h"
 
+struct WKTWriterPrivate {
+  int significant_digits;
+  int use_flat_multipoint;
+};
+
+struct WKBWriterPrivate {
+  int64_t size_pos[32];
+};
+
 struct BuilderPrivate {
   // The ArrowArray responsible for owning the memory
   struct ArrowArray array;
@@ -23,13 +32,15 @@ struct BuilderPrivate {
   // almost certainly be much lower).
   enum GeoArrowGeometryType geometry_type[32];
   enum GeoArrowDimensions dimensions[32];
-  int64_t size_pos[32];
-  uint32_t size[32];
+  int64_t size[32];
   int32_t level;
+  struct GeoArrowCoordView coords;
 
-  // Options
-  int significant_digits;
-  int use_flat_multipoint;
+  // Visitor-specific options
+  union {
+    struct WKTWriterPrivate wkt;
+    struct WKBWriterPrivate wkb;
+  } options;
 };
 
 static GeoArrowErrorCode GeoArrowBuilderInitInternal(struct GeoArrowBuilder* builder) {
@@ -89,10 +100,6 @@ static GeoArrowErrorCode GeoArrowBuilderInitInternal(struct GeoArrowBuilder* bui
 
     private->buffers[i] = ArrowArrayBuffer(res.array, res.i);
   }
-
-  // Some default options
-  private->significant_digits = 16;
-  private->use_flat_multipoint = 1;
 
   builder->private_data = private;
   return GEOARROW_OK;
@@ -298,13 +305,33 @@ static void GeoArrowSetCoordContainerLength(struct GeoArrowBuilder* builder) {
   }
 }
 
+// Bytes for four quiet (little-endian) NANs
+static uint8_t kEmptyPointCoords[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f};
+
 static int feat_start_point(struct GeoArrowVisitor* v) {
-  // Reset level, reset feature coordinate count
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+  private->level = 0;
+  private->size[0] = 0;
+  private->dimensions[0] = builder->view.schema_view.dimensions;
   return GEOARROW_OK;
 }
 
 static int null_feat_point(struct GeoArrowVisitor* v) {
-  // Write an empty to coordinates, write a null to buffer 1
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  int n_dim = _GeoArrowkNumDimensions[builder->view.schema_view.dimensions];
+
+  // Append n_dim quiet NANs to coordinate buffers
+  struct GeoArrowBufferView b;
+  b.data = kEmptyPointCoords;
+  b.n_bytes = sizeof(double);
+  for (int i = 0; i < n_dim; i++) {
+    NANOARROW_RETURN_NOT_OK(GeoArrowBuilderAppendBuffer(builder, 1 + i, b));
+  }
+
   return GEOARROW_OK;
 }
 
@@ -314,6 +341,9 @@ static int geom_start_point(struct GeoArrowVisitor* v,
   // level++, geometry type, dimensions, reset size
   // validate dimensions, maybe against some options that indicate
   // error for mismatch, fill, or drop behaviour
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+  private->dimensions[0] = builder->view.schema_view.dimensions;
   return GEOARROW_OK;
 }
 

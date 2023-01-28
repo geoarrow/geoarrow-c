@@ -408,6 +408,12 @@ static inline const char* GeoArrowGeometryTypeString(
   }
 }
 
+// Such that kNumOffsets[geometry_type] gives the right answer
+static int _GeoArrowkNumOffsets[] = {-1, 0, 1, 2, 1, 2, 3, -1};
+
+// Such that kNumDimensions[dimensions] gives the right answer
+static int _GeoArrowkNumDimensions[] = {-1, 2, 3, 3, 4};
+
 static inline int GeoArrowBuilderBufferCheck(struct GeoArrowBuilder* builder, int64_t i,
                                              int64_t additional_size_bytes) {
   return builder->view.buffers[i].capacity_bytes >=
