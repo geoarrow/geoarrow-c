@@ -214,3 +214,107 @@ TEST(TypeInlineTest, TypeInlineTestCopyCoordsXYtoXYZM) {
   EXPECT_TRUE(isnan(dst.storage()[3][3]));
   EXPECT_TRUE(isnan(dst.storage()[3][4]));
 }
+
+TEST(TypeInlineTest, TypeInlineTestCopyCoordsXYZtoXY) {
+  TestCoords src({1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13, 14, 15},
+                 {16, 17, 18, 19, 20});
+  TestCoords dst({0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0});
+
+  GeoArrowCoordViewCopy(src.view(), GEOARROW_DIMENSIONS_XYZ, 1, dst.writable_view(),
+                        GEOARROW_DIMENSIONS_XY, 2, 3);
+  EXPECT_EQ(dst.storage()[0][0], 0);
+  EXPECT_EQ(dst.storage()[0][1], 0);
+  EXPECT_EQ(dst.storage()[0][2], 2);
+  EXPECT_EQ(dst.storage()[0][3], 3);
+  EXPECT_EQ(dst.storage()[0][4], 4);
+
+  EXPECT_EQ(dst.storage()[1][0], 0);
+  EXPECT_EQ(dst.storage()[1][1], 0);
+  EXPECT_EQ(dst.storage()[1][2], 7);
+  EXPECT_EQ(dst.storage()[1][3], 8);
+  EXPECT_EQ(dst.storage()[1][4], 9);
+}
+
+TEST(TypeInlineTest, TypeInlineTestCopyCoordsXYZtoXYZ) {
+  TestCoords src({1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13, 14, 15},
+                 {16, 17, 18, 19, 20});
+  TestCoords dst({0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0});
+
+  GeoArrowCoordViewCopy(src.view(), GEOARROW_DIMENSIONS_XYZ, 1, dst.writable_view(),
+                        GEOARROW_DIMENSIONS_XYZ, 2, 3);
+  EXPECT_EQ(dst.storage()[0][0], 0);
+  EXPECT_EQ(dst.storage()[0][1], 0);
+  EXPECT_EQ(dst.storage()[0][2], 2);
+  EXPECT_EQ(dst.storage()[0][3], 3);
+  EXPECT_EQ(dst.storage()[0][4], 4);
+
+  EXPECT_EQ(dst.storage()[1][0], 0);
+  EXPECT_EQ(dst.storage()[1][1], 0);
+  EXPECT_EQ(dst.storage()[1][2], 7);
+  EXPECT_EQ(dst.storage()[1][3], 8);
+  EXPECT_EQ(dst.storage()[1][4], 9);
+
+  EXPECT_EQ(dst.storage()[2][0], 0);
+  EXPECT_EQ(dst.storage()[2][1], 0);
+  EXPECT_EQ(dst.storage()[2][2], 12);
+  EXPECT_EQ(dst.storage()[2][3], 13);
+  EXPECT_EQ(dst.storage()[2][4], 14);
+}
+
+TEST(TypeInlineTest, TypeInlineTestCopyCoordsXYZtoXYM) {
+  TestCoords src({1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13, 14, 15},
+                 {16, 17, 18, 19, 20});
+  TestCoords dst({0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0});
+
+  GeoArrowCoordViewCopy(src.view(), GEOARROW_DIMENSIONS_XYZ, 1, dst.writable_view(),
+                        GEOARROW_DIMENSIONS_XYM, 2, 3);
+  EXPECT_EQ(dst.storage()[0][0], 0);
+  EXPECT_EQ(dst.storage()[0][1], 0);
+  EXPECT_EQ(dst.storage()[0][2], 2);
+  EXPECT_EQ(dst.storage()[0][3], 3);
+  EXPECT_EQ(dst.storage()[0][4], 4);
+
+  EXPECT_EQ(dst.storage()[1][0], 0);
+  EXPECT_EQ(dst.storage()[1][1], 0);
+  EXPECT_EQ(dst.storage()[1][2], 7);
+  EXPECT_EQ(dst.storage()[1][3], 8);
+  EXPECT_EQ(dst.storage()[1][4], 9);
+
+  EXPECT_EQ(dst.storage()[2][0], 0);
+  EXPECT_EQ(dst.storage()[2][1], 0);
+  EXPECT_TRUE(isnan(dst.storage()[2][2]));
+  EXPECT_TRUE(isnan(dst.storage()[2][3]));
+  EXPECT_TRUE(isnan(dst.storage()[2][4]));
+}
+
+TEST(TypeInlineTest, TypeInlineTestCopyCoordsXYZtoXYZM) {
+  TestCoords src({1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13, 14, 15},
+                 {16, 17, 18, 19, 20});
+  TestCoords dst({0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0});
+
+  GeoArrowCoordViewCopy(src.view(), GEOARROW_DIMENSIONS_XYZ, 1, dst.writable_view(),
+                        GEOARROW_DIMENSIONS_XYZM, 2, 3);
+  EXPECT_EQ(dst.storage()[0][0], 0);
+  EXPECT_EQ(dst.storage()[0][1], 0);
+  EXPECT_EQ(dst.storage()[0][2], 2);
+  EXPECT_EQ(dst.storage()[0][3], 3);
+  EXPECT_EQ(dst.storage()[0][4], 4);
+
+  EXPECT_EQ(dst.storage()[1][0], 0);
+  EXPECT_EQ(dst.storage()[1][1], 0);
+  EXPECT_EQ(dst.storage()[1][2], 7);
+  EXPECT_EQ(dst.storage()[1][3], 8);
+  EXPECT_EQ(dst.storage()[1][4], 9);
+
+  EXPECT_EQ(dst.storage()[2][0], 0);
+  EXPECT_EQ(dst.storage()[2][1], 0);
+  EXPECT_EQ(dst.storage()[2][2], 12);
+  EXPECT_EQ(dst.storage()[2][3], 13);
+  EXPECT_EQ(dst.storage()[2][4], 14);
+
+  EXPECT_EQ(dst.storage()[3][0], 0);
+  EXPECT_EQ(dst.storage()[3][1], 0);
+  EXPECT_TRUE(isnan(dst.storage()[3][2]));
+  EXPECT_TRUE(isnan(dst.storage()[3][3]));
+  EXPECT_TRUE(isnan(dst.storage()[3][4]));
+}
