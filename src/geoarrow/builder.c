@@ -306,10 +306,10 @@ static void GeoArrowSetCoordContainerLength(struct GeoArrowBuilder* builder) {
 }
 
 // Bytes for four quiet (little-endian) NANs
-static uint8_t kEmptyPointCoords[] = {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f};
+static uint8_t kEmptyPointCoords[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f,
+                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f,
+                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f,
+                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f};
 
 static int feat_start_point(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
@@ -354,10 +354,10 @@ static int ring_start_point(struct GeoArrowVisitor* v) {
 
 static int coords_point(struct GeoArrowVisitor* v,
                         const struct GeoArrowCoordView* coords) {
-  // write coords to coords
-  // solve how exactly to map a conversion from one to another if the
-  // dims don't align
-  return GEOARROW_OK;
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+  enum GeoArrowDimensions src_dim = private->dimensions[private->level];
+  return GeoArrowBuilderCoordsAppend(builder, coords, src_dim, 0, coords->n_coords);
 }
 
 static int ring_end_point(struct GeoArrowVisitor* v) {

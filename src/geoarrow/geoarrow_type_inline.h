@@ -430,7 +430,7 @@ static inline void GeoArrowBuilderAppendBufferUnsafe(struct GeoArrowBuilder* bui
 
 // This could probably be or use a lookup table at some point
 static inline void GeoArrowMapDimensions(enum GeoArrowDimensions src_dim,
-                                    enum GeoArrowDimensions dst_dim, int* dim_map) {
+                                         enum GeoArrowDimensions dst_dim, int* dim_map) {
   dim_map[0] = 0;
   dim_map[1] = 1;
   dim_map[2] = -1;
@@ -494,7 +494,7 @@ static uint8_t _GeoArrowkEmptyPointCoords[] = {
 // in src but not in dst are dropped. This is useful for generic copying of
 // small sequences (e.g., the builder) but shouldn't be used when there is some
 // prior knowledge of the coordinate type.
-static inline void GeoArrowCoordViewCopy(struct GeoArrowCoordView* src,
+static inline void GeoArrowCoordViewCopy(const struct GeoArrowCoordView* src,
                                          enum GeoArrowDimensions src_dim,
                                          int64_t src_offset,
                                          struct GeoArrowWritableCoordView* dst,
@@ -542,6 +542,21 @@ static inline void GeoArrowCoordViewCopy(struct GeoArrowCoordView* src,
           GEOARROW_COORD_VIEW_VALUE(src, src_offset + i, dst_dim_map[3]);
     }
   }
+}
+
+static inline int GeoArrowBuilderCoordsCheck(struct GeoArrowBuilder* builder,
+                                             int64_t additional_size_coords) {
+  return builder->view.coords.capacity_coords >=
+         (builder->view.coords.size_coords + additional_size_coords);
+}
+
+static inline void GeoArrowBuilderCoordsAppendUnsafe(
+    struct GeoArrowBuilder* builder, const struct GeoArrowCoordView* coords,
+    enum GeoArrowDimensions dimensions, int64_t offset, int64_t n) {
+  GeoArrowCoordViewCopy(coords, dimensions, offset, &builder->view.coords,
+                        builder->view.schema_view.dimensions,
+                        builder->view.coords.size_coords, n);
+  builder->view.coords.size_coords += n;
 }
 
 struct _GeoArrowFindBufferResult {

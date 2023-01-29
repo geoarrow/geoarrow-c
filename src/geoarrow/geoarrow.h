@@ -272,4 +272,60 @@ static inline GeoArrowErrorCode GeoArrowBuilderAppendBuffer(
   return GEOARROW_OK;
 }
 
+static inline GeoArrowErrorCode GeoArrowBuilderCoordsReserve(
+    struct GeoArrowBuilder* builder, int64_t additional_size_coords) {
+  if (GeoArrowBuilderCoordsCheck(builder, additional_size_coords)) {
+    return GEOARROW_OK;
+  }
+
+  struct GeoArrowWritableCoordView* writable_view = &builder->view.coords;
+  int result;
+  int last_buffer = builder->view.n_buffers - 1;
+  int n_values = writable_view->n_values;
+
+  switch (builder->view.schema_view.coord_type) {
+    case GEOARROW_COORD_TYPE_INTERLEAVED:
+      result = GeoArrowBuilderReserveBuffer(
+          builder, last_buffer, additional_size_coords * sizeof(double) * n_values);
+      if (result != GEOARROW_OK) {
+        return result;
+      }
+
+      writable_view->capacity_coords =
+          builder->view.buffers[last_buffer].capacity_bytes / sizeof(double) / n_values;
+      return GEOARROW_OK;
+
+    case GEOARROW_COORD_TYPE_SEPARATE:
+      for (int i = last_buffer - n_values + 1; i <= last_buffer; i++) {
+        result = GeoArrowBuilderReserveBuffer(builder, i,
+                                              additional_size_coords * sizeof(double));
+        if (result != GEOARROW_OK) {
+          return result;
+        }
+      }
+
+      writable_view->capacity_coords =
+          builder->view.buffers[last_buffer].capacity_bytes / sizeof(double);
+      return GEOARROW_OK;
+    default:
+      // Beacuse there is no include <errno.h> here yet
+      return -1;
+  }
+}
+
+static inline GeoArrowErrorCode GeoArrowBuilderCoordsAppend(
+    struct GeoArrowBuilder* builder, const struct GeoArrowCoordView* coords,
+    enum GeoArrowDimensions dimensions, int64_t offset, int64_t n) {
+  if (!GeoArrowBuilderCoordsCheck(builder, n)) {
+    int result = GeoArrowBuilderCoordsReserve(builder, n);
+    if (result != GEOARROW_OK) {
+      return result;
+    }
+  }
+
+  GeoArrowBuilderCoordsAppendUnsafe(builder, coords, dimensions, offset, n);
+  builder->view.coords.size_coords += n;
+  return GEOARROW_OK;
+}
+
 #endif
