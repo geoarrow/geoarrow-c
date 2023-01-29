@@ -152,9 +152,9 @@ TEST(TypeInlineTest, TypeInlineTestCopyCoordsXYtoXYZ) {
 
   EXPECT_EQ(dst.storage()[2][0], 0);
   EXPECT_EQ(dst.storage()[2][1], 0);
-  EXPECT_TRUE(isnan(dst.storage()[2][2]));
-  EXPECT_TRUE(isnan(dst.storage()[2][3]));
-  EXPECT_TRUE(isnan(dst.storage()[2][4]));
+  EXPECT_TRUE(std::isnan(dst.storage()[2][2]));
+  EXPECT_TRUE(std::isnan(dst.storage()[2][3]));
+  EXPECT_TRUE(std::isnan(dst.storage()[2][4]));
 }
 
 TEST(TypeInlineTest, TypeInlineTestCopyCoordsXYtoXYM) {
@@ -178,9 +178,9 @@ TEST(TypeInlineTest, TypeInlineTestCopyCoordsXYtoXYM) {
 
   EXPECT_EQ(dst.storage()[2][0], 0);
   EXPECT_EQ(dst.storage()[2][1], 0);
-  EXPECT_TRUE(isnan(dst.storage()[2][2]));
-  EXPECT_TRUE(isnan(dst.storage()[2][3]));
-  EXPECT_TRUE(isnan(dst.storage()[2][4]));
+  EXPECT_TRUE(std::isnan(dst.storage()[2][2]));
+  EXPECT_TRUE(std::isnan(dst.storage()[2][3]));
+  EXPECT_TRUE(std::isnan(dst.storage()[2][4]));
 }
 
 TEST(TypeInlineTest, TypeInlineTestCopyCoordsXYtoXYZM) {
@@ -204,15 +204,15 @@ TEST(TypeInlineTest, TypeInlineTestCopyCoordsXYtoXYZM) {
 
   EXPECT_EQ(dst.storage()[2][0], 0);
   EXPECT_EQ(dst.storage()[2][1], 0);
-  EXPECT_TRUE(isnan(dst.storage()[2][2]));
-  EXPECT_TRUE(isnan(dst.storage()[2][3]));
-  EXPECT_TRUE(isnan(dst.storage()[2][4]));
+  EXPECT_TRUE(std::isnan(dst.storage()[2][2]));
+  EXPECT_TRUE(std::isnan(dst.storage()[2][3]));
+  EXPECT_TRUE(std::isnan(dst.storage()[2][4]));
 
   EXPECT_EQ(dst.storage()[3][0], 0);
   EXPECT_EQ(dst.storage()[3][1], 0);
-  EXPECT_TRUE(isnan(dst.storage()[3][2]));
-  EXPECT_TRUE(isnan(dst.storage()[3][3]));
-  EXPECT_TRUE(isnan(dst.storage()[3][4]));
+  EXPECT_TRUE(std::isnan(dst.storage()[3][2]));
+  EXPECT_TRUE(std::isnan(dst.storage()[3][3]));
+  EXPECT_TRUE(std::isnan(dst.storage()[3][4]));
 }
 
 TEST(TypeInlineTest, TypeInlineTestCopyCoordsXYZtoXY) {
@@ -282,9 +282,9 @@ TEST(TypeInlineTest, TypeInlineTestCopyCoordsXYZtoXYM) {
 
   EXPECT_EQ(dst.storage()[2][0], 0);
   EXPECT_EQ(dst.storage()[2][1], 0);
-  EXPECT_TRUE(isnan(dst.storage()[2][2]));
-  EXPECT_TRUE(isnan(dst.storage()[2][3]));
-  EXPECT_TRUE(isnan(dst.storage()[2][4]));
+  EXPECT_TRUE(std::isnan(dst.storage()[2][2]));
+  EXPECT_TRUE(std::isnan(dst.storage()[2][3]));
+  EXPECT_TRUE(std::isnan(dst.storage()[2][4]));
 }
 
 TEST(TypeInlineTest, TypeInlineTestCopyCoordsXYZtoXYZM) {
@@ -314,7 +314,7 @@ TEST(TypeInlineTest, TypeInlineTestCopyCoordsXYZtoXYZM) {
 
   EXPECT_EQ(dst.storage()[3][0], 0);
   EXPECT_EQ(dst.storage()[3][1], 0);
-  EXPECT_TRUE(isnan(dst.storage()[3][2]));
-  EXPECT_TRUE(isnan(dst.storage()[3][3]));
-  EXPECT_TRUE(isnan(dst.storage()[3][4]));
+  EXPECT_TRUE(std::isnan(dst.storage()[3][2]));
+  EXPECT_TRUE(std::isnan(dst.storage()[3][3]));
+  EXPECT_TRUE(std::isnan(dst.storage()[3][4]));
 }
