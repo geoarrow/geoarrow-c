@@ -66,6 +66,38 @@ INSTANTIATE_TEST_SUITE_P(
                       GEOARROW_TYPE_POLYGON_ZM, GEOARROW_TYPE_MULTIPOINT_ZM,
                       GEOARROW_TYPE_MULTILINESTRING_ZM, GEOARROW_TYPE_MULTIPOLYGON_ZM));
 
+TEST(BuilderTest, BuilderTestAppendCoords) {
+  struct GeoArrowBuilder builder;
+  struct GeoArrowArrayView array_view;
+  struct ArrowArray array_out;
+
+  TestCoords coords({1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13, 14, 15},
+                    {16, 17, 18, 19, 20});
+
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_POINT_ZM), GEOARROW_OK);
+
+  EXPECT_EQ(GeoArrowBuilderCoordsAppend(&builder, coords.view(), GEOARROW_DIMENSIONS_XYZM,
+                                        1, 3),
+            GEOARROW_OK);
+
+  ASSERT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT_ZM),
+            GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "POINT ZM (2 7 12 17)");
+  EXPECT_EQ(values[1], "POINT ZM (3 8 13 18)");
+  EXPECT_EQ(values[2], "POINT ZM (4 9 14 19)");
+
+  array_out.release(&array_out);
+}
+
 TEST(BuilderTest, BuilerTestSetBuffersPoint) {
   struct GeoArrowBuilder builder;
   struct ArrowArray array_out;

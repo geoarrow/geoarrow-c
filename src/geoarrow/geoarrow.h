@@ -257,8 +257,9 @@ void GeoArrowBuilderReset(struct GeoArrowBuilder* builder);
 
 #include "geoarrow_type_inline.h"
 
-// Unique because it's a static inline function that needs to know about a
-// non-static inline function
+// These functions have to live here because they are inline but use non-inline
+// functions too.
+
 static inline GeoArrowErrorCode GeoArrowBuilderAppendBuffer(
     struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value) {
   if (!GeoArrowBuilderBufferCheck(builder, i, value.n_bytes)) {
@@ -285,18 +286,32 @@ static inline GeoArrowErrorCode GeoArrowBuilderCoordsReserve(
 
   switch (builder->view.schema_view.coord_type) {
     case GEOARROW_COORD_TYPE_INTERLEAVED:
+      // Sync the coord view size back to the buffer size
+      builder->view.buffers[last_buffer].size_bytes =
+          writable_view->size_coords * sizeof(double) * n_values;
+
+      // Use the normal reserve
       result = GeoArrowBuilderReserveBuffer(
           builder, last_buffer, additional_size_coords * sizeof(double) * n_values);
       if (result != GEOARROW_OK) {
         return result;
       }
 
+      // Sync the capacity and pointers back to the writable view
       writable_view->capacity_coords =
           builder->view.buffers[last_buffer].capacity_bytes / sizeof(double) / n_values;
+      for (int i = 0; i < n_values; i++) {
+        writable_view->values[i] = builder->view.buffers[last_buffer].data.as_double + i;
+      }
+
       return GEOARROW_OK;
 
     case GEOARROW_COORD_TYPE_SEPARATE:
       for (int i = last_buffer - n_values + 1; i <= last_buffer; i++) {
+        // Sync the coord view size back to the buffer size
+        builder->view.buffers[i].size_bytes = writable_view->size_coords * sizeof(double);
+
+        // Use the normal reserve
         result = GeoArrowBuilderReserveBuffer(builder, i,
                                               additional_size_coords * sizeof(double));
         if (result != GEOARROW_OK) {
@@ -304,8 +319,14 @@ static inline GeoArrowErrorCode GeoArrowBuilderCoordsReserve(
         }
       }
 
+      // Sync the capacity and pointers back to the writable view
       writable_view->capacity_coords =
           builder->view.buffers[last_buffer].capacity_bytes / sizeof(double);
+      for (int i = 0; i < n_values; i++) {
+        writable_view->values[i] =
+            builder->view.buffers[last_buffer - n_values + 1 + i].data.as_double;
+      }
+
       return GEOARROW_OK;
     default:
       // Beacuse there is no include <errno.h> here yet
@@ -324,7 +345,6 @@ static inline GeoArrowErrorCode GeoArrowBuilderCoordsAppend(
   }
 
   GeoArrowBuilderCoordsAppendUnsafe(builder, coords, dimensions, offset, n);
-  builder->view.coords.size_coords += n;
   return GEOARROW_OK;
 }
 

@@ -156,6 +156,33 @@ GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
                                         struct GeoArrowError* error) {
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
 
+  // If the coordinate appender was used, we may need to update the buffer sizes
+  struct GeoArrowWritableCoordView* writable_view = &builder->view.coords;
+  int last_buffer = builder->view.n_buffers - 1;
+  int n_values = writable_view->n_values;
+  int64_t size_by_coords;
+
+  switch (builder->view.schema_view.coord_type) {
+    case GEOARROW_COORD_TYPE_INTERLEAVED:
+      size_by_coords = writable_view->size_coords * sizeof(double) * n_values;
+      if (size_by_coords > builder->view.buffers[last_buffer].size_bytes) {
+        builder->view.buffers[last_buffer].size_bytes = size_by_coords;
+      }
+      break;
+
+    case GEOARROW_COORD_TYPE_SEPARATE:
+      for (int i = last_buffer - n_values + 1; i <= last_buffer; i++) {
+        size_by_coords = writable_view->size_coords * sizeof(double);
+        if (size_by_coords > builder->view.buffers[i].size_bytes) {
+          builder->view.buffers[i].size_bytes = size_by_coords;
+        }
+      }
+      break;
+
+    default:
+      return EINVAL;
+  }
+
   // Sync builder buffer's back to the array; set array lengths from buffer sizes
   struct _GeoArrowFindBufferResult res;
   for (int64_t i = 0; i < builder->view.n_buffers; i++) {
