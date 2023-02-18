@@ -81,6 +81,7 @@ TEST(BuilderTest, BuilderTestAppendCoords) {
             GEOARROW_OK);
 
   ASSERT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT_ZM),
             GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
