@@ -559,6 +559,20 @@ static inline void GeoArrowBuilderCoordsAppendUnsafe(
   builder->view.coords.size_coords += n;
 }
 
+static inline int GeoArrowBuilderOffsetCheck(struct GeoArrowBuilder* builder, int32_t i,
+                                             int64_t additional_size_elements) {
+  return (builder->view.buffers[i + 1].capacity_bytes / sizeof(int32_t)) >=
+         ((builder->view.buffers[i + 1].size_bytes / sizeof(int32_t)) +
+          additional_size_elements);
+}
+
+static inline int GeoArrowBuilderOffsetAppendUnsafe(struct GeoArrowBuilder* builder,
+                                                    int32_t i, int32_t* data,
+                                                    int64_t additional_size_elements) {
+  int32_t* offset_data = builder->view.buffers[i + 1].data.as_int32;
+  memcpy(offset_data, data, additional_size_elements * sizeof(int32_t));
+}
+
 struct _GeoArrowFindBufferResult {
   struct ArrowArray* array;
   int level;

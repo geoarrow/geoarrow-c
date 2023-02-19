@@ -242,8 +242,8 @@ static inline void GeoArrowBuilderAppendBufferUnsafe(struct GeoArrowBuilder* bui
 static inline GeoArrowErrorCode GeoArrowBuilderAppendBuffer(
     struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value);
 
-void GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
-                                struct GeoArrowVisitor* v);
+GeoArrowErrorCode GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
+                                             struct GeoArrowVisitor* v);
 
 GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
                                         struct ArrowArray* array,
@@ -345,6 +345,30 @@ static inline GeoArrowErrorCode GeoArrowBuilderCoordsAppend(
   }
 
   GeoArrowBuilderCoordsAppendUnsafe(builder, coords, dimensions, offset, n);
+  return GEOARROW_OK;
+}
+
+static inline GeoArrowErrorCode GeoArrowBuilderOffsetReserve(
+    struct GeoArrowBuilder* builder, int32_t i, int64_t additional_size_elements) {
+  if (GeoArrowBuilderOffsetCheck(builder, i, additional_size_elements)) {
+    return GEOARROW_OK;
+  }
+
+  return GeoArrowBuilderReserveBuffer(builder, i + 1,
+                                      additional_size_elements * sizeof(int32_t));
+}
+
+static inline GeoArrowErrorCode GeoArrowBuilderOffsetAppend(
+    struct GeoArrowBuilder* builder, int32_t i, int32_t* data,
+    int64_t additional_size_elements) {
+  if (!GeoArrowBuilderOffsetCheck(builder, i, additional_size_elements)) {
+    int result = GeoArrowBuilderOffsetReserve(builder, i, additional_size_elements);
+    if (result != GEOARROW_OK) {
+      return result;
+    }
+  }
+
+  GeoArrowBuilderOffsetAppendUnsafe(builder, i, data, additional_size_elements);
   return GEOARROW_OK;
 }
 
