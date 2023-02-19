@@ -82,6 +82,7 @@ TEST(BuilderTest, BuilderTestAppendCoords) {
 
   ASSERT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
   GeoArrowBuilderReset(&builder);
+
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT_ZM),
             GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
@@ -95,6 +96,59 @@ TEST(BuilderTest, BuilderTestAppendCoords) {
   EXPECT_EQ(values[0], "POINT ZM (2 7 12 17)");
   EXPECT_EQ(values[1], "POINT ZM (3 8 13 18)");
   EXPECT_EQ(values[2], "POINT ZM (4 9 14 19)");
+
+  array_out.release(&array_out);
+}
+
+TEST(BuilderTest, BuilderTestPoint) {
+  struct GeoArrowBuilder builder;
+  struct GeoArrowVisitor v;
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_POINT), GEOARROW_OK);
+  GeoArrowBuilderInitVisitor(&builder, &v);
+
+  TestCoords coords({1}, {2}, {3}, {4});
+
+  // Valid
+  coords.view()->n_values = 2;
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  // Empty
+  coords.view()->n_values = 2;
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  // Null
+  coords.view()->n_values = 2;
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.null_feat(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  struct ArrowArray array_out;
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT),
+            GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "POINT (1 2)");
+  EXPECT_EQ(values[1], "POINT (nan nan)");
+  EXPECT_EQ(values[2], "<null value>");
 
   array_out.release(&array_out);
 }
