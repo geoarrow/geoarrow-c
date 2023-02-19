@@ -28,6 +28,7 @@ struct BuilderPrivate {
   enum GeoArrowDimensions last_dimensions;
   int64_t size[32];
   int32_t level;
+  int64_t null_count;
 };
 
 static GeoArrowErrorCode GeoArrowBuilderInitInternal(struct GeoArrowBuilder* builder) {
@@ -97,6 +98,9 @@ static GeoArrowErrorCode GeoArrowBuilderInitInternal(struct GeoArrowBuilder* bui
   private->empty_coord.n_coords = 1;
   private->empty_coord.n_values = 4;
   private->empty_coord.coords_stride = 1;
+
+  // Set the null_count to zero
+  private->null_count = 0;
 
   builder->private_data = private;
   return GEOARROW_OK;
@@ -175,7 +179,7 @@ GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
       return EINVAL;
   }
 
-  // If the validity bitmap was used, we may need to update the validity buffer size
+  // If the validity bitmap was used, we need to update the validity buffer size
   if (private->validity->buffer.data != NULL &&
       builder->view.buffers[0].data.data == NULL) {
     builder->view.buffers[0].data.as_uint8 = private->validity->buffer.data;
@@ -183,7 +187,7 @@ GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
     builder->view.buffers[0].capacity_bytes = private->validity->buffer.capacity_bytes;
   }
 
-  // Sync builder buffer's back to the array; set array lengths from buffer sizes
+  // Sync builder's buffers back to the array; set array lengths from buffer sizes
   struct _GeoArrowFindBufferResult res;
   for (int64_t i = 0; i < builder->view.n_buffers; i++) {
     private->buffers[i]->size_bytes = builder->view.buffers[i].size_bytes;
@@ -205,6 +209,14 @@ GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
   // and validate sizes.
   NANOARROW_RETURN_NOT_OK(
       ArrowArrayFinishBuilding(&private->array, (struct ArrowError*)error));
+
+  // If the null_count was incremented, we know what it is; if the first buffer
+  // is non-null, we don't know what it is
+  if (private->null_count > 0) {
+    private->array.null_count = private->null_count;
+  } else if (private->array.buffers[0] != NULL) {
+    private->array.null_count = -1;
+  }
 
   // Move the result
   memcpy(array, &private->array, sizeof(struct ArrowArray));
@@ -398,6 +410,7 @@ static int feat_end_point(struct GeoArrowVisitor* v) {
       ArrowBitmapAppendUnsafe(private->validity, 1, current_length - 1);
     }
 
+    private->null_count++;
     NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private->validity, 0, 1));
   } else if (private->validity->buffer.data != NULL) {
     NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private->validity, 1, 1));

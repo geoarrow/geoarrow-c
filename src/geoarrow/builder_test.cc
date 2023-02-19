@@ -134,6 +134,9 @@ TEST(BuilderTest, BuilderTestPoint) {
   EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
   GeoArrowBuilderReset(&builder);
 
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.null_count, 1);
+
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT),
             GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
