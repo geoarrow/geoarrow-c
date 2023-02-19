@@ -17,6 +17,7 @@ struct WKBWriterPrivate {
   int32_t level;
   int64_t length;
   int64_t null_count;
+  int feat_is_null;
 };
 
 #ifndef GEOARROW_NATIVE_ENDIAN
@@ -47,18 +48,14 @@ static int feat_start_wkb(struct GeoArrowVisitor* v) {
   private->level = 0;
   private->size[private->level] = 0;
   private->length++;
+  private->feat_is_null = 0;
   return ArrowBufferAppendInt32(&private->offsets, private->values.size_bytes);
 }
 
 static int null_feat_wkb(struct GeoArrowVisitor* v) {
   struct WKBWriterPrivate* private = (struct WKBWriterPrivate*)v->private_data;
-  if (private->validity.buffer.data == NULL && private->length > 0) {
-    NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(&private->validity, private->length));
-    ArrowBitmapAppendUnsafe(&private->validity, 1, private->length - 1);
-  }
-
-  private->null_count++;
-  return ArrowBitmapAppend(&private->validity, 0, 1);
+  private->feat_is_null = 1;
+  return GEOARROW_OK;
 }
 
 static int geom_start_wkb(struct GeoArrowVisitor* v,
@@ -161,6 +158,24 @@ static int geom_end_wkb(struct GeoArrowVisitor* v) {
   return GEOARROW_OK;
 }
 
+static int feat_end_wkb(struct GeoArrowVisitor* v) {
+  struct WKBWriterPrivate* private = (struct WKBWriterPrivate*)v->private_data;
+
+  if (private->feat_is_null) {
+    if (private->validity.buffer.data == NULL) {
+      NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(&private->validity, private->length));
+      ArrowBitmapAppendUnsafe(&private->validity, 1, private->length - 1);
+    }
+
+    private->null_count++;
+    return ArrowBitmapAppend(&private->validity, 0, 1);
+  } else if (private->validity.buffer.data != NULL) {
+    return ArrowBitmapAppend(&private->validity, 1, 1);
+  }
+
+  return GEOARROW_OK;
+}
+
 GeoArrowErrorCode GeoArrowWKBWriterInit(struct GeoArrowWKBWriter* writer) {
   struct WKBWriterPrivate* private =
       (struct WKBWriterPrivate*)ArrowMalloc(sizeof(struct WKBWriterPrivate));
@@ -194,6 +209,7 @@ void GeoArrowWKBWriterInitVisitor(struct GeoArrowWKBWriter* writer,
   v->coords = &coords_wkb;
   v->ring_end = &ring_end_wkb;
   v->geom_end = &geom_end_wkb;
+  v->feat_end = &feat_end_wkb;
 }
 
 GeoArrowErrorCode GeoArrowWKBWriterFinish(struct GeoArrowWKBWriter* writer,

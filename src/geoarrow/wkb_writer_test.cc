@@ -54,9 +54,15 @@ TEST(WKBWriterTest, WKBWriterTestOneValidOneNull) {
   EXPECT_EQ(v.null_feat(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
   struct ArrowArray array;
   EXPECT_EQ(GeoArrowWKBWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
-  EXPECT_EQ(array.length, 2);
+  EXPECT_EQ(array.length, 3);
   EXPECT_EQ(array.null_count, 1);
 
   struct ArrowArrayView view;
@@ -65,6 +71,7 @@ TEST(WKBWriterTest, WKBWriterTestOneValidOneNull) {
 
   EXPECT_FALSE(ArrowArrayViewIsNull(&view, 0));
   EXPECT_TRUE(ArrowArrayViewIsNull(&view, 1));
+  EXPECT_FALSE(ArrowArrayViewIsNull(&view, 2));
   struct ArrowBufferView value = ArrowArrayViewGetBytesUnsafe(&view, 0);
 
   ArrowArrayViewReset(&view);
