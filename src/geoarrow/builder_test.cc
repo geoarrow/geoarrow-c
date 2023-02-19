@@ -117,18 +117,16 @@ TEST(BuilderTest, BuilderTestPoint) {
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
+  // Null
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.null_feat(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
   // Empty
-  coords.view()->n_values = 2;
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
-  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
-
-  // Null
-  coords.view()->n_values = 2;
-  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
-  EXPECT_EQ(v.null_feat(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
   struct ArrowArray array_out;
@@ -147,8 +145,8 @@ TEST(BuilderTest, BuilderTestPoint) {
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
   EXPECT_EQ(values[0], "POINT (1 2)");
-  EXPECT_EQ(values[1], "POINT (nan nan)");
-  EXPECT_EQ(values[2], "<null value>");
+  EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(values[2], "POINT (nan nan)");
 
   array_out.release(&array_out);
 }

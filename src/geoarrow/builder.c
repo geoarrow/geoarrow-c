@@ -22,8 +22,7 @@ struct BuilderPrivate {
   struct ArrowBuffer* buffers[8];
 
   // Fields to keep track of state when using the visitor pattern
-  int64_t length;
-  int64_t null_count;
+  int feat_is_null;
   double empty_coord_values[4];
   struct GeoArrowCoordView empty_coord;
   enum GeoArrowDimensions last_dimensions;
@@ -338,6 +337,7 @@ static int feat_start_point(struct GeoArrowVisitor* v) {
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   private->level = 0;
   private->size[0] = 0;
+  private->feat_is_null = 0;
   return GEOARROW_OK;
 }
 
@@ -371,19 +371,7 @@ static int geom_end_point(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
 static int null_feat_point(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
-
-  int n_dim = _GeoArrowkNumDimensions[builder->view.schema_view.dimensions];
-  private->empty_coord.n_values = n_dim;
-  NANOARROW_RETURN_NOT_OK(coords_point(v, &private->empty_coord));
-
-  int64_t current_length = builder->view.coords.size_coords;
-  if (private->validity->buffer.data == NULL && current_length > 0) {
-    NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(private->validity, current_length));
-    ArrowBitmapAppendUnsafe(private->validity, 1, current_length - 1);
-  }
-
-  NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private->validity, 0, 1));
-
+  private->feat_is_null = 1;
   return GEOARROW_OK;
 }
 
@@ -401,6 +389,18 @@ static int feat_end_point(struct GeoArrowVisitor* v) {
     ArrowErrorSet((struct ArrowError*)v->error,
                   "Can't convert feature with >1 coordinate to POINT");
     return EINVAL;
+  }
+
+  if (private->feat_is_null) {
+    int64_t current_length = builder->view.coords.size_coords;
+    if (private->validity->buffer.data == NULL) {
+      NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(private->validity, current_length));
+      ArrowBitmapAppendUnsafe(private->validity, 1, current_length - 1);
+    }
+
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private->validity, 0, 1));
+  } else if (private->validity->buffer.data != NULL) {
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private->validity, 1, 1));
   }
 
   return GEOARROW_OK;
