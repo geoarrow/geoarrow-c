@@ -106,10 +106,9 @@ TEST(BuilderTest, BuilderTestPoint) {
   ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_POINT), GEOARROW_OK);
   GeoArrowBuilderInitVisitor(&builder, &v);
 
-  TestCoords coords({1}, {2}, {3}, {4});
+  TestCoords coords({1}, {2});
 
   // Valid
-  coords.view()->n_values = 2;
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
@@ -160,10 +159,9 @@ TEST(BuilderTest, BuilderTestLinestring) {
   ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_LINESTRING), GEOARROW_OK);
   GeoArrowBuilderInitVisitor(&builder, &v);
 
-  TestCoords coords({1, 2, 3, 1}, {2, 3, 4, 2}, {3, 4, 5, 3}, {4, 5, 6, 4});
+  TestCoords coords({1, 2, 3, 1}, {2, 3, 4, 2});
 
   // Valid
-  coords.view()->n_values = 2;
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
@@ -202,7 +200,7 @@ TEST(BuilderTest, BuilderTestLinestring) {
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
-  EXPECT_EQ(values[0], "LINESTRING (1 2, 2 3, 3 4, 4 5)");
+  EXPECT_EQ(values[0], "LINESTRING (1 2, 2 3, 3 4, 1 2)");
   EXPECT_EQ(values[1], "<null value>");
   EXPECT_EQ(values[2], "LINESTRING EMPTY");
 
