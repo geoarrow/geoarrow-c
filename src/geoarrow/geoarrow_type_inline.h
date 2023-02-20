@@ -566,11 +566,13 @@ static inline int GeoArrowBuilderOffsetCheck(struct GeoArrowBuilder* builder, in
           additional_size_elements);
 }
 
-static inline int GeoArrowBuilderOffsetAppendUnsafe(struct GeoArrowBuilder* builder,
-                                                    int32_t i, int32_t* data,
-                                                    int64_t additional_size_elements) {
-  int32_t* offset_data = builder->view.buffers[i + 1].data.as_int32;
-  memcpy(offset_data, data, additional_size_elements * sizeof(int32_t));
+static inline void GeoArrowBuilderOffsetAppendUnsafe(struct GeoArrowBuilder* builder,
+                                                     int32_t i, int32_t* data,
+                                                     int64_t additional_size_elements) {
+  struct GeoArrowWritableBufferView* buf = &builder->view.buffers[i + 1];
+  memcpy(buf->data.as_uint8 + buf->size_bytes, data,
+         additional_size_elements * sizeof(int32_t));
+  buf->size_bytes += additional_size_elements * sizeof(int32_t);
 }
 
 struct _GeoArrowFindBufferResult {

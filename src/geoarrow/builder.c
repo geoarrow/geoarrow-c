@@ -446,6 +446,7 @@ static int feat_start_linestring(struct GeoArrowVisitor* v) {
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   private->level = 0;
   private->size[0] = 0;
+  private->size[1] = 0;
   private->feat_is_null = 0;
   return GEOARROW_OK;
 }
@@ -453,29 +454,64 @@ static int feat_start_linestring(struct GeoArrowVisitor* v) {
 static int geom_start_linestring(struct GeoArrowVisitor* v,
                                  enum GeoArrowGeometryType geometry_type,
                                  enum GeoArrowDimensions dimensions) {
-  // level++, geometry type, dimensions, reset size
-  // validate dimensions, maybe against some options that indicate
-  // error for mismatch, fill, or drop behaviour
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   private->last_dimensions = builder->view.schema_view.dimensions;
+
+  switch (geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+      private
+      ->level++;
+      break;
+    default:
+      break;
+  }
+
   return GEOARROW_OK;
 }
 
-static int ring_start_linestring(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
+static int ring_start_linestring(struct GeoArrowVisitor* v) {
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+  private->level++;
+  return GEOARROW_OK;
+}
 
 static int coords_linestring(struct GeoArrowVisitor* v,
                              const struct GeoArrowCoordView* coords) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
-  private->size[0] += coords->n_coords;
+  private->size[1] += coords->n_coords;
   return GeoArrowBuilderCoordsAppend(builder, coords, private->last_dimensions, 0,
                                      coords->n_coords);
 }
 
-static int ring_end_linestring(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
+static int ring_end_linestring(struct GeoArrowVisitor* v) {
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
 
-static int geom_end_linestring(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
+  private->level--;
+  private->size[0]++;
+  int32_t n_coord32 = builder->view.coords.size_coords;
+  NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 0, &n_coord32, 1));
+
+  return GEOARROW_OK;
+}
+
+static int geom_end_linestring(struct GeoArrowVisitor* v) {
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+
+  if (private->level == 1) {
+    private->size[0]++;
+    private->level--;
+    int32_t n_coord32 = builder->view.coords.size_coords;
+    NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 0, &n_coord32, 1));
+  }
+
+  return GEOARROW_OK;
+}
 
 static int null_feat_linestring(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
@@ -488,20 +524,19 @@ static int feat_end_linestring(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
 
-  // If there weren't any coords (i.e., EMPTY), we need to write some NANs here
-  // if there was >1 coords, we also need to error or we'll get misaligned output
+  // If we didn't finish any sequences, finish at least one. This is usually an
+  // EMPTY but could also be a single point.
   if (private->size[0] == 0) {
-    int n_dim = _GeoArrowkNumDimensions[builder->view.schema_view.dimensions];
-    private->empty_coord.n_values = n_dim;
-    NANOARROW_RETURN_NOT_OK(coords_linestring(v, &private->empty_coord));
+    int32_t n_coord32 = builder->view.coords.size_coords;
+    NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 0, &n_coord32, 1));
   } else if (private->size[0] != 1) {
     ArrowErrorSet((struct ArrowError*)v->error,
-                  "Can't convert feature with >1 coordinate to POINT");
+                  "Can't convert feature with >1 sequence to LINESTRING");
     return EINVAL;
   }
 
   if (private->feat_is_null) {
-    int64_t current_length = builder->view.coords.size_coords;
+    int64_t current_length = builder->view.buffers[1].size_bytes / sizeof(int32_t) - 1;
     if (private->validity->buffer.data == NULL) {
       NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(private->validity, current_length));
       ArrowBitmapAppendUnsafe(private->validity, 1, current_length - 1);
@@ -556,4 +591,6 @@ GeoArrowErrorCode GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
 
     private->visitor_initialized = 1;
   }
+
+  return GEOARROW_OK;
 }
