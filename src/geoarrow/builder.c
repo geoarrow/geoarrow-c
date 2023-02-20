@@ -568,14 +568,153 @@ static void GeoArrowVisitorInitLinestring(struct GeoArrowBuilder* builder,
   v->private_data = builder;
 }
 
+static int feat_start_polygon(struct GeoArrowVisitor* v) {
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+  private->level = 0;
+  private->size[0] = 0;
+  private->size[1] = 0;
+  private->feat_is_null = 0;
+  return GEOARROW_OK;
+}
+
+static int geom_start_polygon(struct GeoArrowVisitor* v,
+                                 enum GeoArrowGeometryType geometry_type,
+                                 enum GeoArrowDimensions dimensions) {
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+  private->last_dimensions = builder->view.schema_view.dimensions;
+
+  switch (geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+      private
+      ->level++;
+      break;
+    default:
+      break;
+  }
+
+  return GEOARROW_OK;
+}
+
+static int ring_start_polygon(struct GeoArrowVisitor* v) {
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+  private->level++;
+  return GEOARROW_OK;
+}
+
+static int coords_polygon(struct GeoArrowVisitor* v,
+                             const struct GeoArrowCoordView* coords) {
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+  private->size[1] += coords->n_coords;
+  return GeoArrowBuilderCoordsAppend(builder, coords, private->last_dimensions, 0,
+                                     coords->n_coords);
+}
+
+static int ring_end_polygon(struct GeoArrowVisitor* v) {
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+
+  private->level--;
+  if (private->size[1] > 0) {
+    int32_t n_coord32 = builder->view.coords.size_coords;
+    NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 1, &n_coord32, 1));
+    private->size[0]++;
+    private->size[1] = 0;
+  }
+
+  return GEOARROW_OK;
+}
+
+static int geom_end_polygon(struct GeoArrowVisitor* v) {
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+
+  if (private->level == 1) {
+    private->level--;
+    if (private->size[1] > 0) {
+      int32_t n_coord32 = builder->view.coords.size_coords;
+      NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 1, &n_coord32, 1));
+      private->size[0]++;
+      private->size[1] = 0;
+    }
+  }
+
+  return GEOARROW_OK;
+}
+
+static int null_feat_polygon(struct GeoArrowVisitor* v) {
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+  private->feat_is_null = 1;
+  return GEOARROW_OK;
+}
+
+static int feat_end_polygon(struct GeoArrowVisitor* v) {
+  struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+
+  // If we have an unfinished sequence left over, finish it now. This could have
+  // occurred if the last geometry that was visited was a POINT.
+  if (private->size[1] > 0) {
+    int32_t n_coord32 = builder->view.coords.size_coords;
+    NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 1, &n_coord32, 1));
+  }
+
+  // Finish off the sequence of sequences. This is a polygon or multilinestring
+  // so it can any number of them.
+  int32_t n_seq32 = builder->view.buffers[2].size_bytes / sizeof(int32_t) - 1;
+  NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 0, &n_seq32, 1));
+
+  if (private->feat_is_null) {
+    int64_t current_length = builder->view.buffers[1].size_bytes / sizeof(int32_t) - 1;
+    if (private->validity->buffer.data == NULL) {
+      NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(private->validity, current_length));
+      ArrowBitmapAppendUnsafe(private->validity, 1, current_length - 1);
+    }
+
+    private->null_count++;
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private->validity, 0, 1));
+  } else if (private->validity->buffer.data != NULL) {
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private->validity, 1, 1));
+  }
+
+  return GEOARROW_OK;
+}
+
+static void GeoArrowVisitorInitPolygon(struct GeoArrowBuilder* builder,
+                                          struct GeoArrowVisitor* v) {
+  struct GeoArrowError* previous_error = v->error;
+  GeoArrowVisitorInitVoid(v);
+  v->error = previous_error;
+
+  v->feat_start = &feat_start_polygon;
+  v->null_feat = &null_feat_polygon;
+  v->geom_start = &geom_start_polygon;
+  v->ring_start = &ring_start_polygon;
+  v->coords = &coords_polygon;
+  v->ring_end = &ring_end_polygon;
+  v->geom_end = &geom_end_polygon;
+  v->feat_end = &feat_end_polygon;
+  v->private_data = builder;
+}
+
 GeoArrowErrorCode GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
                                              struct GeoArrowVisitor* v) {
   switch (builder->view.schema_view.geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_POINT:
       GeoArrowVisitorInitPoint(builder, v);
       break;
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
       GeoArrowVisitorInitLinestring(builder, v);
+      break;
+    case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+    case GEOARROW_GEOMETRY_TYPE_POLYGON:
+      GeoArrowVisitorInitPolygon(builder, v);
       break;
     default:
       return EINVAL;
