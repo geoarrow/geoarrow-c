@@ -441,7 +441,7 @@ static void GeoArrowVisitorInitPoint(struct GeoArrowBuilder* builder,
   v->private_data = builder;
 }
 
-static int feat_start_linestring(struct GeoArrowVisitor* v) {
+static int feat_start_multipoint(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   private->level = 0;
@@ -451,7 +451,7 @@ static int feat_start_linestring(struct GeoArrowVisitor* v) {
   return GEOARROW_OK;
 }
 
-static int geom_start_linestring(struct GeoArrowVisitor* v,
+static int geom_start_multipoint(struct GeoArrowVisitor* v,
                                  enum GeoArrowGeometryType geometry_type,
                                  enum GeoArrowDimensions dimensions) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
@@ -471,14 +471,14 @@ static int geom_start_linestring(struct GeoArrowVisitor* v,
   return GEOARROW_OK;
 }
 
-static int ring_start_linestring(struct GeoArrowVisitor* v) {
+static int ring_start_multipoint(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   private->level++;
   return GEOARROW_OK;
 }
 
-static int coords_linestring(struct GeoArrowVisitor* v,
+static int coords_multipoint(struct GeoArrowVisitor* v,
                              const struct GeoArrowCoordView* coords) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
@@ -487,7 +487,7 @@ static int coords_linestring(struct GeoArrowVisitor* v,
                                      coords->n_coords);
 }
 
-static int ring_end_linestring(struct GeoArrowVisitor* v) {
+static int ring_end_multipoint(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
 
@@ -499,7 +499,7 @@ static int ring_end_linestring(struct GeoArrowVisitor* v) {
   return GEOARROW_OK;
 }
 
-static int geom_end_linestring(struct GeoArrowVisitor* v) {
+static int geom_end_multipoint(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
 
@@ -513,14 +513,14 @@ static int geom_end_linestring(struct GeoArrowVisitor* v) {
   return GEOARROW_OK;
 }
 
-static int null_feat_linestring(struct GeoArrowVisitor* v) {
+static int null_feat_multipoint(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   private->feat_is_null = 1;
   return GEOARROW_OK;
 }
 
-static int feat_end_linestring(struct GeoArrowVisitor* v) {
+static int feat_end_multipoint(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
 
@@ -557,18 +557,18 @@ static void GeoArrowVisitorInitLinestring(struct GeoArrowBuilder* builder,
   GeoArrowVisitorInitVoid(v);
   v->error = previous_error;
 
-  v->feat_start = &feat_start_linestring;
-  v->null_feat = &null_feat_linestring;
-  v->geom_start = &geom_start_linestring;
-  v->ring_start = &ring_start_linestring;
-  v->coords = &coords_linestring;
-  v->ring_end = &ring_end_linestring;
-  v->geom_end = &geom_end_linestring;
-  v->feat_end = &feat_end_linestring;
+  v->feat_start = &feat_start_multipoint;
+  v->null_feat = &null_feat_multipoint;
+  v->geom_start = &geom_start_multipoint;
+  v->ring_start = &ring_start_multipoint;
+  v->coords = &coords_multipoint;
+  v->ring_end = &ring_end_multipoint;
+  v->geom_end = &geom_end_multipoint;
+  v->feat_end = &feat_end_multipoint;
   v->private_data = builder;
 }
 
-static int feat_start_polygon(struct GeoArrowVisitor* v) {
+static int feat_start_multilinestring(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   private->level = 0;
@@ -578,9 +578,9 @@ static int feat_start_polygon(struct GeoArrowVisitor* v) {
   return GEOARROW_OK;
 }
 
-static int geom_start_polygon(struct GeoArrowVisitor* v,
-                                 enum GeoArrowGeometryType geometry_type,
-                                 enum GeoArrowDimensions dimensions) {
+static int geom_start_multilinestring(struct GeoArrowVisitor* v,
+                                      enum GeoArrowGeometryType geometry_type,
+                                      enum GeoArrowDimensions dimensions) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   private->last_dimensions = builder->view.schema_view.dimensions;
@@ -598,15 +598,15 @@ static int geom_start_polygon(struct GeoArrowVisitor* v,
   return GEOARROW_OK;
 }
 
-static int ring_start_polygon(struct GeoArrowVisitor* v) {
+static int ring_start_multilinestring(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   private->level++;
   return GEOARROW_OK;
 }
 
-static int coords_polygon(struct GeoArrowVisitor* v,
-                             const struct GeoArrowCoordView* coords) {
+static int coords_multilinestring(struct GeoArrowVisitor* v,
+                                  const struct GeoArrowCoordView* coords) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   private->size[1] += coords->n_coords;
@@ -614,7 +614,7 @@ static int coords_polygon(struct GeoArrowVisitor* v,
                                      coords->n_coords);
 }
 
-static int ring_end_polygon(struct GeoArrowVisitor* v) {
+static int ring_end_multilinestring(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
 
@@ -629,7 +629,7 @@ static int ring_end_polygon(struct GeoArrowVisitor* v) {
   return GEOARROW_OK;
 }
 
-static int geom_end_polygon(struct GeoArrowVisitor* v) {
+static int geom_end_multilinestring(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
 
@@ -646,14 +646,14 @@ static int geom_end_polygon(struct GeoArrowVisitor* v) {
   return GEOARROW_OK;
 }
 
-static int null_feat_polygon(struct GeoArrowVisitor* v) {
+static int null_feat_multilinestring(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   private->feat_is_null = 1;
   return GEOARROW_OK;
 }
 
-static int feat_end_polygon(struct GeoArrowVisitor* v) {
+static int feat_end_multilinestring(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
 
@@ -686,19 +686,19 @@ static int feat_end_polygon(struct GeoArrowVisitor* v) {
 }
 
 static void GeoArrowVisitorInitPolygon(struct GeoArrowBuilder* builder,
-                                          struct GeoArrowVisitor* v) {
+                                       struct GeoArrowVisitor* v) {
   struct GeoArrowError* previous_error = v->error;
   GeoArrowVisitorInitVoid(v);
   v->error = previous_error;
 
-  v->feat_start = &feat_start_polygon;
-  v->null_feat = &null_feat_polygon;
-  v->geom_start = &geom_start_polygon;
-  v->ring_start = &ring_start_polygon;
-  v->coords = &coords_polygon;
-  v->ring_end = &ring_end_polygon;
-  v->geom_end = &geom_end_polygon;
-  v->feat_end = &feat_end_polygon;
+  v->feat_start = &feat_start_multilinestring;
+  v->null_feat = &null_feat_multilinestring;
+  v->geom_start = &geom_start_multilinestring;
+  v->ring_start = &ring_start_multilinestring;
+  v->coords = &coords_multilinestring;
+  v->ring_end = &ring_end_multilinestring;
+  v->geom_end = &geom_end_multilinestring;
+  v->feat_end = &feat_end_multilinestring;
   v->private_data = builder;
 }
 

@@ -153,10 +153,10 @@ TEST(BuilderTest, BuilderTestPoint) {
   array_out.release(&array_out);
 }
 
-TEST(BuilderTest, BuilderTestLinestring) {
+TEST(BuilderTest, BuilderTestMultipoint) {
   struct GeoArrowBuilder builder;
   struct GeoArrowVisitor v;
-  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_LINESTRING), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_MULTIPOINT), GEOARROW_OK);
   GeoArrowBuilderInitVisitor(&builder, &v);
 
   TestCoords coords({1, 2, 3, 1}, {2, 3, 4, 2});
@@ -211,7 +211,7 @@ TEST(BuilderTest, BuilderTestLinestring) {
   EXPECT_EQ(array_out.length, 5);
   EXPECT_EQ(array_out.null_count, 1);
 
-  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_LINESTRING),
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_MULTIPOINT),
             GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
@@ -221,11 +221,11 @@ TEST(BuilderTest, BuilderTestLinestring) {
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 5);
-  EXPECT_EQ(values[0], "LINESTRING (1 2, 2 3, 3 4, 1 2)");
-  EXPECT_EQ(values[1], "LINESTRING (1 2, 2 3, 3 4, 1 2)");
-  EXPECT_EQ(values[2], "LINESTRING (1 2, 2 3, 3 4, 1 2)");
+  EXPECT_EQ(values[0], "MULTIPOINT ((1 2), (2 3), (3 4), (1 2))");
+  EXPECT_EQ(values[1], "MULTIPOINT ((1 2), (2 3), (3 4), (1 2))");
+  EXPECT_EQ(values[2], "MULTIPOINT ((1 2), (2 3), (3 4), (1 2))");
   EXPECT_EQ(values[3], "<null value>");
-  EXPECT_EQ(values[4], "LINESTRING EMPTY");
+  EXPECT_EQ(values[4], "MULTIPOINT EMPTY");
 
   array_out.release(&array_out);
 }
