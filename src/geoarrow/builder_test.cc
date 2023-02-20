@@ -161,11 +161,32 @@ TEST(BuilderTest, BuilderTestLinestring) {
 
   TestCoords coords({1, 2, 3, 1}, {2, 3, 4, 2});
 
-  // Valid
+  // Valid linestring
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
             GEOARROW_OK);
   EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  // Valid polygon
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POLYGON, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.ring_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
+  EXPECT_EQ(v.ring_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  // Valid multilinestring
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_MULTILINESTRING, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
@@ -187,7 +208,7 @@ TEST(BuilderTest, BuilderTestLinestring) {
   EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
   GeoArrowBuilderReset(&builder);
 
-  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.length, 5);
   EXPECT_EQ(array_out.null_count, 1);
 
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_LINESTRING),
@@ -199,10 +220,12 @@ TEST(BuilderTest, BuilderTestLinestring) {
             GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
-  ASSERT_EQ(values.size(), 3);
+  ASSERT_EQ(values.size(), 5);
   EXPECT_EQ(values[0], "LINESTRING (1 2, 2 3, 3 4, 1 2)");
-  EXPECT_EQ(values[1], "<null value>");
-  EXPECT_EQ(values[2], "LINESTRING EMPTY");
+  EXPECT_EQ(values[1], "LINESTRING (1 2, 2 3, 3 4, 1 2)");
+  EXPECT_EQ(values[2], "LINESTRING (1 2, 2 3, 3 4, 1 2)");
+  EXPECT_EQ(values[3], "<null value>");
+  EXPECT_EQ(values[4], "LINESTRING EMPTY");
 
   array_out.release(&array_out);
 }
