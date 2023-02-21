@@ -408,8 +408,8 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitMultipolygon(
 
         for (int64_t k = 0; k < n_rings; k++) {
           NANOARROW_RETURN_NOT_OK(v->ring_start(v));
-          coord_offset = array_view->offsets[2][ring_offset + j];
-          n_coords = array_view->offsets[2][ring_offset + j + 1] - coord_offset;
+          coord_offset = array_view->offsets[2][ring_offset + k];
+          n_coords = array_view->offsets[2][ring_offset + k + 1] - coord_offset;
           GeoArrowCoordViewUpdate(&array_view->coords, &coords, coord_offset, n_coords);
           NANOARROW_RETURN_NOT_OK(v->coords(v, &coords));
           NANOARROW_RETURN_NOT_OK(v->ring_end(v));
