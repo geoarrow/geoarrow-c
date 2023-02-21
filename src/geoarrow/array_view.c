@@ -404,7 +404,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitMultipolygon(
                                               array_view->schema_view.dimensions));
 
         ring_offset = array_view->offsets[1][polygon_offset + j];
-        n_rings = array_view->offsets[1][polygon_offset + j + 1];
+        n_rings = array_view->offsets[1][polygon_offset + j + 1] - ring_offset;
 
         for (int64_t k = 0; k < n_rings; k++) {
           NANOARROW_RETURN_NOT_OK(v->ring_start(v));
