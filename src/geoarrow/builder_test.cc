@@ -442,6 +442,81 @@ TEST(BuilderTest, BuilderTestMultiPolygon) {
   array_out.release(&array_out);
 }
 
+class WKTRoundtripParameterizedTestFixture
+    : public ::testing::TestWithParam<std::pair<std::string, enum GeoArrowType>> {
+ protected:
+  std::string wkt;
+};
+
+TEST_P(WKTRoundtripParameterizedTestFixture, BuilderTestWKTRoundtrip) {
+  // Initialize params
+  const std::string& wkt = GetParam().first;
+  struct GeoArrowStringView wkt_view;
+  wkt_view.data = wkt.data();
+  wkt_view.n_bytes = wkt.size();
+  enum GeoArrowType type = GetParam().second;
+
+  // Initialize the builder
+  struct GeoArrowBuilder builder;
+  struct GeoArrowVisitor v;
+  struct GeoArrowError error;
+  v.error = &error;
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, type), GEOARROW_OK);
+  GeoArrowBuilderInitVisitor(&builder, &v);
+
+  // Visit the WKT item
+  struct GeoArrowWKTReader reader;
+  GeoArrowWKTReaderInit(&reader);
+  ASSERT_EQ(GeoArrowWKTReaderVisit(&reader, wkt_view, &v), GEOARROW_OK);
+  GeoArrowWKTReaderReset(&reader);
+
+  // Finalize the output
+  struct ArrowArray array_out;
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
+
+  // Validate it
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  // Visit the output
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  EXPECT_EQ(values.size(), 1);
+  EXPECT_EQ(values[0], wkt);
+
+  array_out.release(&array_out);
+}
+
+#define WKT_PAIR(a, b) std::pair<std::string, enum GeoArrowType> { a, b }
+
+INSTANTIATE_TEST_SUITE_P(
+    BuilderTest, WKTRoundtripParameterizedTestFixture,
+    ::testing::Values(
+        // Point
+        WKT_PAIR("POINT (0 1)", GEOARROW_TYPE_POINT),
+        WKT_PAIR("POINT Z (0 1 2)", GEOARROW_TYPE_POINT_Z),
+        WKT_PAIR("POINT M (0 1 2)", GEOARROW_TYPE_POINT_M),
+        WKT_PAIR("POINT ZM (0 1 2 3)", GEOARROW_TYPE_POINT_ZM),
+
+        // Linestring
+        WKT_PAIR("LINESTRING EMPTY", GEOARROW_TYPE_LINESTRING),
+        WKT_PAIR("LINESTRING (30 10, 12 16)", GEOARROW_TYPE_LINESTRING),
+        WKT_PAIR("LINESTRING Z (30 10 11, 12 16 15)", GEOARROW_TYPE_LINESTRING_Z),
+        WKT_PAIR("LINESTRING M (30 10 11, 12 16 15)", GEOARROW_TYPE_LINESTRING_M),
+        WKT_PAIR("LINESTRING ZM (30 10 11 10, 12 16 15 98)", GEOARROW_TYPE_LINESTRING_ZM),
+
+        // Polygon
+        WKT_PAIR("POLYGON EMPTY", GEOARROW_TYPE_POLYGON),
+        WKT_PAIR("POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))", GEOARROW_TYPE_POLYGON),
+        WKT_PAIR("POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10), (20 30, 35 35, 30 "
+                 "20, 20 30))",
+                 GEOARROW_TYPE_POLYGON)));
+
 TEST(BuilderTest, BuilerTestSetBuffersPoint) {
   struct GeoArrowBuilder builder;
   struct ArrowArray array_out;
