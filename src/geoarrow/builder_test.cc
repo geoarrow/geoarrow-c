@@ -515,7 +515,11 @@ INSTANTIATE_TEST_SUITE_P(
         WKT_PAIR("POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))", GEOARROW_TYPE_POLYGON),
         WKT_PAIR("POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10), (20 30, 35 35, 30 "
                  "20, 20 30))",
-                 GEOARROW_TYPE_POLYGON)));
+                 GEOARROW_TYPE_POLYGON),
+
+        // Multipoint
+        WKT_PAIR("MULTIPOINT EMPTY", GEOARROW_TYPE_MULTIPOINT),
+        WKT_PAIR("MULTIPOINT ((30 10), (12 16))", GEOARROW_TYPE_MULTIPOINT)));
 
 TEST(BuilderTest, BuilerTestSetBuffersPoint) {
   struct GeoArrowBuilder builder;
