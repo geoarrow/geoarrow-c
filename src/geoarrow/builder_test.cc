@@ -519,7 +519,21 @@ INSTANTIATE_TEST_SUITE_P(
 
         // Multipoint
         WKT_PAIR("MULTIPOINT EMPTY", GEOARROW_TYPE_MULTIPOINT),
-        WKT_PAIR("MULTIPOINT ((30 10), (12 16))", GEOARROW_TYPE_MULTIPOINT)));
+        WKT_PAIR("MULTIPOINT ((30 10), (12 16))", GEOARROW_TYPE_MULTIPOINT),
+
+        // Multilinestring
+        WKT_PAIR("MULTILINESTRING EMPTY", GEOARROW_TYPE_MULTILINESTRING),
+        WKT_PAIR("MULTILINESTRING ((10 10, 20 20, 10 40), (40 40, 30 30, 40 20, 30 10))",
+                 GEOARROW_TYPE_MULTILINESTRING),
+
+        // Multipolygon
+        WKT_PAIR("MULTIPOLYGON EMPTY", GEOARROW_TYPE_MULTIPOLYGON),
+        WKT_PAIR("MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)), ((20 35, 10 30, 10 10, "
+                 "30 5, 45 20, 20 35), (30 20, 20 15, 20 25, 30 20)))",
+                 GEOARROW_TYPE_MULTIPOLYGON)
+
+        // Comment to keep the last line on its own
+        ));
 
 TEST(BuilderTest, BuilerTestSetBuffersPoint) {
   struct GeoArrowBuilder builder;
