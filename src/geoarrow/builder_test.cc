@@ -6,6 +6,40 @@
 
 #include "wkx_testing.hpp"
 
+
+static void CustomFreeDoubleVector(uint8_t* ptr, int64_t size, void* private_data) {
+  auto vector = reinterpret_cast<std::vector<double>*>(private_data);
+  delete vector;
+}
+
+TEST(BuilderTest, BuilderTestOwnedBuffer) {
+  struct GeoArrowBuilder builder;
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_POINT), GEOARROW_OK);
+
+  std::vector<double>* xs = new std::vector<double>();
+  xs->push_back(123);
+  std::vector<double>* ys = new std::vector<double>();
+  ys->push_back(456);
+
+  struct GeoArrowBufferView view;
+  view.data = reinterpret_cast<const uint8_t*>(xs->data());
+  view.size_bytes = xs->size() * sizeof(double);
+  EXPECT_EQ(GeoArrowBuilderSetOwnedBuffer(&builder, 1, view, &CustomFreeDoubleVector, xs), GEOARROW_OK);
+
+  view.data = reinterpret_cast<const uint8_t*>(ys->data());
+  view.size_bytes = ys->size() * sizeof(double);
+  EXPECT_EQ(GeoArrowBuilderSetOwnedBuffer(&builder, 2, view, &CustomFreeDoubleVector, ys), GEOARROW_OK);
+
+  struct ArrowArray array;
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array, nullptr), GEOARROW_OK);
+
+  EXPECT_EQ(reinterpret_cast<const double*>(array.children[0]->buffers[1])[0], 123);
+  EXPECT_EQ(reinterpret_cast<const double*>(array.children[1]->buffers[1])[0], 456);
+
+  array.release(&array);
+  GeoArrowBuilderReset(&builder);
+}
+
 class TypeParameterizedTestFixture : public ::testing::TestWithParam<enum GeoArrowType> {
  protected:
   enum GeoArrowType type;
