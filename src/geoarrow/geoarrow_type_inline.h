@@ -408,6 +408,12 @@ static inline const char* GeoArrowGeometryTypeString(
   }
 }
 
+// Such that kNumOffsets[geometry_type] gives the right answer
+static int _GeoArrowkNumOffsets[] = {-1, 0, 1, 2, 1, 2, 3, -1};
+
+// Such that kNumDimensions[dimensions] gives the right answer
+static int _GeoArrowkNumDimensions[] = {-1, 2, 3, 3, 4};
+
 static inline int GeoArrowBuilderBufferCheck(struct GeoArrowBuilder* builder, int64_t i,
                                              int64_t additional_size_bytes) {
   return builder->view.buffers[i].capacity_bytes >=
@@ -420,6 +426,153 @@ static inline void GeoArrowBuilderAppendBufferUnsafe(struct GeoArrowBuilder* bui
   struct GeoArrowWritableBufferView* buffer = builder->view.buffers + i;
   memcpy(buffer->data.as_uint8 + buffer->size_bytes, value.data, value.n_bytes);
   buffer->size_bytes += value.n_bytes;
+}
+
+// This could probably be or use a lookup table at some point
+static inline void GeoArrowMapDimensions(enum GeoArrowDimensions src_dim,
+                                         enum GeoArrowDimensions dst_dim, int* dim_map) {
+  dim_map[0] = 0;
+  dim_map[1] = 1;
+  dim_map[2] = -1;
+  dim_map[3] = -1;
+
+  switch (dst_dim) {
+    case GEOARROW_DIMENSIONS_XYM:
+      switch (src_dim) {
+        case GEOARROW_DIMENSIONS_XYM:
+          dim_map[2] = 2;
+          break;
+        case GEOARROW_DIMENSIONS_XYZM:
+          dim_map[2] = 3;
+          break;
+        default:
+          break;
+      }
+      break;
+
+    case GEOARROW_DIMENSIONS_XYZ:
+      switch (src_dim) {
+        case GEOARROW_DIMENSIONS_XYZ:
+        case GEOARROW_DIMENSIONS_XYZM:
+          dim_map[2] = 2;
+          break;
+        default:
+          break;
+      }
+      break;
+
+    case GEOARROW_DIMENSIONS_XYZM:
+      switch (src_dim) {
+        case GEOARROW_DIMENSIONS_XYZ:
+          dim_map[2] = 2;
+          break;
+        case GEOARROW_DIMENSIONS_XYM:
+          dim_map[3] = 2;
+          break;
+        case GEOARROW_DIMENSIONS_XYZM:
+          dim_map[2] = 2;
+          dim_map[3] = 3;
+          break;
+        default:
+          break;
+      }
+      break;
+
+    default:
+      break;
+  }
+}
+
+// Four little-endian NANs
+static uint8_t _GeoArrowkEmptyPointCoords[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f};
+
+// Copies coordinates from one view to another keeping dimensions the same.
+// This function fills dimensions in dst but not in src with NAN; dimensions
+// in src but not in dst are dropped. This is useful for generic copying of
+// small sequences (e.g., the builder) but shouldn't be used when there is some
+// prior knowledge of the coordinate type.
+static inline void GeoArrowCoordViewCopy(const struct GeoArrowCoordView* src,
+                                         enum GeoArrowDimensions src_dim,
+                                         int64_t src_offset,
+                                         struct GeoArrowWritableCoordView* dst,
+                                         enum GeoArrowDimensions dst_dim,
+                                         int64_t dst_offset, int64_t n) {
+  // Copy the XYs
+  for (int64_t i = 0; i < n; i++) {
+    GEOARROW_COORD_VIEW_VALUE(dst, dst_offset + i, 0) =
+        GEOARROW_COORD_VIEW_VALUE(src, src_offset + i, 0);
+    GEOARROW_COORD_VIEW_VALUE(dst, dst_offset + i, 1) =
+        GEOARROW_COORD_VIEW_VALUE(src, src_offset + i, 1);
+  }
+
+  if (dst->n_values == 2) {
+    return;
+  }
+
+  int dst_dim_map[4];
+  GeoArrowMapDimensions(src_dim, dst_dim, dst_dim_map);
+
+  if (dst_dim_map[2] == -1) {
+    for (int64_t i = 0; i < n; i++) {
+      memcpy(&(GEOARROW_COORD_VIEW_VALUE(dst, dst_offset + i, 2)),
+             _GeoArrowkEmptyPointCoords, sizeof(double));
+    }
+  } else {
+    for (int64_t i = 0; i < n; i++) {
+      GEOARROW_COORD_VIEW_VALUE(dst, dst_offset + i, 2) =
+          GEOARROW_COORD_VIEW_VALUE(src, src_offset + i, dst_dim_map[2]);
+    }
+  }
+
+  if (dst->n_values == 3) {
+    return;
+  }
+
+  if (dst_dim_map[3] == -1) {
+    for (int64_t i = 0; i < n; i++) {
+      memcpy(&(GEOARROW_COORD_VIEW_VALUE(dst, dst_offset + i, 3)),
+             _GeoArrowkEmptyPointCoords, sizeof(double));
+    }
+  } else {
+    for (int64_t i = 0; i < n; i++) {
+      GEOARROW_COORD_VIEW_VALUE(dst, dst_offset + i, 3) =
+          GEOARROW_COORD_VIEW_VALUE(src, src_offset + i, dst_dim_map[3]);
+    }
+  }
+}
+
+static inline int GeoArrowBuilderCoordsCheck(struct GeoArrowBuilder* builder,
+                                             int64_t additional_size_coords) {
+  return builder->view.coords.capacity_coords >=
+         (builder->view.coords.size_coords + additional_size_coords);
+}
+
+static inline void GeoArrowBuilderCoordsAppendUnsafe(
+    struct GeoArrowBuilder* builder, const struct GeoArrowCoordView* coords,
+    enum GeoArrowDimensions dimensions, int64_t offset, int64_t n) {
+  GeoArrowCoordViewCopy(coords, dimensions, offset, &builder->view.coords,
+                        builder->view.schema_view.dimensions,
+                        builder->view.coords.size_coords, n);
+  builder->view.coords.size_coords += n;
+}
+
+static inline int GeoArrowBuilderOffsetCheck(struct GeoArrowBuilder* builder, int32_t i,
+                                             int64_t additional_size_elements) {
+  return (builder->view.buffers[i + 1].capacity_bytes / sizeof(int32_t)) >=
+         ((builder->view.buffers[i + 1].size_bytes / sizeof(int32_t)) +
+          additional_size_elements);
+}
+
+static inline void GeoArrowBuilderOffsetAppendUnsafe(struct GeoArrowBuilder* builder,
+                                                     int32_t i, int32_t* data,
+                                                     int64_t additional_size_elements) {
+  struct GeoArrowWritableBufferView* buf = &builder->view.buffers[i + 1];
+  memcpy(buf->data.as_uint8 + buf->size_bytes, data,
+         additional_size_elements * sizeof(int32_t));
+  buf->size_bytes += additional_size_elements * sizeof(int32_t);
 }
 
 struct _GeoArrowFindBufferResult {

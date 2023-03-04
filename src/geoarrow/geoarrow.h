@@ -222,11 +222,6 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowBufferView src,
                                          struct GeoArrowVisitor* v);
 
-struct GeoArrowBuilder {
-  struct GeoArrowWritableArrayView view;
-  void* private_data;
-};
-
 GeoArrowErrorCode GeoArrowBuilderInitFromType(struct GeoArrowBuilder* builder,
                                               enum GeoArrowType type);
 
@@ -245,20 +240,10 @@ static inline void GeoArrowBuilderAppendBufferUnsafe(struct GeoArrowBuilder* bui
                                                      struct GeoArrowBufferView value);
 
 static inline GeoArrowErrorCode GeoArrowBuilderAppendBuffer(
-    struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value) {
-  if (!GeoArrowBuilderBufferCheck(builder, i, value.n_bytes)) {
-    int result = GeoArrowBuilderReserveBuffer(builder, i, value.n_bytes);
-    if (result != GEOARROW_OK) {
-      return result;
-    }
-  }
+    struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value);
 
-  GeoArrowBuilderAppendBufferUnsafe(builder, i, value);
-  return GEOARROW_OK;
-}
-
-void GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
-                                struct GeoArrowVisitor* v);
+GeoArrowErrorCode GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
+                                             struct GeoArrowVisitor* v);
 
 GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
                                         struct ArrowArray* array,
@@ -271,5 +256,120 @@ void GeoArrowBuilderReset(struct GeoArrowBuilder* builder);
 #endif
 
 #include "geoarrow_type_inline.h"
+
+// These functions have to live here because they are inline but use non-inline
+// functions too.
+
+static inline GeoArrowErrorCode GeoArrowBuilderAppendBuffer(
+    struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value) {
+  if (!GeoArrowBuilderBufferCheck(builder, i, value.n_bytes)) {
+    int result = GeoArrowBuilderReserveBuffer(builder, i, value.n_bytes);
+    if (result != GEOARROW_OK) {
+      return result;
+    }
+  }
+
+  GeoArrowBuilderAppendBufferUnsafe(builder, i, value);
+  return GEOARROW_OK;
+}
+
+static inline GeoArrowErrorCode GeoArrowBuilderCoordsReserve(
+    struct GeoArrowBuilder* builder, int64_t additional_size_coords) {
+  if (GeoArrowBuilderCoordsCheck(builder, additional_size_coords)) {
+    return GEOARROW_OK;
+  }
+
+  struct GeoArrowWritableCoordView* writable_view = &builder->view.coords;
+  int result;
+  int last_buffer = builder->view.n_buffers - 1;
+  int n_values = writable_view->n_values;
+
+  switch (builder->view.schema_view.coord_type) {
+    case GEOARROW_COORD_TYPE_INTERLEAVED:
+      // Sync the coord view size back to the buffer size
+      builder->view.buffers[last_buffer].size_bytes =
+          writable_view->size_coords * sizeof(double) * n_values;
+
+      // Use the normal reserve
+      result = GeoArrowBuilderReserveBuffer(
+          builder, last_buffer, additional_size_coords * sizeof(double) * n_values);
+      if (result != GEOARROW_OK) {
+        return result;
+      }
+
+      // Sync the capacity and pointers back to the writable view
+      writable_view->capacity_coords =
+          builder->view.buffers[last_buffer].capacity_bytes / sizeof(double) / n_values;
+      for (int i = 0; i < n_values; i++) {
+        writable_view->values[i] = builder->view.buffers[last_buffer].data.as_double + i;
+      }
+
+      return GEOARROW_OK;
+
+    case GEOARROW_COORD_TYPE_SEPARATE:
+      for (int i = last_buffer - n_values + 1; i <= last_buffer; i++) {
+        // Sync the coord view size back to the buffer size
+        builder->view.buffers[i].size_bytes = writable_view->size_coords * sizeof(double);
+
+        // Use the normal reserve
+        result = GeoArrowBuilderReserveBuffer(builder, i,
+                                              additional_size_coords * sizeof(double));
+        if (result != GEOARROW_OK) {
+          return result;
+        }
+      }
+
+      // Sync the capacity and pointers back to the writable view
+      writable_view->capacity_coords =
+          builder->view.buffers[last_buffer].capacity_bytes / sizeof(double);
+      for (int i = 0; i < n_values; i++) {
+        writable_view->values[i] =
+            builder->view.buffers[last_buffer - n_values + 1 + i].data.as_double;
+      }
+
+      return GEOARROW_OK;
+    default:
+      // Beacuse there is no include <errno.h> here yet
+      return -1;
+  }
+}
+
+static inline GeoArrowErrorCode GeoArrowBuilderCoordsAppend(
+    struct GeoArrowBuilder* builder, const struct GeoArrowCoordView* coords,
+    enum GeoArrowDimensions dimensions, int64_t offset, int64_t n) {
+  if (!GeoArrowBuilderCoordsCheck(builder, n)) {
+    int result = GeoArrowBuilderCoordsReserve(builder, n);
+    if (result != GEOARROW_OK) {
+      return result;
+    }
+  }
+
+  GeoArrowBuilderCoordsAppendUnsafe(builder, coords, dimensions, offset, n);
+  return GEOARROW_OK;
+}
+
+static inline GeoArrowErrorCode GeoArrowBuilderOffsetReserve(
+    struct GeoArrowBuilder* builder, int32_t i, int64_t additional_size_elements) {
+  if (GeoArrowBuilderOffsetCheck(builder, i, additional_size_elements)) {
+    return GEOARROW_OK;
+  }
+
+  return GeoArrowBuilderReserveBuffer(builder, i + 1,
+                                      additional_size_elements * sizeof(int32_t));
+}
+
+static inline GeoArrowErrorCode GeoArrowBuilderOffsetAppend(
+    struct GeoArrowBuilder* builder, int32_t i, int32_t* data,
+    int64_t additional_size_elements) {
+  if (!GeoArrowBuilderOffsetCheck(builder, i, additional_size_elements)) {
+    int result = GeoArrowBuilderOffsetReserve(builder, i, additional_size_elements);
+    if (result != GEOARROW_OK) {
+      return result;
+    }
+  }
+
+  GeoArrowBuilderOffsetAppendUnsafe(builder, i, data, additional_size_elements);
+  return GEOARROW_OK;
+}
 
 #endif

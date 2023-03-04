@@ -237,9 +237,16 @@ class TestCoords {
     return &coord_view_;
   }
 
+  struct GeoArrowWritableCoordView* writable_view() {
+    return &writable_coord_view_;
+  }
+
+  const std::vector<std::vector<double>>& storage() { return storage_; }
+
  private:
   std::vector<std::vector<double>> storage_;
   struct GeoArrowCoordView coord_view_;
+  struct GeoArrowWritableCoordView writable_coord_view_;
 
   void setup_view() {
     coord_view_.coords_stride = 1;
@@ -247,6 +254,14 @@ class TestCoords {
     coord_view_.n_values = storage_.size();
     for (size_t i = 0; i < storage_.size(); i++) {
       coord_view_.values[i] = storage_[i].data();
+    }
+
+    writable_coord_view_.coords_stride = 1;
+    writable_coord_view_.size_coords = storage_[0].size();
+    writable_coord_view_.capacity_coords = storage_[0].capacity();
+    writable_coord_view_.n_values = storage_.size();
+    for (size_t i = 0; i < storage_.size(); i++) {
+      writable_coord_view_.values[i] = storage_[i].data();
     }
   }
 };
