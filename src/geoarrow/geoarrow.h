@@ -262,8 +262,8 @@ void GeoArrowBuilderReset(struct GeoArrowBuilder* builder);
 
 static inline GeoArrowErrorCode GeoArrowBuilderAppendBuffer(
     struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value) {
-  if (!GeoArrowBuilderBufferCheck(builder, i, value.n_bytes)) {
-    int result = GeoArrowBuilderReserveBuffer(builder, i, value.n_bytes);
+  if (!GeoArrowBuilderBufferCheck(builder, i, value.size_bytes)) {
+    int result = GeoArrowBuilderReserveBuffer(builder, i, value.size_bytes);
     if (result != GEOARROW_OK) {
       return result;
     }

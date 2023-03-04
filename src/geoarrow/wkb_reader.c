@@ -37,7 +37,7 @@ static inline uint64_t bswap_64(uint64_t x) {
 
 struct WKBReaderPrivate {
   const uint8_t* data;
-  int64_t n_bytes;
+  int64_t size_bytes;
   const uint8_t* data0;
   int need_swapping;
   double coords[COORD_CACHE_SIZE_ELEMENTS];
@@ -46,10 +46,10 @@ struct WKBReaderPrivate {
 
 static inline int WKBReaderReadEndian(struct WKBReaderPrivate* s,
                                       struct GeoArrowError* error) {
-  if (s->n_bytes > 0) {
+  if (s->size_bytes > 0) {
     s->need_swapping = s->data[0] != GEOARROW_NATIVE_ENDIAN;
     s->data++;
-    s->n_bytes--;
+    s->size_bytes--;
     return GEOARROW_OK;
   } else {
     ArrowErrorSet((struct ArrowError*)error,
@@ -61,10 +61,10 @@ static inline int WKBReaderReadEndian(struct WKBReaderPrivate* s,
 
 static inline int WKBReaderReadUInt32(struct WKBReaderPrivate* s, uint32_t* out,
                                       struct GeoArrowError* error) {
-  if (s->n_bytes >= 4) {
+  if (s->size_bytes >= 4) {
     memcpy(out, s->data, sizeof(uint32_t));
     s->data += sizeof(uint32_t);
-    s->n_bytes -= sizeof(uint32_t);
+    s->size_bytes -= sizeof(uint32_t);
     if (s->need_swapping) {
       *out = GEOARROW_BSWAP32(*out);
     }
@@ -89,12 +89,12 @@ static inline void WKBReaderMaybeBswapCoords(struct WKBReaderPrivate* s, int64_t
 static int WKBReaderReadCoordinates(struct WKBReaderPrivate* s, int64_t n_coords,
                                     struct GeoArrowVisitor* v) {
   int64_t bytes_needed = n_coords * s->coord_view.n_values * sizeof(double);
-  if (s->n_bytes < bytes_needed) {
+  if (s->size_bytes < bytes_needed) {
     ArrowErrorSet(
         (struct ArrowError*)v->error,
         "Expected coordinate sequence of %ld coords (%ld bytes) but found %ld bytes "
         "remaining at byte %ld",
-        (long)n_coords, (long)bytes_needed, (long)s->n_bytes, (long)(s->data - s->data0));
+        (long)n_coords, (long)bytes_needed, (long)s->size_bytes, (long)(s->data - s->data0));
     return EINVAL;
   }
 
@@ -107,7 +107,7 @@ static int WKBReaderReadCoordinates(struct WKBReaderPrivate* s, int64_t n_coords
     WKBReaderMaybeBswapCoords(s, COORD_CACHE_SIZE_ELEMENTS);
     NANOARROW_RETURN_NOT_OK(v->coords(v, &s->coord_view));
     s->data += COORD_CACHE_SIZE_ELEMENTS * sizeof(double);
-    s->n_bytes -= COORD_CACHE_SIZE_ELEMENTS * sizeof(double);
+    s->size_bytes -= COORD_CACHE_SIZE_ELEMENTS * sizeof(double);
     n_coords -= chunk_size;
   }
 
@@ -115,7 +115,7 @@ static int WKBReaderReadCoordinates(struct WKBReaderPrivate* s, int64_t n_coords
   int64_t remaining_bytes = n_coords * s->coord_view.n_values * sizeof(double);
   memcpy(s->coords, s->data, remaining_bytes);
   s->data += remaining_bytes;
-  s->n_bytes -= remaining_bytes;
+  s->size_bytes -= remaining_bytes;
   s->coord_view.n_coords = n_coords;
   WKBReaderMaybeBswapCoords(s, n_coords * s->coord_view.n_values);
   return v->coords(v, &s->coord_view);
@@ -230,7 +230,7 @@ GeoArrowErrorCode GeoArrowWKBReaderInit(struct GeoArrowWKBReader* reader) {
 
   s->data0 = NULL;
   s->data = NULL;
-  s->n_bytes = 0;
+  s->size_bytes = 0;
   s->need_swapping = 0;
 
   s->coord_view.coords_stride = 2;
@@ -255,7 +255,7 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
   struct WKBReaderPrivate* s = (struct WKBReaderPrivate*)reader->private_data;
   s->data0 = src.data;
   s->data = src.data;
-  s->n_bytes = src.n_bytes;
+  s->size_bytes = src.size_bytes;
 
   NANOARROW_RETURN_NOT_OK(v->feat_start(v));
   NANOARROW_RETURN_NOT_OK(WKBReaderReadGeometry(s, v));

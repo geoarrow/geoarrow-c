@@ -84,7 +84,7 @@ static GeoArrowErrorCode GeoArrowSchemaViewInitInternal(
     struct GeoArrowSchemaView* schema_view, struct ArrowSchema* schema,
     struct ArrowSchemaView* na_schema_view, struct ArrowError* na_error) {
   const char* ext_name = na_schema_view->extension_name.data;
-  int64_t ext_len = na_schema_view->extension_name.n_bytes;
+  int64_t ext_len = na_schema_view->extension_name.size_bytes;
 
   if (ext_len >= 14 && strncmp(ext_name, "geoarrow.point", 14) == 0) {
     schema_view->geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
@@ -123,7 +123,7 @@ static GeoArrowErrorCode GeoArrowSchemaViewInitInternal(
     schema_view->type = GeoArrowMakeType(
         schema_view->geometry_type, schema_view->dimensions, schema_view->coord_type);
   } else if (ext_len >= 12 && strncmp(ext_name, "geoarrow.wkb", 12) == 0) {
-    switch (na_schema_view->data_type) {
+    switch (na_schema_view->type) {
       case NANOARROW_TYPE_BINARY:
         schema_view->type = GEOARROW_TYPE_WKB;
         break;
@@ -147,9 +147,9 @@ static GeoArrowErrorCode GeoArrowSchemaViewInitInternal(
   }
 
   schema_view->extension_name.data = na_schema_view->extension_name.data;
-  schema_view->extension_name.n_bytes = na_schema_view->extension_name.n_bytes;
+  schema_view->extension_name.size_bytes = na_schema_view->extension_name.size_bytes;
   schema_view->extension_metadata.data = na_schema_view->extension_metadata.data;
-  schema_view->extension_metadata.n_bytes = na_schema_view->extension_metadata.n_bytes;
+  schema_view->extension_metadata.size_bytes = na_schema_view->extension_metadata.size_bytes;
 
   return GEOARROW_OK;
 }
@@ -162,7 +162,7 @@ GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
   NANOARROW_RETURN_NOT_OK(ArrowSchemaViewInit(&na_schema_view, schema, na_error));
 
   const char* ext_name = na_schema_view.extension_name.data;
-  int64_t ext_len = na_schema_view.extension_name.n_bytes;
+  int64_t ext_len = na_schema_view.extension_name.size_bytes;
 
   if (ext_name == NULL) {
     ArrowErrorSet(na_error, "Expected extension type");
@@ -179,7 +179,7 @@ GeoArrowErrorCode GeoArrowSchemaViewInitFromStorage(
   struct ArrowSchemaView na_schema_view;
   NANOARROW_RETURN_NOT_OK(ArrowSchemaViewInit(&na_schema_view, schema, na_error));
   na_schema_view.extension_name.data = extension_name.data;
-  na_schema_view.extension_name.n_bytes = extension_name.n_bytes;
+  na_schema_view.extension_name.size_bytes = extension_name.size_bytes;
   return GeoArrowSchemaViewInitInternal(schema_view, schema, &na_schema_view, na_error);
 }
 
@@ -187,9 +187,9 @@ GeoArrowErrorCode GeoArrowSchemaViewInitFromType(struct GeoArrowSchemaView* sche
                                                  enum GeoArrowType type) {
   schema_view->schema = NULL;
   schema_view->extension_name.data = NULL;
-  schema_view->extension_name.n_bytes = 0;
+  schema_view->extension_name.size_bytes = 0;
   schema_view->extension_metadata.data = NULL;
-  schema_view->extension_metadata.n_bytes = 0;
+  schema_view->extension_metadata.size_bytes = 0;
   schema_view->type = type;
   schema_view->geometry_type = GeoArrowGeometryTypeFromType(type);
   schema_view->dimensions = GeoArrowDimensionsFromType(type);
@@ -205,7 +205,7 @@ GeoArrowErrorCode GeoArrowSchemaViewInitFromType(struct GeoArrowSchemaView* sche
   }
 
   schema_view->extension_name.data = extension_name;
-  schema_view->extension_name.n_bytes = strlen(extension_name);
+  schema_view->extension_name.size_bytes = strlen(extension_name);
 
   return GEOARROW_OK;
 }

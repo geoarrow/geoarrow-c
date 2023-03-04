@@ -453,7 +453,7 @@ TEST_P(WKTRoundtripParameterizedTestFixture, BuilderTestWKTRoundtrip) {
   const std::string& wkt = GetParam().first;
   struct GeoArrowStringView wkt_view;
   wkt_view.data = wkt.data();
-  wkt_view.n_bytes = wkt.size();
+  wkt_view.size_bytes = wkt.size();
   enum GeoArrowType type = GetParam().second;
 
   // Initialize the builder

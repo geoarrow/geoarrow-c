@@ -53,7 +53,7 @@ TEST(WKTWriterTest, WKTWriterTestOneNull) {
   EXPECT_EQ(array.null_count, 1);
 
   struct ArrowArrayView view;
-  ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
   ArrowArrayViewSetArray(&view, &array, nullptr);
 
   EXPECT_TRUE(ArrowArrayViewIsNull(&view, 0));
@@ -91,14 +91,14 @@ TEST(WKTWriterTest, WKTWriterTestOneValidOneNull) {
   EXPECT_EQ(array.null_count, 1);
 
   struct ArrowArrayView view;
-  ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
   ArrowArrayViewSetArray(&view, &array, nullptr);
 
   EXPECT_FALSE(ArrowArrayViewIsNull(&view, 0));
   EXPECT_TRUE(ArrowArrayViewIsNull(&view, 1));
   EXPECT_FALSE(ArrowArrayViewIsNull(&view, 2));
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "POINT EMPTY");
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "POINT EMPTY");
 
   ArrowArrayViewReset(&view);
   array.release(&array);
@@ -195,23 +195,23 @@ TEST_P(GeometryTypeParameterizedTestFixture, WKTWriterTestEmpty) {
   EXPECT_EQ(array.buffers[0], nullptr);
 
   struct ArrowArrayView view;
-  ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
   ArrowArrayViewSetArray(&view, &array, nullptr);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
-  EXPECT_EQ(std::string(value.data, value.n_bytes),
+  EXPECT_EQ(std::string(value.data, value.size_bytes),
             WKTEmpty(geometry_type, GEOARROW_DIMENSIONS_XY));
 
   value = ArrowArrayViewGetStringUnsafe(&view, 1);
-  EXPECT_EQ(std::string(value.data, value.n_bytes),
+  EXPECT_EQ(std::string(value.data, value.size_bytes),
             WKTEmpty(geometry_type, GEOARROW_DIMENSIONS_XYZ));
 
   value = ArrowArrayViewGetStringUnsafe(&view, 2);
-  EXPECT_EQ(std::string(value.data, value.n_bytes),
+  EXPECT_EQ(std::string(value.data, value.size_bytes),
             WKTEmpty(geometry_type, GEOARROW_DIMENSIONS_XYM));
 
   value = ArrowArrayViewGetStringUnsafe(&view, 3);
-  EXPECT_EQ(std::string(value.data, value.n_bytes),
+  EXPECT_EQ(std::string(value.data, value.size_bytes),
             WKTEmpty(geometry_type, GEOARROW_DIMENSIONS_XYZM));
 
   array.release(&array);
@@ -274,20 +274,20 @@ TEST(WKTWriterTest, WKTWriterTestPoint) {
   EXPECT_EQ(array.null_count, 0);
 
   struct ArrowArrayView view;
-  ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
   ArrowArrayViewSetArray(&view, &array, nullptr);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "POINT (1 2)");
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "POINT (1 2)");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 1);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "POINT Z (1 2 3)");
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "POINT Z (1 2 3)");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 2);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "POINT M (1 2 3)");
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "POINT M (1 2 3)");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 3);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "POINT ZM (1 2 3 4)");
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "POINT ZM (1 2 3 4)");
 
   ArrowArrayViewReset(&view);
   array.release(&array);
@@ -340,22 +340,22 @@ TEST(WKTWriterTest, WKTWriterTestLinestring) {
   EXPECT_EQ(array.null_count, 0);
 
   struct ArrowArrayView view;
-  ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
   ArrowArrayViewSetArray(&view, &array, nullptr);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "LINESTRING (1 2, 2 3, 3 4, 1 2)");
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "LINESTRING (1 2, 2 3, 3 4, 1 2)");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 1);
-  EXPECT_EQ(std::string(value.data, value.n_bytes),
+  EXPECT_EQ(std::string(value.data, value.size_bytes),
             "LINESTRING Z (1 2 3, 2 3 4, 3 4 5, 1 2 3)");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 2);
-  EXPECT_EQ(std::string(value.data, value.n_bytes),
+  EXPECT_EQ(std::string(value.data, value.size_bytes),
             "LINESTRING M (1 2 3, 2 3 4, 3 4 5, 1 2 3)");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 3);
-  EXPECT_EQ(std::string(value.data, value.n_bytes),
+  EXPECT_EQ(std::string(value.data, value.size_bytes),
             "LINESTRING ZM (1 2 3 4, 2 3 4 5, 3 4 5 6, 1 2 3 4)");
 
   ArrowArrayViewReset(&view);
@@ -400,14 +400,14 @@ TEST(WKTWriterTest, WKTWriterTestPolygon) {
   EXPECT_EQ(array.null_count, 0);
 
   struct ArrowArrayView view;
-  ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
   ArrowArrayViewSetArray(&view, &array, nullptr);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "POLYGON ((1 2, 2 3, 3 4, 1 2))");
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "POLYGON ((1 2, 2 3, 3 4, 1 2))");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 1);
-  EXPECT_EQ(std::string(value.data, value.n_bytes),
+  EXPECT_EQ(std::string(value.data, value.size_bytes),
             "POLYGON ((1 2, 2 3, 3 4, 1 2), (1 2, 2 3, 3 4, 1 2))");
 
   ArrowArrayViewReset(&view);
@@ -491,20 +491,20 @@ TEST(WKTWriterTest, WKTWriterTestMultipoint) {
   EXPECT_EQ(array.null_count, 0);
 
   struct ArrowArrayView view;
-  ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
   ArrowArrayViewSetArray(&view, &array, nullptr);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "MULTIPOINT (1 2)");
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "MULTIPOINT (1 2)");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 1);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "MULTIPOINT (1 2, 1 2)");
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "MULTIPOINT (1 2, 1 2)");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 2);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "MULTIPOINT ((1 2))");
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "MULTIPOINT ((1 2))");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 3);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "MULTIPOINT ((1 2), (1 2))");
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "MULTIPOINT ((1 2), (1 2))");
 
   ArrowArrayViewReset(&view);
   array.release(&array);
@@ -556,14 +556,14 @@ TEST(WKTWriterTest, WKTWriterTestMultilinestring) {
   EXPECT_EQ(array.null_count, 0);
 
   struct ArrowArrayView view;
-  ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
   ArrowArrayViewSetArray(&view, &array, nullptr);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "MULTILINESTRING ((1 2, 2 3))");
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "MULTILINESTRING ((1 2, 2 3))");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 1);
-  EXPECT_EQ(std::string(value.data, value.n_bytes),
+  EXPECT_EQ(std::string(value.data, value.size_bytes),
             "MULTILINESTRING ((1 2, 2 3), (1 2, 2 3))");
 
   ArrowArrayViewReset(&view);
@@ -619,15 +619,15 @@ TEST(WKTWriterTest, WKTWriterTestMultipolygon) {
   EXPECT_EQ(array.null_count, 0);
 
   struct ArrowArrayView view;
-  ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
   ArrowArrayViewSetArray(&view, &array, nullptr);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
-  EXPECT_EQ(std::string(value.data, value.n_bytes),
+  EXPECT_EQ(std::string(value.data, value.size_bytes),
             "MULTIPOLYGON (((1 2, 2 3, 3 4, 1 2)))");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 1);
-  EXPECT_EQ(std::string(value.data, value.n_bytes),
+  EXPECT_EQ(std::string(value.data, value.size_bytes),
             "MULTIPOLYGON (((1 2, 2 3, 3 4, 1 2)), ((1 2, 2 3, 3 4, 1 2)))");
 
   ArrowArrayViewReset(&view);
@@ -680,14 +680,14 @@ TEST(WKTWriterTest, WKTWriterTestGeometrycollection) {
   EXPECT_EQ(array.null_count, 0);
 
   struct ArrowArrayView view;
-  ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
   ArrowArrayViewSetArray(&view, &array, nullptr);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "GEOMETRYCOLLECTION (POINT (1 2))");
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "GEOMETRYCOLLECTION (POINT (1 2))");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 1);
-  EXPECT_EQ(std::string(value.data, value.n_bytes),
+  EXPECT_EQ(std::string(value.data, value.size_bytes),
             "GEOMETRYCOLLECTION (POINT (1 2), POINT (1 2))");
 
   ArrowArrayViewReset(&view);
@@ -717,11 +717,11 @@ TEST(WKTWriterTest, WKTWriterTestStreamingCoords) {
   EXPECT_EQ(array.null_count, 0);
 
   struct ArrowArrayView view;
-  ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
   ArrowArrayViewSetArray(&view, &array, nullptr);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
-  EXPECT_EQ(std::string(value.data, value.n_bytes), "LINESTRING (1 2, 2 3, 1 2, 2 3)");
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "LINESTRING (1 2, 2 3, 1 2, 2 3)");
 
   ArrowArrayViewReset(&view);
   array.release(&array);

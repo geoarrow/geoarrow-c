@@ -53,7 +53,7 @@ TEST(SchemaViewTest, SchemaViewTestInitFromStorage) {
   ASSERT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_POINT), GEOARROW_OK);
   struct GeoArrowStringView ext;
   ext.data = "geoarrow.point";
-  ext.n_bytes = 14;
+  ext.size_bytes = 14;
   EXPECT_EQ(GeoArrowSchemaViewInitFromStorage(&schema_view, &schema, ext, &error),
             GEOARROW_OK);
   EXPECT_EQ(schema_view.type, GEOARROW_TYPE_POINT);
@@ -114,7 +114,7 @@ TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {
   ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_POINT), GEOARROW_OK);
 
   // Bad storage type
-  ASSERT_EQ(ArrowSchemaInit(&bad_schema, NANOARROW_TYPE_INT32), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaInitFromType(&bad_schema, NANOARROW_TYPE_INT32), GEOARROW_OK);
   ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);
   EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
   EXPECT_STREQ(
@@ -123,7 +123,7 @@ TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {
   bad_schema.release(&bad_schema);
 
   // Bad number of children
-  ASSERT_EQ(ArrowSchemaInit(&bad_schema, NANOARROW_TYPE_STRUCT), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaInitFromType(&bad_schema, NANOARROW_TYPE_STRUCT), GEOARROW_OK);
   ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);
   EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
   EXPECT_STREQ(error.message,
@@ -143,7 +143,7 @@ TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {
   // Bad child type
   ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
   bad_schema.children[1]->release(bad_schema.children[1]);
-  ASSERT_EQ(ArrowSchemaInit(bad_schema.children[1], NANOARROW_TYPE_INT32), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaInitFromType(bad_schema.children[1], NANOARROW_TYPE_INT32), GEOARROW_OK);
   ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[1], "y"), GEOARROW_OK);
   EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
   EXPECT_STREQ(error.message,
@@ -172,7 +172,7 @@ TEST(SchemaViewTest, SchemaViewTestInitInvalidNested) {
   ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_LINESTRING),
             GEOARROW_OK);
 
-  ASSERT_EQ(ArrowSchemaInit(&bad_schema, NANOARROW_TYPE_INT32), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaInitFromType(&bad_schema, NANOARROW_TYPE_INT32), GEOARROW_OK);
   ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);
   EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
   EXPECT_STREQ(
@@ -191,7 +191,7 @@ TEST(SchemaViewTest, SchemaViewTestInitInvalidWKB) {
 
   ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_WKB), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowSchemaInit(&bad_schema, NANOARROW_TYPE_INT32), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaInitFromType(&bad_schema, NANOARROW_TYPE_INT32), GEOARROW_OK);
   ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);
   EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
   EXPECT_STREQ(

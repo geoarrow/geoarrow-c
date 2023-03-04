@@ -17,7 +17,7 @@
 static GeoArrowErrorCode GeoArrowMetadataViewInitDeprecated(
     struct GeoArrowMetadataView* metadata_view, struct GeoArrowError* error) {
   const char* metadata = metadata_view->metadata.data;
-  int32_t pos_max = metadata_view->metadata.n_bytes;
+  int32_t pos_max = metadata_view->metadata.size_bytes;
   int32_t pos = 0;
   int32_t name_len;
   int32_t value_len;
@@ -49,7 +49,7 @@ static GeoArrowErrorCode GeoArrowMetadataViewInitDeprecated(
     }
 
     if (name_len == 3 && strncmp(name, "crs", 3) == 0) {
-      metadata_view->crs.n_bytes = value_len;
+      metadata_view->crs.size_bytes = value_len;
       metadata_view->crs.data = value;
       metadata_view->crs_type = GEOARROW_CRS_TYPE_UNKNOWN;
     } else if (name_len == 5 && strncmp(name, "edges", 5) == 0) {
@@ -67,7 +67,7 @@ static GeoArrowErrorCode GeoArrowMetadataViewInitDeprecated(
 }
 
 static int AssertChar(struct ArrowStringView* s, char c) {
-  if (s->n_bytes > 0 && s->data[0] == c) {
+  if (s->size_bytes > 0 && s->data[0] == c) {
     return GEOARROW_OK;
   } else {
     return EINVAL;
@@ -75,8 +75,8 @@ static int AssertChar(struct ArrowStringView* s, char c) {
 }
 
 static int ParseChar(struct ArrowStringView* s, char c) {
-  if (s->n_bytes > 0 && s->data[0] == c) {
-    s->n_bytes--;
+  if (s->size_bytes > 0 && s->data[0] == c) {
+    s->size_bytes--;
     s->data++;
     return GEOARROW_OK;
   } else {
@@ -85,10 +85,10 @@ static int ParseChar(struct ArrowStringView* s, char c) {
 }
 
 static void SkipWhitespace(struct ArrowStringView* s) {
-  while (s->n_bytes > 0) {
+  while (s->size_bytes > 0) {
     char c = *(s->data);
     if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
-      s->n_bytes--;
+      s->size_bytes--;
       s->data++;
     } else {
       break;
@@ -98,7 +98,7 @@ static void SkipWhitespace(struct ArrowStringView* s) {
 
 static int SkipUntil(struct ArrowStringView* s, const char* items) {
   int n_items = strlen(items);
-  while (s->n_bytes > 0) {
+  while (s->size_bytes > 0) {
     char c = *(s->data);
     if (c == '\0') {
       return 0;
@@ -110,7 +110,7 @@ static int SkipUntil(struct ArrowStringView* s, const char* items) {
       }
     }
 
-    s->n_bytes--;
+    s->size_bytes--;
     s->data++;
   }
 
@@ -124,27 +124,27 @@ static GeoArrowErrorCode FindString(struct ArrowStringView* s,
     return EINVAL;
   }
 
-  s->n_bytes--;
+  s->size_bytes--;
   s->data++;
 
   int is_escape = 0;
-  while (s->n_bytes > 0) {
+  while (s->size_bytes > 0) {
     char c = *(s->data);
     if (!is_escape && c == '\\') {
       is_escape = 1;
-      s->n_bytes--;
+      s->size_bytes--;
       s->data++;
       continue;
     }
 
     if (!is_escape && c == '\"') {
-      s->n_bytes--;
+      s->size_bytes--;
       s->data++;
-      out->n_bytes = s->data - out->data;
+      out->size_bytes = s->data - out->data;
       return GEOARROW_OK;
     }
 
-    s->n_bytes--;
+    s->size_bytes--;
     s->data++;
     is_escape = 0;
   }
@@ -162,10 +162,10 @@ static GeoArrowErrorCode FindList(struct ArrowStringView* s,
     return EINVAL;
   }
 
-  s->n_bytes--;
+  s->size_bytes--;
   s->data++;
   struct ArrowStringView tmp_value;
-  while (s->n_bytes > 0) {
+  while (s->size_bytes > 0) {
     if (SkipUntil(s, "[{\"]")) {
       char c = *(s->data);
       switch (c) {
@@ -179,9 +179,9 @@ static GeoArrowErrorCode FindList(struct ArrowStringView* s,
           NANOARROW_RETURN_NOT_OK(FindObject(s, &tmp_value));
           break;
         case ']':
-          s->n_bytes--;
+          s->size_bytes--;
           s->data++;
-          out->n_bytes = s->data - out->data;
+          out->size_bytes = s->data - out->data;
           return GEOARROW_OK;
         default:
           break;
@@ -199,10 +199,10 @@ static GeoArrowErrorCode FindObject(struct ArrowStringView* s,
     return EINVAL;
   }
 
-  s->n_bytes--;
+  s->size_bytes--;
   s->data++;
   struct ArrowStringView tmp_value;
-  while (s->n_bytes > 0) {
+  while (s->size_bytes > 0) {
     if (SkipUntil(s, "{[\"}")) {
       char c = *(s->data);
       switch (c) {
@@ -216,9 +216,9 @@ static GeoArrowErrorCode FindObject(struct ArrowStringView* s,
           NANOARROW_RETURN_NOT_OK(FindObject(s, &tmp_value));
           break;
         case '}':
-          s->n_bytes--;
+          s->size_bytes--;
           s->data++;
-          out->n_bytes = s->data - out->data;
+          out->size_bytes = s->data - out->data;
           return GEOARROW_OK;
         default:
           break;
@@ -236,7 +236,7 @@ static GeoArrowErrorCode ParseJSONMetadata(struct GeoArrowMetadataView* metadata
   struct ArrowStringView k;
   struct ArrowStringView v;
 
-  while (s->n_bytes > 0 && s->data[0] != '}') {
+  while (s->size_bytes > 0 && s->data[0] != '}') {
     SkipWhitespace(s);
     NANOARROW_RETURN_NOT_OK(FindString(s, &k));
     SkipWhitespace(s);
@@ -257,11 +257,11 @@ static GeoArrowErrorCode ParseJSONMetadata(struct GeoArrowMetadataView* metadata
         break;
     }
 
-    if (k.n_bytes == 7 && strncmp(k.data, "\"edges\"", 7) == 0) {
-      if (v.n_bytes == 11 && strncmp(v.data, "\"spherical\"", 11) == 0) {
+    if (k.size_bytes == 7 && strncmp(k.data, "\"edges\"", 7) == 0) {
+      if (v.size_bytes == 11 && strncmp(v.data, "\"spherical\"", 11) == 0) {
         metadata_view->edge_type = GEOARROW_EDGE_TYPE_SPHERICAL;
       }
-    } else if (k.n_bytes == 5 && strncmp(k.data, "\"crs\"", 5) == 0) {
+    } else if (k.size_bytes == 5 && strncmp(k.data, "\"crs\"", 5) == 0) {
       if (v.data[0] == '{') {
         metadata_view->crs_type = GEOARROW_CRS_TYPE_PROJJSON;
       } else if (v.data[0] == '\"') {
@@ -271,18 +271,18 @@ static GeoArrowErrorCode ParseJSONMetadata(struct GeoArrowMetadataView* metadata
       }
 
       metadata_view->crs.data = v.data;
-      metadata_view->crs.n_bytes = v.n_bytes;
+      metadata_view->crs.size_bytes = v.size_bytes;
     }
 
     SkipUntil(s, ",}");
     if (s->data[0] == ',') {
-      s->n_bytes--;
+      s->size_bytes--;
       s->data++;
     }
   }
 
-  if (s->n_bytes > 0 && s->data[0] == '}') {
-    s->n_bytes--;
+  if (s->size_bytes > 0 && s->data[0] == '}') {
+    s->size_bytes--;
     s->data++;
     return GEOARROW_OK;
   } else {
@@ -294,7 +294,7 @@ static GeoArrowErrorCode GeoArrowMetadataViewInitJSON(
     struct GeoArrowMetadataView* metadata_view, struct GeoArrowError* error) {
   struct ArrowStringView metadata;
   metadata.data = metadata_view->metadata.data;
-  metadata.n_bytes = metadata_view->metadata.n_bytes;
+  metadata.size_bytes = metadata_view->metadata.size_bytes;
 
   struct ArrowStringView s = metadata;
   SkipWhitespace(&s);
@@ -302,16 +302,16 @@ static GeoArrowErrorCode GeoArrowMetadataViewInitJSON(
   if (ParseJSONMetadata(metadata_view, &s) != GEOARROW_OK) {
     ArrowErrorSet((struct ArrowError*)error,
                   "Expected valid GeoArrow JSON metadata but got '%.*s'",
-                  (int)metadata.n_bytes, metadata.data);
+                  (int)metadata.size_bytes, metadata.data);
     return EINVAL;
   }
 
   SkipWhitespace(&s);
-  if (s.data != (metadata.data + metadata.n_bytes)) {
+  if (s.data != (metadata.data + metadata.size_bytes)) {
     ArrowErrorSet(
         (struct ArrowError*)error,
         "Expected JSON object with no trailing characters but found trailing '%.*s'",
-        (int)s.n_bytes, s.data);
+        (int)s.size_bytes, s.data);
     return EINVAL;
   }
 
@@ -325,13 +325,13 @@ GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata
   metadata_view->edge_type = GEOARROW_EDGE_TYPE_PLANAR;
   metadata_view->crs_type = GEOARROW_CRS_TYPE_NONE;
   metadata_view->crs.data = NULL;
-  metadata_view->crs.n_bytes = 0;
+  metadata_view->crs.size_bytes = 0;
 
-  if (metadata.n_bytes == 0) {
+  if (metadata.size_bytes == 0) {
     return GEOARROW_OK;
   }
 
-  if (metadata.n_bytes >= 4 && metadata.data[0] != '{') {
+  if (metadata.size_bytes >= 4 && metadata.data[0] != '{') {
     if (GeoArrowMetadataViewInitDeprecated(metadata_view, error) == GEOARROW_OK) {
       return GEOARROW_OK;
     }
@@ -352,9 +352,9 @@ static GeoArrowErrorCode GeoArrowMetadataSerializeInternalDeprecated(
   }
 
   struct ArrowStringView crs_value;
-  if (metadata_view->crs.n_bytes > 0) {
+  if (metadata_view->crs.size_bytes > 0) {
     crs_value.data = metadata_view->crs.data;
-    crs_value.n_bytes = metadata_view->crs.n_bytes;
+    crs_value.size_bytes = metadata_view->crs.size_bytes;
     NANOARROW_RETURN_NOT_OK(
         ArrowMetadataBuilderAppend(buffer, ArrowCharView("crs"), crs_value));
   }
@@ -390,15 +390,15 @@ static GeoArrowErrorCode GeoArrowMetadataSerializeInternal(
 
   if (metadata_view->crs_type == GEOARROW_CRS_TYPE_PROJJSON) {
     NANOARROW_RETURN_NOT_OK(
-        ArrowBufferAppend(buffer, metadata_view->crs.data, metadata_view->crs.n_bytes));
+        ArrowBufferAppend(buffer, metadata_view->crs.data, metadata_view->crs.size_bytes));
   } else if (metadata_view->crs_type == GEOARROW_CRS_TYPE_UNKNOWN) {
     // Escape quotes in the string if the string does not start with '"'
-    if (metadata_view->crs.n_bytes > 0 && metadata_view->crs.data[0] == '\"') {
+    if (metadata_view->crs.size_bytes > 0 && metadata_view->crs.data[0] == '\"') {
       NANOARROW_RETURN_NOT_OK(
-          ArrowBufferAppend(buffer, metadata_view->crs.data, metadata_view->crs.n_bytes));
+          ArrowBufferAppend(buffer, metadata_view->crs.data, metadata_view->crs.size_bytes));
     } else {
       NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\"", 1));
-      for (int64_t i = 0; i < metadata_view->crs.n_bytes; i++) {
+      for (int64_t i = 0; i < metadata_view->crs.size_bytes; i++) {
         char c = metadata_view->crs.data[i];
         if (c == '\"') {
           NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\\", 1));
@@ -440,7 +440,7 @@ static GeoArrowErrorCode GeoArrowSchemaSetMetadataInternal(
 
   struct ArrowStringView value;
   value.data = (const char*)buffer.data;
-  value.n_bytes = buffer.size_bytes;
+  value.size_bytes = buffer.size_bytes;
   result = ArrowMetadataBuilderSet(&existing_buffer,
                                    ArrowCharView("ARROW:extension:metadata"), value);
   ArrowBufferReset(&buffer);
@@ -501,7 +501,7 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
 }
 
 int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n) {
-  if (crs.n_bytes == 0) {
+  if (crs.size_bytes == 0) {
     if (n > 0) {
       out[0] = '\0';
     }
@@ -509,18 +509,18 @@ int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n)
   }
 
   if (crs.data[0] != '\"') {
-    if (n > crs.n_bytes) {
-      memcpy(out, crs.data, crs.n_bytes);
-      out[crs.n_bytes] = '\0';
+    if (n > crs.size_bytes) {
+      memcpy(out, crs.data, crs.size_bytes);
+      out[crs.size_bytes] = '\0';
     } else {
       memcpy(out, crs.data, n);
     }
 
-    return crs.n_bytes;
+    return crs.size_bytes;
   }
 
   int64_t num_escapes = 0;
-  for (int64_t i = 1; i < (crs.n_bytes - 1); i++) {
+  for (int64_t i = 1; i < (crs.size_bytes - 1); i++) {
     if (crs.data[i] == '\\') {
       i++;
       num_escapes++;
@@ -529,7 +529,7 @@ int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n)
 
   int64_t out_i = 0;
   int is_escape = 0;
-  for (int64_t i = 1; i < (crs.n_bytes - 1); i++) {
+  for (int64_t i = 1; i < (crs.size_bytes - 1); i++) {
     if (!is_escape && crs.data[i] == '\\') {
       is_escape = 1;
       continue;
