@@ -16,6 +16,7 @@ TEST(BuilderTest, BuilderTestOwnedBuffer) {
   struct GeoArrowBuilder builder;
   ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_POINT), GEOARROW_OK);
 
+  // Array release should delete these objects if our deallocator worked
   std::vector<double>* xs = new std::vector<double>();
   xs->push_back(123);
   std::vector<double>* ys = new std::vector<double>();
