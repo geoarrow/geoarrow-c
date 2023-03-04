@@ -53,8 +53,6 @@
 #include <stdint.h>
 #include <string.h>
 
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -594,8 +592,6 @@ struct ArrowArrayPrivateData {
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-
-
 
 // If using CMake, optionally pass -DNANOARROW_NAMESPACE=MyNamespace which will set this
 // define in nanoarrow_config.h. If not, you can optionally #define NANOARROW_NAMESPACE
@@ -1558,8 +1554,6 @@ ArrowErrorCode ArrowBasicArrayStreamValidate(struct ArrowArrayStream* array_stre
 
 // Inline function definitions
 
-
-
 #ifdef __cplusplus
 }
 #endif
@@ -1588,8 +1582,6 @@ ArrowErrorCode ArrowBasicArrayStreamValidate(struct ArrowArrayStream* array_stre
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
-
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -2084,9 +2076,6 @@ static inline void ArrowBitmapReset(struct ArrowBitmap* bitmap) {
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
-
-
-
 
 #ifdef __cplusplus
 extern "C" {

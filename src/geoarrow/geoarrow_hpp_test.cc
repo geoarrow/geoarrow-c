@@ -113,10 +113,8 @@ TEST(GeoArrowHppTest, GeoArrowHppTestVectorArray) {
 }
 
 TEST(GeoArrowHppTest, GeoArrowHppTestArrayFromVectors) {
-  auto array = geoarrow::ArrayFromVectors(
-    geoarrow::Point(),
-    {{1, 2, 3, 4}, {5, 6, 7, 8}}
-  );
+  auto array =
+      geoarrow::ArrayFromVectors(geoarrow::Point(), {{1, 2, 3, 4}, {5, 6, 7, 8}});
 
   EXPECT_TRUE(array.valid());
   EXPECT_EQ(array.type().id(), GEOARROW_TYPE_POINT);

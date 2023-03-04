@@ -684,7 +684,8 @@ TEST(WKTWriterTest, WKTWriterTestGeometrycollection) {
   ArrowArrayViewSetArray(&view, &array, nullptr);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
-  EXPECT_EQ(std::string(value.data, value.size_bytes), "GEOMETRYCOLLECTION (POINT (1 2))");
+  EXPECT_EQ(std::string(value.data, value.size_bytes),
+            "GEOMETRYCOLLECTION (POINT (1 2))");
 
   value = ArrowArrayViewGetStringUnsafe(&view, 1);
   EXPECT_EQ(std::string(value.data, value.size_bytes),

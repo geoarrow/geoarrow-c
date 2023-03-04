@@ -94,7 +94,8 @@ static int WKBReaderReadCoordinates(struct WKBReaderPrivate* s, int64_t n_coords
         (struct ArrowError*)v->error,
         "Expected coordinate sequence of %ld coords (%ld bytes) but found %ld bytes "
         "remaining at byte %ld",
-        (long)n_coords, (long)bytes_needed, (long)s->size_bytes, (long)(s->data - s->data0));
+        (long)n_coords, (long)bytes_needed, (long)s->size_bytes,
+        (long)(s->data - s->data0));
     return EINVAL;
   }
 

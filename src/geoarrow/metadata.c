@@ -389,13 +389,13 @@ static GeoArrowErrorCode GeoArrowMetadataSerializeInternal(
   }
 
   if (metadata_view->crs_type == GEOARROW_CRS_TYPE_PROJJSON) {
-    NANOARROW_RETURN_NOT_OK(
-        ArrowBufferAppend(buffer, metadata_view->crs.data, metadata_view->crs.size_bytes));
+    NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, metadata_view->crs.data,
+                                              metadata_view->crs.size_bytes));
   } else if (metadata_view->crs_type == GEOARROW_CRS_TYPE_UNKNOWN) {
     // Escape quotes in the string if the string does not start with '"'
     if (metadata_view->crs.size_bytes > 0 && metadata_view->crs.data[0] == '\"') {
-      NANOARROW_RETURN_NOT_OK(
-          ArrowBufferAppend(buffer, metadata_view->crs.data, metadata_view->crs.size_bytes));
+      NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, metadata_view->crs.data,
+                                                metadata_view->crs.size_bytes));
     } else {
       NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\"", 1));
       for (int64_t i = 0; i < metadata_view->crs.size_bytes; i++) {
@@ -490,8 +490,8 @@ int64_t GeoArrowMetadataSerialize(const struct GeoArrowMetadataView* metadata_vi
   return size_needed;
 }
 
-GeoArrowErrorCode GeoArrowSchemaSetMetadata(struct ArrowSchema* schema,
-                                            const struct GeoArrowMetadataView* metadata_view) {
+GeoArrowErrorCode GeoArrowSchemaSetMetadata(
+    struct ArrowSchema* schema, const struct GeoArrowMetadataView* metadata_view) {
   return GeoArrowSchemaSetMetadataInternal(schema, metadata_view, 0);
 }
 

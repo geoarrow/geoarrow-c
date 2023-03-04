@@ -149,7 +149,8 @@ static GeoArrowErrorCode GeoArrowSchemaViewInitInternal(
   schema_view->extension_name.data = na_schema_view->extension_name.data;
   schema_view->extension_name.size_bytes = na_schema_view->extension_name.size_bytes;
   schema_view->extension_metadata.data = na_schema_view->extension_metadata.data;
-  schema_view->extension_metadata.size_bytes = na_schema_view->extension_metadata.size_bytes;
+  schema_view->extension_metadata.size_bytes =
+      na_schema_view->extension_metadata.size_bytes;
 
   return GEOARROW_OK;
 }

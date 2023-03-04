@@ -118,8 +118,8 @@ static inline int AssertChar(struct WKTReaderPrivate* s, char c,
 
 static inline int AssertWhitespace(struct WKTReaderPrivate* s,
                                    struct GeoArrowError* error) {
-  if (s->size_bytes > 0 && (s->data[0] == ' ' || s->data[0] == '\t' || s->data[0] == '\r' ||
-                         s->data[0] == '\n')) {
+  if (s->size_bytes > 0 && (s->data[0] == ' ' || s->data[0] == '\t' ||
+                            s->data[0] == '\r' || s->data[0] == '\n')) {
     SkipWhitespace(s);
     return GEOARROW_OK;
   } else {
@@ -173,12 +173,12 @@ static inline int ReadCoordinate(struct WKTReaderPrivate* s, struct GeoArrowVisi
     NANOARROW_RETURN_NOT_OK(FlushCoordCache(s, v));
   }
 
-  NANOARROW_RETURN_NOT_OK(
-      ReadOrdinate(s, (double*)s->coord_view.values[0] + s->coord_view.n_coords, v->error));
+  NANOARROW_RETURN_NOT_OK(ReadOrdinate(
+      s, (double*)s->coord_view.values[0] + s->coord_view.n_coords, v->error));
   for (int i = 1; i < s->coord_view.n_values; i++) {
     NANOARROW_RETURN_NOT_OK(AssertWhitespace(s, v->error));
-    NANOARROW_RETURN_NOT_OK(
-        ReadOrdinate(s, (double*)s->coord_view.values[i] + s->coord_view.n_coords, v->error));
+    NANOARROW_RETURN_NOT_OK(ReadOrdinate(
+        s, (double*)s->coord_view.values[i] + s->coord_view.n_coords, v->error));
   }
 
   s->coord_view.n_coords++;

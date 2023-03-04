@@ -143,7 +143,8 @@ TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {
   // Bad child type
   ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
   bad_schema.children[1]->release(bad_schema.children[1]);
-  ASSERT_EQ(ArrowSchemaInitFromType(bad_schema.children[1], NANOARROW_TYPE_INT32), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaInitFromType(bad_schema.children[1], NANOARROW_TYPE_INT32),
+            GEOARROW_OK);
   ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[1], "y"), GEOARROW_OK);
   EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
   EXPECT_STREQ(error.message,
