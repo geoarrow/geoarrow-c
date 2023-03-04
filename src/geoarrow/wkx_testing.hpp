@@ -32,8 +32,8 @@ class WKXTester {
     wkt_writer_.use_flat_multipoint = false;
     v_.error = &error_;
     array_.release = nullptr;
-    ArrowArrayViewInit(&wkt_array_view_, NANOARROW_TYPE_STRING);
-    ArrowArrayViewInit(&wkb_array_view_, NANOARROW_TYPE_BINARY);
+    ArrowArrayViewInitFromType(&wkt_array_view_, NANOARROW_TYPE_STRING);
+    ArrowArrayViewInitFromType(&wkb_array_view_, NANOARROW_TYPE_BINARY);
   }
 
   ~WKXTester() {
@@ -57,7 +57,7 @@ class WKXTester {
   std::string AsWKT(const std::string& str) {
     struct GeoArrowStringView str_view;
     str_view.data = str.data();
-    str_view.n_bytes = str.size();
+    str_view.size_bytes = str.size();
 
     int result = GeoArrowWKTReaderVisit(&wkt_reader_, str_view, WKTVisitor());
     if (result != GEOARROW_OK) {
@@ -70,7 +70,7 @@ class WKXTester {
   std::string AsWKT(const std::basic_string<uint8_t>& str) {
     struct GeoArrowBufferView str_view;
     str_view.data = str.data();
-    str_view.n_bytes = str.size();
+    str_view.size_bytes = str.size();
 
     int result = GeoArrowWKBReaderVisit(&wkb_reader_, str_view, WKTVisitor());
     if (result != GEOARROW_OK) {
@@ -83,7 +83,7 @@ class WKXTester {
   std::basic_string<uint8_t> AsWKB(const std::string& str) {
     struct GeoArrowStringView str_view;
     str_view.data = str.data();
-    str_view.n_bytes = str.size();
+    str_view.size_bytes = str.size();
 
     int result = GeoArrowWKTReaderVisit(&wkt_reader_, str_view, WKBVisitor());
     if (result != GEOARROW_OK) {
@@ -96,7 +96,7 @@ class WKXTester {
   std::basic_string<uint8_t> AsWKB(const std::basic_string<uint8_t>& str) {
     struct GeoArrowBufferView str_view;
     str_view.data = str.data();
-    str_view.n_bytes = str.size();
+    str_view.size_bytes = str.size();
 
     int result = GeoArrowWKBReaderVisit(&wkb_reader_, str_view, WKBVisitor());
     if (result != GEOARROW_OK) {
@@ -143,10 +143,10 @@ class WKXTester {
       } else {
         struct ArrowStringView answer =
             ArrowArrayViewGetStringUnsafe(&wkt_array_view_, i);
-        if (answer.n_bytes == 0) {
+        if (answer.size_bytes == 0) {
           out[i] = "";
         } else {
-          out[i] = std::string(answer.data, answer.n_bytes);
+          out[i] = std::string(answer.data, answer.size_bytes);
         }
       }
     }
@@ -182,7 +182,7 @@ class WKXTester {
         out[i] = null_sentinel;
       } else {
         struct ArrowBufferView answer = ArrowArrayViewGetBytesUnsafe(&wkb_array_view_, i);
-        out[i] = std::basic_string<uint8_t>(answer.data.as_uint8, answer.n_bytes);
+        out[i] = std::basic_string<uint8_t>(answer.data.as_uint8, answer.size_bytes);
       }
     }
 
@@ -270,6 +270,6 @@ template <typename T>
 static inline struct GeoArrowBufferView MakeBufferView(const std::vector<T>& v) {
   struct GeoArrowBufferView buffer_view;
   buffer_view.data = (const uint8_t*)v.data();
-  buffer_view.n_bytes = v.size() * sizeof(T);
+  buffer_view.size_bytes = v.size() * sizeof(T);
   return buffer_view;
 }

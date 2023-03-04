@@ -28,7 +28,7 @@ TEST(WKBWriterTest, WKBWriterTestOneNull) {
   EXPECT_EQ(array.null_count, 1);
 
   struct ArrowArrayView view;
-  ArrowArrayViewInit(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
   ArrowArrayViewSetArray(&view, &array, nullptr);
 
   EXPECT_TRUE(ArrowArrayViewIsNull(&view, 0));
@@ -66,7 +66,7 @@ TEST(WKBWriterTest, WKBWriterTestOneValidOneNull) {
   EXPECT_EQ(array.null_count, 1);
 
   struct ArrowArrayView view;
-  ArrowArrayViewInit(&view, NANOARROW_TYPE_BINARY);
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_BINARY);
   ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
 
   EXPECT_FALSE(ArrowArrayViewIsNull(&view, 0));

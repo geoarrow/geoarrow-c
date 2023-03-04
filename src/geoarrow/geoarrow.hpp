@@ -130,7 +130,7 @@ class VectorType {
                      enum GeoArrowCrsType crs_type = GEOARROW_CRS_TYPE_UNKNOWN) {
     struct GeoArrowMetadataView metadata_view_copy = metadata_view_;
     metadata_view_copy.crs.data = crs.data();
-    metadata_view_copy.crs.n_bytes = crs.size();
+    metadata_view_copy.crs.size_bytes = crs.size();
     metadata_view_copy.crs_type = crs_type;
 
     return VectorType(schema_view_, metadata_view_copy);
@@ -262,10 +262,10 @@ class VectorType {
     schema_view_.type = schema_view.type;
 
     metadata_view_.edge_type = metadata_view.edge_type;
-    crs_ = std::string(metadata_view.crs.data, metadata_view.crs.n_bytes);
+    crs_ = std::string(metadata_view.crs.data, metadata_view.crs.size_bytes);
     metadata_view_.crs_type = metadata_view.crs_type;
     metadata_view_.crs.data = crs_.data();
-    metadata_view_.crs.n_bytes = crs_.size();
+    metadata_view_.crs.size_bytes = crs_.size();
   }
 };
 

@@ -14,12 +14,12 @@ typedef int GeoArrowErrorCode;
 
 struct GeoArrowStringView {
   const char* data;
-  int64_t n_bytes;
+  int64_t size_bytes;
 };
 
 struct GeoArrowBufferView {
   const uint8_t* data;
-  int64_t n_bytes;
+  int64_t size_bytes;
 };
 
 struct GeoArrowWritableBufferView {

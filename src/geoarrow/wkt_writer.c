@@ -286,7 +286,7 @@ GeoArrowErrorCode GeoArrowWKTWriterFinish(struct GeoArrowWKTWriter* writer,
 
   NANOARROW_RETURN_NOT_OK(
       ArrowBufferAppendInt32(&private->offsets, private->values.size_bytes));
-  NANOARROW_RETURN_NOT_OK(ArrowArrayInit(array, private->storage_type));
+  NANOARROW_RETURN_NOT_OK(ArrowArrayInitFromType(array, private->storage_type));
   ArrowArraySetValidityBitmap(array, &private->validity);
   NANOARROW_RETURN_NOT_OK(ArrowArraySetBuffer(array, 1, &private->offsets));
   NANOARROW_RETURN_NOT_OK(ArrowArraySetBuffer(array, 2, &private->values));

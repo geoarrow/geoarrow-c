@@ -424,8 +424,8 @@ static inline void GeoArrowBuilderAppendBufferUnsafe(struct GeoArrowBuilder* bui
                                                      int64_t i,
                                                      struct GeoArrowBufferView value) {
   struct GeoArrowWritableBufferView* buffer = builder->view.buffers + i;
-  memcpy(buffer->data.as_uint8 + buffer->size_bytes, value.data, value.n_bytes);
-  buffer->size_bytes += value.n_bytes;
+  memcpy(buffer->data.as_uint8 + buffer->size_bytes, value.data, value.size_bytes);
+  buffer->size_bytes += value.size_bytes;
 }
 
 // This could probably be or use a lookup table at some point
