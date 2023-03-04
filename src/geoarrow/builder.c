@@ -24,6 +24,7 @@ struct BuilderPrivate {
   // Fields to keep track of state when using the visitor pattern
   int visitor_initialized;
   int feat_is_null;
+  int nesting_multipoint;
   double empty_coord_values[4];
   struct GeoArrowCoordView empty_coord;
   enum GeoArrowDimensions last_dimensions;
@@ -448,6 +449,7 @@ static int feat_start_multipoint(struct GeoArrowVisitor* v) {
   private->size[0] = 0;
   private->size[1] = 0;
   private->feat_is_null = 0;
+  private->nesting_multipoint = 0;
   return GEOARROW_OK;
 }
 
@@ -460,10 +462,18 @@ static int geom_start_multipoint(struct GeoArrowVisitor* v,
 
   switch (geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
-    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
       private
       ->level++;
       break;
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+      private
+      ->nesting_multipoint = 1;
+      private->level++;
+      break;
+    case GEOARROW_GEOMETRY_TYPE_POINT:
+      if (private->nesting_multipoint) {
+        private->nesting_multipoint++;
+      }
     default:
       break;
   }
@@ -502,6 +512,12 @@ static int ring_end_multipoint(struct GeoArrowVisitor* v) {
 static int geom_end_multipoint(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+
+  // Ignore geom_end calls from the end of a POINT nested within a MULTIPOINT
+  if (private->nesting_multipoint == 2) {
+    private->nesting_multipoint--;
+    return GEOARROW_OK;
+  }
 
   if (private->level == 1) {
     private->size[0]++;
@@ -714,8 +730,8 @@ static int feat_start_multipolygon(struct GeoArrowVisitor* v) {
 }
 
 static int geom_start_multipolygon(struct GeoArrowVisitor* v,
-                                      enum GeoArrowGeometryType geometry_type,
-                                      enum GeoArrowDimensions dimensions) {
+                                   enum GeoArrowGeometryType geometry_type,
+                                   enum GeoArrowDimensions dimensions) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   private->last_dimensions = builder->view.schema_view.dimensions;
@@ -743,7 +759,7 @@ static int ring_start_multipolygon(struct GeoArrowVisitor* v) {
 }
 
 static int coords_multipolygon(struct GeoArrowVisitor* v,
-                                  const struct GeoArrowCoordView* coords) {
+                               const struct GeoArrowCoordView* coords) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   private->size[2] += coords->n_coords;
