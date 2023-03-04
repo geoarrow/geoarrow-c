@@ -41,26 +41,6 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
 
 int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n);
 
-struct GeoArrowArray {
-  struct GeoArrowSchemaView schema_view;
-  struct ArrowArray array;
-};
-
-GeoArrowErrorCode GeoArrowArrayInitFromType(struct GeoArrowArray* array,
-                                            enum GeoArrowType type);
-
-GeoArrowErrorCode GeoArrowArrayInitFromSchema(struct GeoArrowArray* array,
-                                              struct ArrowSchema* schema,
-                                              struct GeoArrowError* error);
-
-GeoArrowErrorCode GeoArrowArraySetBuffer(struct GeoArrowArray* array, int64_t i,
-                                         struct GeoArrowBufferView value);
-
-GeoArrowErrorCode GeoArrowArrayFinish(struct GeoArrowArray* array,
-                                      struct ArrowArray* array_out,
-                                      struct GeoArrowError* error);
-
-void GeoArrowArrayReset(struct GeoArrowArray* array);
 
 GeoArrowErrorCode GeoArrowArrayViewInitFromType(struct GeoArrowArrayView* array_view,
                                                 enum GeoArrowType type);
@@ -154,6 +134,11 @@ static inline void GeoArrowBuilderAppendBufferUnsafe(struct GeoArrowBuilder* bui
 
 static inline GeoArrowErrorCode GeoArrowBuilderAppendBuffer(
     struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value);
+
+GeoArrowErrorCode GeoArrowBuilderSetOwnedBuffer(
+    struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value,
+    void (*custom_free)(uint8_t* ptr, int64_t size, void* private_data),
+    void* private_data);
 
 GeoArrowErrorCode GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
                                              struct GeoArrowVisitor* v);
