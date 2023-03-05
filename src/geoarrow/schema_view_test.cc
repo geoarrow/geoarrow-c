@@ -87,8 +87,8 @@ TEST_P(TypeParameterizedTestFixture, SchemaViewTestInitFromSchema) {
 
 INSTANTIATE_TEST_SUITE_P(
     SchemaViewTest, TypeParameterizedTestFixture,
-    ::testing::Values(GEOARROW_TYPE_WKB, GEOARROW_TYPE_LARGE_WKB,
-                      GEOARROW_TYPE_WKT, GEOARROW_TYPE_LARGE_WKT,
+    ::testing::Values(GEOARROW_TYPE_WKB, GEOARROW_TYPE_LARGE_WKB, GEOARROW_TYPE_WKT,
+                      GEOARROW_TYPE_LARGE_WKT,
 
                       GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING,
                       GEOARROW_TYPE_POLYGON, GEOARROW_TYPE_MULTIPOINT,
@@ -104,7 +104,11 @@ INSTANTIATE_TEST_SUITE_P(
 
                       GEOARROW_TYPE_POINT_ZM, GEOARROW_TYPE_LINESTRING_ZM,
                       GEOARROW_TYPE_POLYGON_ZM, GEOARROW_TYPE_MULTIPOINT_ZM,
-                      GEOARROW_TYPE_MULTILINESTRING_ZM, GEOARROW_TYPE_MULTIPOLYGON_ZM));
+                      GEOARROW_TYPE_MULTILINESTRING_ZM, GEOARROW_TYPE_MULTIPOLYGON_ZM,
+
+                      GEOARROW_TYPE_INTERLEAVED_POINT
+                      // Foo
+                      ));
 
 TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {
   struct ArrowSchema good_schema;
@@ -118,9 +122,9 @@ TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {
   ASSERT_EQ(ArrowSchemaInitFromType(&bad_schema, NANOARROW_TYPE_INT32), GEOARROW_OK);
   ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);
   EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
-  EXPECT_STREQ(
-      error.message,
-      "Expected storage type struct for coord array for extension 'geoarrow.point'");
+  EXPECT_STREQ(error.message,
+               "Expected storage type fixed-size list or struct for coord array for "
+               "extension 'geoarrow.point'");
   bad_schema.release(&bad_schema);
 
   // Bad number of children

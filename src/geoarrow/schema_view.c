@@ -6,67 +6,141 @@
 #include "geoarrow.h"
 #include "nanoarrow.h"
 
+static const char* GeoArrowDimsFromNDims(int32_t n_dims) {
+  switch (n_dims) {
+    case 2:
+      return "xy";
+    case 3:
+      return "xyz";
+    case 4:
+      return "xyzm";
+    default:
+      return NULL;
+  }
+}
+
+static int GeoArrowParsePointFixedSizeList(struct ArrowSchema* schema,
+                                           struct GeoArrowSchemaView* schema_view,
+                                           struct ArrowError* error,
+                                           const char* ext_name) {
+  struct ArrowSchemaView na_schema_view;
+  NANOARROW_RETURN_NOT_OK(ArrowSchemaViewInit(&na_schema_view, schema, error));
+  const char* maybe_dims = schema->name;
+  if (maybe_dims == NULL) {
+    maybe_dims = "<NULL>";
+  }
+
+  if (strcmp(maybe_dims, "xy") == 0) {
+    schema_view->dimensions = GEOARROW_DIMENSIONS_XY;
+  } else if (strcmp(maybe_dims, "xyz") == 0) {
+    schema_view->dimensions = GEOARROW_DIMENSIONS_XYZ;
+  } else if (strcmp(maybe_dims, "xym") == 0) {
+    schema_view->dimensions = GEOARROW_DIMENSIONS_XYM;
+  } else if (strcmp(maybe_dims, "xyzm") == 0) {
+    schema_view->dimensions = GEOARROW_DIMENSIONS_XYZM;
+  } else {
+    switch (na_schema_view.fixed_size) {
+      case 2:
+        schema_view->dimensions = GEOARROW_DIMENSIONS_XY;
+        break;
+      case 3:
+        schema_view->dimensions = GEOARROW_DIMENSIONS_XYZ;
+        break;
+      case 4:
+        schema_view->dimensions = GEOARROW_DIMENSIONS_XYZM;
+        break;
+      default:
+        ArrowErrorSet(error,
+                      "Can't guess dimensions for fixed size list coord array with child "
+                      "name '%s' and fixed size %d for extension '%s'",
+                      maybe_dims, na_schema_view.fixed_size, ext_name);
+        return EINVAL;
+    }
+  }
+
+  int expected_n_dims = _GeoArrowkNumDimensions[schema_view->dimensions];
+  if (expected_n_dims != na_schema_view.fixed_size) {
+    ArrowErrorSet(error,
+                  "Expected fixed size list coord array with child name '%s' to have "
+                  "fixed size %d but found fixed size %d for extension '%s'",
+                  maybe_dims, expected_n_dims, na_schema_view.fixed_size, ext_name);
+    return EINVAL;
+  }
+
+  schema_view->coord_type = GEOARROW_COORD_TYPE_INTERLEAVED;
+  return NANOARROW_OK;
+}
+
+static int GeoArrowParsePointStruct(struct ArrowSchema* schema,
+                                    struct GeoArrowSchemaView* schema_view,
+                                    struct ArrowError* error, const char* ext_name) {
+  if (schema->n_children < 2 || schema->n_children > 4) {
+    ArrowErrorSet(
+        error,
+        "Expected 2, 3, or 4 children for coord array for extension '%s' but got %d",
+        ext_name, (int)schema->n_children);
+    return EINVAL;
+  }
+
+  char dim[5];
+  memset(dim, 0, sizeof(dim));
+  for (int64_t i = 0; i < schema->n_children; i++) {
+    const char* child_name = schema->children[i]->name;
+    if (child_name == NULL || strlen(child_name) != 1) {
+      ArrowErrorSet(error,
+                    "Expected coordinate child %d to have single character name for "
+                    "extension '%s'",
+                    (int)i, ext_name);
+      return EINVAL;
+    }
+
+    if (strcmp(schema->children[i]->format, "g") != 0) {
+      ArrowErrorSet(error,
+                    "Expected coordinate child %d to have storage type of double for "
+                    "extension '%s'",
+                    (int)i, ext_name);
+      return EINVAL;
+    }
+
+    dim[i] = child_name[0];
+  }
+
+  if (strcmp(dim, "xy") == 0) {
+    schema_view->dimensions = GEOARROW_DIMENSIONS_XY;
+  } else if (strcmp(dim, "xyz") == 0) {
+    schema_view->dimensions = GEOARROW_DIMENSIONS_XYZ;
+  } else if (strcmp(dim, "xym") == 0) {
+    schema_view->dimensions = GEOARROW_DIMENSIONS_XYM;
+  } else if (strcmp(dim, "xyzm") == 0) {
+    schema_view->dimensions = GEOARROW_DIMENSIONS_XYZM;
+  } else {
+    ArrowErrorSet(error,
+                  "Expected dimensions 'xy', 'xyz', 'xym', or 'xyzm' for extension "
+                  "'%s' but found '%s'",
+                  ext_name, dim);
+    return EINVAL;
+  }
+
+  schema_view->coord_type = GEOARROW_COORD_TYPE_SEPARATE;
+  return GEOARROW_OK;
+}
+
 static GeoArrowErrorCode GeoArrowParseNestedSchema(struct ArrowSchema* schema, int n,
                                                    struct GeoArrowSchemaView* schema_view,
                                                    struct ArrowError* error,
                                                    const char* ext_name) {
   if (n == 0) {
-    if (strcmp(schema->format, "+s") != 0) {
+    if (strcmp(schema->format, "+s") == 0) {
+      return GeoArrowParsePointStruct(schema, schema_view, error, ext_name);
+    } else if (strncmp(schema->format, "+w:", 3) == 0) {
+      return GeoArrowParsePointFixedSizeList(schema, schema_view, error, ext_name);
+    } else {
       ArrowErrorSet(error,
-                    "Expected storage type struct for coord array for extension '%s'",
+                    "Expected storage type fixed-size list or struct for coord array for "
+                    "extension '%s'",
                     ext_name);
       return EINVAL;
     }
-
-    if (schema->n_children < 2 || schema->n_children > 4) {
-      ArrowErrorSet(
-          error,
-          "Expected 2, 3, or 4 children for coord array for extension '%s' but got %d",
-          ext_name, (int)n);
-      return EINVAL;
-    }
-
-    char dim[5];
-    memset(dim, 0, sizeof(dim));
-    for (int64_t i = 0; i < schema->n_children; i++) {
-      const char* child_name = schema->children[i]->name;
-      if (child_name == NULL || strlen(child_name) != 1) {
-        ArrowErrorSet(error,
-                      "Expected coordinate child %d to have single character name for "
-                      "extension '%s'",
-                      (int)i, ext_name);
-        return EINVAL;
-      }
-
-      if (strcmp(schema->children[i]->format, "g") != 0) {
-        ArrowErrorSet(error,
-                      "Expected coordinate child %d to have storage type of double for "
-                      "extension '%s'",
-                      (int)i, ext_name);
-        return EINVAL;
-      }
-
-      dim[i] = child_name[0];
-    }
-
-    if (strcmp(dim, "xy") == 0) {
-      schema_view->dimensions = GEOARROW_DIMENSIONS_XY;
-    } else if (strcmp(dim, "xyz") == 0) {
-      schema_view->dimensions = GEOARROW_DIMENSIONS_XYZ;
-    } else if (strcmp(dim, "xym") == 0) {
-      schema_view->dimensions = GEOARROW_DIMENSIONS_XYM;
-    } else if (strcmp(dim, "xyzm") == 0) {
-      schema_view->dimensions = GEOARROW_DIMENSIONS_XYZM;
-    } else {
-      ArrowErrorSet(error,
-                    "Expected dimensions 'xy', 'xyz', 'xym', or 'xyzm' for extension "
-                    "'%s' but found '%s'",
-                    ext_name, dim);
-      return EINVAL;
-    }
-
-    schema_view->coord_type = GEOARROW_COORD_TYPE_SEPARATE;
-    return GEOARROW_OK;
   } else {
     if (strcmp(schema->format, "+l") != 0 || schema->n_children != 1) {
       ArrowErrorSet(error,
