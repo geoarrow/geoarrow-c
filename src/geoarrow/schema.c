@@ -6,6 +6,19 @@
 
 #include "geoarrow.h"
 
+static GeoArrowErrorCode GeoArrowSchemaInitCoordFixedSizeList(struct ArrowSchema* schema,
+                                                              const char* dims) {
+  int n_dims = strlen(dims);
+  char dim_name[] = {'\0', '\0'};
+  ArrowSchemaInit(schema);
+  NANOARROW_RETURN_NOT_OK(
+      ArrowSchemaSetTypeFixedSize(schema, NANOARROW_TYPE_FIXED_SIZE_LIST, n_dims));
+  NANOARROW_RETURN_NOT_OK(ArrowSchemaSetName(schema->children[0], dims));
+  NANOARROW_RETURN_NOT_OK(ArrowSchemaSetType(schema->children[0], NANOARROW_TYPE_DOUBLE));
+
+  return GEOARROW_OK;
+}
+
 static GeoArrowErrorCode GeoArrowSchemaInitCoordStruct(struct ArrowSchema* schema,
                                                        const char* dims) {
   int n_dims = strlen(dims);
@@ -23,6 +36,7 @@ static GeoArrowErrorCode GeoArrowSchemaInitCoordStruct(struct ArrowSchema* schem
 }
 
 static GeoArrowErrorCode GeoArrowSchemaInitListStruct(struct ArrowSchema* schema,
+                                                      enum GeoArrowCoordType coord_type,
                                                       const char* dims, int n,
                                                       const char** child_names) {
   if (n == 0) {
@@ -31,8 +45,8 @@ static GeoArrowErrorCode GeoArrowSchemaInitListStruct(struct ArrowSchema* schema
     ArrowSchemaInit(schema);
     NANOARROW_RETURN_NOT_OK(ArrowSchemaSetFormat(schema, "+l"));
     NANOARROW_RETURN_NOT_OK(ArrowSchemaAllocateChildren(schema, 1));
-    NANOARROW_RETURN_NOT_OK(
-        GeoArrowSchemaInitListStruct(schema->children[0], dims, n - 1, child_names + 1));
+    NANOARROW_RETURN_NOT_OK(GeoArrowSchemaInitListStruct(schema->children[0], coord_type,
+                                                         dims, n - 1, child_names + 1));
     return ArrowSchemaSetName(schema->children[0], child_names[0]);
   }
 }
@@ -57,68 +71,59 @@ GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowTy
     case GEOARROW_TYPE_LARGE_WKB:
       return ArrowSchemaInitFromType(schema, NANOARROW_TYPE_LARGE_BINARY);
 
-      case GEOARROW_TYPE_WKT:
+    case GEOARROW_TYPE_WKT:
       return ArrowSchemaInitFromType(schema, NANOARROW_TYPE_STRING);
     case GEOARROW_TYPE_LARGE_WKT:
       return ArrowSchemaInitFromType(schema, NANOARROW_TYPE_LARGE_STRING);
-
-    case GEOARROW_TYPE_POINT:
-      return GeoArrowSchemaInitCoordStruct(schema, "xy");
-    case GEOARROW_TYPE_LINESTRING:
-      return GeoArrowSchemaInitListStruct(schema, "xy", 1, CHILD_NAMES_LINESTRING);
-    case GEOARROW_TYPE_MULTIPOINT:
-      return GeoArrowSchemaInitListStruct(schema, "xy", 1, CHILD_NAMES_MULTIPOINT);
-    case GEOARROW_TYPE_POLYGON:
-      return GeoArrowSchemaInitListStruct(schema, "xy", 2, CHILD_NAMES_POLYGON);
-    case GEOARROW_TYPE_MULTILINESTRING:
-      return GeoArrowSchemaInitListStruct(schema, "xy", 2, CHILD_NAMES_MULTILINESTRING);
-    case GEOARROW_TYPE_MULTIPOLYGON:
-      return GeoArrowSchemaInitListStruct(schema, "xy", 3, CHILD_NAMES_MULTIPOLYGON);
-
-    case GEOARROW_TYPE_POINT_Z:
-      return GeoArrowSchemaInitCoordStruct(schema, "xyz");
-    case GEOARROW_TYPE_LINESTRING_Z:
-      return GeoArrowSchemaInitListStruct(schema, "xyz", 1, CHILD_NAMES_LINESTRING);
-    case GEOARROW_TYPE_MULTIPOINT_Z:
-      return GeoArrowSchemaInitListStruct(schema, "xyz", 1, CHILD_NAMES_MULTIPOINT);
-    case GEOARROW_TYPE_POLYGON_Z:
-      return GeoArrowSchemaInitListStruct(schema, "xyz", 2, CHILD_NAMES_POLYGON);
-    case GEOARROW_TYPE_MULTILINESTRING_Z:
-      return GeoArrowSchemaInitListStruct(schema, "xyz", 2, CHILD_NAMES_MULTILINESTRING);
-    case GEOARROW_TYPE_MULTIPOLYGON_Z:
-      return GeoArrowSchemaInitListStruct(schema, "xyz", 3, CHILD_NAMES_MULTIPOLYGON);
-
-    case GEOARROW_TYPE_POINT_M:
-      return GeoArrowSchemaInitCoordStruct(schema, "xym");
-    case GEOARROW_TYPE_LINESTRING_M:
-      return GeoArrowSchemaInitListStruct(schema, "xym", 1, CHILD_NAMES_LINESTRING);
-    case GEOARROW_TYPE_MULTIPOINT_M:
-      return GeoArrowSchemaInitListStruct(schema, "xym", 1, CHILD_NAMES_MULTIPOINT);
-    case GEOARROW_TYPE_POLYGON_M:
-      return GeoArrowSchemaInitListStruct(schema, "xym", 2, CHILD_NAMES_POLYGON);
-    case GEOARROW_TYPE_MULTILINESTRING_M:
-      return GeoArrowSchemaInitListStruct(schema, "xym", 2, CHILD_NAMES_MULTILINESTRING);
-    case GEOARROW_TYPE_MULTIPOLYGON_M:
-      return GeoArrowSchemaInitListStruct(schema, "xym", 3, CHILD_NAMES_MULTIPOLYGON);
-
-    case GEOARROW_TYPE_POINT_ZM:
-      return GeoArrowSchemaInitCoordStruct(schema, "xyzm");
-    case GEOARROW_TYPE_LINESTRING_ZM:
-      return GeoArrowSchemaInitListStruct(schema, "xyzm", 1, CHILD_NAMES_LINESTRING);
-    case GEOARROW_TYPE_MULTIPOINT_ZM:
-      return GeoArrowSchemaInitListStruct(schema, "xyzm", 1, CHILD_NAMES_MULTIPOINT);
-    case GEOARROW_TYPE_POLYGON_ZM:
-      return GeoArrowSchemaInitListStruct(schema, "xyzm", 2, CHILD_NAMES_POLYGON);
-    case GEOARROW_TYPE_MULTILINESTRING_ZM:
-      return GeoArrowSchemaInitListStruct(schema, "xyzm", 2, CHILD_NAMES_MULTILINESTRING);
-    case GEOARROW_TYPE_MULTIPOLYGON_ZM:
-      return GeoArrowSchemaInitListStruct(schema, "xyzm", 3, CHILD_NAMES_MULTIPOLYGON);
 
     default:
       break;
   }
 
-  return ENOTSUP;
+  enum GeoArrowDimensions dimensions = GeoArrowDimensionsFromType(type);
+  enum GeoArrowCoordType coord_type = GeoArrowCoordTypeFromType(type);
+  enum GeoArrowGeometryType geometry_type = GeoArrowGeometryTypeFromType(type);
+
+  const char* dims;
+  switch (dimensions) {
+    case GEOARROW_DIMENSIONS_XY:
+      dims = "xy";
+      break;
+    case GEOARROW_DIMENSIONS_XYZ:
+      dims = "xyz";
+      break;
+    case GEOARROW_DIMENSIONS_XYM:
+      dims = "xym";
+      break;
+    case GEOARROW_DIMENSIONS_XYZM:
+      dims = "xyzm";
+      break;
+    default:
+      return EINVAL;
+  }
+
+  switch (geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_POINT:
+      return GeoArrowSchemaInitCoordStruct(schema, dims);
+    case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+      return GeoArrowSchemaInitListStruct(schema, coord_type, dims, 1,
+                                          CHILD_NAMES_LINESTRING);
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+      return GeoArrowSchemaInitListStruct(schema, coord_type, dims, 1,
+                                          CHILD_NAMES_MULTIPOINT);
+    case GEOARROW_GEOMETRY_TYPE_POLYGON:
+      return GeoArrowSchemaInitListStruct(schema, coord_type, dims, 2,
+                                          CHILD_NAMES_POLYGON);
+    case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+      return GeoArrowSchemaInitListStruct(schema, coord_type, dims, 2,
+                                          CHILD_NAMES_MULTILINESTRING);
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+      return GeoArrowSchemaInitListStruct(schema, coord_type, dims, 3,
+                                          CHILD_NAMES_MULTIPOLYGON);
+
+    default:
+      return ENOTSUP;
+  }
 }
 
 GeoArrowErrorCode GeoArrowSchemaInitExtension(struct ArrowSchema* schema,
