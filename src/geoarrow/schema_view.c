@@ -23,9 +23,18 @@ static int GeoArrowParsePointFixedSizeList(struct ArrowSchema* schema,
                                            struct GeoArrowSchemaView* schema_view,
                                            struct ArrowError* error,
                                            const char* ext_name) {
+  if (schema->n_children != 1 || strcmp(schema->children[0]->format, "g") != 0) {
+    ArrowErrorSet(
+        error,
+        "Expected fixed-size list coordinate child 0 to have storage type of double for "
+        "extension '%s'",
+        ext_name);
+    return EINVAL;
+  }
+
   struct ArrowSchemaView na_schema_view;
   NANOARROW_RETURN_NOT_OK(ArrowSchemaViewInit(&na_schema_view, schema, error));
-  const char* maybe_dims = schema->name;
+  const char* maybe_dims = schema->children[0]->name;
   if (maybe_dims == NULL) {
     maybe_dims = "<NULL>";
   }

@@ -169,6 +169,58 @@ TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {
   good_schema.release(&good_schema);
 }
 
+TEST(SchemaViewTest, SchemaViewTestInitInvalidInterleavedPoint) {
+  struct ArrowSchema good_schema;
+  struct ArrowSchema bad_schema;
+  struct GeoArrowSchemaView schema_view;
+  struct GeoArrowError error;
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_INTERLEAVED_POINT),
+            GEOARROW_OK);
+
+  // Bad fixed size for guessed dims
+  ArrowSchemaInit(&bad_schema);
+  ASSERT_EQ(ArrowSchemaSetTypeFixedSize(&bad_schema, NANOARROW_TYPE_FIXED_SIZE_LIST, 1),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetType(bad_schema.children[0], NANOARROW_TYPE_DOUBLE),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[0], nullptr), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Can't guess dimensions for fixed size list coord array with child name "
+               "'<NULL>' and fixed size 1 for extension 'geoarrow.point'");
+  bad_schema.release(&bad_schema);
+
+  // Bad fixed size with explicit dims
+  ArrowSchemaInit(&bad_schema);
+  ASSERT_EQ(ArrowSchemaSetTypeFixedSize(&bad_schema, NANOARROW_TYPE_FIXED_SIZE_LIST, 1),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetType(bad_schema.children[0], NANOARROW_TYPE_DOUBLE),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[0], "xy"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Expected fixed size list coord array with child name 'xy' to have fixed "
+               "size 2 but found fixed size 1 for extension 'geoarrow.point'");
+  bad_schema.release(&bad_schema);
+
+  // Bad child type
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
+  bad_schema.children[0]->release(bad_schema.children[0]);
+  ASSERT_EQ(ArrowSchemaInitFromType(bad_schema.children[0], NANOARROW_TYPE_INT32),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[0], "xy"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Expected fixed-size list coordinate child 0 to have storage type of "
+               "double for extension 'geoarrow.point'");
+  bad_schema.release(&bad_schema);
+
+  good_schema.release(&good_schema);
+}
+
 TEST(SchemaViewTest, SchemaViewTestInitInvalidNested) {
   struct ArrowSchema good_schema;
   struct ArrowSchema bad_schema;
