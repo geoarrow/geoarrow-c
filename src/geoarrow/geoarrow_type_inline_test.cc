@@ -7,6 +7,21 @@
 
 #include "wkx_testing.hpp"
 
+TEST(TypeInlineTest, TypeInlineTestGeometryTypeFromType) {
+  EXPECT_EQ(GeoArrowGeometryTypeFromType(GEOARROW_TYPE_WKB),
+            GEOARROW_GEOMETRY_TYPE_GEOMETRY);
+  EXPECT_EQ(GeoArrowGeometryTypeFromType(GEOARROW_TYPE_POINT),
+            GEOARROW_GEOMETRY_TYPE_POINT);
+  EXPECT_EQ(GeoArrowGeometryTypeFromType(GEOARROW_TYPE_POINT_Z),
+            GEOARROW_GEOMETRY_TYPE_POINT);
+  EXPECT_EQ(GeoArrowGeometryTypeFromType(GEOARROW_TYPE_POINT_M),
+            GEOARROW_GEOMETRY_TYPE_POINT);
+  EXPECT_EQ(GeoArrowGeometryTypeFromType(GEOARROW_TYPE_POINT_ZM),
+            GEOARROW_GEOMETRY_TYPE_POINT);
+  EXPECT_EQ(GeoArrowGeometryTypeFromType(GEOARROW_TYPE_INTERLEAVED_POINT),
+            GEOARROW_GEOMETRY_TYPE_POINT);
+}
+
 TEST(TypeInlineTest, TypeInlineTestDimMap) {
   int map[4];
 

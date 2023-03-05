@@ -2,6 +2,7 @@
 #ifndef GEOARROW_GEOARROW_TYPES_INLINE_H_INCLUDED
 #define GEOARROW_GEOARROW_TYPES_INLINE_H_INCLUDED
 
+#include <stddef.h>
 #include <string.h>
 
 #include "geoarrow_type.h"
@@ -10,484 +11,134 @@
 extern "C" {
 #endif
 
+static inline enum GeoArrowGeometryType GeoArrowGeometryTypeFromType(
+    enum GeoArrowType type) {
+  switch (type) {
+    case GEOARROW_TYPE_UNINITIALIZED:
+    case GEOARROW_TYPE_WKB:
+    case GEOARROW_TYPE_LARGE_WKB:
+    case GEOARROW_TYPE_WKT:
+    case GEOARROW_TYPE_LARGE_WKT:
+      return GEOARROW_GEOMETRY_TYPE_GEOMETRY;
+
+    default:
+      break;
+  }
+
+  int type_int = type;
+
+  if (type_int >= GEOARROW_TYPE_INTERLEAVED_POINT) {
+    type_int -= 10000;
+  }
+
+  if (type_int >= 4000) {
+    type_int -= 4000;
+  } else if (type_int >= 3000) {
+    type_int -= 3000;
+  } else if (type_int >= 2000) {
+    type_int -= 2000;
+  } else if (type_int >= 1000) {
+    type_int -= 1000;
+  }
+
+  if (type_int > 6 || type_int < 1) {
+    return GEOARROW_GEOMETRY_TYPE_GEOMETRY;
+  } else {
+    return (enum GeoArrowGeometryType)type_int;
+  }
+}
+
 static inline const char* GeoArrowExtensionNameFromType(enum GeoArrowType type) {
   switch (type) {
     case GEOARROW_TYPE_WKB:
     case GEOARROW_TYPE_LARGE_WKB:
       return "geoarrow.wkb";
-
     case GEOARROW_TYPE_WKT:
     case GEOARROW_TYPE_LARGE_WKT:
       return "geoarrow.wkt";
 
-    case GEOARROW_TYPE_POINT:
-    case GEOARROW_TYPE_POINT_Z:
-    case GEOARROW_TYPE_POINT_M:
-    case GEOARROW_TYPE_POINT_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_POINT:
-    case GEOARROW_TYPE_INTERLEAVED_POINT_Z:
-    case GEOARROW_TYPE_INTERLEAVED_POINT_M:
-    case GEOARROW_TYPE_INTERLEAVED_POINT_ZM:
+    default:
+      break;
+  }
+
+  int geometry_type = GeoArrowGeometryTypeFromType(type);
+  switch (geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_POINT:
       return "geoarrow.point";
-
-    case GEOARROW_TYPE_LINESTRING:
-    case GEOARROW_TYPE_LINESTRING_Z:
-    case GEOARROW_TYPE_LINESTRING_M:
-    case GEOARROW_TYPE_LINESTRING_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING_Z:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING_M:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING_ZM:
+    case GEOARROW_GEOMETRY_TYPE_LINESTRING:
       return "geoarrow.linestring";
-
-    case GEOARROW_TYPE_POLYGON:
-    case GEOARROW_TYPE_POLYGON_Z:
-    case GEOARROW_TYPE_POLYGON_M:
-    case GEOARROW_TYPE_POLYGON_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON_Z:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON_M:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON_ZM:
+    case GEOARROW_GEOMETRY_TYPE_POLYGON:
       return "geoarrow.polygon";
-
-    case GEOARROW_TYPE_MULTIPOINT:
-    case GEOARROW_TYPE_MULTIPOINT_Z:
-    case GEOARROW_TYPE_MULTIPOINT_M:
-    case GEOARROW_TYPE_MULTIPOINT_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_Z:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_M:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZM:
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
       return "geoarrow.multipoint";
-
-    case GEOARROW_TYPE_MULTILINESTRING:
-    case GEOARROW_TYPE_MULTILINESTRING_Z:
-    case GEOARROW_TYPE_MULTILINESTRING_M:
-    case GEOARROW_TYPE_MULTILINESTRING_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_Z:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_M:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_ZM:
+    case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
       return "geoarrow.multilinestring";
-
-    case GEOARROW_TYPE_MULTIPOLYGON:
-    case GEOARROW_TYPE_MULTIPOLYGON_Z:
-    case GEOARROW_TYPE_MULTIPOLYGON_M:
-    case GEOARROW_TYPE_MULTIPOLYGON_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_Z:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_M:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM:
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
       return "geoarrow.multipolygon";
-
     default:
       return NULL;
-  }
-}
-
-static inline enum GeoArrowGeometryType GeoArrowGeometryTypeFromType(
-    enum GeoArrowType type) {
-  switch (type) {
-    case GEOARROW_TYPE_UNINITIALIZED:
-      return GEOARROW_GEOMETRY_TYPE_GEOMETRY;
-    case GEOARROW_TYPE_POINT:
-    case GEOARROW_TYPE_POINT_Z:
-    case GEOARROW_TYPE_POINT_M:
-    case GEOARROW_TYPE_POINT_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_POINT:
-    case GEOARROW_TYPE_INTERLEAVED_POINT_Z:
-    case GEOARROW_TYPE_INTERLEAVED_POINT_M:
-    case GEOARROW_TYPE_INTERLEAVED_POINT_ZM:
-      return GEOARROW_GEOMETRY_TYPE_POINT;
-
-    case GEOARROW_TYPE_LINESTRING:
-    case GEOARROW_TYPE_LINESTRING_Z:
-    case GEOARROW_TYPE_LINESTRING_M:
-    case GEOARROW_TYPE_LINESTRING_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING_Z:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING_M:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING_ZM:
-      return GEOARROW_GEOMETRY_TYPE_LINESTRING;
-
-    case GEOARROW_TYPE_POLYGON:
-    case GEOARROW_TYPE_POLYGON_Z:
-    case GEOARROW_TYPE_POLYGON_M:
-    case GEOARROW_TYPE_POLYGON_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON_Z:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON_M:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON_ZM:
-      return GEOARROW_GEOMETRY_TYPE_POLYGON;
-
-    case GEOARROW_TYPE_MULTIPOINT:
-    case GEOARROW_TYPE_MULTIPOINT_Z:
-    case GEOARROW_TYPE_MULTIPOINT_M:
-    case GEOARROW_TYPE_MULTIPOINT_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_Z:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_M:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZM:
-      return GEOARROW_GEOMETRY_TYPE_MULTIPOINT;
-
-    case GEOARROW_TYPE_MULTILINESTRING:
-    case GEOARROW_TYPE_MULTILINESTRING_Z:
-    case GEOARROW_TYPE_MULTILINESTRING_M:
-    case GEOARROW_TYPE_MULTILINESTRING_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_Z:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_M:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_ZM:
-      return GEOARROW_GEOMETRY_TYPE_MULTILINESTRING;
-
-    case GEOARROW_TYPE_MULTIPOLYGON:
-    case GEOARROW_TYPE_MULTIPOLYGON_Z:
-    case GEOARROW_TYPE_MULTIPOLYGON_M:
-    case GEOARROW_TYPE_MULTIPOLYGON_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_Z:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_M:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM:
-      return GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON;
-
-    default:
-      return GEOARROW_GEOMETRY_TYPE_GEOMETRY;
   }
 }
 
 static inline enum GeoArrowDimensions GeoArrowDimensionsFromType(enum GeoArrowType type) {
   switch (type) {
     case GEOARROW_TYPE_UNINITIALIZED:
+    case GEOARROW_TYPE_WKB:
+    case GEOARROW_TYPE_LARGE_WKB:
+    case GEOARROW_TYPE_WKT:
+    case GEOARROW_TYPE_LARGE_WKT:
       return GEOARROW_DIMENSIONS_UNKNOWN;
 
-    case GEOARROW_TYPE_POINT:
-    case GEOARROW_TYPE_LINESTRING:
-    case GEOARROW_TYPE_POLYGON:
-    case GEOARROW_TYPE_MULTIPOINT:
-    case GEOARROW_TYPE_MULTILINESTRING:
-    case GEOARROW_TYPE_MULTIPOLYGON:
-    case GEOARROW_TYPE_INTERLEAVED_POINT:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON:
+    default:
+      break;
+  }
+
+  int geometry_type = GeoArrowGeometryTypeFromType(type);
+  int type_int = type;
+  type_int -= geometry_type;
+  if (type_int > 5000) {
+    type_int -= 10000;
+  }
+
+  switch (type_int) {
+    case 0:
       return GEOARROW_DIMENSIONS_XY;
-
-    case GEOARROW_TYPE_POINT_Z:
-    case GEOARROW_TYPE_LINESTRING_Z:
-    case GEOARROW_TYPE_POLYGON_Z:
-    case GEOARROW_TYPE_MULTIPOINT_Z:
-    case GEOARROW_TYPE_MULTILINESTRING_Z:
-    case GEOARROW_TYPE_MULTIPOLYGON_Z:
-    case GEOARROW_TYPE_INTERLEAVED_POINT_Z:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING_Z:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON_Z:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_Z:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_Z:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_Z:
+    case 1000:
       return GEOARROW_DIMENSIONS_XYZ;
-
-    case GEOARROW_TYPE_POINT_M:
-    case GEOARROW_TYPE_LINESTRING_M:
-    case GEOARROW_TYPE_POLYGON_M:
-    case GEOARROW_TYPE_MULTIPOINT_M:
-    case GEOARROW_TYPE_MULTILINESTRING_M:
-    case GEOARROW_TYPE_MULTIPOLYGON_M:
-    case GEOARROW_TYPE_INTERLEAVED_POINT_M:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING_M:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON_M:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_M:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_M:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_M:
+    case 2000:
       return GEOARROW_DIMENSIONS_XYM;
-
-    case GEOARROW_TYPE_POINT_ZM:
-    case GEOARROW_TYPE_LINESTRING_ZM:
-    case GEOARROW_TYPE_POLYGON_ZM:
-    case GEOARROW_TYPE_MULTIPOINT_ZM:
-    case GEOARROW_TYPE_MULTILINESTRING_ZM:
-    case GEOARROW_TYPE_MULTIPOLYGON_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_POINT_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM:
+    case 3000:
       return GEOARROW_DIMENSIONS_XYZM;
-
     default:
       return GEOARROW_DIMENSIONS_UNKNOWN;
   }
 }
 
 static inline enum GeoArrowCoordType GeoArrowCoordTypeFromType(enum GeoArrowType type) {
-  switch (type) {
-    case GEOARROW_TYPE_UNINITIALIZED:
-      return GEOARROW_COORD_TYPE_UNKNOWN;
-
-    case GEOARROW_TYPE_POINT:
-    case GEOARROW_TYPE_LINESTRING:
-    case GEOARROW_TYPE_POLYGON:
-    case GEOARROW_TYPE_MULTIPOINT:
-    case GEOARROW_TYPE_MULTILINESTRING:
-    case GEOARROW_TYPE_MULTIPOLYGON:
-    case GEOARROW_TYPE_POINT_Z:
-    case GEOARROW_TYPE_LINESTRING_Z:
-    case GEOARROW_TYPE_POLYGON_Z:
-    case GEOARROW_TYPE_MULTIPOINT_Z:
-    case GEOARROW_TYPE_MULTILINESTRING_Z:
-    case GEOARROW_TYPE_MULTIPOLYGON_Z:
-    case GEOARROW_TYPE_POINT_M:
-    case GEOARROW_TYPE_LINESTRING_M:
-    case GEOARROW_TYPE_POLYGON_M:
-    case GEOARROW_TYPE_MULTIPOINT_M:
-    case GEOARROW_TYPE_MULTILINESTRING_M:
-    case GEOARROW_TYPE_MULTIPOLYGON_M:
-    case GEOARROW_TYPE_POINT_ZM:
-    case GEOARROW_TYPE_LINESTRING_ZM:
-    case GEOARROW_TYPE_POLYGON_ZM:
-    case GEOARROW_TYPE_MULTIPOINT_ZM:
-    case GEOARROW_TYPE_MULTILINESTRING_ZM:
-    case GEOARROW_TYPE_MULTIPOLYGON_ZM:
-      return GEOARROW_COORD_TYPE_SEPARATE;
-
-    case GEOARROW_TYPE_INTERLEAVED_POINT:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON:
-    case GEOARROW_TYPE_INTERLEAVED_POINT_Z:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING_Z:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON_Z:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_Z:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_Z:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_Z:
-    case GEOARROW_TYPE_INTERLEAVED_POINT_M:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING_M:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON_M:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_M:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_M:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_M:
-    case GEOARROW_TYPE_INTERLEAVED_POINT_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_LINESTRING_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_POLYGON_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_ZM:
-    case GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM:
-      return GEOARROW_COORD_TYPE_INTERLEAVED;
-
-    default:
-      return GEOARROW_COORD_TYPE_UNKNOWN;
+  if (type >= GEOARROW_TYPE_WKB) {
+    return GEOARROW_COORD_TYPE_UNKNOWN;
+  } else if (type >= GEOARROW_TYPE_INTERLEAVED_POINT) {
+    return GEOARROW_COORD_TYPE_INTERLEAVED;
+  } else if (type >= GEOARROW_TYPE_POINT) {
+    return GEOARROW_COORD_TYPE_SEPARATE;
+  } else {
+    return GEOARROW_COORD_TYPE_UNKNOWN;
   }
 }
 
 static inline enum GeoArrowType GeoArrowMakeType(enum GeoArrowGeometryType geometry_type,
                                                  enum GeoArrowDimensions dimensions,
                                                  enum GeoArrowCoordType coord_type) {
-  switch (geometry_type) {
-    case GEOARROW_GEOMETRY_TYPE_POINT:
-      switch (dimensions) {
-        case GEOARROW_DIMENSIONS_XY:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_POINT;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYZ:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_POINT_Z;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYM:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_POINT_M;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYZM:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_POINT_ZM;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        default:
-          return GEOARROW_TYPE_UNINITIALIZED;
-      }
-    case GEOARROW_GEOMETRY_TYPE_LINESTRING:
-      switch (dimensions) {
-        case GEOARROW_DIMENSIONS_XY:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_LINESTRING;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYZ:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_LINESTRING_Z;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYM:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_LINESTRING_M;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYZM:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_LINESTRING_ZM;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        default:
-          return GEOARROW_TYPE_UNINITIALIZED;
-      }
-    case GEOARROW_GEOMETRY_TYPE_POLYGON:
-      switch (dimensions) {
-        case GEOARROW_DIMENSIONS_XY:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_POLYGON;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYZ:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_POLYGON_Z;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYM:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_POLYGON_M;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYZM:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_POLYGON_ZM;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        default:
-          return GEOARROW_TYPE_UNINITIALIZED;
-      }
-    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
-      switch (dimensions) {
-        case GEOARROW_DIMENSIONS_XY:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_MULTIPOINT;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYZ:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_MULTIPOINT_Z;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYM:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_MULTIPOINT_M;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYZM:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_MULTIPOINT_ZM;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        default:
-          return GEOARROW_TYPE_UNINITIALIZED;
-      }
-    case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
-      switch (dimensions) {
-        case GEOARROW_DIMENSIONS_XY:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_MULTILINESTRING;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYZ:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_MULTILINESTRING_Z;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYM:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_MULTILINESTRING_M;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYZM:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_MULTILINESTRING_ZM;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        default:
-          return GEOARROW_TYPE_UNINITIALIZED;
-      }
-    case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
-      switch (dimensions) {
-        case GEOARROW_DIMENSIONS_XY:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_MULTIPOLYGON;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYZ:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_MULTIPOLYGON_Z;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYM:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_MULTIPOLYGON_M;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        case GEOARROW_DIMENSIONS_XYZM:
-          switch (coord_type) {
-            case GEOARROW_COORD_TYPE_SEPARATE:
-              return GEOARROW_TYPE_MULTIPOLYGON_ZM;
-            default:
-              return GEOARROW_TYPE_UNINITIALIZED;
-          }
-        default:
-          return GEOARROW_TYPE_UNINITIALIZED;
-      }
-    default:
-      return GEOARROW_TYPE_UNINITIALIZED;
+  if (geometry_type == GEOARROW_GEOMETRY_TYPE_GEOMETRY) {
+    return GEOARROW_TYPE_UNINITIALIZED;
+  } else if (dimensions == GEOARROW_DIMENSIONS_UNKNOWN) {
+    return GEOARROW_TYPE_UNINITIALIZED;
+  } else if (coord_type == GEOARROW_COORD_TYPE_UNKNOWN) {
+    return GEOARROW_TYPE_UNINITIALIZED;
   }
+
+  int type_int = (dimensions - 1) * 1000 + (coord_type - 1) * 10000 + geometry_type;
+  return (enum GeoArrowType)type_int;
 }
 
 static inline const char* GeoArrowGeometryTypeString(
