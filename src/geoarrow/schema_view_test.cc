@@ -123,6 +123,39 @@ INSTANTIATE_TEST_SUITE_P(
         GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_ZM,
         GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM));
 
+TEST(SchemaViewTest, SchemaViewTestInitInterleavedGuessDims) {
+  struct ArrowSchema good_schema;
+  struct ArrowSchema good_schema2;
+  struct GeoArrowSchemaView schema_view;
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_INTERLEAVED_POINT),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &good_schema2), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(good_schema2.children[0], "item"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &good_schema2, nullptr), GEOARROW_OK);
+  EXPECT_EQ(schema_view.dimensions, GEOARROW_DIMENSIONS_XY);
+  good_schema2.release(&good_schema2);
+  good_schema.release(&good_schema);
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_INTERLEAVED_POINT_Z),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &good_schema2), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(good_schema2.children[0], "item"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &good_schema2, nullptr), GEOARROW_OK);
+  EXPECT_EQ(schema_view.dimensions, GEOARROW_DIMENSIONS_XYZ);
+  good_schema2.release(&good_schema2);
+  good_schema.release(&good_schema);
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_INTERLEAVED_POINT_ZM),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &good_schema2), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(good_schema2.children[0], "item"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &good_schema2, nullptr), GEOARROW_OK);
+  EXPECT_EQ(schema_view.dimensions, GEOARROW_DIMENSIONS_XYZM);
+  good_schema2.release(&good_schema2);
+  good_schema.release(&good_schema);
+}
+
 TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {
   struct ArrowSchema good_schema;
   struct ArrowSchema bad_schema;
