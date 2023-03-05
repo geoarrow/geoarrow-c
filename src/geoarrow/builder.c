@@ -147,6 +147,46 @@ GeoArrowErrorCode GeoArrowBuilderReserveBuffer(struct GeoArrowBuilder* builder, 
   return GEOARROW_OK;
 }
 
+struct GeoArrowBufferDeallocatorPrivate {
+  void (*custom_free)(uint8_t* ptr, int64_t size, void* private_data);
+  void* private_data;
+};
+
+static void GeoArrowBufferDeallocateWrapper(struct ArrowBufferAllocator* allocator,
+                                            uint8_t* ptr, int64_t size) {
+  struct GeoArrowBufferDeallocatorPrivate* private_data =
+      (struct GeoArrowBufferDeallocatorPrivate*)allocator->private_data;
+  private_data->custom_free(ptr, size, private_data->private_data);
+  ArrowFree(private_data);
+}
+
+GeoArrowErrorCode GeoArrowBuilderSetOwnedBuffer(
+    struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value,
+    void (*custom_free)(uint8_t* ptr, int64_t size, void* private_data),
+    void* private_data) {
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+  struct ArrowBuffer* buffer_src = private->buffers[i];
+
+  struct GeoArrowBufferDeallocatorPrivate* deallocator =
+      (struct GeoArrowBufferDeallocatorPrivate*)ArrowMalloc(
+          sizeof(struct GeoArrowBufferDeallocatorPrivate));
+  if (deallocator == NULL) {
+    return ENOMEM;
+  }
+
+  deallocator->custom_free = custom_free;
+  deallocator->private_data = private_data;
+
+  ArrowBufferReset(buffer_src);
+  buffer_src->allocator =
+      ArrowBufferDeallocator(&GeoArrowBufferDeallocateWrapper, deallocator);
+  buffer_src->data = (uint8_t*)value.data;
+  buffer_src->size_bytes = value.size_bytes;
+  buffer_src->capacity_bytes = value.size_bytes;
+
+  return GEOARROW_OK;
+}
+
 static void GeoArrowSetArrayLengthFromBufferLength(struct GeoArrowSchemaView* schema_view,
                                                    struct _GeoArrowFindBufferResult* res,
                                                    int64_t size_bytes);
