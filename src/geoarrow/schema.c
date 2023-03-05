@@ -111,7 +111,15 @@ GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowTy
 
   switch (geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_POINT:
-      return GeoArrowSchemaInitCoordStruct(schema, dims);
+      switch (coord_type) {
+        case GEOARROW_COORD_TYPE_SEPARATE:
+          return GeoArrowSchemaInitCoordStruct(schema, dims);
+         case GEOARROW_COORD_TYPE_INTERLEAVED:
+          return GeoArrowSchemaInitCoordFixedSizeList(schema, dims);
+        default:
+          return EINVAL;
+      }
+
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
       return GeoArrowSchemaInitListStruct(schema, coord_type, dims, 1,
                                           CHILD_NAMES_LINESTRING);

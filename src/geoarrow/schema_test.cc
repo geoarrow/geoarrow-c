@@ -29,6 +29,10 @@ std::shared_ptr<DataType> coord_type(std::string dims) {
   }
 }
 
+std::shared_ptr<DataType> interleaved_coord_type(std::string dims) {
+  return fixed_size_list(field(dims, float64()), dims.size());
+}
+
 TEST(SchemaTest, SchemaTestMakeType) {
   EXPECT_EQ(GeoArrowMakeType(GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY,
                              GEOARROW_COORD_TYPE_SEPARATE),
@@ -264,6 +268,30 @@ TEST(SchemaTest, SchemaTestInitSchemaPoint) {
   EXPECT_TRUE(maybe_type_zm.ValueUnsafe()->Equals(coord_type("xyzm")));
 }
 
+TEST(SchemaTest, SchemaTestInitSchemaInterleavedPoint) {
+  struct ArrowSchema schema;
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_INTERLEAVED_POINT), GEOARROW_OK);
+  auto maybe_type = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type.status());
+  EXPECT_TRUE(maybe_type.ValueUnsafe()->Equals(interleaved_coord_type("xy")));
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_INTERLEAVED_POINT_Z), GEOARROW_OK);
+  auto maybe_type_z = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type_z.status());
+  EXPECT_TRUE(maybe_type_z.ValueUnsafe()->Equals(interleaved_coord_type("xyz")));
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_INTERLEAVED_POINT_M), GEOARROW_OK);
+  auto maybe_type_m = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type_m.status());
+  EXPECT_TRUE(maybe_type_m.ValueUnsafe()->Equals(interleaved_coord_type("xym")));
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_INTERLEAVED_POINT_ZM), GEOARROW_OK);
+  auto maybe_type_zm = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type_zm.status());
+  EXPECT_TRUE(maybe_type_zm.ValueUnsafe()->Equals(interleaved_coord_type("xyzm")));
+}
+
 TEST(SchemaTest, SchemaTestInitSchemaLinestring) {
   struct ArrowSchema schema;
 
@@ -290,6 +318,38 @@ TEST(SchemaTest, SchemaTestInitSchemaLinestring) {
   ASSERT_ARROW_OK(maybe_type_zm.status());
   EXPECT_TRUE(
       maybe_type_zm.ValueUnsafe()->Equals(list(field("vertices", coord_type("xyzm")))));
+}
+
+TEST(SchemaTest, SchemaTestInitSchemaInterleavedLinestring) {
+  struct ArrowSchema schema;
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_INTERLEAVED_LINESTRING),
+            GEOARROW_OK);
+  auto maybe_type = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type.status());
+  EXPECT_TRUE(maybe_type.ValueUnsafe()->Equals(
+      list(field("vertices", interleaved_coord_type("xy")))));
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_INTERLEAVED_LINESTRING_Z),
+            GEOARROW_OK);
+  auto maybe_type_z = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type_z.status());
+  EXPECT_TRUE(maybe_type_z.ValueUnsafe()->Equals(
+      list(field("vertices", interleaved_coord_type("xyz")))));
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_INTERLEAVED_LINESTRING_M),
+            GEOARROW_OK);
+  auto maybe_type_m = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type_m.status());
+  EXPECT_TRUE(maybe_type_m.ValueUnsafe()->Equals(
+      list(field("vertices", interleaved_coord_type("xym")))));
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_INTERLEAVED_LINESTRING_ZM),
+            GEOARROW_OK);
+  auto maybe_type_zm = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type_zm.status());
+  EXPECT_TRUE(maybe_type_zm.ValueUnsafe()->Equals(
+      list(field("vertices", interleaved_coord_type("xyzm")))));
 }
 
 TEST(SchemaTest, SchemaTestInitSchemaPolygon) {
