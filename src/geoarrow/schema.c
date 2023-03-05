@@ -40,7 +40,14 @@ static GeoArrowErrorCode GeoArrowSchemaInitListStruct(struct ArrowSchema* schema
                                                       const char* dims, int n,
                                                       const char** child_names) {
   if (n == 0) {
-    return GeoArrowSchemaInitCoordStruct(schema, dims);
+    switch (coord_type) {
+      case GEOARROW_COORD_TYPE_SEPARATE:
+        return GeoArrowSchemaInitCoordStruct(schema, dims);
+      case GEOARROW_COORD_TYPE_INTERLEAVED:
+        return GeoArrowSchemaInitCoordFixedSizeList(schema, dims);
+      default:
+        return EINVAL;
+    }
   } else {
     ArrowSchemaInit(schema);
     NANOARROW_RETURN_NOT_OK(ArrowSchemaSetFormat(schema, "+l"));
