@@ -294,9 +294,11 @@ static void GeoArrowSetArrayLengthFromBufferLength(struct GeoArrowSchemaView* sc
 
   switch (schema_view->type) {
     case GEOARROW_TYPE_WKB:
+    case GEOARROW_TYPE_WKT:
       res->array->length = (size_bytes / sizeof(int32_t)) - 1;
       return;
     case GEOARROW_TYPE_LARGE_WKB:
+    case GEOARROW_TYPE_LARGE_WKT:
       res->array->length = (size_bytes / sizeof(int64_t)) - 1;
       return;
     default:

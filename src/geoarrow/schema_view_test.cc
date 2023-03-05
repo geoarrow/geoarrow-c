@@ -88,6 +88,7 @@ TEST_P(TypeParameterizedTestFixture, SchemaViewTestInitFromSchema) {
 INSTANTIATE_TEST_SUITE_P(
     SchemaViewTest, TypeParameterizedTestFixture,
     ::testing::Values(GEOARROW_TYPE_WKB, GEOARROW_TYPE_LARGE_WKB,
+                      GEOARROW_TYPE_WKT, GEOARROW_TYPE_LARGE_WKT,
 
                       GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING,
                       GEOARROW_TYPE_POLYGON, GEOARROW_TYPE_MULTIPOINT,

@@ -122,6 +122,24 @@ static GeoArrowErrorCode GeoArrowSchemaViewInitInternal(
                                                       "geoarrow.multipolygon"));
     schema_view->type = GeoArrowMakeType(
         schema_view->geometry_type, schema_view->dimensions, schema_view->coord_type);
+  } else if (ext_len >= 12 && strncmp(ext_name, "geoarrow.wkt", 12) == 0) {
+    switch (na_schema_view->type) {
+      case NANOARROW_TYPE_STRING:
+        schema_view->type = GEOARROW_TYPE_WKT;
+        break;
+      case NANOARROW_TYPE_LARGE_STRING:
+        schema_view->type = GEOARROW_TYPE_LARGE_WKT;
+        break;
+      default:
+        ArrowErrorSet(na_error,
+                      "Expected storage type of string or large_string for extension "
+                      "'geoarrow.wkt'");
+        return EINVAL;
+    }
+
+    schema_view->geometry_type = GeoArrowGeometryTypeFromType(schema_view->type);
+    schema_view->dimensions = GeoArrowDimensionsFromType(schema_view->type);
+    schema_view->coord_type = GeoArrowCoordTypeFromType(schema_view->type);
   } else if (ext_len >= 12 && strncmp(ext_name, "geoarrow.wkb", 12) == 0) {
     switch (na_schema_view->type) {
       case NANOARROW_TYPE_BINARY:

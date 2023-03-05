@@ -57,6 +57,11 @@ GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowTy
     case GEOARROW_TYPE_LARGE_WKB:
       return ArrowSchemaInitFromType(schema, NANOARROW_TYPE_LARGE_BINARY);
 
+      case GEOARROW_TYPE_WKT:
+      return ArrowSchemaInitFromType(schema, NANOARROW_TYPE_STRING);
+    case GEOARROW_TYPE_LARGE_WKT:
+      return ArrowSchemaInitFromType(schema, NANOARROW_TYPE_LARGE_STRING);
+
     case GEOARROW_TYPE_POINT:
       return GeoArrowSchemaInitCoordStruct(schema, "xy");
     case GEOARROW_TYPE_LINESTRING:

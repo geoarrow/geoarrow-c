@@ -226,6 +226,20 @@ TEST(SchemaTest, SchemaTestInitSchemaWKB) {
   EXPECT_TRUE(maybe_type_large.ValueUnsafe()->Equals(large_binary()));
 }
 
+TEST(SchemaTest, SchemaTestInitSchemaWKT) {
+  struct ArrowSchema schema;
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_WKT), GEOARROW_OK);
+  auto maybe_type = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type.status());
+  EXPECT_TRUE(maybe_type.ValueUnsafe()->Equals(utf8()));
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_LARGE_WKT), GEOARROW_OK);
+  auto maybe_type_large = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type_large.status());
+  EXPECT_TRUE(maybe_type_large.ValueUnsafe()->Equals(large_utf8()));
+}
+
 TEST(SchemaTest, SchemaTestInitSchemaPoint) {
   struct ArrowSchema schema;
 

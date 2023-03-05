@@ -88,6 +88,7 @@ TEST(GeoArrowHppTest, GeoArrowHppTestVectorTypeModifyMultipolygon) {
 
 TEST(GeoArrowHppTest, GeoArrowHppTestTypeConstructors) {
   EXPECT_EQ(geoarrow::Wkb().id(), GEOARROW_TYPE_WKB);
+  EXPECT_EQ(geoarrow::Wkt().id(), GEOARROW_TYPE_WKT);
   EXPECT_EQ(geoarrow::Point().id(), GEOARROW_TYPE_POINT);
   EXPECT_EQ(geoarrow::Linestring().id(), GEOARROW_TYPE_LINESTRING);
   EXPECT_EQ(geoarrow::Polygon().id(), GEOARROW_TYPE_POLYGON);

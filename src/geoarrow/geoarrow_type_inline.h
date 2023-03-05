@@ -16,6 +16,10 @@ static inline const char* GeoArrowExtensionNameFromType(enum GeoArrowType type) 
     case GEOARROW_TYPE_LARGE_WKB:
       return "geoarrow.wkb";
 
+    case GEOARROW_TYPE_WKT:
+    case GEOARROW_TYPE_LARGE_WKT:
+      return "geoarrow.wkt";
+
     case GEOARROW_TYPE_POINT:
     case GEOARROW_TYPE_POINT_Z:
     case GEOARROW_TYPE_POINT_M:
