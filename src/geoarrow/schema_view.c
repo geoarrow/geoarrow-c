@@ -6,19 +6,6 @@
 #include "geoarrow.h"
 #include "nanoarrow.h"
 
-static const char* GeoArrowDimsFromNDims(int32_t n_dims) {
-  switch (n_dims) {
-    case 2:
-      return "xy";
-    case 3:
-      return "xyz";
-    case 4:
-      return "xyzm";
-    default:
-      return NULL;
-  }
-}
-
 static int GeoArrowParsePointFixedSizeList(struct ArrowSchema* schema,
                                            struct GeoArrowSchemaView* schema_view,
                                            struct ArrowError* error,
