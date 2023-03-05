@@ -159,6 +159,31 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayErrors) {
       "Unexpected number of children in list array in GeoArrowArrayViewSetArray()");
 }
 
+TEST(ArrayViewTest, ArrayViewTestSetInterleavedArrayErrors) {
+  struct GeoArrowArrayView array_view;
+  struct GeoArrowError error;
+  struct ArrowArray array;
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_INTERLEAVED_POINT),
+            GEOARROW_OK);
+
+  array.n_children = 0;
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Unexpected number of children for interleaved coordinate array in "
+               "GeoArrowArrayViewSetArray()");
+
+  struct ArrowArray dummy_childxy;
+  struct ArrowArray* children[] = {&dummy_childxy};
+  array.n_children = 1;
+  array.children = reinterpret_cast<struct ArrowArray**>(children);
+  dummy_childxy.n_buffers = 1;
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Unexpected number of buffers for interleaved coordinate array child in "
+               "GeoArrowArrayViewSetArray()");
+}
+
 TEST(ArrayViewTest, ArrayViewTestSetArrayValidPoint) {
   struct ArrowSchema schema;
   struct ArrowArray array;
