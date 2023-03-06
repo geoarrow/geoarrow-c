@@ -730,20 +730,43 @@ INSTANTIATE_TEST_SUITE_P(
                  "20, 20 30))",
                  GEOARROW_TYPE_POLYGON),
 
+        // Interleaved Polygon
+        WKT_PAIR("POLYGON EMPTY", GEOARROW_TYPE_INTERLEAVED_POLYGON),
+        WKT_PAIR("POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))",
+                 GEOARROW_TYPE_INTERLEAVED_POLYGON),
+        WKT_PAIR("POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10), (20 30, 35 35, 30 "
+                 "20, 20 30))",
+                 GEOARROW_TYPE_INTERLEAVED_POLYGON),
+
         // Multipoint
         WKT_PAIR("MULTIPOINT EMPTY", GEOARROW_TYPE_MULTIPOINT),
         WKT_PAIR("MULTIPOINT ((30 10), (12 16))", GEOARROW_TYPE_MULTIPOINT),
+
+        // Interleaved Multipoint
+        WKT_PAIR("MULTIPOINT EMPTY", GEOARROW_TYPE_INTERLEAVED_MULTIPOINT),
+        WKT_PAIR("MULTIPOINT ((30 10), (12 16))", GEOARROW_TYPE_INTERLEAVED_MULTIPOINT),
 
         // Multilinestring
         WKT_PAIR("MULTILINESTRING EMPTY", GEOARROW_TYPE_MULTILINESTRING),
         WKT_PAIR("MULTILINESTRING ((10 10, 20 20, 10 40), (40 40, 30 30, 40 20, 30 10))",
                  GEOARROW_TYPE_MULTILINESTRING),
 
+        // Interleaved Multilinestring
+        WKT_PAIR("MULTILINESTRING EMPTY", GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING),
+        WKT_PAIR("MULTILINESTRING ((10 10, 20 20, 10 40), (40 40, 30 30, 40 20, 30 10))",
+                 GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING),
+
         // Multipolygon
         WKT_PAIR("MULTIPOLYGON EMPTY", GEOARROW_TYPE_MULTIPOLYGON),
         WKT_PAIR("MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)), ((20 35, 10 30, 10 10, "
                  "30 5, 45 20, 20 35), (30 20, 20 15, 20 25, 30 20)))",
-                 GEOARROW_TYPE_MULTIPOLYGON)
+                 GEOARROW_TYPE_MULTIPOLYGON),
+
+        // Interleaved Multipolygon
+        WKT_PAIR("MULTIPOLYGON EMPTY", GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON),
+        WKT_PAIR("MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)), ((20 35, 10 30, 10 10, "
+                 "30 5, 45 20, 20 35), (30 20, 20 15, 20 25, 30 20)))",
+                 GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON)
 
         // Comment to keep the last line on its own
         ));
