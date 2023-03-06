@@ -271,6 +271,7 @@ struct GeoArrowWritableArrayView {
   struct GeoArrowSchemaView schema_view;
   int64_t length;
   int64_t n_buffers;
+  int32_t n_offsets;
   struct GeoArrowWritableBufferView buffers[8];
   struct GeoArrowWritableCoordView coords;
 };

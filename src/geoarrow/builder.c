@@ -65,6 +65,7 @@ static GeoArrowErrorCode GeoArrowBuilderInitInternal(struct GeoArrowBuilder* bui
   // Update a few things about the writable view from the regular view
   builder->view.coords.n_values = array_view.coords.n_values;
   builder->view.coords.coords_stride = array_view.coords.coords_stride;
+  builder->view.n_offsets = array_view.n_offsets;
   switch (builder->view.schema_view.coord_type) {
     case GEOARROW_COORD_TYPE_SEPARATE:
       builder->view.n_buffers = 1 + array_view.n_offsets + array_view.coords.n_values;
@@ -938,9 +939,8 @@ GeoArrowErrorCode GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
 
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   if (!private->visitor_initialized) {
-    int n_offsets = builder->view.n_buffers - builder->view.coords.n_values - 1;
     int32_t zero = 0;
-    for (int i = 0; i < n_offsets; i++) {
+    for (int i = 0; i < builder->view.n_offsets; i++) {
       NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, i, &zero, 1));
     }
 

@@ -41,7 +41,6 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
 
 int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n);
 
-
 GeoArrowErrorCode GeoArrowArrayViewInitFromType(struct GeoArrowArrayView* array_view,
                                                 enum GeoArrowType type);
 
