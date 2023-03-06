@@ -368,23 +368,25 @@ static void GeoArrowSetCoordContainerLength(struct GeoArrowBuilder* builder) {
   switch (builder->view.schema_view.geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_POINT:
       private
-      ->array.length = private->array.children[0]->length;
+      ->array.length = private->array.children[0]->length / scale;
       break;
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
     case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
       private
-      ->array.children[0]->length = private->array.children[0]->children[0]->length;
+      ->array.children[0]->length =
+          private->array.children[0]->children[0]->length / scale;
       break;
     case GEOARROW_GEOMETRY_TYPE_POLYGON:
     case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
       private
       ->array.children[0]->children[0]->length =
-          private->array.children[0]->children[0]->children[0]->length;
+          private->array.children[0]->children[0]->children[0]->length / scale;
       break;
     case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
       private
       ->array.children[0]->children[0]->children[0]->length =
-          private->array.children[0]->children[0]->children[0]->children[0]->length;
+          private->array.children[0]->children[0]->children[0]->children[0]->length /
+          scale;
       break;
     default:
       // e.g., WKB

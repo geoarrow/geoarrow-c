@@ -255,7 +255,7 @@ struct GeoArrowWritableCoordView {
 };
 
 #define GEOARROW_COORD_VIEW_VALUE(coords_, row_, col_) \
-  coords_->values[col_][row_ * coords_->coords_stride]
+  coords_->values[col_][(row_)*coords_->coords_stride]
 
 struct GeoArrowArrayView {
   struct GeoArrowSchemaView schema_view;
