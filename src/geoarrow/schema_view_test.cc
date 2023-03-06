@@ -87,23 +87,74 @@ TEST_P(TypeParameterizedTestFixture, SchemaViewTestInitFromSchema) {
 
 INSTANTIATE_TEST_SUITE_P(
     SchemaViewTest, TypeParameterizedTestFixture,
-    ::testing::Values(GEOARROW_TYPE_WKB, GEOARROW_TYPE_LARGE_WKB,
+    ::testing::Values(
+        GEOARROW_TYPE_WKB, GEOARROW_TYPE_LARGE_WKB, GEOARROW_TYPE_WKT,
+        GEOARROW_TYPE_LARGE_WKT,
 
-                      GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING,
-                      GEOARROW_TYPE_POLYGON, GEOARROW_TYPE_MULTIPOINT,
-                      GEOARROW_TYPE_MULTILINESTRING, GEOARROW_TYPE_MULTIPOLYGON,
+        GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING, GEOARROW_TYPE_POLYGON,
+        GEOARROW_TYPE_MULTIPOINT, GEOARROW_TYPE_MULTILINESTRING,
+        GEOARROW_TYPE_MULTIPOLYGON,
 
-                      GEOARROW_TYPE_POINT_Z, GEOARROW_TYPE_LINESTRING_Z,
-                      GEOARROW_TYPE_POLYGON_Z, GEOARROW_TYPE_MULTIPOINT_Z,
-                      GEOARROW_TYPE_MULTILINESTRING_Z, GEOARROW_TYPE_MULTIPOLYGON_Z,
+        GEOARROW_TYPE_POINT_Z, GEOARROW_TYPE_LINESTRING_Z, GEOARROW_TYPE_POLYGON_Z,
+        GEOARROW_TYPE_MULTIPOINT_Z, GEOARROW_TYPE_MULTILINESTRING_Z,
+        GEOARROW_TYPE_MULTIPOLYGON_Z,
 
-                      GEOARROW_TYPE_POINT_M, GEOARROW_TYPE_LINESTRING_M,
-                      GEOARROW_TYPE_POLYGON_M, GEOARROW_TYPE_MULTIPOINT_M,
-                      GEOARROW_TYPE_MULTILINESTRING_M, GEOARROW_TYPE_MULTIPOLYGON_M,
+        GEOARROW_TYPE_POINT_M, GEOARROW_TYPE_LINESTRING_M, GEOARROW_TYPE_POLYGON_M,
+        GEOARROW_TYPE_MULTIPOINT_M, GEOARROW_TYPE_MULTILINESTRING_M,
+        GEOARROW_TYPE_MULTIPOLYGON_M,
 
-                      GEOARROW_TYPE_POINT_ZM, GEOARROW_TYPE_LINESTRING_ZM,
-                      GEOARROW_TYPE_POLYGON_ZM, GEOARROW_TYPE_MULTIPOINT_ZM,
-                      GEOARROW_TYPE_MULTILINESTRING_ZM, GEOARROW_TYPE_MULTIPOLYGON_ZM));
+        GEOARROW_TYPE_POINT_ZM, GEOARROW_TYPE_LINESTRING_ZM, GEOARROW_TYPE_POLYGON_ZM,
+        GEOARROW_TYPE_MULTIPOINT_ZM, GEOARROW_TYPE_MULTILINESTRING_ZM,
+        GEOARROW_TYPE_MULTIPOLYGON_ZM,
+
+        GEOARROW_TYPE_INTERLEAVED_POINT, GEOARROW_TYPE_INTERLEAVED_LINESTRING,
+        GEOARROW_TYPE_INTERLEAVED_POLYGON, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT,
+        GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING, GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON,
+        GEOARROW_TYPE_INTERLEAVED_POINT_Z, GEOARROW_TYPE_INTERLEAVED_LINESTRING_Z,
+        GEOARROW_TYPE_INTERLEAVED_POLYGON_Z, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_Z,
+        GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_Z,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_Z, GEOARROW_TYPE_INTERLEAVED_POINT_M,
+        GEOARROW_TYPE_INTERLEAVED_LINESTRING_M, GEOARROW_TYPE_INTERLEAVED_POLYGON_M,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_M,
+        GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_M,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_M, GEOARROW_TYPE_INTERLEAVED_POINT_ZM,
+        GEOARROW_TYPE_INTERLEAVED_LINESTRING_ZM, GEOARROW_TYPE_INTERLEAVED_POLYGON_ZM,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZM,
+        GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_ZM,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM));
+
+TEST(SchemaViewTest, SchemaViewTestInitInterleavedGuessDims) {
+  struct ArrowSchema good_schema;
+  struct ArrowSchema good_schema2;
+  struct GeoArrowSchemaView schema_view;
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_INTERLEAVED_POINT),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &good_schema2), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(good_schema2.children[0], "item"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &good_schema2, nullptr), GEOARROW_OK);
+  EXPECT_EQ(schema_view.dimensions, GEOARROW_DIMENSIONS_XY);
+  good_schema2.release(&good_schema2);
+  good_schema.release(&good_schema);
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_INTERLEAVED_POINT_Z),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &good_schema2), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(good_schema2.children[0], "item"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &good_schema2, nullptr), GEOARROW_OK);
+  EXPECT_EQ(schema_view.dimensions, GEOARROW_DIMENSIONS_XYZ);
+  good_schema2.release(&good_schema2);
+  good_schema.release(&good_schema);
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_INTERLEAVED_POINT_ZM),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &good_schema2), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(good_schema2.children[0], "item"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &good_schema2, nullptr), GEOARROW_OK);
+  EXPECT_EQ(schema_view.dimensions, GEOARROW_DIMENSIONS_XYZM);
+  good_schema2.release(&good_schema2);
+  good_schema.release(&good_schema);
+}
 
 TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {
   struct ArrowSchema good_schema;
@@ -117,9 +168,9 @@ TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {
   ASSERT_EQ(ArrowSchemaInitFromType(&bad_schema, NANOARROW_TYPE_INT32), GEOARROW_OK);
   ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);
   EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
-  EXPECT_STREQ(
-      error.message,
-      "Expected storage type struct for coord array for extension 'geoarrow.point'");
+  EXPECT_STREQ(error.message,
+               "Expected storage type fixed-size list or struct for coord array for "
+               "extension 'geoarrow.point'");
   bad_schema.release(&bad_schema);
 
   // Bad number of children
@@ -159,6 +210,58 @@ TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {
   EXPECT_STREQ(error.message,
                "Expected dimensions 'xy', 'xyz', 'xym', or 'xyzm' for extension "
                "'geoarrow.point' but found 'xz'");
+  bad_schema.release(&bad_schema);
+
+  good_schema.release(&good_schema);
+}
+
+TEST(SchemaViewTest, SchemaViewTestInitInvalidInterleavedPoint) {
+  struct ArrowSchema good_schema;
+  struct ArrowSchema bad_schema;
+  struct GeoArrowSchemaView schema_view;
+  struct GeoArrowError error;
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_INTERLEAVED_POINT),
+            GEOARROW_OK);
+
+  // Bad fixed size for guessed dims
+  ArrowSchemaInit(&bad_schema);
+  ASSERT_EQ(ArrowSchemaSetTypeFixedSize(&bad_schema, NANOARROW_TYPE_FIXED_SIZE_LIST, 1),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetType(bad_schema.children[0], NANOARROW_TYPE_DOUBLE),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[0], nullptr), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Can't guess dimensions for fixed size list coord array with child name "
+               "'<NULL>' and fixed size 1 for extension 'geoarrow.point'");
+  bad_schema.release(&bad_schema);
+
+  // Bad fixed size with explicit dims
+  ArrowSchemaInit(&bad_schema);
+  ASSERT_EQ(ArrowSchemaSetTypeFixedSize(&bad_schema, NANOARROW_TYPE_FIXED_SIZE_LIST, 1),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetType(bad_schema.children[0], NANOARROW_TYPE_DOUBLE),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[0], "xy"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Expected fixed size list coord array with child name 'xy' to have fixed "
+               "size 2 but found fixed size 1 for extension 'geoarrow.point'");
+  bad_schema.release(&bad_schema);
+
+  // Bad child type
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
+  bad_schema.children[0]->release(bad_schema.children[0]);
+  ASSERT_EQ(ArrowSchemaInitFromType(bad_schema.children[0], NANOARROW_TYPE_INT32),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[0], "xy"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Expected fixed-size list coordinate child 0 to have storage type of "
+               "double for extension 'geoarrow.point'");
   bad_schema.release(&bad_schema);
 
   good_schema.release(&good_schema);

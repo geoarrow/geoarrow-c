@@ -380,6 +380,8 @@ class VectorArray {
 
 static inline VectorType Wkb() { return VectorType::Make(GEOARROW_TYPE_WKB); }
 
+static inline VectorType Wkt() { return VectorType::Make(GEOARROW_TYPE_WKT); }
+
 static inline VectorType Point() { return VectorType::Make(GEOARROW_TYPE_POINT); }
 
 static inline VectorType Linestring() {

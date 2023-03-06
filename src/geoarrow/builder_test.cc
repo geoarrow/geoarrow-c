@@ -6,7 +6,6 @@
 
 #include "wkx_testing.hpp"
 
-
 static void CustomFreeDoubleVector(uint8_t* ptr, int64_t size, void* private_data) {
   auto vector = reinterpret_cast<std::vector<double>*>(private_data);
   delete vector;
@@ -25,11 +24,13 @@ TEST(BuilderTest, BuilderTestOwnedBuffer) {
   struct GeoArrowBufferView view;
   view.data = reinterpret_cast<const uint8_t*>(xs->data());
   view.size_bytes = xs->size() * sizeof(double);
-  EXPECT_EQ(GeoArrowBuilderSetOwnedBuffer(&builder, 1, view, &CustomFreeDoubleVector, xs), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderSetOwnedBuffer(&builder, 1, view, &CustomFreeDoubleVector, xs),
+            GEOARROW_OK);
 
   view.data = reinterpret_cast<const uint8_t*>(ys->data());
   view.size_bytes = ys->size() * sizeof(double);
-  EXPECT_EQ(GeoArrowBuilderSetOwnedBuffer(&builder, 2, view, &CustomFreeDoubleVector, ys), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderSetOwnedBuffer(&builder, 2, view, &CustomFreeDoubleVector, ys),
+            GEOARROW_OK);
 
   struct ArrowArray array;
   EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array, nullptr), GEOARROW_OK);
@@ -85,21 +86,38 @@ TEST_P(TypeParameterizedTestFixture, BuilderTestEmpty) {
 
 INSTANTIATE_TEST_SUITE_P(
     BuilderTest, TypeParameterizedTestFixture,
-    ::testing::Values(GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING,
-                      GEOARROW_TYPE_POLYGON, GEOARROW_TYPE_MULTIPOINT,
-                      GEOARROW_TYPE_MULTILINESTRING, GEOARROW_TYPE_MULTIPOLYGON,
+    ::testing::Values(
+        GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING, GEOARROW_TYPE_POLYGON,
+        GEOARROW_TYPE_MULTIPOINT, GEOARROW_TYPE_MULTILINESTRING,
+        GEOARROW_TYPE_MULTIPOLYGON,
 
-                      GEOARROW_TYPE_POINT_Z, GEOARROW_TYPE_LINESTRING_Z,
-                      GEOARROW_TYPE_POLYGON_Z, GEOARROW_TYPE_MULTIPOINT_Z,
-                      GEOARROW_TYPE_MULTILINESTRING_Z, GEOARROW_TYPE_MULTIPOLYGON_Z,
+        GEOARROW_TYPE_POINT_Z, GEOARROW_TYPE_LINESTRING_Z, GEOARROW_TYPE_POLYGON_Z,
+        GEOARROW_TYPE_MULTIPOINT_Z, GEOARROW_TYPE_MULTILINESTRING_Z,
+        GEOARROW_TYPE_MULTIPOLYGON_Z,
 
-                      GEOARROW_TYPE_POINT_M, GEOARROW_TYPE_LINESTRING_M,
-                      GEOARROW_TYPE_POLYGON_M, GEOARROW_TYPE_MULTIPOINT_M,
-                      GEOARROW_TYPE_MULTILINESTRING_M, GEOARROW_TYPE_MULTIPOLYGON_M,
+        GEOARROW_TYPE_POINT_M, GEOARROW_TYPE_LINESTRING_M, GEOARROW_TYPE_POLYGON_M,
+        GEOARROW_TYPE_MULTIPOINT_M, GEOARROW_TYPE_MULTILINESTRING_M,
+        GEOARROW_TYPE_MULTIPOLYGON_M,
 
-                      GEOARROW_TYPE_POINT_ZM, GEOARROW_TYPE_LINESTRING_ZM,
-                      GEOARROW_TYPE_POLYGON_ZM, GEOARROW_TYPE_MULTIPOINT_ZM,
-                      GEOARROW_TYPE_MULTILINESTRING_ZM, GEOARROW_TYPE_MULTIPOLYGON_ZM));
+        GEOARROW_TYPE_POINT_ZM, GEOARROW_TYPE_LINESTRING_ZM, GEOARROW_TYPE_POLYGON_ZM,
+        GEOARROW_TYPE_MULTIPOINT_ZM, GEOARROW_TYPE_MULTILINESTRING_ZM,
+        GEOARROW_TYPE_MULTIPOLYGON_ZM,
+
+        GEOARROW_TYPE_INTERLEAVED_POINT, GEOARROW_TYPE_INTERLEAVED_LINESTRING,
+        GEOARROW_TYPE_INTERLEAVED_POLYGON, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT,
+        GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING, GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON,
+        GEOARROW_TYPE_INTERLEAVED_POINT_Z, GEOARROW_TYPE_INTERLEAVED_LINESTRING_Z,
+        GEOARROW_TYPE_INTERLEAVED_POLYGON_Z, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_Z,
+        GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_Z,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_Z, GEOARROW_TYPE_INTERLEAVED_POINT_M,
+        GEOARROW_TYPE_INTERLEAVED_LINESTRING_M, GEOARROW_TYPE_INTERLEAVED_POLYGON_M,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_M,
+        GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_M,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_M, GEOARROW_TYPE_INTERLEAVED_POINT_ZM,
+        GEOARROW_TYPE_INTERLEAVED_LINESTRING_ZM, GEOARROW_TYPE_INTERLEAVED_POLYGON_ZM,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZM,
+        GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_ZM,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM));
 
 TEST(BuilderTest, BuilderTestAppendCoords) {
   struct GeoArrowBuilder builder;
@@ -187,6 +205,60 @@ TEST(BuilderTest, BuilderTestPoint) {
   array_out.release(&array_out);
 }
 
+TEST(BuilderTest, BuilderTestInterleavedPoint) {
+  struct GeoArrowBuilder builder;
+  struct GeoArrowVisitor v;
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_INTERLEAVED_POINT),
+            GEOARROW_OK);
+  GeoArrowBuilderInitVisitor(&builder, &v);
+
+  TestCoords coords({1}, {2});
+
+  // Valid
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  // Null
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.null_feat(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  // Empty
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  struct ArrowArray array_out;
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
+
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.null_count, 1);
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_INTERLEAVED_POINT),
+            GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "POINT (1 2)");
+  EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(values[2], "POINT (nan nan)");
+
+  array_out.release(&array_out);
+}
+
 TEST(BuilderTest, BuilderTestMultipoint) {
   struct GeoArrowBuilder builder;
   struct GeoArrowVisitor v;
@@ -257,6 +329,96 @@ TEST(BuilderTest, BuilderTestMultipoint) {
 
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_MULTIPOINT),
             GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 6);
+  EXPECT_EQ(values[0], "MULTIPOINT ((1 2))");
+  EXPECT_EQ(values[1], "MULTIPOINT ((1 2), (2 3), (3 4), (1 2))");
+  EXPECT_EQ(values[2], "MULTIPOINT ((1 2), (2 3), (3 4), (1 2))");
+  EXPECT_EQ(values[3], "MULTIPOINT ((1 2), (2 3), (3 4), (1 2))");
+  EXPECT_EQ(values[4], "<null value>");
+  EXPECT_EQ(values[5], "MULTIPOINT EMPTY");
+
+  array_out.release(&array_out);
+}
+
+TEST(BuilderTest, BuilderTestInterleavedMultipoint) {
+  struct GeoArrowBuilder builder;
+  struct GeoArrowVisitor v;
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT),
+            GEOARROW_OK);
+  GeoArrowBuilderInitVisitor(&builder, &v);
+
+  TestCoords coords({1, 2, 3, 1}, {2, 3, 4, 2});
+
+  // Valid point
+  coords.view()->n_coords = 1;
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  // Valid linestring
+  coords.view()->n_coords = 4;
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  // Valid polygon
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POLYGON, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.ring_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
+  EXPECT_EQ(v.ring_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  // Valid multilinestring
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(
+      v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_MULTILINESTRING, GEOARROW_DIMENSIONS_XY),
+      GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  // Null
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.null_feat(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  // Empty
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.geom_end(&v), GEOARROW_OK);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  struct ArrowArray array_out;
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
+
+  EXPECT_EQ(array_out.length, 6);
+  EXPECT_EQ(array_out.null_count, 1);
+
+  ASSERT_EQ(
+      GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT),
+      GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
@@ -521,7 +683,7 @@ TEST_P(WKTRoundtripParameterizedTestFixture, BuilderTestWKTRoundtrip) {
             GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
-  EXPECT_EQ(values.size(), 1);
+  ASSERT_EQ(values.size(), 1);
   EXPECT_EQ(values[0], wkt);
 
   array_out.release(&array_out);
@@ -538,12 +700,28 @@ INSTANTIATE_TEST_SUITE_P(
         WKT_PAIR("POINT M (0 1 2)", GEOARROW_TYPE_POINT_M),
         WKT_PAIR("POINT ZM (0 1 2 3)", GEOARROW_TYPE_POINT_ZM),
 
+        // Interleaved Point
+        WKT_PAIR("POINT (0 1)", GEOARROW_TYPE_INTERLEAVED_POINT),
+        WKT_PAIR("POINT Z (0 1 2)", GEOARROW_TYPE_INTERLEAVED_POINT_Z),
+        WKT_PAIR("POINT M (0 1 2)", GEOARROW_TYPE_INTERLEAVED_POINT_M),
+        WKT_PAIR("POINT ZM (0 1 2 3)", GEOARROW_TYPE_INTERLEAVED_POINT_ZM),
+
         // Linestring
         WKT_PAIR("LINESTRING EMPTY", GEOARROW_TYPE_LINESTRING),
         WKT_PAIR("LINESTRING (30 10, 12 16)", GEOARROW_TYPE_LINESTRING),
         WKT_PAIR("LINESTRING Z (30 10 11, 12 16 15)", GEOARROW_TYPE_LINESTRING_Z),
         WKT_PAIR("LINESTRING M (30 10 11, 12 16 15)", GEOARROW_TYPE_LINESTRING_M),
         WKT_PAIR("LINESTRING ZM (30 10 11 10, 12 16 15 98)", GEOARROW_TYPE_LINESTRING_ZM),
+
+        // Interleaved Linestring
+        WKT_PAIR("LINESTRING EMPTY", GEOARROW_TYPE_INTERLEAVED_LINESTRING),
+        WKT_PAIR("LINESTRING (30 10, 12 16)", GEOARROW_TYPE_INTERLEAVED_LINESTRING),
+        WKT_PAIR("LINESTRING Z (30 10 11, 12 16 15)",
+                 GEOARROW_TYPE_INTERLEAVED_LINESTRING_Z),
+        WKT_PAIR("LINESTRING M (30 10 11, 12 16 15)",
+                 GEOARROW_TYPE_INTERLEAVED_LINESTRING_M),
+        WKT_PAIR("LINESTRING ZM (30 10 11 10, 12 16 15 98)",
+                 GEOARROW_TYPE_INTERLEAVED_LINESTRING_ZM),
 
         // Polygon
         WKT_PAIR("POLYGON EMPTY", GEOARROW_TYPE_POLYGON),
@@ -552,20 +730,43 @@ INSTANTIATE_TEST_SUITE_P(
                  "20, 20 30))",
                  GEOARROW_TYPE_POLYGON),
 
+        // Interleaved Polygon
+        WKT_PAIR("POLYGON EMPTY", GEOARROW_TYPE_INTERLEAVED_POLYGON),
+        WKT_PAIR("POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))",
+                 GEOARROW_TYPE_INTERLEAVED_POLYGON),
+        WKT_PAIR("POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10), (20 30, 35 35, 30 "
+                 "20, 20 30))",
+                 GEOARROW_TYPE_INTERLEAVED_POLYGON),
+
         // Multipoint
         WKT_PAIR("MULTIPOINT EMPTY", GEOARROW_TYPE_MULTIPOINT),
         WKT_PAIR("MULTIPOINT ((30 10), (12 16))", GEOARROW_TYPE_MULTIPOINT),
+
+        // Interleaved Multipoint
+        WKT_PAIR("MULTIPOINT EMPTY", GEOARROW_TYPE_INTERLEAVED_MULTIPOINT),
+        WKT_PAIR("MULTIPOINT ((30 10), (12 16))", GEOARROW_TYPE_INTERLEAVED_MULTIPOINT),
 
         // Multilinestring
         WKT_PAIR("MULTILINESTRING EMPTY", GEOARROW_TYPE_MULTILINESTRING),
         WKT_PAIR("MULTILINESTRING ((10 10, 20 20, 10 40), (40 40, 30 30, 40 20, 30 10))",
                  GEOARROW_TYPE_MULTILINESTRING),
 
+        // Interleaved Multilinestring
+        WKT_PAIR("MULTILINESTRING EMPTY", GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING),
+        WKT_PAIR("MULTILINESTRING ((10 10, 20 20, 10 40), (40 40, 30 30, 40 20, 30 10))",
+                 GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING),
+
         // Multipolygon
         WKT_PAIR("MULTIPOLYGON EMPTY", GEOARROW_TYPE_MULTIPOLYGON),
         WKT_PAIR("MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)), ((20 35, 10 30, 10 10, "
                  "30 5, 45 20, 20 35), (30 20, 20 15, 20 25, 30 20)))",
-                 GEOARROW_TYPE_MULTIPOLYGON)
+                 GEOARROW_TYPE_MULTIPOLYGON),
+
+        // Interleaved Multipolygon
+        WKT_PAIR("MULTIPOLYGON EMPTY", GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON),
+        WKT_PAIR("MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)), ((20 35, 10 30, 10 10, "
+                 "30 5, 45 20, 20 35), (30 20, 20 15, 20 25, 30 20)))",
+                 GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON)
 
         // Comment to keep the last line on its own
         ));

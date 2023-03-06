@@ -65,6 +65,7 @@ static GeoArrowErrorCode GeoArrowBuilderInitInternal(struct GeoArrowBuilder* bui
   // Update a few things about the writable view from the regular view
   builder->view.coords.n_values = array_view.coords.n_values;
   builder->view.coords.coords_stride = array_view.coords.coords_stride;
+  builder->view.n_offsets = array_view.n_offsets;
   switch (builder->view.schema_view.coord_type) {
     case GEOARROW_COORD_TYPE_SEPARATE:
       builder->view.n_buffers = 1 + array_view.n_offsets + array_view.coords.n_values;
@@ -294,9 +295,11 @@ static void GeoArrowSetArrayLengthFromBufferLength(struct GeoArrowSchemaView* sc
 
   switch (schema_view->type) {
     case GEOARROW_TYPE_WKB:
+    case GEOARROW_TYPE_WKT:
       res->array->length = (size_bytes / sizeof(int32_t)) - 1;
       return;
     case GEOARROW_TYPE_LARGE_WKB:
+    case GEOARROW_TYPE_LARGE_WKT:
       res->array->length = (size_bytes / sizeof(int64_t)) - 1;
       return;
     default:
@@ -366,23 +369,25 @@ static void GeoArrowSetCoordContainerLength(struct GeoArrowBuilder* builder) {
   switch (builder->view.schema_view.geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_POINT:
       private
-      ->array.length = private->array.children[0]->length;
+      ->array.length = private->array.children[0]->length / scale;
       break;
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
     case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
       private
-      ->array.children[0]->length = private->array.children[0]->children[0]->length;
+      ->array.children[0]->length =
+          private->array.children[0]->children[0]->length / scale;
       break;
     case GEOARROW_GEOMETRY_TYPE_POLYGON:
     case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
       private
       ->array.children[0]->children[0]->length =
-          private->array.children[0]->children[0]->children[0]->length;
+          private->array.children[0]->children[0]->children[0]->length / scale;
       break;
     case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
       private
       ->array.children[0]->children[0]->children[0]->length =
-          private->array.children[0]->children[0]->children[0]->children[0]->length;
+          private->array.children[0]->children[0]->children[0]->children[0]->length /
+          scale;
       break;
     default:
       // e.g., WKB
@@ -934,9 +939,8 @@ GeoArrowErrorCode GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
 
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   if (!private->visitor_initialized) {
-    int n_offsets = builder->view.n_buffers - builder->view.coords.n_values - 1;
     int32_t zero = 0;
-    for (int i = 0; i < n_offsets; i++) {
+    for (int i = 0; i < builder->view.n_offsets; i++) {
       NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, i, &zero, 1));
     }
 

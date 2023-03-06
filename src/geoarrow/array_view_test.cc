@@ -70,21 +70,37 @@ TEST_P(TypeParameterizedTestFixture, ArrayViewTestInitEmptyArray) {
 
 INSTANTIATE_TEST_SUITE_P(
     ArrayViewTest, TypeParameterizedTestFixture,
-    ::testing::Values(GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING,
-                      GEOARROW_TYPE_POLYGON, GEOARROW_TYPE_MULTIPOINT,
-                      GEOARROW_TYPE_MULTILINESTRING, GEOARROW_TYPE_MULTIPOLYGON,
+    ::testing::Values(
+        GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING, GEOARROW_TYPE_POLYGON,
+        GEOARROW_TYPE_MULTIPOINT, GEOARROW_TYPE_MULTILINESTRING,
+        GEOARROW_TYPE_MULTIPOLYGON,
 
-                      GEOARROW_TYPE_POINT_Z, GEOARROW_TYPE_LINESTRING_Z,
-                      GEOARROW_TYPE_POLYGON_Z, GEOARROW_TYPE_MULTIPOINT_Z,
-                      GEOARROW_TYPE_MULTILINESTRING_Z, GEOARROW_TYPE_MULTIPOLYGON_Z,
+        GEOARROW_TYPE_POINT_Z, GEOARROW_TYPE_LINESTRING_Z, GEOARROW_TYPE_POLYGON_Z,
+        GEOARROW_TYPE_MULTIPOINT_Z, GEOARROW_TYPE_MULTILINESTRING_Z,
+        GEOARROW_TYPE_MULTIPOLYGON_Z,
 
-                      GEOARROW_TYPE_POINT_M, GEOARROW_TYPE_LINESTRING_M,
-                      GEOARROW_TYPE_POLYGON_M, GEOARROW_TYPE_MULTIPOINT_M,
-                      GEOARROW_TYPE_MULTILINESTRING_M, GEOARROW_TYPE_MULTIPOLYGON_M,
+        GEOARROW_TYPE_POINT_M, GEOARROW_TYPE_LINESTRING_M, GEOARROW_TYPE_POLYGON_M,
+        GEOARROW_TYPE_MULTIPOINT_M, GEOARROW_TYPE_MULTILINESTRING_M,
+        GEOARROW_TYPE_MULTIPOLYGON_M,
 
-                      GEOARROW_TYPE_POINT_ZM, GEOARROW_TYPE_LINESTRING_ZM,
-                      GEOARROW_TYPE_POLYGON_ZM, GEOARROW_TYPE_MULTIPOINT_ZM,
-                      GEOARROW_TYPE_MULTILINESTRING_ZM, GEOARROW_TYPE_MULTIPOLYGON_ZM));
+        GEOARROW_TYPE_POINT_ZM, GEOARROW_TYPE_LINESTRING_ZM, GEOARROW_TYPE_POLYGON_ZM,
+        GEOARROW_TYPE_MULTIPOINT_ZM, GEOARROW_TYPE_MULTILINESTRING_ZM,
+        GEOARROW_TYPE_MULTIPOLYGON_ZM, GEOARROW_TYPE_INTERLEAVED_POINT,
+        GEOARROW_TYPE_INTERLEAVED_LINESTRING, GEOARROW_TYPE_INTERLEAVED_POLYGON,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOINT, GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON, GEOARROW_TYPE_INTERLEAVED_POINT_Z,
+        GEOARROW_TYPE_INTERLEAVED_LINESTRING_Z, GEOARROW_TYPE_INTERLEAVED_POLYGON_Z,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_Z,
+        GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_Z,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_Z, GEOARROW_TYPE_INTERLEAVED_POINT_M,
+        GEOARROW_TYPE_INTERLEAVED_LINESTRING_M, GEOARROW_TYPE_INTERLEAVED_POLYGON_M,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_M,
+        GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_M,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_M, GEOARROW_TYPE_INTERLEAVED_POINT_ZM,
+        GEOARROW_TYPE_INTERLEAVED_LINESTRING_ZM, GEOARROW_TYPE_INTERLEAVED_POLYGON_ZM,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZM,
+        GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_ZM,
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM));
 
 TEST(ArrayViewTest, ArrayViewTestInitErrors) {
   struct GeoArrowArrayView array_view;
@@ -143,6 +159,32 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayErrors) {
       "Unexpected number of children in list array in GeoArrowArrayViewSetArray()");
 }
 
+TEST(ArrayViewTest, ArrayViewTestSetInterleavedArrayErrors) {
+  struct GeoArrowArrayView array_view;
+  struct GeoArrowError error;
+  struct ArrowArray array;
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_INTERLEAVED_POINT),
+            GEOARROW_OK);
+
+  array.offset = 0;
+  array.n_children = 0;
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Unexpected number of children for interleaved coordinate array in "
+               "GeoArrowArrayViewSetArray()");
+
+  struct ArrowArray dummy_childxy;
+  struct ArrowArray* children[] = {&dummy_childxy};
+  array.n_children = 1;
+  array.children = reinterpret_cast<struct ArrowArray**>(children);
+  dummy_childxy.n_buffers = 1;
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Unexpected number of buffers for interleaved coordinate array child in "
+               "GeoArrowArrayViewSetArray()");
+}
+
 TEST(ArrayViewTest, ArrayViewTestSetArrayValidPoint) {
   struct ArrowSchema schema;
   struct ArrowArray array;
@@ -155,6 +197,48 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPoint) {
 
   ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], 30), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendDouble(array.children[1], 10), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayFinishBuilding(&array, nullptr), GEOARROW_OK);
+
+  // Set the array view
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+
+  // Check its contents
+  EXPECT_EQ(array_view.length, 2);
+  EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
+  EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 1));
+  EXPECT_EQ(array_view.coords.n_coords, 2);
+  EXPECT_EQ(array_view.coords.values[0][0], 30);
+  EXPECT_EQ(array_view.coords.values[1][0], 10);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 2);
+  EXPECT_EQ(values[0], "POINT (30 10)");
+  EXPECT_EQ(values[1], "<null value>");
+
+  schema.release(&schema);
+  array.release(&array);
+}
+
+TEST(ArrayViewTest, ArrayViewTestSetArrayValidInterleavedPoint) {
+  struct ArrowSchema schema;
+  struct ArrowArray array;
+  enum GeoArrowType type = GEOARROW_TYPE_INTERLEAVED_POINT;
+
+  // Build the array for [POINT (30 10), null]
+  ASSERT_EQ(GeoArrowSchemaInit(&schema, type), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], 30), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], 10), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
 
