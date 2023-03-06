@@ -167,6 +167,7 @@ TEST(ArrayViewTest, ArrayViewTestSetInterleavedArrayErrors) {
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_INTERLEAVED_POINT),
             GEOARROW_OK);
 
+  array.offset = 0;
   array.n_children = 0;
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
   EXPECT_STREQ(error.message,
