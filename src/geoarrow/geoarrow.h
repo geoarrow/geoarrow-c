@@ -58,6 +58,10 @@ GeoArrowErrorCode GeoArrowArrayViewVisit(struct GeoArrowArrayView* array_view,
 
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
+void GeoArrowKernelInitVoid(struct GeoArrowKernel* kernel);
+
+void GeoArrowKernelInitVoidAgg(struct GeoArrowKernel* kernel);
+
 struct GeoArrowWKTWriter {
   int significant_digits;
   int use_flat_multipoint;
