@@ -34,7 +34,7 @@ static int kernel_finish_void(struct GeoArrowKernel* kernel, struct ArrowArray* 
 
 static void kernel_release_void(struct GeoArrowKernel* kernel) { kernel->release = NULL; }
 
-void GeoArrowKernelInitVoid(struct GeoArrowKernel* kernel) {
+static void GeoArrowKernelInitVoid(struct GeoArrowKernel* kernel) {
   kernel->start = &kernel_start_void;
   kernel->push_batch = &kernel_push_batch_void;
   kernel->finish = &kernel_finish_void;
@@ -62,7 +62,7 @@ static int kernel_finish_void_agg(struct GeoArrowKernel* kernel, struct ArrowArr
   return NANOARROW_OK;
 }
 
-void GeoArrowKernelInitVoidAgg(struct GeoArrowKernel* kernel) {
+static void GeoArrowKernelInitVoidAgg(struct GeoArrowKernel* kernel) {
   kernel->start = &kernel_start_void;
   kernel->push_batch = &kernel_push_batch_void_agg;
   kernel->finish = &kernel_finish_void_agg;
@@ -83,9 +83,10 @@ struct GeoArrowVisitorKernelPrivate {
 };
 
 static int finish_push_batch_do_nothing(struct GeoArrowVisitorKernelPrivate* private_data,
-                           struct ArrowArray* out, struct GeoArrowError* error) {
-                            return NANOARROW_OK;
-                           }
+                                        struct ArrowArray* out,
+                                        struct GeoArrowError* error) {
+  return NANOARROW_OK;
+}
 
 static void kernel_release_visitor(struct GeoArrowKernel* kernel) {
   struct GeoArrowVisitorKernelPrivate* private_data =
@@ -143,7 +144,6 @@ static int kernel_push_batch_geoarrow(struct GeoArrowKernel* kernel,
 
 static int GeoArrowInitVisitorKernelInternal(struct GeoArrowKernel* kernel,
                                              enum GeoArrowType in_type) {
-
   struct GeoArrowVisitorKernelPrivate* private_data =
       (struct GeoArrowVisitorKernelPrivate*)ArrowMalloc(
           sizeof(struct GeoArrowVisitorKernelPrivate));
@@ -178,7 +178,21 @@ static int GeoArrowInitVisitorKernelInternal(struct GeoArrowKernel* kernel,
   }
 
   memset(private_data, 0, sizeof(struct GeoArrowVisitorKernelPrivate));
+  private_data->finish_push_batch = finish_push_batch_do_nothing;
   kernel->release = kernel_release_visitor;
   kernel->private_data = private_data;
   return NANOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* name,
+                                     const char* options) {
+  if (strcmp(name, "void") == 0) {
+    GeoArrowKernelInitVoid(kernel);
+    return NANOARROW_OK;
+  } else if (strcmp(name, "void_agg") == 0) {
+    GeoArrowKernelInitVoidAgg(kernel);
+    return NANOARROW_OK;
+  }
+
+  return ENOTSUP;
 }

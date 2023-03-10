@@ -1,6 +1,6 @@
 
-#include <stdexcept>
 #include <errno.h>
+#include <stdexcept>
 
 #include <gtest/gtest.h>
 
@@ -21,7 +21,7 @@ TEST(KernelTest, KernelTestVoid) {
   array_in.length = 123;
   array_in.null_count = 123;
 
-  GeoArrowKernelInitVoid(&kernel);
+  EXPECT_EQ(GeoArrowKernelInit(&kernel, "void", nullptr), GEOARROW_OK);
   EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
   EXPECT_STREQ(schema_out.format, "n");
   schema_out.release(&schema_out);
@@ -55,7 +55,7 @@ TEST(KernelTest, KernelTestVoidAgg) {
   array_in.length = 123;
   array_in.null_count = 123;
 
-  GeoArrowKernelInitVoidAgg(&kernel);
+  EXPECT_EQ(GeoArrowKernelInit(&kernel, "void_agg", nullptr), GEOARROW_OK);
   EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
   EXPECT_STREQ(schema_out.format, "n");
   schema_out.release(&schema_out);

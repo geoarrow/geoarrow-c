@@ -58,9 +58,8 @@ GeoArrowErrorCode GeoArrowArrayViewVisit(struct GeoArrowArrayView* array_view,
 
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
-void GeoArrowKernelInitVoid(struct GeoArrowKernel* kernel);
-
-void GeoArrowKernelInitVoidAgg(struct GeoArrowKernel* kernel);
+GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* name,
+                                     const char* options);
 
 struct GeoArrowWKTWriter {
   int significant_digits;
