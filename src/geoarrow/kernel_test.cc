@@ -109,3 +109,43 @@ TEST(KernelTest, KernelTestVisitVoidAggWKT) {
   array_in.release(&array_in);
   array_out.release(&array_out);
 }
+
+TEST(KernelTest, KernelTestVisitVoidAggWKB) {
+  struct GeoArrowKernel kernel;
+  struct GeoArrowError error;
+
+  struct ArrowSchema schema_in;
+  struct ArrowSchema schema_out;
+  struct ArrowArray array_in;
+  struct ArrowArray array_out;
+
+  std::basic_string<uint8_t> point({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                    0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
+                                    0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
+  struct ArrowBufferView data;
+  data.data.data = point.data();
+  data.size_bytes = point.size();
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&schema_in, GEOARROW_TYPE_WKB), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array_in, &schema_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array_in), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendBytes(&array_in, data), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+
+  EXPECT_EQ(GeoArrowKernelInit(&kernel, "visit_void_agg", nullptr), GEOARROW_OK);
+  EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
+  EXPECT_STREQ(schema_out.format, "n");
+  EXPECT_EQ(kernel.push_batch(&kernel, &array_in, nullptr, &error), GEOARROW_OK);
+  EXPECT_EQ(kernel.finish(&kernel, &array_out, &error), GEOARROW_OK);
+
+  EXPECT_EQ(array_out.length, 1);
+  EXPECT_EQ(array_out.null_count, 1);
+  kernel.release(&kernel);
+  EXPECT_EQ(kernel.release, nullptr);
+
+  schema_in.release(&schema_in);
+  schema_out.release(&schema_out);
+  array_in.release(&array_in);
+  array_out.release(&array_out);
+}

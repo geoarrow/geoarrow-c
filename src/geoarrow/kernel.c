@@ -213,7 +213,7 @@ static int kernel_visitor_start(struct GeoArrowKernel* kernel, struct ArrowSchem
       result = GeoArrowWKTReaderInit(&private_data->wkt_reader);
       break;
     case GEOARROW_TYPE_WKB:
-      kernel->push_batch = &kernel_push_batch_wkt;
+      kernel->push_batch = &kernel_push_batch_wkb;
       result = GeoArrowWKBReaderInit(&private_data->wkb_reader);
       break;
     default:
