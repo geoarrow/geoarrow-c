@@ -70,6 +70,15 @@ static void GeoArrowKernelInitVoidAgg(struct GeoArrowKernel* kernel) {
   kernel->private_data = NULL;
 }
 
+// Visitor-based kernels
+//
+// These kernels implement generic operations by visiting each feature in
+// the input (since all GeoArrow types including WKB/WKT can be visited).
+// This for conversion to/from WKB and WKT whose readers and writers are
+// visitor-based. Most other operations are probably faster phrased as
+// "cast to GeoArrow in batches then do the thing" (but require these kernels to
+// do the "cast to GeoArrow" step).
+
 struct GeoArrowVisitorKernelPrivate {
   struct GeoArrowVisitor v;
   struct GeoArrowWKBReader wkb_reader;
@@ -124,19 +133,18 @@ static int kernel_push_batch_wkb(struct GeoArrowKernel* kernel, struct ArrowArra
       (struct GeoArrowVisitorKernelPrivate*)kernel->private_data;
 
   private_data->v.error = error;
-  struct ArrowArrayView array_view;
+  struct ArrowArrayView* array_view = &private_data->na_array_view;
   struct GeoArrowBufferView buffer_view;
-  ArrowArrayViewInitFromType(&array_view, NANOARROW_TYPE_BINARY);
   NANOARROW_RETURN_NOT_OK(
-      ArrowArrayViewSetArray(&array_view, array, (struct ArrowError*)error));
+      ArrowArrayViewSetArray(array_view, array, (struct ArrowError*)error));
 
   for (int64_t i = 0; i < array->length; i++) {
-    if (ArrowArrayViewIsNull(&array_view, i)) {
+    if (ArrowArrayViewIsNull(array_view, i)) {
       NANOARROW_RETURN_NOT_OK(private_data->v.feat_start(&private_data->v));
       NANOARROW_RETURN_NOT_OK(private_data->v.null_feat(&private_data->v));
       NANOARROW_RETURN_NOT_OK(private_data->v.feat_end(&private_data->v));
     } else {
-      struct ArrowBufferView value = ArrowArrayViewGetBytesUnsafe(&array_view, i);
+      struct ArrowBufferView value = ArrowArrayViewGetBytesUnsafe(array_view, i);
       buffer_view.data = value.data.as_uint8;
       buffer_view.size_bytes = value.size_bytes;
       NANOARROW_RETURN_NOT_OK(GeoArrowWKBReaderVisit(&private_data->wkb_reader,
@@ -153,19 +161,18 @@ static int kernel_push_batch_wkt(struct GeoArrowKernel* kernel, struct ArrowArra
       (struct GeoArrowVisitorKernelPrivate*)kernel->private_data;
 
   private_data->v.error = error;
-  struct ArrowArrayView array_view;
+  struct ArrowArrayView* array_view = &private_data->na_array_view;
   struct GeoArrowStringView buffer_view;
-  ArrowArrayViewInitFromType(&array_view, NANOARROW_TYPE_STRING);
   NANOARROW_RETURN_NOT_OK(
-      ArrowArrayViewSetArray(&array_view, array, (struct ArrowError*)error));
+      ArrowArrayViewSetArray(array_view, array, (struct ArrowError*)error));
 
   for (int64_t i = 0; i < array->length; i++) {
-    if (ArrowArrayViewIsNull(&array_view, i)) {
+    if (ArrowArrayViewIsNull(array_view, i)) {
       NANOARROW_RETURN_NOT_OK(private_data->v.feat_start(&private_data->v));
       NANOARROW_RETURN_NOT_OK(private_data->v.null_feat(&private_data->v));
       NANOARROW_RETURN_NOT_OK(private_data->v.feat_end(&private_data->v));
     } else {
-      struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&array_view, i);
+      struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(array_view, i);
       buffer_view.data = value.data;
       buffer_view.size_bytes = value.size_bytes;
       NANOARROW_RETURN_NOT_OK(GeoArrowWKTReaderVisit(&private_data->wkt_reader,
@@ -201,29 +208,36 @@ static int kernel_visitor_start(struct GeoArrowKernel* kernel, struct ArrowSchem
   struct GeoArrowSchemaView schema_view;
   NANOARROW_RETURN_NOT_OK(GeoArrowSchemaViewInit(&schema_view, schema, error));
 
-  int result;
   switch (schema_view.type) {
     case GEOARROW_TYPE_UNINITIALIZED:
     case GEOARROW_TYPE_LARGE_WKB:
     case GEOARROW_TYPE_LARGE_WKT:
-      result = EINVAL;
-      break;
+      return EINVAL;
     case GEOARROW_TYPE_WKT:
       kernel->push_batch = &kernel_push_batch_wkt;
-      result = GeoArrowWKTReaderInit(&private_data->wkt_reader);
+      NANOARROW_RETURN_NOT_OK(GeoArrowWKTReaderInit(&private_data->wkt_reader));
+      ArrowArrayViewInitFromType(&private_data->na_array_view, NANOARROW_TYPE_STRING);
       break;
     case GEOARROW_TYPE_WKB:
       kernel->push_batch = &kernel_push_batch_wkb;
-      result = GeoArrowWKBReaderInit(&private_data->wkb_reader);
+      GeoArrowWKBReaderInit(&private_data->wkb_reader);
+      ArrowArrayViewInitFromType(&private_data->na_array_view, NANOARROW_TYPE_BINARY);
       break;
     default:
       kernel->push_batch = &kernel_push_batch_geoarrow;
-      result = GeoArrowArrayViewInitFromType(&private_data->array_view, schema_view.type);
+      NANOARROW_RETURN_NOT_OK(
+          GeoArrowArrayViewInitFromType(&private_data->array_view, schema_view.type));
       break;
   }
 
   return private_data->finish_start(private_data, schema, options, out, error);
 }
+
+// Kernel visit_void_agg
+//
+// This kernel visits every feature and returns a single null item at the end.
+// This is useful for (1) testing and (2) validating well-known text or well-known
+// binary.
 
 static int finish_start_visit_void_agg(struct GeoArrowVisitorKernelPrivate* private_data,
                                        struct ArrowSchema* schema, const char* options,
