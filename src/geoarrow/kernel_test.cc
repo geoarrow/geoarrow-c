@@ -96,7 +96,7 @@ TEST(KernelTest, KernelTestVisitVoidAggWKT) {
   EXPECT_EQ(GeoArrowKernelInit(&kernel, "visit_void_agg", nullptr), GEOARROW_OK);
   EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
   EXPECT_STREQ(schema_out.format, "n");
-  EXPECT_EQ(kernel.push_batch(&kernel, &array_in, nullptr, nullptr), GEOARROW_OK);
+  EXPECT_EQ(kernel.push_batch(&kernel, &array_in, nullptr, &error), GEOARROW_OK);
   EXPECT_EQ(kernel.finish(&kernel, &array_out, &error), GEOARROW_OK);
 
   EXPECT_EQ(array_out.length, 1);
