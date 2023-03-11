@@ -219,6 +219,9 @@ static int kernel_visitor_start(struct GeoArrowKernel* kernel, struct ArrowSchem
       break;
   }
 
+  // TODO: kernel specific
+  NANOARROW_RETURN_NOT_OK(ArrowSchemaInitFromType(out, NANOARROW_TYPE_NA));
+
   return NANOARROW_OK;
 }
 
@@ -233,6 +236,7 @@ static int GeoArrowInitVisitorKernelInternal(struct GeoArrowKernel* kernel,
 
   memset(private_data, 0, sizeof(struct GeoArrowVisitorKernelPrivate));
   private_data->finish_push_batch = &finish_push_batch_do_nothing;
+  GeoArrowVisitorInitVoid(&private_data->v);
   kernel->start = &kernel_visitor_start;
   kernel->push_batch = &kernel_push_batch_void_agg;
   kernel->finish = &kernel_finish_void_agg;
@@ -249,7 +253,7 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
   } else if (strcmp(name, "void_agg") == 0) {
     GeoArrowKernelInitVoidAgg(kernel);
     return NANOARROW_OK;
-  } else if (strcmp(name, "visit_void")) {
+  } else if (strcmp(name, "visit_void_agg") == 0) {
     return GeoArrowInitVisitorKernelInternal(kernel, name);
   }
 
