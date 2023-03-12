@@ -258,9 +258,6 @@ static int finish_start_visit_void_agg(struct GeoArrowVisitorKernelPrivate* priv
 static int finish_start_as_wkt(struct GeoArrowVisitorKernelPrivate* private_data,
                                struct ArrowSchema* schema, const char* options,
                                struct ArrowSchema* out, struct GeoArrowError* error) {
-  NANOARROW_RETURN_NOT_OK(GeoArrowWKTWriterInit(&private_data->wkt_writer));
-  GeoArrowWKTWriterInitVisitor(&private_data->wkt_writer, &private_data->v);
-
   struct ArrowSchema tmp;
   NANOARROW_RETURN_NOT_OK(GeoArrowSchemaInitExtension(&tmp, GEOARROW_TYPE_WKT));
   NANOARROW_RETURN_NOT_OK(GeoArrowSchemaSetMetadataFrom(&tmp, schema));
@@ -281,9 +278,6 @@ static int finish_push_batch_as_wkt(struct GeoArrowVisitorKernelPrivate* private
 static int finish_start_as_wkb(struct GeoArrowVisitorKernelPrivate* private_data,
                                struct ArrowSchema* schema, const char* options,
                                struct ArrowSchema* out, struct GeoArrowError* error) {
-  NANOARROW_RETURN_NOT_OK(GeoArrowWKBWriterInit(&private_data->wkb_writer));
-  GeoArrowWKBWriterInitVisitor(&private_data->wkb_writer, &private_data->v);
-
   struct ArrowSchema tmp;
   NANOARROW_RETURN_NOT_OK(GeoArrowSchemaInitExtension(&tmp, GEOARROW_TYPE_WKB));
   NANOARROW_RETURN_NOT_OK(GeoArrowSchemaSetMetadataFrom(&tmp, schema));
@@ -360,10 +354,14 @@ static int GeoArrowInitVisitorKernelInternal(struct GeoArrowKernel* kernel,
     kernel->finish = &kernel_finish_void;
     private_data->finish_start = &finish_start_as_wkt;
     private_data->finish_push_batch = &finish_push_batch_as_wkt;
+    NANOARROW_RETURN_NOT_OK(GeoArrowWKTWriterInit(&private_data->wkt_writer));
+    GeoArrowWKTWriterInitVisitor(&private_data->wkt_writer, &private_data->v);
   } else if (strcmp(name, "as_wkb") == 0) {
     kernel->finish = &kernel_finish_void;
     private_data->finish_start = &finish_start_as_wkb;
     private_data->finish_push_batch = &finish_push_batch_as_wkb;
+    NANOARROW_RETURN_NOT_OK(GeoArrowWKBWriterInit(&private_data->wkb_writer));
+    GeoArrowWKBWriterInitVisitor(&private_data->wkb_writer, &private_data->v);
   } else if (strcmp(name, "as_geoarrow") == 0) {
     kernel->finish = &kernel_finish_void;
     private_data->finish_start = &finish_start_as_geoarrow;
