@@ -268,6 +268,8 @@ TEST(KernelTest, KernelTestAsWKB) {
   EXPECT_EQ(kernel.release, nullptr);
 
   EXPECT_EQ(array_out1.length, 2);
+  EXPECT_EQ(array_out1.null_count, 1);
+  EXPECT_EQ(array_out1.length, 2);
   EXPECT_EQ(array_out2.null_count, 1);
 
   // Will be different on big-endian
@@ -304,7 +306,8 @@ TEST(KernelTest, KernelTestAsGeoArrow) {
   struct ArrowSchema schema_in;
   struct ArrowSchema schema_out;
   struct ArrowArray array_in;
-  struct ArrowArray array_out;
+  struct ArrowArray array_out1;
+  struct ArrowArray array_out2;
 
   ASSERT_EQ(GeoArrowSchemaInitExtension(&schema_in, GEOARROW_TYPE_WKT), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayInitFromSchema(&array_in, &schema_in, nullptr), GEOARROW_OK);
@@ -325,20 +328,28 @@ TEST(KernelTest, KernelTestAsGeoArrow) {
                          &schema_out, &error),
             GEOARROW_OK);
   EXPECT_STREQ(schema_out.format, "+s");
-  EXPECT_EQ(kernel.push_batch(&kernel, &array_in, &array_out, &error), GEOARROW_OK);
+  EXPECT_EQ(kernel.push_batch(&kernel, &array_in, &array_out1, &error), GEOARROW_OK);
+  EXPECT_EQ(kernel.push_batch(&kernel, &array_in, &array_out2, &error), GEOARROW_OK);
   EXPECT_EQ(kernel.finish(&kernel, nullptr, &error), GEOARROW_OK);
 
   kernel.release(&kernel);
   EXPECT_EQ(kernel.release, nullptr);
 
-  EXPECT_EQ(array_out.length, 2);
-  EXPECT_EQ(array_out.null_count, 1);
+  EXPECT_EQ(array_out1.length, 2);
+  EXPECT_EQ(array_out1.null_count, 1);
+  EXPECT_EQ(array_out2.length, 2);
+  EXPECT_EQ(array_out2.null_count, 1);
 
   struct ArrowArrayView array_view;
   struct ArrowStringView item;
   ASSERT_EQ(ArrowArrayViewInitFromSchema(&array_view, &schema_out, nullptr), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
+  ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array_out1, nullptr), GEOARROW_OK);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[0], 0), 30);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[1], 0), 10);
+  EXPECT_TRUE(ArrowArrayViewIsNull(&array_view, 1));
+
+  ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array_out2, nullptr), GEOARROW_OK);
   EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[0], 0), 30);
   EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[1], 0), 10);
   EXPECT_TRUE(ArrowArrayViewIsNull(&array_view, 1));
@@ -348,5 +359,6 @@ TEST(KernelTest, KernelTestAsGeoArrow) {
   schema_in.release(&schema_in);
   schema_out.release(&schema_out);
   array_in.release(&array_in);
-  array_out.release(&array_out);
+  array_out1.release(&array_out1);
+  array_out2.release(&array_out2);
 }

@@ -314,11 +314,15 @@ static int finish_start_as_geoarrow(struct GeoArrowVisitorKernelPrivate* private
   memset(type_str0, 0, sizeof(type_str0));
   snprintf(type_str0, sizeof(type_str0), "%.*s", (int)type_str.size_bytes, type_str.data);
   long out_type_int = atoi(type_str0);
-
   enum GeoArrowType out_type = (enum GeoArrowType)out_type_int;
-  NANOARROW_RETURN_NOT_OK(GeoArrowBuilderInitFromType(&private_data->builder, out_type));
-  NANOARROW_RETURN_NOT_OK(
-      GeoArrowBuilderInitVisitor(&private_data->builder, &private_data->v));
+
+  if (out_type != private_data->builder.view.schema_view.type) {
+    GeoArrowBuilderReset(&private_data->builder);
+    NANOARROW_RETURN_NOT_OK(
+        GeoArrowBuilderInitFromType(&private_data->builder, out_type));
+    NANOARROW_RETURN_NOT_OK(
+        GeoArrowBuilderInitVisitor(&private_data->builder, &private_data->v));
+  }
 
   struct ArrowSchema tmp;
   NANOARROW_RETURN_NOT_OK(GeoArrowSchemaInitExtension(&tmp, out_type));
@@ -331,7 +335,19 @@ static int finish_start_as_geoarrow(struct GeoArrowVisitorKernelPrivate* private
 static int finish_push_batch_as_geoarrow(
     struct GeoArrowVisitorKernelPrivate* private_data, struct ArrowArray* out,
     struct GeoArrowError* error) {
-  return GeoArrowBuilderFinish(&private_data->builder, out, error);
+  // The GeoArrowBuilder is not currently designed to visit + finish more than
+  // once and until it is, we have to reset + reinit here.
+  int result = GeoArrowBuilderFinish(&private_data->builder, out, error);
+  enum GeoArrowType type = private_data->builder.view.schema_view.type;
+  GeoArrowBuilderReset(&private_data->builder);
+  int result2 = GeoArrowBuilderInitFromType(&private_data->builder, type);
+  if (result != GEOARROW_OK) {
+    return result;
+  } else if (result2 != GEOARROW_OK) {
+    return result2;
+  } else {
+    return GEOARROW_OK;
+  }
 }
 
 static int GeoArrowInitVisitorKernelInternal(struct GeoArrowKernel* kernel,
