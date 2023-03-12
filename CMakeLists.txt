@@ -14,6 +14,7 @@ add_library(
   src/geoarrow/schema.c
   src/geoarrow/schema_view.c
   src/geoarrow/metadata.c
+  src/geoarrow/kernel.c
   src/geoarrow/builder.c
   src/geoarrow/array_view.c
   src/geoarrow/visitor.c
@@ -55,6 +56,7 @@ if (GEOARROW_BUILD_TESTS)
   add_executable(schema_test src/geoarrow/schema_test.cc)
   add_executable(schema_view_test src/geoarrow/schema_view_test.cc)
   add_executable(metadata_test src/geoarrow/metadata_test.cc)
+  add_executable(kernel_test src/geoarrow/kernel_test.cc)
   add_executable(visitor_test src/geoarrow/visitor_test.cc)
   add_executable(wkb_reader_test src/geoarrow/wkb_reader_test.cc)
   add_executable(wkb_writer_test src/geoarrow/wkb_writer_test.cc)
@@ -75,6 +77,7 @@ if (GEOARROW_BUILD_TESTS)
   target_link_libraries(array_view_test geoarrow gtest_main)
   target_link_libraries(schema_test geoarrow arrow_shared gtest_main)
   target_link_libraries(schema_view_test geoarrow gtest_main)
+  target_link_libraries(kernel_test geoarrow gtest_main)
   target_link_libraries(metadata_test geoarrow gtest_main)
   target_link_libraries(visitor_test geoarrow gtest_main)
   target_link_libraries(wkb_reader_test geoarrow gtest_main)
@@ -91,6 +94,7 @@ if (GEOARROW_BUILD_TESTS)
   gtest_discover_tests(array_view_test)
   gtest_discover_tests(schema_test)
   gtest_discover_tests(schema_view_test)
+  gtest_discover_tests(kernel_test)
   gtest_discover_tests(metadata_test)
   gtest_discover_tests(visitor_test)
   gtest_discover_tests(wkb_reader_test)

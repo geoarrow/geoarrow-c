@@ -500,6 +500,25 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
   return GeoArrowSchemaSetMetadataInternal(schema, metadata_view, 1);
 }
 
+GeoArrowErrorCode GeoArrowSchemaSetMetadataFrom(struct ArrowSchema* schema,
+                                                struct ArrowSchema* schema_src) {
+  struct ArrowSchemaView schema_view;
+  NANOARROW_RETURN_NOT_OK(ArrowSchemaViewInit(&schema_view, schema_src, NULL));
+
+  struct ArrowBuffer buffer;
+  NANOARROW_RETURN_NOT_OK(ArrowMetadataBuilderInit(&buffer, schema->metadata));
+  int result = ArrowMetadataBuilderSet(&buffer, ArrowCharView("ARROW:extension:metadata"),
+                                       schema_view.extension_metadata);
+  if (result != GEOARROW_OK) {
+    ArrowBufferReset(&buffer);
+    return result;
+  }
+
+  result = ArrowSchemaSetMetadata(schema, (const char*)buffer.data);
+  ArrowBufferReset(&buffer);
+  return result;
+}
+
 int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n) {
   if (crs.size_bytes == 0) {
     if (n > 0) {

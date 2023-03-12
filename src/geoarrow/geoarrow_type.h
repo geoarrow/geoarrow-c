@@ -300,6 +300,17 @@ struct GeoArrowVisitor {
   void* private_data;
 };
 
+struct GeoArrowKernel {
+  int (*start)(struct GeoArrowKernel* kernel, struct ArrowSchema* schema,
+               const char* options, struct ArrowSchema* out, struct GeoArrowError* error);
+  int (*push_batch)(struct GeoArrowKernel* kernel, struct ArrowArray* array,
+                    struct ArrowArray* out, struct GeoArrowError* error);
+  int (*finish)(struct GeoArrowKernel* kernel, struct ArrowArray* out,
+                struct GeoArrowError* error);
+  void (*release)(struct GeoArrowKernel* kernel);
+  void* private_data;
+};
+
 #ifdef __cplusplus
 }
 #endif
