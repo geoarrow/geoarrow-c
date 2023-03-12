@@ -198,7 +198,8 @@ TEST(KernelTest, KernelTestAsWKT) {
   ASSERT_EQ(GeoArrowSchemaInitExtension(&schema_in, GEOARROW_TYPE_WKT), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayInitFromSchema(&array_in, &schema_in, nullptr), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayStartAppending(&array_in), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("POINT (30 10)")), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("POINT (30 10)")),
+            GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
 
@@ -242,7 +243,8 @@ TEST(KernelTest, KernelTestAsWKB) {
   ASSERT_EQ(GeoArrowSchemaInitExtension(&schema_in, GEOARROW_TYPE_WKT), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayInitFromSchema(&array_in, &schema_in, nullptr), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayStartAppending(&array_in), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("POINT (30 10)")), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("POINT (30 10)")),
+            GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
 
@@ -272,6 +274,60 @@ TEST(KernelTest, KernelTestAsWKB) {
   EXPECT_EQ(std::basic_string<uint8_t>(item.data.as_uint8, item.size_bytes), point);
   EXPECT_TRUE(ArrowArrayViewIsNull(&array_view, 1));
 
+  ArrowArrayViewReset(&array_view);
+  schema_in.release(&schema_in);
+  schema_out.release(&schema_out);
+  array_in.release(&array_in);
+  array_out.release(&array_out);
+}
+
+TEST(KernelTest, KernelTestAsGeoArrow) {
+  struct GeoArrowKernel kernel;
+  struct GeoArrowError error;
+
+  struct ArrowSchema schema_in;
+  struct ArrowSchema schema_out;
+  struct ArrowArray array_in;
+  struct ArrowArray array_out;
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&schema_in, GEOARROW_TYPE_WKT), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array_in, &schema_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array_in), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("POINT (30 10)")),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+
+  struct ArrowBuffer buffer;
+  ASSERT_EQ(ArrowMetadataBuilderInit(&buffer, nullptr), GEOARROW_OK);
+  ASSERT_EQ(
+      ArrowMetadataBuilderAppend(&buffer, ArrowCharView("type"), ArrowCharView("1")),
+      GEOARROW_OK);
+
+  EXPECT_EQ(GeoArrowKernelInit(&kernel, "as_geoarrow", nullptr), GEOARROW_OK);
+  EXPECT_EQ(kernel.start(&kernel, &schema_in, reinterpret_cast<char*>(buffer.data),
+                         &schema_out, &error),
+            GEOARROW_OK);
+  EXPECT_STREQ(schema_out.format, "+s");
+  EXPECT_EQ(kernel.push_batch(&kernel, &array_in, &array_out, &error), GEOARROW_OK);
+  EXPECT_EQ(kernel.finish(&kernel, nullptr, &error), GEOARROW_OK);
+
+  kernel.release(&kernel);
+  EXPECT_EQ(kernel.release, nullptr);
+
+  EXPECT_EQ(array_out.length, 2);
+  EXPECT_EQ(array_out.null_count, 1);
+
+  struct ArrowArrayView array_view;
+  struct ArrowStringView item;
+  ASSERT_EQ(ArrowArrayViewInitFromSchema(&array_view, &schema_out, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[0], 0), 30);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[1], 0), 10);
+  EXPECT_TRUE(ArrowArrayViewIsNull(&array_view, 1));
+
+  ArrowBufferReset(&buffer);
   ArrowArrayViewReset(&array_view);
   schema_in.release(&schema_in);
   schema_out.release(&schema_out);
