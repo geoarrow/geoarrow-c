@@ -39,6 +39,9 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadata(
 GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
     struct ArrowSchema* schema, const struct GeoArrowMetadataView* metadata_view);
 
+GeoArrowErrorCode GeoArrowSchemaSetMetadataFrom(struct ArrowSchema* schema,
+                                                struct ArrowSchema* schema_src);
+
 int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n);
 
 GeoArrowErrorCode GeoArrowArrayViewInitFromType(struct GeoArrowArrayView* array_view,
