@@ -32,7 +32,7 @@ if os.path.exists(bootstrap_py):
 
 vendor_dir = os.path.join(this_dir, 'geoarrow', 'geoarrow')
 vendored_files = os.listdir(vendor_dir)
-geoarrow_c_sources = [f'geoarrow/geoarrow/{f}' for f in vendored_files if f.endswith('.c')]
+sources = [f'geoarrow/geoarrow/{f}' for f in vendored_files if f.endswith('.c')]
 
 setup(
     ext_modules=[
@@ -40,7 +40,7 @@ setup(
             name='geoarrow._lib',
             include_dirs=['geoarrow/geoarrow'],
             language='c',
-            sources=['geoarrow/_lib.pyx'] + geoarrow_c_sources,
+            sources=['geoarrow/_lib.pyx'] + sources,
         )
     ]
 )
