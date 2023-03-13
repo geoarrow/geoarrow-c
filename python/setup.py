@@ -17,7 +17,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import glob
 import os
 import sys
 import subprocess
