@@ -31,7 +31,9 @@ bootstrap_py = os.path.join(this_dir, 'bootstrap.py')
 if os.path.exists(bootstrap_py):
     subprocess.run([sys.executable, bootstrap_py])
 
-geoarrow_c_sources = glob.glob(os.path.join(this_dir, 'geoarrow', 'geoarrow', '*.c'))
+vendor_dir = os.path.join(this_dir, 'geoarrow', 'geoarrow')
+vendored_files = os.listdir(vendor_dir)
+geoarrow_c_sources = [f'geoarrow/geoarrow/{f}' for f in vendored_files if f.endswith('.c')]
 
 setup(
     ext_modules=[
