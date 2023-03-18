@@ -18,7 +18,31 @@
 import pyarrow as pa
 import pytest
 
-import geoarrow as ga
+import geoarrow.lib as lib
 
-def test_some_function():
-    assert ga.some_function()
+def test_schema_holder():
+    holder = lib.SchemaHolder()
+    assert holder.is_valid() is False
+    with pytest.raises(ValueError):
+        holder.release()
+
+    pa.int32()._export_to_c(holder._addr())
+    assert holder.is_valid() is True
+    holder.release()
+
+def test_array_holder():
+    holder = lib.ArrayHolder()
+    assert holder.is_valid() is False
+    with pytest.raises(ValueError):
+        holder.release()
+
+    pa.array([1, 2, 3], pa.int32())._export_to_c(holder._addr())
+    assert holder.is_valid() is True
+    holder.release()
+
+def test_kernel_void():
+    kernel = lib.Kernel(b'void')
+    del kernel
+
+    with pytest.raises(ValueError):
+        lib.Kernel(b'not_a_kernel')

@@ -19,8 +19,8 @@
 
 # geoarrow for Python
 
-Python bindings for nanoarrow. These are in a preliminary state: see open issues
-and tests/test_nanoarrow.py for usage.
+Python bindings for geoarrow-cpp. These are in a preliminary state: see open issues
+and tests/test_geoarrow.py for usage.
 
 ## Installation
 

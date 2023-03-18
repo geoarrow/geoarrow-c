@@ -102,33 +102,9 @@ cdef extern from "geoarrow_type.h":
         void (*release)(GeoArrowKernel* kernel)
         void* private_data
 
-cdef extern from "geoarrow_type_inline.h":
-    GeoArrowGeometryType GeoArrowGeometryTypeFromType(GeoArrowType type)
-    GeoArrowDimensions GeoArrowDimensionsFromType(GeoArrowType type)
-    GeoArrowCoordType GeoArrowCoordTypeFromType(GeoArrowType type)
-    GeoArrowType GeoArrowMakeType(GeoArrowGeometryType geometry_type,
-                                  GeoArrowDimensions dimensions,
-                                  GeoArrowCoordType coord_type)
 
 cdef extern from "geoarrow.h":
     GeoArrowErrorCode GeoArrowKernelInit(GeoArrowKernel* kernel, const char* name, const char* options)
-
-    int GeoArrowSchemaInitExtension(ArrowSchema* schema, GeoArrowType type)
-
-    int GeoArrowSchemaViewInit(GeoArrowSchemaView* schema_view,
-                               ArrowSchema* schema,
-                               GeoArrowError* error)
-
-    int GeoArrowMetadataViewInit(GeoArrowMetadataView* metadata_view,
-                                 GeoArrowStringView metadata,
-                                 GeoArrowError* error)
-
-    int64_t GeoArrowMetadataSerialize(const GeoArrowMetadataView* metadata_view,
-                                      char* out, int64_t n)
-
-    int GeoArrowSchemaSetMetadata(ArrowSchema* schema, const GeoArrowMetadataView* metadata_view)
-
-    int64_t GeoArrowUnescapeCrs(GeoArrowStringView crs, char* out, int64_t n)
 
 
 cdef class SchemaHolder:
@@ -144,6 +120,15 @@ cdef class SchemaHolder:
     def _addr(self):
         return <uintptr_t>&self.c_schema
 
+    def is_valid(self):
+        return self.c_schema.release != NULL
+
+    def release(self):
+        if self.c_schema.release == NULL:
+            raise ValueError('Schema is already released')
+        self.c_schema.release(&self.c_schema)
+
+
 cdef class ArrayHolder:
     cdef ArrowArray c_array
 
@@ -157,26 +142,34 @@ cdef class ArrayHolder:
     def _addr(self):
         return <uintptr_t>&self.c_array
 
+    def is_valid(self):
+        return self.c_array.release != NULL
+
+    def release(self):
+        if self.c_array.release == NULL:
+            raise ValueError('Array is already released')
+        self.c_array.release(&self.c_array)
+
 
 cdef class Kernel:
     cdef GeoArrowKernel c_kernel
 
     def __init__(self, const char* name):
         cdef const char* cname = <const char*>name
-        cdef int result = GeoArrowKernelInit(&self.c_kernel, NULL, NULL)
+        cdef int result = GeoArrowKernelInit(&self.c_kernel, cname, NULL)
         if result != GEOARROW_OK:
-            raise ValueError('GeoArrowKernelInit failed')
+            raise ValueError('GeoArrowKernelInit() failed')
 
     def __del__(self):
         self.c_kernel.release(&self.c_kernel)
 
-    def start(self, SchemaHolder schema, **kwargs):
+    def start(self, SchemaHolder schema, const char* options):
         cdef GeoArrowError error
         out = SchemaHolder()
         cdef int result = self.c_kernel.start(&self.c_kernel, &schema.c_schema,
-                                              NULL, &out.c_schema, &error)
+                                              options, &out.c_schema, &error)
         if result != GEOARROW_OK:
-            raise ValueError('kernel.start() failed')
+            raise ValueError(error.message)
 
     def push_batch(self, ArrayHolder array):
         cdef GeoArrowError error
@@ -184,15 +177,11 @@ cdef class Kernel:
         cdef int result = self.c_kernel.push_batch(&self.c_kernel, &array.c_array,
                                                    &out.c_array, &error)
         if result != GEOARROW_OK:
-            raise ValueError('kernel.push_batch() failed')
+            raise ValueError(error.message)
 
     def finish(self):
         cdef GeoArrowError error
         out = ArrayHolder()
         cdef int result = self.c_kernel.finish(&self.c_kernel, &out.c_array, &error)
         if result != GEOARROW_OK:
-            raise ValueError('kernel.finish() failed')
-
-
-def some_function():
-    return True
+            raise ValueError(error.message)
