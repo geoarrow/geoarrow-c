@@ -171,6 +171,8 @@ cdef class Kernel:
         if result != GEOARROW_OK:
             raise ValueError(error.message)
 
+        return out
+
     def push_batch(self, ArrayHolder array):
         cdef GeoArrowError error
         out = ArrayHolder()
@@ -178,6 +180,8 @@ cdef class Kernel:
                                                    &out.c_array, &error)
         if result != GEOARROW_OK:
             raise ValueError(error.message)
+
+        return out
 
     def finish(self):
         cdef GeoArrowError error
