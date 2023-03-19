@@ -1,2 +1,2 @@
 
-from ._lib import Kernel, SchemaHolder, ArrayHolder
+from ._lib import Kernel, SchemaHolder, ArrayHolder, CVectorType, GeoArrowGeometryType, GeoArrowDimensions, GeoArrowCoordType

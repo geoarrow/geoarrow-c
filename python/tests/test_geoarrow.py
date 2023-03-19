@@ -19,6 +19,7 @@ import pyarrow as pa
 import pytest
 
 import geoarrow.lib as lib
+import geoarrow._lib as _lib
 
 def test_schema_holder():
     holder = lib.SchemaHolder()
@@ -39,6 +40,13 @@ def test_array_holder():
     pa.array([1, 2, 3], pa.int32())._export_to_c(holder._addr())
     assert holder.is_valid() is True
     holder.release()
+
+def test_c_vector_type():
+    type_obj = lib.CVectorType.Make(
+        _lib.GEOARROW_GEOMETRY_TYPE_POINT,
+        _lib.GEOARROW_DIMENSIONS_XY,
+        _lib.GEOARROW_COORD_TYPE_SEPARATE
+    )
 
 def test_kernel_void():
     kernel = lib.Kernel(b'void')

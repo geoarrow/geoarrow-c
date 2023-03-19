@@ -4,6 +4,7 @@
 """Low-level geoarrow Python bindings."""
 
 from libc.stdint cimport uint8_t, int64_t, uintptr_t
+from libcpp.string cimport string
 
 cdef extern from "geoarrow_type.h":
     struct ArrowSchema:
@@ -109,7 +110,18 @@ cdef extern from "geoarrow.h":
 
 cdef extern from "geoarrow.hpp" namespace "geoarrow":
     cdef cppclass VectorType:
-        pass
+        VectorType() except +
+        VectorType(VectorType x) except +
+
+        @staticmethod
+        VectorType Make0 "Make"(GeoArrowGeometryType geometry_type,
+                                GeoArrowDimensions dimensions,
+                                GeoArrowCoordType coord_type,
+                                string metadata)
+
+        @staticmethod
+        VectorType Make1 "Make"(ArrowSchema* schema)
+
 
 cdef class SchemaHolder:
     cdef ArrowSchema c_schema
@@ -154,6 +166,29 @@ cdef class ArrayHolder:
             raise ValueError('Array is already released')
         self.c_array.release(&self.c_array)
 
+
+cdef class CVectorType:
+    cdef VectorType c_vector_type
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def Make(GeoArrowGeometryType geometry_type,
+             GeoArrowDimensions dimensions,
+             GeoArrowCoordType coord_type,
+             metadata=b''):
+        cdef VectorType ctype = VectorType.Make0(geometry_type, dimensions, coord_type, metadata)
+        out = CVectorType()
+        out.c_vector_type = VectorType(ctype)
+        return out
+
+    @staticmethod
+    def FromSchema(SchemaHolder schema):
+        cdef VectorType ctype = VectorType.Make1(&schema.c_schema)
+        out = CVectorType()
+        out.c_vector_type = VectorType(ctype)
+        return out
 
 cdef class Kernel:
     cdef GeoArrowKernel c_kernel
