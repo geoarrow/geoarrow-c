@@ -17,7 +17,7 @@
 # under the License.
 
 geoarrow/geoarrow
-geoarrow/_lib.c
+geoarrow/_lib.cpp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

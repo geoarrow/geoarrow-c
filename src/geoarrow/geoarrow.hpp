@@ -5,6 +5,7 @@
 #include <cerrno>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "geoarrow.h"
 

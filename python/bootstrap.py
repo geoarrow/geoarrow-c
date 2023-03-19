@@ -29,6 +29,7 @@ if __name__ == '__main__':
 
     vendor_source_files = glob.glob(os.path.join(vendor_source_dir, '*.c'))
     vendor_source_files += glob.glob(os.path.join(vendor_source_dir, '*.h'))
+    vendor_source_files += glob.glob(os.path.join(vendor_source_dir, 'geoarrow.hpp'))
 
     os.mkdir(vendor_dir)
     for source_file in vendor_source_files:

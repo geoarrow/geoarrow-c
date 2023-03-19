@@ -21,6 +21,7 @@ import os
 import sys
 import subprocess
 from setuptools import Extension, setup
+from setuptools.command.build_ext import build_ext
 
 # Run bootstrap.py to run cmake generating a fresh bundle based on this
 # checkout or copy from ../dist if the caller doesn't have cmake available.
@@ -34,13 +35,30 @@ vendor_dir = os.path.join(this_dir, 'geoarrow', 'geoarrow')
 vendored_files = os.listdir(vendor_dir)
 sources = [f'geoarrow/geoarrow/{f}' for f in vendored_files if f.endswith('.c')]
 
+# Workdaround because setuptools has no easy way to mix C and C++ sources
+# if extra flags are required (e.g., -std=c++11 like we need here).
+class build_ext_subclass(build_ext):
+    def build_extensions(self):
+        original__compile = self.compiler._compile
+        def new__compile(obj, src, ext, cc_args, extra_postargs, pp_opts):
+            if src.endswith('.c'):
+                extra_postargs = [s for s in extra_postargs if s != "-std=c++11"]
+            return original__compile(obj, src, ext, cc_args, extra_postargs, pp_opts)
+        self.compiler._compile = new__compile
+        try:
+            build_ext.build_extensions(self)
+        finally:
+            del self.compiler._compile
+
 setup(
     ext_modules=[
         Extension(
             name='geoarrow._lib',
             include_dirs=['geoarrow/geoarrow'],
-            language='c',
+            language='c++',
             sources=['geoarrow/_lib.pyx'] + sources,
+            extra_compile_args = ['-std=c++11'],
         )
-    ]
+    ],
+    cmdclass = {"build_ext": build_ext_subclass}
 )

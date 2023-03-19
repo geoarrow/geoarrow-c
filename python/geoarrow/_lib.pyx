@@ -107,6 +107,10 @@ cdef extern from "geoarrow.h":
     GeoArrowErrorCode GeoArrowKernelInit(GeoArrowKernel* kernel, const char* name, const char* options)
 
 
+cdef extern from "geoarrow.hpp" namespace "geoarrow":
+    cdef cppclass VectorType:
+        pass
+
 cdef class SchemaHolder:
     cdef ArrowSchema c_schema
 
