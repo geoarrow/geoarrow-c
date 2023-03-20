@@ -113,7 +113,7 @@ cdef extern from "geoarrow.h":
 cdef extern from "geoarrow.hpp" namespace "geoarrow":
     cdef cppclass VectorType:
         VectorType() except +
-        VectorType(VectorType x) except +
+        VectorType(const VectorType& x) except +
 
         bool valid()
         string error()
@@ -127,13 +127,20 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
         GeoArrowEdgeType edge_type()
         GeoArrowCrsType crs_type()
         string crs()
+
+        VectorType WithGeometryType(GeoArrowGeometryType geometry_type)
+        VectorType WithCoordType(GeoArrowCoordType coord_type)
+        VectorType WithDimensions(GeoArrowDimensions dimensions)
+        VectorType WithEdgeType(GeoArrowEdgeType edge_type)
+        VectorType WithCrs(const string& crs, GeoArrowCrsType crs_type)
+
         GeoArrowErrorCode InitSchema(ArrowSchema* schema)
 
         @staticmethod
         VectorType Make0 "Make"(GeoArrowGeometryType geometry_type,
                                 GeoArrowDimensions dimensions,
                                 GeoArrowCoordType coord_type,
-                                string metadata)
+                                const string& metadata)
 
         @staticmethod
         VectorType Make1 "Make"(ArrowSchema* schema)
@@ -192,7 +199,7 @@ cdef class CVectorType:
     @staticmethod
     cdef _from_ctype(VectorType* c_vector_type):
         if not c_vector_type.valid():
-            raise ValueError(type.error().decode("UTF-8"))
+            raise ValueError(c_vector_type.error().decode("UTF-8"))
         out = CVectorType()
         out.c_vector_type = dereference(c_vector_type)
         return out
@@ -233,6 +240,43 @@ cdef class CVectorType:
     def crs(self):
         return self.c_vector_type.crs()
 
+    def with_geometry_type(self, GeoArrowGeometryType geometry_type):
+        cdef VectorType ctype = self.c_vector_type.WithGeometryType(geometry_type)
+        return CVectorType._from_ctype(&ctype)
+
+    def with_dimensions(self, GeoArrowDimensions dimensions):
+        cdef VectorType ctype = self.c_vector_type.WithDimensions(dimensions)
+        return CVectorType._from_ctype(&ctype)
+
+    def with_coord_type(self, GeoArrowCoordType coord_type):
+        cdef VectorType ctype = self.c_vector_type.WithCoordType(coord_type)
+        return CVectorType._from_ctype(&ctype)
+
+    def with_edge_type(self, GeoArrowEdgeType edge_type):
+        cdef VectorType ctype = self.c_vector_type.WithEdgeType(edge_type)
+        return CVectorType._from_ctype(&ctype)
+
+    def with_crs(self, string crs, GeoArrowCrsType crs_type):
+        cdef VectorType ctype = self.c_vector_type.WithCrs(crs, crs_type)
+        return CVectorType._from_ctype(&ctype)
+
+    def __eq__(self, other):
+        if not isinstance(other, CVectorType):
+            return False
+        if self.id != other.id or self.edge_type != other.edge_type:
+            return False
+        if self.crs_type == other.crs_type and self.crs != other.crs:
+            return False
+
+        return self.crs_type == other.crs_type
+
+    def to_schema(self):
+        out = SchemaHolder()
+        cdef int result = self.c_vector_type.InitSchema(&out.c_schema)
+        if result != GEOARROW_OK:
+            raise ValueError("InitSchema() failed")
+        return out
+
     @staticmethod
     def Make(GeoArrowGeometryType geometry_type,
              GeoArrowDimensions dimensions,
@@ -244,9 +288,7 @@ cdef class CVectorType:
     @staticmethod
     def FromSchema(SchemaHolder schema):
         cdef VectorType ctype = VectorType.Make1(&schema.c_schema)
-        out = CVectorType()
-        out.c_vector_type = VectorType(ctype)
-        return out
+        return CVectorType._from_ctype(&ctype)
 
 cdef class Kernel:
     cdef GeoArrowKernel c_kernel
