@@ -4,7 +4,9 @@
 """Low-level geoarrow Python bindings."""
 
 from libc.stdint cimport uint8_t, int64_t, uintptr_t
+from libcpp cimport bool
 from libcpp.string cimport string
+from cython.operator import dereference
 
 cdef extern from "geoarrow_type.h":
     struct ArrowSchema:
@@ -113,6 +115,20 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
         VectorType() except +
         VectorType(VectorType x) except +
 
+        bool valid()
+        string error()
+        string extension_name()
+        string extension_metadata()
+        GeoArrowType id()
+        GeoArrowGeometryType geometry_type()
+        GeoArrowDimensions dimensions()
+        GeoArrowCoordType coord_type()
+        int num_dimensions()
+        GeoArrowEdgeType edge_type()
+        GeoArrowCrsType crs_type()
+        string crs()
+        GeoArrowErrorCode InitSchema(ArrowSchema* schema)
+
         @staticmethod
         VectorType Make0 "Make"(GeoArrowGeometryType geometry_type,
                                 GeoArrowDimensions dimensions,
@@ -174,14 +190,56 @@ cdef class CVectorType:
         pass
 
     @staticmethod
+    cdef _from_ctype(VectorType* c_vector_type):
+        if not c_vector_type.valid():
+            raise ValueError(type.error().decode("UTF-8"))
+        out = CVectorType()
+        out.c_vector_type = dereference(c_vector_type)
+        return out
+
+    @property
+    def id(self):
+        return self.c_vector_type.id()
+
+    @property
+    def geometry_type(self):
+        return self.c_vector_type.geometry_type()
+
+    @property
+    def dimensions(self):
+        return self.c_vector_type.dimensions()
+
+    @property
+    def coord_type(self):
+        return self.c_vector_type.coord_type()
+
+    @property
+    def extension_name(self):
+        return self.c_vector_type.extension_name().decode("UTF-8")
+
+    @property
+    def extension_metadata(self):
+        return self.c_vector_type.extension_metadata()
+
+    @property
+    def edge_type(self):
+        return self.c_vector_type.edge_type()
+
+    @property
+    def crs_type(self):
+        return self.c_vector_type.crs_type()
+
+    @property
+    def crs(self):
+        return self.c_vector_type.crs()
+
+    @staticmethod
     def Make(GeoArrowGeometryType geometry_type,
              GeoArrowDimensions dimensions,
              GeoArrowCoordType coord_type,
              metadata=b''):
         cdef VectorType ctype = VectorType.Make0(geometry_type, dimensions, coord_type, metadata)
-        out = CVectorType()
-        out.c_vector_type = VectorType(ctype)
-        return out
+        return CVectorType._from_ctype(&ctype)
 
     @staticmethod
     def FromSchema(SchemaHolder schema):

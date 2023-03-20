@@ -48,6 +48,10 @@ def test_c_vector_type():
         _lib.GEOARROW_COORD_TYPE_SEPARATE
     )
 
+    assert type_obj.geometry_type == _lib.GEOARROW_GEOMETRY_TYPE_POINT
+    assert type_obj.dimensions == _lib.GEOARROW_DIMENSIONS_XY
+    assert type_obj.coord_type == _lib.GEOARROW_COORD_TYPE_SEPARATE
+
 def test_kernel_void():
     kernel = lib.Kernel(b'void')
 
