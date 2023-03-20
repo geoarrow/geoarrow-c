@@ -6,7 +6,6 @@
 from libc.stdint cimport uint8_t, int64_t, uintptr_t
 from libcpp cimport bool
 from libcpp.string cimport string
-from cython.operator import dereference
 
 cdef extern from "geoarrow_type.h":
     struct ArrowSchema:
@@ -114,6 +113,7 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
     cdef cppclass VectorType:
         VectorType() except +
         VectorType(const VectorType& x) except +
+        void MoveFrom(VectorType* other)
 
         bool valid()
         string error()
@@ -197,11 +197,11 @@ cdef class CVectorType:
         pass
 
     @staticmethod
-    cdef _from_ctype(VectorType* c_vector_type):
+    cdef _move_from_ctype(VectorType* c_vector_type):
         if not c_vector_type.valid():
             raise ValueError(c_vector_type.error().decode("UTF-8"))
         out = CVectorType()
-        out.c_vector_type = dereference(c_vector_type)
+        out.c_vector_type.MoveFrom(c_vector_type)
         return out
 
     @property
@@ -242,23 +242,23 @@ cdef class CVectorType:
 
     def with_geometry_type(self, GeoArrowGeometryType geometry_type):
         cdef VectorType ctype = self.c_vector_type.WithGeometryType(geometry_type)
-        return CVectorType._from_ctype(&ctype)
+        return CVectorType._move_from_ctype(&ctype)
 
     def with_dimensions(self, GeoArrowDimensions dimensions):
         cdef VectorType ctype = self.c_vector_type.WithDimensions(dimensions)
-        return CVectorType._from_ctype(&ctype)
+        return CVectorType._move_from_ctype(&ctype)
 
     def with_coord_type(self, GeoArrowCoordType coord_type):
         cdef VectorType ctype = self.c_vector_type.WithCoordType(coord_type)
-        return CVectorType._from_ctype(&ctype)
+        return CVectorType._move_from_ctype(&ctype)
 
     def with_edge_type(self, GeoArrowEdgeType edge_type):
         cdef VectorType ctype = self.c_vector_type.WithEdgeType(edge_type)
-        return CVectorType._from_ctype(&ctype)
+        return CVectorType._move_from_ctype(&ctype)
 
     def with_crs(self, string crs, GeoArrowCrsType crs_type):
         cdef VectorType ctype = self.c_vector_type.WithCrs(crs, crs_type)
-        return CVectorType._from_ctype(&ctype)
+        return CVectorType._move_from_ctype(&ctype)
 
     def __eq__(self, other):
         if not isinstance(other, CVectorType):
@@ -283,12 +283,12 @@ cdef class CVectorType:
              GeoArrowCoordType coord_type,
              metadata=b''):
         cdef VectorType ctype = VectorType.Make0(geometry_type, dimensions, coord_type, metadata)
-        return CVectorType._from_ctype(&ctype)
+        return CVectorType._move_from_ctype(&ctype)
 
     @staticmethod
     def FromSchema(SchemaHolder schema):
         cdef VectorType ctype = VectorType.Make1(&schema.c_schema)
-        return CVectorType._from_ctype(&ctype)
+        return CVectorType._move_from_ctype(&ctype)
 
 cdef class Kernel:
     cdef GeoArrowKernel c_kernel
