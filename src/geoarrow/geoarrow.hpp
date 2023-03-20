@@ -16,8 +16,36 @@ class VectorType {
   VectorType() : VectorType("") {}
 
   VectorType(const VectorType& other)
-      : VectorType(other.schema_view_, other.metadata_view_) {
-    error_ = other.error_;
+      : schema_view_(other.schema_view_),
+        metadata_view_(other.metadata_view_),
+        crs_(other.crs_),
+        error_(other.error_) {
+    metadata_view_.crs.data = crs_.data();
+  }
+
+  VectorType& operator=(VectorType other) {
+    this->schema_view_ = other.schema_view_;
+    this->metadata_view_ = other.metadata_view_;
+    this->crs_ = other.crs_;
+    this->error_ = other.error_;
+    this->metadata_view_.crs.data = this->crs_.data();
+    return *this;
+  }
+
+  VectorType(const VectorType&& other)
+      : schema_view_(other.schema_view_),
+        metadata_view_(other.metadata_view_),
+        crs_(std::move(other.crs_)),
+        error_(std::move(other.error_)) {
+    metadata_view_.crs.data = crs_.data();
+  }
+
+  void MoveFrom(VectorType* other) {
+    schema_view_ = other->schema_view_;
+    metadata_view_ = other->metadata_view_;
+    error_ = std::move(other->error_);
+    crs_ = std::move(other->crs_);
+    metadata_view_.crs.data = crs_.data();
   }
 
   /// \brief Make a VectorType from a geometry type, dimensions, and coordinate type.
