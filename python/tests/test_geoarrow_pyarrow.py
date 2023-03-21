@@ -47,6 +47,32 @@ def test_vector_type_with():
     type_spherical = type_obj.with_edge_type(ga.EdgeType.SPHERICAL)
     assert type_spherical.edge_type == ga.EdgeType.SPHERICAL
 
-    type_crs = type_obj.with_crs(b'EPSG:1234', ga.CrsType.UNKNOWN)
+    type_crs = type_obj.with_crs('EPSG:1234', ga.CrsType.UNKNOWN)
     assert type_crs.crs_type == ga.CrsType.UNKNOWN
-    assert type_crs.crs == b'EPSG:1234'
+    assert type_crs.crs == 'EPSG:1234'
+
+def test_constructors():
+    assert ga.wkb().extension_name == 'geoarrow.wkb'
+    assert ga.large_wkb().extension_name == 'geoarrow.wkb'
+    assert ga.wkt().extension_name == 'geoarrow.wkt'
+    assert ga.large_wkt().extension_name == 'geoarrow.wkt'
+    assert ga.point().extension_name == 'geoarrow.point'
+    assert ga.linestring().extension_name == 'geoarrow.linestring'
+    assert ga.polygon().extension_name == 'geoarrow.polygon'
+    assert ga.multipoint().extension_name == 'geoarrow.multipoint'
+    assert ga.multilinestring().extension_name == 'geoarrow.multilinestring'
+    assert ga.multipolygon().extension_name == 'geoarrow.multipolygon'
+
+    generic = ga.vector_type(
+        ga.GeometryType.POINT,
+        ga.Dimensions.XYZ,
+        ga.CoordType.INTERLEAVED,
+        ga.EdgeType.SPHERICAL,
+        'EPSG:1234'
+    )
+    assert generic.geometry_type == ga.GeometryType.POINT
+    assert generic.dimensions == ga.Dimensions.XYZ
+    assert generic.coord_type == ga.CoordType.INTERLEAVED
+    assert generic.edge_type == ga.EdgeType.SPHERICAL
+    assert generic.crs == 'EPSG:1234'
+    assert generic.crs_type == ga.CrsType.UNKNOWN
