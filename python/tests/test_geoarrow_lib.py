@@ -27,7 +27,7 @@ def test_array_holder():
 
 def test_c_vector_type():
     type_obj = lib.CVectorType.Make(
-        lib.GeometryType.POINT,
+        ga.GeometryType.POINT,
         ga.Dimensions.XY,
         ga.CoordType.SEPARATE
     )
@@ -37,7 +37,7 @@ def test_c_vector_type():
     assert type_obj.coord_type == ga.CoordType.SEPARATE
 
     schema = type_obj.to_schema()
-    type_obj2 = lib.CVectorType.FromSchema(schema)
+    type_obj2 = lib.CVectorType.FromExtension(schema)
     assert type_obj2 == type_obj
 
     pa_type = pa.DataType._import_from_c(schema._addr())
@@ -48,7 +48,15 @@ def test_c_vector_type():
 
     # Schema is now released, so we get an error
     with pytest.raises(ValueError):
-        lib.CVectorType.FromSchema(schema)
+        lib.CVectorType.FromExtension(schema)
+
+    schema_storage = lib.SchemaHolder()
+    pa_type_expected._export_to_c(schema_storage._addr())
+    type_obj3 = lib.CVectorType.FromStorage(schema_storage, b'geoarrow.point', b'')
+
+    assert type_obj3.geometry_type == ga.GeometryType.POINT
+    assert type_obj3.dimensions == ga.Dimensions.XY
+    assert type_obj3.coord_type == ga.CoordType.SEPARATE
 
 def test_c_vector_type_with():
     type_obj = lib.CVectorType.Make(

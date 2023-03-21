@@ -145,6 +145,10 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
         @staticmethod
         VectorType Make1 "Make"(ArrowSchema* schema)
 
+        @staticmethod
+        VectorType Make2 "Make"(ArrowSchema* schema, const string& extension_name,
+                                const string& metadata)
+
 
 cdef class SchemaHolder:
     cdef ArrowSchema c_schema
@@ -286,8 +290,13 @@ cdef class CVectorType:
         return CVectorType._move_from_ctype(&ctype)
 
     @staticmethod
-    def FromSchema(SchemaHolder schema):
+    def FromExtension(SchemaHolder schema):
         cdef VectorType ctype = VectorType.Make1(&schema.c_schema)
+        return CVectorType._move_from_ctype(&ctype)
+
+    @staticmethod
+    def FromStorage(SchemaHolder schema, string extension_name, string extension_metadata):
+        cdef VectorType ctype = VectorType.Make2(&schema.c_schema, extension_name, extension_metadata)
         return CVectorType._move_from_ctype(&ctype)
 
 cdef class Kernel:
