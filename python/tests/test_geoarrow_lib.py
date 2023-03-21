@@ -2,8 +2,8 @@
 import pyarrow as pa
 import pytest
 
+import geoarrow as ga
 import geoarrow.lib as lib
-import geoarrow._lib as _lib
 
 def test_schema_holder():
     holder = lib.SchemaHolder()
@@ -28,13 +28,13 @@ def test_array_holder():
 def test_c_vector_type():
     type_obj = lib.CVectorType.Make(
         lib.GeometryType.POINT,
-        _lib.GEOARROW_DIMENSIONS_XY,
-        _lib.GEOARROW_COORD_TYPE_SEPARATE
+        ga.Dimensions.XY,
+        ga.CoordType.SEPARATE
     )
 
-    assert type_obj.geometry_type == _lib.GEOARROW_GEOMETRY_TYPE_POINT
-    assert type_obj.dimensions == _lib.GEOARROW_DIMENSIONS_XY
-    assert type_obj.coord_type == _lib.GEOARROW_COORD_TYPE_SEPARATE
+    assert type_obj.geometry_type == ga.GeometryType.POINT
+    assert type_obj.dimensions == ga.Dimensions.XY
+    assert type_obj.coord_type == ga.CoordType.SEPARATE
 
     schema = type_obj.to_schema()
     type_obj2 = lib.CVectorType.FromSchema(schema)
@@ -52,25 +52,25 @@ def test_c_vector_type():
 
 def test_c_vector_type_with():
     type_obj = lib.CVectorType.Make(
-        _lib.GEOARROW_GEOMETRY_TYPE_POINT,
-        _lib.GEOARROW_DIMENSIONS_XY,
-        _lib.GEOARROW_COORD_TYPE_SEPARATE
+        lib.GeometryType.POINT,
+        ga.Dimensions.XY,
+        ga.CoordType.SEPARATE
     )
 
-    type_linestring = type_obj.with_geometry_type(_lib.GEOARROW_GEOMETRY_TYPE_LINESTRING)
-    assert type_linestring.geometry_type == _lib.GEOARROW_GEOMETRY_TYPE_LINESTRING
+    type_linestring = type_obj.with_geometry_type(ga.GeometryType.LINESTRING)
+    assert type_linestring.geometry_type == ga.GeometryType.LINESTRING
 
-    type_xyz = type_obj.with_dimensions(_lib.GEOARROW_DIMENSIONS_XYZ)
-    assert type_xyz.dimensions == _lib.GEOARROW_DIMENSIONS_XYZ
+    type_xyz = type_obj.with_dimensions(ga.Dimensions.XYZ)
+    assert type_xyz.dimensions == ga.Dimensions.XYZ
 
-    type_interleaved = type_obj.with_coord_type(_lib.GEOARROW_COORD_TYPE_INTERLEAVED)
-    assert type_interleaved.coord_type == _lib.GEOARROW_COORD_TYPE_INTERLEAVED
+    type_interleaved = type_obj.with_coord_type(ga.CoordType.INTERLEAVED)
+    assert type_interleaved.coord_type == ga.CoordType.INTERLEAVED
 
-    type_spherical = type_obj.with_edge_type(_lib.GEOARROW_EDGE_TYPE_SPHERICAL)
-    assert type_spherical.edge_type == _lib.GEOARROW_EDGE_TYPE_SPHERICAL
+    type_spherical = type_obj.with_edge_type(ga.EdgeType.SPHERICAL)
+    assert type_spherical.edge_type == ga.EdgeType.SPHERICAL
 
-    type_crs = type_obj.with_crs(b'EPSG:1234', _lib.GEOARROW_CRS_TYPE_UNKNOWN)
-    assert type_crs.crs_type == _lib.GEOARROW_CRS_TYPE_UNKNOWN
+    type_crs = type_obj.with_crs(b'EPSG:1234', ga.CrsType.UNKNOWN)
+    assert type_crs.crs_type == ga.CrsType.UNKNOWN
     assert type_crs.crs == b'EPSG:1234'
 
 def test_kernel_void():
