@@ -5,6 +5,62 @@ from . import lib
 from .lib import GeometryType, Dimensions, CoordType, EdgeType, CrsType
 
 
+class VectorScalar(pa.ExtensionScalar):
+    pass
+
+
+class PointScalar(VectorScalar):
+    pass
+
+
+class LinestringScalar(VectorScalar):
+    pass
+
+
+class PolygonScalar(VectorScalar):
+    pass
+
+
+class MultiPointScalar(VectorScalar):
+    pass
+
+
+class MultiLinestringScalar(VectorScalar):
+    pass
+
+
+class MultiPolygonScalar(VectorScalar):
+    pass
+
+
+class VectorArray(pa.ExtensionArray):
+    pass
+
+
+class PointArray(VectorArray):
+    pass
+
+
+class LinestringArray(VectorArray):
+    pass
+
+
+class PolygonArray(VectorArray):
+    pass
+
+
+class MultiPointArray(VectorArray):
+    pass
+
+
+class MultiLinestringArray(VectorArray):
+    pass
+
+
+class MultiPolygonArray(VectorArray):
+    pass
+
+
 class VectorType(pa.ExtensionType):
     _extension_name = None
 
@@ -35,6 +91,12 @@ class VectorType(pa.ExtensionType):
         )
 
         return cls(c_vector_type)
+
+    def __arrow_ext_class__(self):
+        return _array_cls_from_name(self.extension_name)
+
+    def __arrow_ext_scalar_class__(self):
+        return _scalar_cls_from_name(self.extension_name)
 
     @property
     def geometry_type(self):
@@ -143,6 +205,48 @@ def _type_cls_from_name(name):
     else:
         raise ValueError(f'Expected valid extension name but got "{name}"')
 
+def _array_cls_from_name(name):
+    if name == 'geoarrow.wkb':
+        return VectorArray
+    elif name == 'geoarrow.wkt':
+        return VectorArray
+    elif name == 'geoarrow.point':
+        return PointArray
+    elif name == 'geoarrow.linestring':
+        return LinestringArray
+    elif name == 'geoarrow.polygon':
+        return PolygonArray
+    elif name == 'geoarrow.multipoint':
+        return MultiPointArray
+    elif name == 'geoarrow.multilinestring':
+        return MultiLinestringArray
+    elif name == 'geoarrow.multipolygon':
+        return MultiPolygonArray
+    else:
+        raise ValueError(f'Expected valid extension name but got "{name}"')
+
+
+def _scalar_cls_from_name(name):
+    if name == 'geoarrow.wkb':
+        return VectorScalar
+    elif name == 'geoarrow.wkt':
+        return VectorScalar
+    elif name == 'geoarrow.point':
+        return PointScalar
+    elif name == 'geoarrow.linestring':
+        return LinestringScalar
+    elif name == 'geoarrow.polygon':
+        return PolygonScalar
+    elif name == 'geoarrow.multipoint':
+        return MultiPointScalar
+    elif name == 'geoarrow.multilinestring':
+        return MultiLinestringScalar
+    elif name == 'geoarrow.multipolygon':
+        return MultiPolygonScalar
+    else:
+        raise ValueError(f'Expected valid extension name but got "{name}"')
+
+
 def _ctype_to_extension_type(ctype):
     cls = _type_cls_from_name(ctype.extension_name)
     return cls(ctype)
@@ -152,35 +256,45 @@ def _make_default(geometry_type, cls):
     ctype = lib.CVectorType.Make(geometry_type, Dimensions.XY, CoordType.SEPARATE)
     return cls(ctype)
 
+
 def wkb() -> WkbType:
     return WkbType.__arrow_ext_deserialize__(pa.binary(), b'')
+
 
 def large_wkb() ->WkbType:
     return WkbType.__arrow_ext_deserialize__(pa.large_binary(), b'')
 
+
 def wkt() -> WktType:
     return WktType.__arrow_ext_deserialize__(pa.utf8(), b'')
+
 
 def large_wkt() -> WktType:
     return WktType.__arrow_ext_deserialize__(pa.large_utf8(), b'')
 
+
 def point() -> PointType:
     return _make_default(GeometryType.POINT, PointType)
+
 
 def linestring() -> PointType:
     return _make_default(GeometryType.LINESTRING, LinestringType)
 
+
 def polygon() -> PolygonType:
     return _make_default(GeometryType.POLYGON, PolygonType)
 
+
 def multipoint() -> MultiPointType:
     return _make_default(GeometryType.MULTIPOINT, MultiPointType)
+
 
 def multilinestring() -> MultiLinestringType:
     return _make_default(GeometryType.MULTILINESTRING, MultiLinestringType)
 
 def multipolygon() -> MultiPolygonType:
     return _make_default(GeometryType.MULTIPOLYGON, MultiPolygonType)
+
 
 def vector_type(geometry_type,
                 dimensions=Dimensions.XY,
