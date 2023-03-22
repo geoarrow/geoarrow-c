@@ -82,7 +82,7 @@ def test_c_vector_type_with():
     assert type_crs.crs == b'EPSG:1234'
 
 def test_kernel_void():
-    kernel = lib.Kernel(b'void')
+    kernel = lib.CKernel(b'void')
 
     schema_in = lib.SchemaHolder()
     pa.int32()._export_to_c(schema_in._addr())
@@ -99,4 +99,4 @@ def test_kernel_void():
 
 def test_kernel_init_error():
     with pytest.raises(ValueError):
-        lib.Kernel(b'not_a_kernel')
+        lib.CKernel(b'not_a_kernel')

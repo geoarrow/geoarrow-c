@@ -34,7 +34,11 @@ class MultiPolygonScalar(VectorScalar):
 
 
 class VectorArray(pa.ExtensionArray):
-    pass
+
+    def _export_to_holder(self):
+        array = lib.ArrayHolder()
+        self._export_to_c(array._addr())
+        return array
 
 
 class PointArray(VectorArray):
@@ -304,3 +308,59 @@ def vector_type(geometry_type,
     ctype = lib.CVectorType.Make(geometry_type, dimensions, coord_type)
     cls = _type_cls_from_name(ctype.extension_name)
     return cls(ctype).with_edge_type(edge_type).with_crs(crs, crs_type)
+
+
+class Kernel:
+
+    def __init__(self, name, type_in, **kwargs) -> None:
+        if not isinstance(type_in, pa.DataType):
+            raise TypeError('Expected `type_in` to inherit from pyarrow.DataType')
+
+        self._kernel = lib.CKernel(name.encode('UTF-8'))
+
+        type_in_schema = lib.SchemaHolder()
+        type_in._export_to_c(type_in_schema._addr())
+
+        options = Kernel._pack_options(kwargs)
+
+        type_out_schema = self._kernel.start(type_in_schema, options)
+        self._type_out = pa.DataType._import_from_c(type_out_schema._addr())
+        self._type_in = type_in
+
+    def push(self, arr):
+        pa_array_in = pa.array(arr, self._type_in)
+        array_in = lib.ArrayHolder()
+        pa_array_in._export_to_c(array_in._addr())
+        array_out = self._kernel.push_batch(array_in)
+        return pa.Array._import_from_c(array_out._addr(), self._type_out)
+
+    @staticmethod
+    def void(type_in):
+        return Kernel('void', type_in)
+
+    @staticmethod
+    def void_agg(type_in):
+        return Kernel('void_agg', type_in)
+
+    @staticmethod
+    def visit_void_agg(type_in):
+        return Kernel('visit_void_agg', type_in)
+
+    @staticmethod
+    def as_wkt(type_in):
+        return Kernel('as_wkt', type_in)
+
+    @staticmethod
+    def as_wkb(type_in):
+        return Kernel('as_wkb', type_in)
+
+    @staticmethod
+    def as_geoarrow(type_in, type_id):
+        return Kernel('as_geoarrow', type_in, type=type_id)
+
+    @staticmethod
+    def _pack_options(options):
+        if options:
+            raise NotImplemented()
+        else:
+            return b''

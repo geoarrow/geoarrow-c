@@ -299,7 +299,7 @@ cdef class CVectorType:
         cdef VectorType ctype = VectorType.Make2(&schema.c_schema, extension_name, extension_metadata)
         return CVectorType._move_from_ctype(&ctype)
 
-cdef class Kernel:
+cdef class CKernel:
     cdef GeoArrowKernel c_kernel
 
     def __init__(self, const char* name):
