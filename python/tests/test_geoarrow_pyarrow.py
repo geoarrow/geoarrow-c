@@ -79,6 +79,29 @@ def test_constructors():
     assert generic.crs == 'EPSG:1234'
     assert generic.crs_type == ga.CrsType.UNKNOWN
 
+def test_register_extension_types():
+    # Unregistering once is ok
+    ga.unregister_extension_types(lazy=False)
+
+    # Unregistering twice with lazy=True is ok
+    ga.unregister_extension_types(lazy=True)
+
+    # Unregistering twice with lazy=False is not
+    with pytest.raises(RuntimeError):
+        ga.unregister_extension_types(lazy=False)
+
+    # Same concept with registration
+    ga.register_extension_types(lazy=False)
+    ga.register_extension_types(lazy=True)
+    with pytest.raises(RuntimeError):
+        ga.register_extension_types(lazy=False)
+
+    # Reset state
+    ga.unregister_extension_types()
+    ga.register_extension_types()
+    assert ga._extension_types_registered is True
+
+
 def test_array():
     array = ga.array(["POINT (30 10)"])
     assert array.type == ga.wkt()

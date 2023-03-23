@@ -83,6 +83,19 @@ class VectorType(pa.ExtensionType):
     def __arrow_ext_serialize__(self):
         return self._type.extension_metadata
 
+    @staticmethod
+    def _import_from_c(addr):
+        field = pa.Field._import_from_c(addr)
+        if not field.metadata or 'ARROW:extension:name' not in field.metadata:
+            return field.type
+
+        schema = lib.SchemaHolder()
+        field._export_to_c(schema._addr())
+
+        c_vector_type = lib.CVectorType.FromExtension(schema)
+        cls = _type_cls_from_name(c_vector_type.extension_name.decode('UTF-8'))
+        cls(c_vector_type)
+
     @classmethod
     def __arrow_ext_deserialize__(cls, storage_type, serialized):
         schema = lib.SchemaHolder()
@@ -348,7 +361,7 @@ class Kernel:
         options = Kernel._pack_options(kwargs)
 
         type_out_schema = self._kernel.start(type_in_schema, options)
-        self._type_out = pa.DataType._import_from_c(type_out_schema._addr())
+        self._type_out = VectorType._import_from_c(type_out_schema._addr())
         self._type_in = type_in
 
     def push(self, arr):
@@ -404,27 +417,62 @@ class Kernel:
             return b''
 
 
-def register_extension_types():
-    pa.register_extension_type(wkt())
-    pa.register_extension_type(wkb())
-    pa.register_extension_type(point())
-    pa.register_extension_type(linestring())
-    pa.register_extension_type(polygon())
-    pa.register_extension_type(multipoint())
-    pa.register_extension_type(multilinestring())
-    pa.register_extension_type(multipolygon())
+_extension_types_registered = False
+
+def register_extension_types(lazy=True):
+    global _extension_types_registered
+
+    if lazy and _extension_types_registered is True:
+        return
+
+    _extension_types_registered = None
+
+    all_types = [
+        wkt(), wkb(),
+        point(), linestring(), polygon(),
+        multipoint(), multilinestring(), multipolygon()
+    ]
+
+    n_registered = 0
+    for t in all_types:
+        try:
+            pa.register_extension_type(t)
+            n_registered += 1
+        except pa.ArrowException:
+            pass
+
+    if n_registered != len(all_types):
+        raise RuntimeError('Failed to register one or more extension types')
+
+    _extension_types_registered = True
 
 
-def unregister_extension_types():
-    pa.unregister_extension_type('geoarrow.wkt')
-    pa.unregister_extension_type('geoarrow.wkb')
-    pa.unregister_extension_type('geoarrow.point')
-    pa.unregister_extension_type('geoarrow.linestring')
-    pa.unregister_extension_type('geoarrow.polygon')
-    pa.unregister_extension_type('geoarrow.multipoint')
-    pa.unregister_extension_type('geoarrow.multilinestring')
-    pa.unregister_extension_type('geoarrow.multipolygon')
+def unregister_extension_types(lazy=True):
+    global _extension_types_registered
 
+    if lazy and _extension_types_registered is False:
+        return
+
+    _extension_types_registered = None
+
+    all_type_names = [
+        'geoarrow.wkb', 'geoarrow.wkt',
+        'geoarrow.point', 'geoarrow.linestring', 'geoarrow.polygon',
+        'geoarrow.multipoint', 'geoarrow.multilinestring', 'geoarrow.multipolygon'
+    ]
+
+    n_unregistered = 0
+    for t_name in all_type_names:
+        try:
+            pa.unregister_extension_type(t_name)
+            n_unregistered += 1
+        except pa.ArrowException:
+            pass
+
+    if n_unregistered != len(all_type_names):
+        raise RuntimeError('Failed to unregister one or more extension types')
+
+    _extension_types_registered = False
 
 # Do it!
 register_extension_types()
