@@ -218,6 +218,14 @@ class VectorType {
     return GeoArrowSchemaSetMetadata(schema_out, &metadata_view_);
   }
 
+  GeoArrowErrorCode InitStorageSchema(struct ArrowSchema* schema_out) const {
+    if (!valid()) {
+      return EINVAL;
+    }
+
+    return GeoArrowSchemaInit(schema_out, schema_view_.type);
+  }
+
   bool valid() const { return schema_view_.type != GEOARROW_TYPE_UNINITIALIZED; }
 
   std::string error() const { return error_; }

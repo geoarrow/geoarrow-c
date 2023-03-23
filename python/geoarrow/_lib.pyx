@@ -135,6 +135,7 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
         VectorType WithCrs(const string& crs, GeoArrowCrsType crs_type)
 
         GeoArrowErrorCode InitSchema(ArrowSchema* schema)
+        GeoArrowErrorCode InitStorageSchema(ArrowSchema* schema)
 
         @staticmethod
         VectorType Make0 "Make"(GeoArrowGeometryType geometry_type,
@@ -279,6 +280,13 @@ cdef class CVectorType:
         cdef int result = self.c_vector_type.InitSchema(&out.c_schema)
         if result != GEOARROW_OK:
             raise ValueError("InitSchema() failed")
+        return out
+
+    def to_storage_schema(self):
+        out = SchemaHolder()
+        cdef int result = self.c_vector_type.InitStorageSchema(&out.c_schema)
+        if result != GEOARROW_OK:
+            raise ValueError("InitStorageSchema() failed")
         return out
 
     @staticmethod

@@ -44,7 +44,13 @@ def test_c_vector_type():
     pa_type_expected = pa.struct(
         [pa.field('x', pa.float64()), pa.field('y', pa.float64())]
     )
-    assert pa_type == pa_type_expected
+
+    # Depending on how the tests are run, the extension type might be
+    # registered here.
+    if isinstance(pa_type, pa.ExtensionType):
+        assert pa_type.storage_type == pa_type_expected
+    else:
+        assert pa_type == pa_type_expected
 
     # Schema is now released, so we get an error
     with pytest.raises(ValueError):

@@ -76,7 +76,7 @@ class VectorType(pa.ExtensionType):
             raise ValueError(
                 f'Expected CVectorType with extension name "{type(self)._extension_name}" but got "{self._type.extension_name}"')
 
-        storage_schema = self._type.to_schema()
+        storage_schema = self._type.to_storage_schema()
         storage_type = pa.DataType._import_from_c(storage_schema._addr())
         pa.ExtensionType.__init__(self, storage_type, self._type.extension_name)
 
@@ -352,15 +352,16 @@ class Kernel:
         self._type_in = type_in
 
     def push(self, arr):
-        pa_array_in = pa.array(arr, self._type_in)
-        if isinstance(pa_array_in, pa.ChunkedArray):
+        if isinstance(arr, pa.ChunkedArray):
             chunks_out = []
-            for chunk_in in pa_array_in:
+            for chunk_in in arr:
                 chunks_out.append(self.push(chunk_in))
             return pa.chunked_array(chunks_out)
+        elif not isinstance(arr, pa.Array):
+            raise TypeError(f'Expected pyarrow.Array or pyarrow.ChunkedArray but got {type(arr)}')
 
         array_in = lib.ArrayHolder()
-        pa_array_in._export_to_c(array_in._addr())
+        arr._export_to_c(array_in._addr())
         array_out = self._kernel.push_batch(array_in)
         return pa.Array._import_from_c(array_out._addr(), self._type_out)
 
@@ -423,3 +424,6 @@ def unregister_extension_types():
     pa.unregister_extension_type('geoarrow.multipoint')
     pa.unregister_extension_type('geoarrow.multilinestring')
     pa.unregister_extension_type('geoarrow.multipolygon')
+
+
+register_extension_types()

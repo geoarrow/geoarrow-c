@@ -103,3 +103,21 @@ def test_array():
     array = ga.array([wkb_item], ga.large_wkb())
     assert array.type == ga.large_wkb()
     assert array.type.storage_type == pa.large_binary()
+
+def test_kernel():
+    with pytest.raises(TypeError):
+        kernel = ga.Kernel.void(pa.int32())
+        kernel.push(5)
+
+    array = ga.array(['POINT (30 10)'])
+    kernel = ga.Kernel.void(array.type)
+    out = kernel.push(array)
+    assert out.type == pa.null()
+    assert len(out) == 1
+
+    array = ga.array(['POINT (30 10)'], ga.wkt().with_crs('EPSG:1234'))
+    kernel = ga.Kernel.as_wkt(array.type)
+    out = kernel.push(array)
+    assert out.type.extension_name == 'geoarrow.wkt'
+    assert out.type.crs == 'EPSG:1234'
+    assert isinstance(out, ga.VectorArray)
