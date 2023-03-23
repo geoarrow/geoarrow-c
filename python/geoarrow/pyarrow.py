@@ -1,4 +1,6 @@
 
+import sys
+
 import pyarrow as pa
 
 from . import lib
@@ -123,6 +125,10 @@ class VectorType(pa.ExtensionType):
             validator.finish()
 
         return out
+
+    @property
+    def id(self):
+        return self._type.id
 
     @property
     def geometry_type(self):
@@ -427,10 +433,20 @@ class Kernel:
 
     @staticmethod
     def _pack_options(options):
-        if options:
-            raise NotImplemented()
-        else:
+        if not options:
             return b''
+
+        bytes = len(options).to_bytes(4, sys.byteorder, signed=True)
+        for k, v in options.items():
+            k = str(k)
+            bytes += len(k).to_bytes(4, sys.byteorder, signed=True)
+            bytes += k.encode('UTF-8')
+
+            v = str(v)
+            bytes += len(v).to_bytes(4, sys.byteorder, signed=True)
+            bytes += v.encode('UTF-8')
+
+        return bytes
 
 
 _extension_types_registered = False
