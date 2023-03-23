@@ -353,7 +353,10 @@ class Kernel:
         if not isinstance(type_in, pa.DataType):
             raise TypeError('Expected `type_in` to inherit from pyarrow.DataType')
 
-        self._kernel = lib.CKernel(name.encode('UTF-8'))
+        self._name = str(name)
+        self._kernel = lib.CKernel(self._name.encode('UTF-8'))
+        # True for all the kernels that currently exist
+        self._is_agg = self._name.endswith('_agg')
 
         type_in_schema = lib.SchemaHolder()
         type_in._export_to_c(type_in_schema._addr())
@@ -375,15 +378,19 @@ class Kernel:
 
         array_in = lib.ArrayHolder()
         arr._export_to_c(array_in._addr())
-        array_out = self._kernel.push_batch(array_in)
-        return pa.Array._import_from_c(array_out._addr(), self._type_out)
+
+        if self._is_agg:
+            self._kernel.push_batch_agg(array_in)
+        else:
+            array_out = self._kernel.push_batch(array_in)
+            return pa.Array._import_from_c(array_out._addr(), self._type_out)
 
     def finish(self):
-        array_out = self._kernel.finish()
-        if array_out.is_valid():
-            return array_out
+        if self._is_agg:
+            out = self._kernel.finish_agg()
+            return pa.Array._import_from_c(out._addr(), self._type_out)
         else:
-            return None
+            self._kernel.finish()
 
     @staticmethod
     def void(type_in):

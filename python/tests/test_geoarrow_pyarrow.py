@@ -129,7 +129,7 @@ def test_array():
     assert array.type == ga.large_wkb()
     assert array.type.storage_type == pa.large_binary()
 
-def test_kernel():
+def test_kernel_void():
     with pytest.raises(TypeError):
         kernel = ga.Kernel.void(pa.int32())
         kernel.push(5)
@@ -140,6 +140,14 @@ def test_kernel():
     assert out.type == pa.null()
     assert len(out) == 1
 
+    array = ga.array(['POINT (30 10)', 'POINT (31 11)'])
+    kernel = ga.Kernel.void_agg(array.type)
+    assert kernel.push(array) is None
+    out = kernel.finish()
+    assert out.type == pa.null()
+    assert len(out) == 1
+
+def test_kernel_as():
     array = ga.array(['POINT (30 10)'], ga.wkt().with_crs('EPSG:1234'))
     kernel = ga.Kernel.as_wkt(array.type)
     out = kernel.push(array)
@@ -157,3 +165,19 @@ def test_kernel():
     if sys.byteorder == 'little':
         wkb_item = b'\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x3e\x40\x00\x00\x00\x00\x00\x00\x24\x40'
         assert out[0].as_py() == wkb_item
+
+def test_kernel_visit_void():
+    array = ga.array(['POINT (30 10)'], ga.wkt())
+    kernel = ga.Kernel.visit_void_agg(array.type)
+    assert kernel.push(array) is None
+    out = kernel.finish()
+    assert out.type == pa.null()
+    assert len(out) == 1
+
+    array = ga.array(['POINT (30 10)', 'NOT VALID WKT AT ALL'], ga.wkt())
+    kernel = ga.Kernel.visit_void_agg(array.type)
+    with pytest.raises(ValueError):
+        kernel.push(array) is None
+    out = kernel.finish()
+    assert out.type == pa.null()
+    assert len(out) == 1
