@@ -1,4 +1,6 @@
 
+import sys
+
 import pyarrow as pa
 import pytest
 
@@ -81,7 +83,7 @@ def test_array():
     array = ga.array(["POINT (30 10)"])
     assert array.type == ga.wkt()
 
-    wkb_item = b'0x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x3e\x40\x00\x00\x00\x00\x00\x00\x24\x40'
+    wkb_item = b'\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x3e\x40\x00\x00\x00\x00\x00\x00\x24\x40'
     array = ga.array([wkb_item])
     assert array.type == ga.wkb()
 
@@ -121,3 +123,14 @@ def test_kernel():
     assert out.type.extension_name == 'geoarrow.wkt'
     assert out.type.crs == 'EPSG:1234'
     assert isinstance(out, ga.VectorArray)
+
+    array = ga.array(['POINT (30 10)'], ga.wkt().with_crs('EPSG:1234'))
+    kernel = ga.Kernel.as_wkb(array.type)
+    out = kernel.push(array)
+    assert out.type.extension_name == 'geoarrow.wkb'
+    assert out.type.crs == 'EPSG:1234'
+    assert isinstance(out, ga.VectorArray)
+
+    if sys.byteorder == 'little':
+        wkb_item = b'\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x3e\x40\x00\x00\x00\x00\x00\x00\x24\x40'
+        assert out[0].as_py() == wkb_item

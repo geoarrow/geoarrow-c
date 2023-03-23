@@ -426,4 +426,5 @@ def unregister_extension_types():
     pa.unregister_extension_type('geoarrow.multipolygon')
 
 
+# Do it!
 register_extension_types()
