@@ -115,6 +115,15 @@ class VectorType(pa.ExtensionType):
     def __arrow_ext_scalar_class__(self):
         return _scalar_cls_from_name(self.extension_name)
 
+    def wrap_array(self, obj, validate=True):
+        out = super().wrap_array(obj)
+        if validate:
+            validator = Kernel.visit_void_agg(self)
+            validator.push(out)
+            validator.finish()
+
+        return out
+
     @property
     def geometry_type(self):
         return self._type.geometry_type
@@ -323,16 +332,16 @@ def vector_type(geometry_type,
     return cls(ctype).with_edge_type(edge_type).with_crs(crs, crs_type)
 
 
-def array(obj, type=None, *args, **kwargs):
+def array(obj, type=None, *args, validate=True, **kwargs):
     if type is None:
         arr = pa.array(obj, *args, **kwargs)
 
         if arr.type == pa.utf8():
-            return wkt().wrap_array(arr)
+            return wkt().wrap_array(arr, validate=validate)
         elif arr.type == pa.large_utf8():
-            return large_wkt().wrap_array(arr)
+            return large_wkt().wrap_array(arr, validate=validate)
         elif arr.type == pa.binary():
-            return wkb().wrap_array(arr)
+            return wkb().wrap_array(arr, validate=validate)
         else:
             raise TypeError(f"Can't create geoarrow.array from Arrow array of type {type}")
 
@@ -341,7 +350,7 @@ def array(obj, type=None, *args, **kwargs):
 
     if type_is_geoarrow and type_is_wkb_or_wkt:
         arr = pa.array(obj, type.storage_type, *args, **kwargs)
-        return type.wrap_array(arr)
+        return type.wrap_array(arr, validate=validate)
 
     # Eventually we will be able to handle more types (e.g., parse wkt or wkb
     # into a geoarrow type)

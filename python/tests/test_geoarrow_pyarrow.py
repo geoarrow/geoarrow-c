@@ -117,7 +117,8 @@ def test_array():
     assert array.type == ga.wkt()
     assert array.type.storage_type == pa.utf8()
 
-    array = ga.array(["POINT (30 10)"], ga.large_wkt())
+    # Validation not yet supported for large types
+    array = ga.array(["POINT (30 10)"], ga.large_wkt(), validate=False)
     assert array.type == ga.large_wkt()
     assert array.type.storage_type == pa.large_utf8()
 
@@ -125,7 +126,8 @@ def test_array():
     assert array.type == ga.wkb()
     assert array.type.storage_type == pa.binary()
 
-    array = ga.array([wkb_item], ga.large_wkb())
+    # Validation not yet supported for large types
+    array = ga.array([wkb_item], ga.large_wkb(), validate=False)
     assert array.type == ga.large_wkb()
     assert array.type.storage_type == pa.large_binary()
 
@@ -174,7 +176,7 @@ def test_kernel_visit_void():
     assert out.type == pa.null()
     assert len(out) == 1
 
-    array = ga.array(['POINT (30 10)', 'NOT VALID WKT AT ALL'], ga.wkt())
+    array = ga.array(['POINT (30 10)', 'NOT VALID WKT AT ALL'], ga.wkt(), validate=False)
     kernel = ga.Kernel.visit_void_agg(array.type)
     with pytest.raises(ValueError):
         kernel.push(array) is None
