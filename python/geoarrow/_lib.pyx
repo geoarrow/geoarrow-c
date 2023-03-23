@@ -345,3 +345,18 @@ cdef class CKernel:
         cdef int result = self.c_kernel.finish(&self.c_kernel, &out.c_array, &error)
         if result != GEOARROW_OK:
             raise ValueError(error.message)
+
+    def push_batch_agg(self, ArrayHolder array):
+        cdef GeoArrowError error
+        cdef int result = self.c_kernel.push_batch(&self.c_kernel, &array.c_array,
+                                                   NULL, &error)
+        if result != GEOARROW_OK:
+            raise ValueError(error.message)
+
+    def finish_agg(self):
+        cdef GeoArrowError error
+        out = ArrayHolder()
+        cdef int result = self.c_kernel.finish(&self.c_kernel, &out.c_array, &error)
+        if result != GEOARROW_OK:
+            raise ValueError(error.message)
+        return out
