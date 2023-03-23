@@ -310,6 +310,30 @@ def vector_type(geometry_type,
     return cls(ctype).with_edge_type(edge_type).with_crs(crs, crs_type)
 
 
+def array(obj, type=None, *args, **kwargs):
+    if type is None:
+        arr = pa.array(obj, *args, **kwargs)
+
+        if arr.type == pa.utf8():
+            return wkt().wrap_array(arr)
+        elif arr.type == pa.large_utf8():
+            return large_wkt().wrap_array(arr)
+        elif arr.type == pa.binary():
+            return wkb().wrap_array(arr)
+        else:
+            raise TypeError(f"Can't create geoarrow.array from Arrow array of type {type}")
+
+    type_is_geoarrow = isinstance(type, VectorType)
+    type_is_wkb_or_wkt = type.extension_name in ('geoarrow.wkt', 'geoarrow.wkb')
+
+    if type_is_geoarrow and type_is_wkb_or_wkt:
+        arr = pa.array(obj, type.storage_type, *args, **kwargs)
+        return type.wrap_array(arr)
+
+    # Eventually we will be able to handle more types (e.g., parse wkt or wkb
+    # into a geoarrow type)
+    raise TypeError(f"Can't create geoarrow.array for type {type}")
+
 class Kernel:
 
     def __init__(self, name, type_in, **kwargs) -> None:
@@ -329,10 +353,23 @@ class Kernel:
 
     def push(self, arr):
         pa_array_in = pa.array(arr, self._type_in)
+        if isinstance(pa_array_in, pa.ChunkedArray):
+            chunks_out = []
+            for chunk_in in pa_array_in:
+                chunks_out.append(self.push(chunk_in))
+            return pa.chunked_array(chunks_out)
+
         array_in = lib.ArrayHolder()
         pa_array_in._export_to_c(array_in._addr())
         array_out = self._kernel.push_batch(array_in)
         return pa.Array._import_from_c(array_out._addr(), self._type_out)
+
+    def finish(self):
+        array_out = self._kernel.finish()
+        if array_out.is_valid():
+            return array_out
+        else:
+            return None
 
     @staticmethod
     def void(type_in):
@@ -364,3 +401,25 @@ class Kernel:
             raise NotImplemented()
         else:
             return b''
+
+
+def register_extension_types():
+    pa.register_extension_type(wkt())
+    pa.register_extension_type(wkb())
+    pa.register_extension_type(point())
+    pa.register_extension_type(linestring())
+    pa.register_extension_type(polygon())
+    pa.register_extension_type(multipoint())
+    pa.register_extension_type(multilinestring())
+    pa.register_extension_type(multipolygon())
+
+
+def unregister_extension_types():
+    pa.unregister_extension_type('geoarrow.wkt')
+    pa.unregister_extension_type('geoarrow.wkb')
+    pa.unregister_extension_type('geoarrow.point')
+    pa.unregister_extension_type('geoarrow.linestring')
+    pa.unregister_extension_type('geoarrow.polygon')
+    pa.unregister_extension_type('geoarrow.multipoint')
+    pa.unregister_extension_type('geoarrow.multilinestring')
+    pa.unregister_extension_type('geoarrow.multipolygon')

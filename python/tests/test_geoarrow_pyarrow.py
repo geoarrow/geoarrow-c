@@ -76,3 +76,30 @@ def test_constructors():
     assert generic.edge_type == ga.EdgeType.SPHERICAL
     assert generic.crs == 'EPSG:1234'
     assert generic.crs_type == ga.CrsType.UNKNOWN
+
+def test_array():
+    array = ga.array(["POINT (30 10)"])
+    assert array.type == ga.wkt()
+
+    wkb_item = b'0x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x3e\x40\x00\x00\x00\x00\x00\x00\x24\x40'
+    array = ga.array([wkb_item])
+    assert array.type == ga.wkb()
+
+    with pytest.raises(TypeError):
+        ga.array([1])
+
+    array = ga.array(["POINT (30 10)"], ga.wkt())
+    assert array.type == ga.wkt()
+    assert array.type.storage_type == pa.utf8()
+
+    array = ga.array(["POINT (30 10)"], ga.large_wkt())
+    assert array.type == ga.large_wkt()
+    assert array.type.storage_type == pa.large_utf8()
+
+    array = ga.array([wkb_item], ga.wkb())
+    assert array.type == ga.wkb()
+    assert array.type.storage_type == pa.binary()
+
+    array = ga.array([wkb_item], ga.large_wkb())
+    assert array.type == ga.large_wkb()
+    assert array.type.storage_type == pa.large_binary()
