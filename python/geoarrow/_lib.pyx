@@ -201,6 +201,41 @@ cdef class CVectorType:
     def __init__(self):
         pass
 
+    def __repr__(self):
+        ext_name = self.extension_name
+        spherical = self.edge_type == GEOARROW_EDGE_TYPE_SPHERICAL
+        interleaved = self.coord_type == GEOARROW_COORD_TYPE_INTERLEAVED
+
+        if self.dimensions == GEOARROW_DIMENSIONS_XYZM:
+            dims = '_zm'
+        elif self.dimensions == GEOARROW_DIMENSIONS_XYZ:
+            dims = '_z'
+        elif self.dimensions == GEOARROW_DIMENSIONS_XYM:
+            dims = '_m'
+        else:
+            dims = ''
+
+        if spherical and interleaved:
+            type_prefix = 'spherical interleaved '
+        elif spherical:
+            type_prefix = 'spherical '
+        elif interleaved:
+            type_prefix = 'interleaved '
+        else:
+            type_prefix = ''
+
+        if self.crs_type == GEOARROW_CRS_TYPE_PROJJSON:
+            crs = f' <PROJJSON:{self.crs.decode("UTF-8")}>'
+        elif self.crs_type == GEOARROW_CRS_TYPE_UNKNOWN:
+            crs = f' <{self.crs.decode("UTF-8")}>'
+        else:
+            crs = ''
+
+        if len(crs) > 40:
+            crs = crs[:36] + '...>'
+
+        return f'{type_prefix}{ext_name}{dims}{crs}'
+
     @staticmethod
     cdef _move_from_ctype(VectorType* c_vector_type):
         if not c_vector_type.valid():

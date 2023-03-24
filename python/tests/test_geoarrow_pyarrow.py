@@ -131,6 +131,27 @@ def test_array():
     assert array.type == ga.large_wkb()
     assert array.type.storage_type == pa.large_binary()
 
+def test_array_repr():
+    array = ga.array(['POINT (30 10)'])
+    array_repr = repr(array)
+    assert array_repr.startswith('VectorArray')
+    assert '<POINT (30 10)>' in array_repr
+
+    array = ga.array(['POINT (30 10)'] * 12)
+    array_repr = repr(array)
+    assert '...2 values...' in array_repr
+
+    array = ga.array([
+        'LINESTRING (100000 100000, 100000 100000, 100000 100000, 100000 100000)'
+    ])
+    array_repr = repr(array)
+    assert '...>' in array_repr
+
+    array = ga.array(['THIS IS TOTALLY INVALID WKT'], validate=False)
+    array_repr = repr(array)
+    assert array_repr.startswith('VectorArray')
+    assert '* 1 or more display values failed to parse' in array_repr
+
 def test_kernel_void():
     with pytest.raises(TypeError):
         kernel = ga.Kernel.void(pa.int32())

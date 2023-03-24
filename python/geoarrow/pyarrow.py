@@ -37,10 +37,47 @@ class MultiPolygonScalar(VectorScalar):
 
 class VectorArray(pa.ExtensionArray):
 
-    def _export_to_holder(self):
-        array = lib.ArrayHolder()
-        self._export_to_c(array._addr())
-        return array
+    def __repr__(self):
+        n_values_to_show = 10
+        max_width = 70
+
+        if len(self) > n_values_to_show:
+            n_extra = len(self) - n_values_to_show
+            value_s = 'values' if n_extra != 1 else 'value'
+            head = self[:int(n_values_to_show / 2)]
+            mid = f'...{n_extra} {value_s}...'
+            tail = self[int(-n_values_to_show / 2):]
+        else:
+            head = self
+            mid = ''
+            tail = self[:0]
+
+        try:
+            kernel = Kernel.as_wkt(self.type)
+            head = kernel.push(head).storage
+            tail = kernel.push(tail).storage
+        except:
+            err = '* 1 or more display values failed to parse'
+            type_name = type(self).__name__
+            super_repr = super().__repr__()
+            return f'{type_name}:{repr(self.type)}[{len(self)}]\n{err}\n{super_repr}'
+
+
+        head_str = [f'<{item.as_py()}>' for item in head]
+        tail_str = [f'<{item.as_py()}>' for item in tail]
+        for i in range(len(head)):
+            if len(head_str[i]) > max_width:
+                head_str[i] = f'{head_str[i][:(max_width - 4)]}...>'
+        for i in range(len(tail)):
+            if len(tail_str[i]) > max_width:
+                tail_str[i] = f'{tail_str[i][:(max_width - 4)]}...>'
+
+        type_name = type(self).__name__
+        head_str = '\n'.join(head_str)
+        tail_str = '\n'.join(tail_str)
+        items_str = f'{head_str}\n{mid}\n{tail_str}'
+
+        return f'{type_name}:{repr(self.type)}[{len(self)}]\n{items_str}'
 
 
 class PointArray(VectorArray):
@@ -81,6 +118,9 @@ class VectorType(pa.ExtensionType):
         storage_schema = self._type.to_storage_schema()
         storage_type = pa.DataType._import_from_c(storage_schema._addr())
         pa.ExtensionType.__init__(self, storage_type, self._type.extension_name)
+
+    def __repr__(self):
+        return f'{type(self).__name__}({repr(self._type)})'
 
     def __arrow_ext_serialize__(self):
         return self._type.extension_metadata

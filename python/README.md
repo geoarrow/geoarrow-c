@@ -31,7 +31,7 @@ ga.wkb().with_crs('EPSG:1234')
 
 
 
-    WkbType(DataType(binary))
+    WkbType(geoarrow.wkb <EPSG:1234>)
 
 
 
@@ -43,7 +43,7 @@ ga.linestring().with_dimensions(ga.Dimensions.XYZ)
 
 
 
-    LinestringType(ListType(list<vertices: struct<x: double, y: double, z: double>>))
+    LinestringType(geoarrow.linestring_z)
 
 
 
@@ -57,10 +57,9 @@ ga.array(['POINT (30 10)'], ga.wkt())
 
 
 
-    <geoarrow.pyarrow.VectorArray object at 0x1231677c0>
-    [
-      "POINT (30 10)"
-    ]
+    VectorArray:WktType(geoarrow.wkt)[1]
+    <POINT (30 10)>
+
 
 
 
@@ -76,10 +75,9 @@ ga.wkt().wrap_array(existing_array)
 
 
 
-    <geoarrow.pyarrow.VectorArray object at 0x123167820>
-    [
-      "POINT (30 10)"
-    ]
+    VectorArray:WktType(geoarrow.wkt)[1]
+    <POINT (30 10)>
+
 
 
 
@@ -103,8 +101,26 @@ wkb = pa.array(df.geometry.to_wkb())
 
 
 ```python
-geoarrow_wkb = ga.wkb().with_crs(str(df.geometry.crs)).wrap_array(wkb)
+ga.wkb().with_crs(str(df.geometry.crs)).wrap_array(wkb)
 ```
+
+
+
+
+    VectorArray:WkbType(geoarrow.wkb <EPSG:4326>)[127]
+    <POLYGON ((-59.57209469261153 -80.0401787250963, -59.8658493719746...>
+    <POLYGON ((-159.2081835601977 -79.49705942170873, -161.12760128481...>
+    <POLYGON ((-45.15475765642103 -78.04706960058674, -43.920827806155...>
+    <POLYGON ((-121.2115113938571 -73.50099049900605, -119.91885127829...>
+    <POLYGON ((-125.5595664068953 -73.48135345473521, -124.03188187726...>
+    ...117 values...
+    <POLYGON ((51.13618655783139 80.54728017854103, 49.79368452332082 ...>
+    <POLYGON ((99.93976000000001 78.88094, 97.75794 78.75620000000001,...>
+    <POLYGON ((-87.02 79.66, -85.81435 79.3369, -87.18756 79.0393, -89...>
+    <POLYGON ((-68.5 83.10632151676583, -65.82735 83.02801000000014, -...>
+    <POLYGON ((-27.10046 83.51966, -20.84539 82.72669, -22.69182 82.34...>
+
+
 
 ## Building
 
