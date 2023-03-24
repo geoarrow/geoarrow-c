@@ -131,6 +131,39 @@ def test_array():
     assert array.type == ga.large_wkb()
     assert array.type.storage_type == pa.large_binary()
 
+def test_array_as():
+    array = ga.array(['POINT (30 10)'])
+    array_wkb = array.as_wkb()
+
+    array_as_wkt = array.as_wkt()
+    assert array_as_wkt is array
+
+    array_as_wkt = array_wkb.as_wkt()
+    assert array_as_wkt.type == ga.wkt()
+
+    array_as_wkb = array.as_wkb()
+    assert array_as_wkb.type == ga.wkb()
+
+    array_as_wkb = array_wkb.as_wkb()
+    assert array_as_wkb is array_wkb
+
+    array_as_wkb = array_wkb.as_geoarrow(ga.wkb())
+    assert array_as_wkb is array_wkb
+
+    array_as_wkt = array_wkb.as_geoarrow(ga.wkt())
+    assert array_as_wkt.type == ga.wkt()
+
+    array_as_wkb = array.as_geoarrow(ga.wkb())
+    assert array_as_wkb.type == ga.wkb()
+
+    array_as_ga = array.as_geoarrow(ga.point())
+    assert array_as_ga.type == ga.point()
+
+    with pytest.raises(TypeError):
+        array.as_geoarrow(123)
+    with pytest.raises(NotImplementedError):
+        array.as_geoarrow(None)
+
 def test_array_repr():
     array = ga.array(['POINT (30 10)'])
     array_repr = repr(array)

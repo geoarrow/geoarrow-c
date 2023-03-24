@@ -37,6 +37,35 @@ class MultiPolygonScalar(VectorScalar):
 
 class VectorArray(pa.ExtensionArray):
 
+    def as_wkt(self):
+        if self.type.extension_name == 'geoarrow.wkt':
+            return self
+        kernel = Kernel.as_wkt(self.type)
+        return kernel.push(self)
+
+    def as_wkb(self):
+        if self.type.extension_name == 'geoarrow.wkb':
+            return self
+        kernel = Kernel.as_wkb(self.type)
+        return kernel.push(self)
+
+    def as_geoarrow(self, type_to=None):
+        if type_to is None:
+            raise NotImplementedError('Auto-detection of best geoarrow type')
+
+        if isinstance(type_to, WktType):
+            return self.as_wkt()
+        elif isinstance(type_to, WkbType):
+            return self.as_wkb()
+        elif not isinstance(type_to, VectorType):
+            raise TypeError('type_to must inherit from VectorType')
+
+        if self.type._type.id == type_to._type.id:
+            return self
+
+        kernel = Kernel.as_geoarrow(self.type, type_to._type.id)
+        return kernel.push(self)
+
     def __repr__(self):
         n_values_to_show = 10
         max_width = 70
@@ -157,7 +186,7 @@ class VectorType(pa.ExtensionType):
     def __arrow_ext_scalar_class__(self):
         return _scalar_cls_from_name(self.extension_name)
 
-    def wrap_array(self, obj, validate=True):
+    def wrap_array(self, obj, validate=False):
         out = super().wrap_array(obj)
         if validate:
             validator = Kernel.visit_void_agg(self)
@@ -228,9 +257,15 @@ class VectorType(pa.ExtensionType):
 class WkbType(VectorType):
     _extension_name = 'geoarrow.wkb'
 
+    def wrap_array(self, obj, validate=True):
+        return super().wrap_array(obj, validate=validate)
+
 
 class WktType(VectorType):
     _extension_name = 'geoarrow.wkt'
+
+    def wrap_array(self, obj, validate=True):
+        return super().wrap_array(obj, validate=validate)
 
 
 class PointType(VectorType):
@@ -378,7 +413,7 @@ def vector_type(geometry_type,
     return cls(ctype).with_edge_type(edge_type).with_crs(crs, crs_type)
 
 
-def array(obj, type=None, *args, validate=True, **kwargs):
+def array(obj, type=None, *args, validate=True, **kwargs) -> VectorArray:
     if type is None:
         arr = pa.array(obj, *args, **kwargs)
 
