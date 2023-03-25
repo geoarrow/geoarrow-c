@@ -413,8 +413,18 @@ def vector_type(geometry_type,
     return cls(ctype).with_edge_type(edge_type).with_crs(crs, crs_type)
 
 
-def array(obj, type=None, *args, validate=True, **kwargs) -> VectorArray:
-    if type is None:
+def array(obj, type_=None, *args, validate=True, **kwargs) -> VectorArray:
+    if type(obj).__name__ == 'GeoSeries':
+        if obj.crs:
+            try:
+                type_ = wkb().with_crs(obj.crs.to_json())
+            except:
+                type_ = wkb().with_crs(str(obj.crs))
+        else:
+            type_ = wkb()
+        obj = obj.to_wkb()
+
+    if type_ is None:
         arr = pa.array(obj, *args, **kwargs)
 
         if arr.type == pa.utf8():
@@ -424,18 +434,18 @@ def array(obj, type=None, *args, validate=True, **kwargs) -> VectorArray:
         elif arr.type == pa.binary():
             return wkb().wrap_array(arr, validate=validate)
         else:
-            raise TypeError(f"Can't create geoarrow.array from Arrow array of type {type}")
+            raise TypeError(f"Can't create geoarrow.array from Arrow array of type {type_}")
 
-    type_is_geoarrow = isinstance(type, VectorType)
-    type_is_wkb_or_wkt = type.extension_name in ('geoarrow.wkt', 'geoarrow.wkb')
+    type_is_geoarrow = isinstance(type_, VectorType)
+    type_is_wkb_or_wkt = type_.extension_name in ('geoarrow.wkt', 'geoarrow.wkb')
 
     if type_is_geoarrow and type_is_wkb_or_wkt:
-        arr = pa.array(obj, type.storage_type, *args, **kwargs)
-        return type.wrap_array(arr, validate=validate)
+        arr = pa.array(obj, type_.storage_type, *args, **kwargs)
+        return type_.wrap_array(arr, validate=validate)
 
     # Eventually we will be able to handle more types (e.g., parse wkt or wkb
     # into a geoarrow type)
-    raise TypeError(f"Can't create geoarrow.array for type {type}")
+    raise TypeError(f"Can't create geoarrow.array for type {type_}")
 
 class Kernel:
 
