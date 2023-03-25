@@ -247,6 +247,15 @@ def test_kernel_visit_void():
     assert len(out) == 1
 
 
+def test_array_geobuffers():
+    arr = ga.array(['POLYGON ((0 0, 1 0, 0 1, 0 0))']).as_geoarrow(ga.polygon())
+    bufs = arr.geobuffers()
+    assert bufs[0] is None
+    np.testing.assert_array_equal(bufs[1], np.array([0, 1]))
+    np.testing.assert_array_equal(bufs[2], np.array([0, 4]))
+    np.testing.assert_array_equal(bufs[3], np.array([0.0, 1.0, 0.0, 0.0]))
+    np.testing.assert_array_equal(bufs[4], np.array([0.0, 0.0, 1.0, 0.0]))
+
 # Easier to test here because we have actual geoarrow arrays to parse
 def test_c_array_view():
     arr = ga.array(['POLYGON ((0 0, 1 0, 0 1, 0 0))']).as_geoarrow(ga.polygon())

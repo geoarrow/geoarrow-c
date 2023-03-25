@@ -450,23 +450,23 @@ cdef class CArrayView:
         if self.c_array_view.n_offsets > 0:
             buf = CArrayViewBuffer(
                 self,
-                <uintptr_t>&(self.c_array_view.offsets[0][self.c_array_view.offset]),
+                <uintptr_t>self.c_array_view.offsets[0],
                 4,
-                self.c_array_view.length + 1,
+                self.c_array_view.offset + self.c_array_view.length + 1,
                 'i'
             )
             buffers.append(buf)
 
         if self.c_array_view.n_offsets > 1:
             for i in range(self.c_array_view.n_offsets - 1):
-                length = self.c_array_view.last_offset[i] - self.c_array_view.first_offset[i]
+                length = self.c_array_view.last_offset[i]
                 buf = CArrayViewBuffer(
-                self,
-                <uintptr_t>&(self.c_array_view.offsets[i + 1][self.c_array_view.first_offset[i]]),
-                4,
-                length + 1,
-                'i'
-            )
+                    self,
+                    <uintptr_t>self.c_array_view.offsets[i + 1],
+                    4,
+                    length + 1,
+                    'i'
+                )
             buffers.append(buf)
 
         cdef GeoArrowCoordView* coords = &self.c_array_view.coords

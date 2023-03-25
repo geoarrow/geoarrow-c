@@ -37,6 +37,17 @@ class MultiPolygonScalar(VectorScalar):
 
 class VectorArray(pa.ExtensionArray):
 
+    def geobuffers(self):
+        import numpy as np
+        cschema = lib.SchemaHolder()
+        self.type._export_to_c(cschema._addr())
+        carray = lib.ArrayHolder()
+        self._export_to_c(carray._addr())
+
+        array_view = lib.CArrayView(carray, cschema)
+        buffers = array_view.buffers()
+        return [np.array(b) if b is not None else None for b in buffers]
+
     def as_wkt(self):
         if self.type.extension_name == 'geoarrow.wkt':
             return self
