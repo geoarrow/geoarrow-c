@@ -2,6 +2,7 @@
 import sys
 
 import pyarrow as pa
+import numpy as np
 import pytest
 
 import geoarrow.lib as lib
@@ -244,3 +245,70 @@ def test_kernel_visit_void():
     out = kernel.finish()
     assert out.type == pa.null()
     assert len(out) == 1
+
+
+# Easier to test here because we have actual geoarrow arrays to parse
+def test_c_array_view():
+    arr = ga.array(['POLYGON ((0 0, 1 0, 0 1, 0 0))']).as_geoarrow(ga.polygon())
+
+    cschema = lib.SchemaHolder()
+    arr.type._export_to_c(cschema._addr())
+    carray = lib.ArrayHolder()
+    arr._export_to_c(carray._addr())
+
+    array_view = lib.CArrayView(carray, cschema)
+    buffers = array_view.buffers()
+    assert len(buffers) == 5
+
+    buffer_arrays = [np.array(b) for b in buffers]
+
+    assert buffers[0] is None
+
+    assert buffer_arrays[1].shape == (2, )
+    assert buffer_arrays[1][0] == 0
+    assert buffer_arrays[1][1] == 1
+
+    assert buffer_arrays[2].shape == (2, )
+    assert buffer_arrays[2][0] == 0
+    assert buffer_arrays[2][1] == 4
+
+    assert buffer_arrays[3].shape == (4, )
+    assert buffer_arrays[3][1] == 1
+    assert buffer_arrays[3][3] == 0
+
+    assert buffer_arrays[4].shape == (4, )
+    assert buffer_arrays[4][1] == 0
+    assert buffer_arrays[4][3] == 0
+
+def test_c_array_view_interleaved():
+    arr = ga.array(['POLYGON ((0 0, 1 0, 0 1, 0 0))'])
+    arr = arr.as_geoarrow(ga.polygon().with_coord_type(ga.CoordType.INTERLEAVED))
+
+    cschema = lib.SchemaHolder()
+    arr.type._export_to_c(cschema._addr())
+    carray = lib.ArrayHolder()
+    arr._export_to_c(carray._addr())
+
+    array_view = lib.CArrayView(carray, cschema)
+    buffers = array_view.buffers()
+    assert len(buffers) == 4
+
+    buffer_arrays = [np.array(b) for b in buffers]
+
+    assert buffers[0] is None
+
+    assert buffer_arrays[1].shape == (2, )
+    assert buffer_arrays[1][0] == 0
+    assert buffer_arrays[1][1] == 1
+
+    assert buffer_arrays[2].shape == (2, )
+    assert buffer_arrays[2][0] == 0
+    assert buffer_arrays[2][1] == 4
+
+    assert buffer_arrays[3].shape == (8, )
+    assert buffer_arrays[3][0] == 0
+    assert buffer_arrays[3][1] == 0
+    assert buffer_arrays[3][2] == 1
+    assert buffer_arrays[3][3] == 0
+    assert buffer_arrays[3][6] == 0
+    assert buffer_arrays[3][7] == 0

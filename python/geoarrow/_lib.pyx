@@ -3,7 +3,8 @@
 
 """Low-level geoarrow Python bindings."""
 
-from libc.stdint cimport uint8_t, int64_t, uintptr_t
+from libc.stdint cimport uint8_t, int32_t, int64_t, uintptr_t
+from cpython cimport Py_buffer
 from libcpp cimport bool
 from libcpp.string cimport string
 
@@ -103,6 +104,31 @@ cdef extern from "geoarrow_type.h":
                       GeoArrowError* error)
         void (*release)(GeoArrowKernel* kernel)
         void* private_data
+
+    struct GeoArrowCoordView:
+        const double* values[4]
+        int64_t n_coords
+        int32_t n_values
+        int32_t coords_stride
+
+    struct GeoArrowArrayView:
+        GeoArrowSchemaView schema_view
+        int64_t offset
+        int64_t length
+        const uint8_t* validity_bitmap
+        int32_t n_offsets
+        const int32_t* offsets[3]
+        int32_t first_offset[3]
+        int32_t last_offset[3]
+        GeoArrowCoordView coords
+
+    GeoArrowErrorCode GeoArrowArrayViewInitFromSchema(GeoArrowArrayView* array_view,
+                                                      ArrowSchema* schema,
+                                                      GeoArrowError* error)
+
+    GeoArrowErrorCode GeoArrowArrayViewSetArray(GeoArrowArrayView* array_view,
+                                                ArrowArray* array,
+                                                GeoArrowError* error)
 
 
 cdef extern from "geoarrow.h":
@@ -395,3 +421,113 @@ cdef class CKernel:
         if result != GEOARROW_OK:
             raise ValueError(error.message)
         return out
+
+
+cdef class CArrayView:
+    cdef GeoArrowArrayView c_array_view
+    cdef object _base
+
+    def __init__(self, ArrayHolder array, SchemaHolder schema):
+        self._base = array
+
+        cdef GeoArrowError error
+        cdef int result = GeoArrowArrayViewInitFromSchema(&self.c_array_view, &schema.c_schema, &error)
+        if result != GEOARROW_OK:
+            raise ValueError(error.message.decode('UTF-8'))
+
+        result = GeoArrowArrayViewSetArray(&self.c_array_view, &array.c_array, &error)
+        if result != GEOARROW_OK:
+            raise ValueError(error.message.decode('UTF-8'))
+
+    def buffers(self):
+        buffers = []
+        cdef int64_t length
+
+        # Validity not quite implemented
+        buf = None
+        buffers.append(buf)
+
+        if self.c_array_view.n_offsets > 0:
+            buf = CArrayViewBuffer(
+                self,
+                <uintptr_t>&(self.c_array_view.offsets[0][self.c_array_view.offset]),
+                4,
+                self.c_array_view.length + 1,
+                'i'
+            )
+            buffers.append(buf)
+
+        if self.c_array_view.n_offsets > 1:
+            for i in range(self.c_array_view.n_offsets - 1):
+                length = self.c_array_view.last_offset[i] - self.c_array_view.first_offset[i]
+                buf = CArrayViewBuffer(
+                self,
+                <uintptr_t>&(self.c_array_view.offsets[i + 1][self.c_array_view.first_offset[i]]),
+                4,
+                length + 1,
+                'i'
+            )
+            buffers.append(buf)
+
+        cdef GeoArrowCoordView* coords = &self.c_array_view.coords
+        if coords.coords_stride == 1:
+            for i in range(coords.n_values):
+                buf = CArrayViewBuffer(
+                    self,
+                    <uintptr_t>coords.values[i],
+                    8,
+                    coords.n_coords,
+                    'd'
+                )
+                buffers.append(buf)
+        elif coords.coords_stride == coords.n_values:
+            buf = CArrayViewBuffer(
+                self,
+                <uintptr_t>coords.values[0],
+                8,
+                coords.n_coords * coords.n_values,
+                'd'
+            )
+            buffers.append(buf)
+        else:
+            raise NotImplementedError('Unknown coord type')
+
+        return buffers
+
+
+cdef class CArrayViewBuffer:
+    cdef object _base
+    cdef void* _ptr
+    cdef Py_ssize_t _item_size
+    cdef Py_ssize_t _shape
+    cdef str _format
+
+    def __init__(self, base, uintptr_t ptr, item_size_bytes, length_elements, format):
+        self._base = base
+        self._ptr = <void*>ptr
+        self._item_size = item_size_bytes
+        self._shape = length_elements
+        self._format = format
+
+    def __getbuffer__(self, Py_buffer *buffer, int flags):
+        buffer.buf = self._ptr
+
+        if self._format == 'i':
+            buffer.format = 'i'
+        elif self._format == 'd':
+            buffer.format = 'd'
+        else:
+            buffer.format = NULL
+
+        buffer.internal = NULL
+        buffer.itemsize = self._item_size
+        buffer.len = self._shape * self._item_size
+        buffer.ndim = 1
+        buffer.obj = self
+        buffer.readonly = 1
+        buffer.shape = &self._shape
+        buffer.strides = &self._item_size
+        buffer.suboffsets = NULL
+
+    def __releasebuffer__(self, Py_buffer *buffer):
+        pass
