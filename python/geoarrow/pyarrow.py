@@ -85,8 +85,8 @@ class VectorArray(pa.ExtensionArray):
             kernel = Kernel.as_wkt(self.type)
             head = kernel.push(head).storage
             tail = kernel.push(tail).storage
-        except:
-            err = '* 1 or more display values failed to parse'
+        except Exception as e:
+            err = f'* 1 or more display values failed to parse\n* {str(e)}'
             type_name = type(self).__name__
             super_repr = super().__repr__()
             return f'{type_name}:{repr(self.type)}[{len(self)}]\n{err}\n{super_repr}'
