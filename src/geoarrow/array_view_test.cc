@@ -119,11 +119,6 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayErrors) {
   struct ArrowArray array;
 
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT), GEOARROW_OK);
-  array.offset = 1;
-  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), ENOTSUP);
-  EXPECT_STREQ(
-      error.message,
-      "ArrowArray with offset != 0 is not yet supported in GeoArrowArrayViewSetArray()");
 
   array.offset = 0;
   array.n_children = 1;

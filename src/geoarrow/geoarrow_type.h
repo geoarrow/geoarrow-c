@@ -259,10 +259,12 @@ struct GeoArrowWritableCoordView {
 
 struct GeoArrowArrayView {
   struct GeoArrowSchemaView schema_view;
+  int64_t offset;
   int64_t length;
   const uint8_t* validity_bitmap;
   int32_t n_offsets;
   const int32_t* offsets[3];
+  int32_t first_offset[3];
   int32_t last_offset[3];
   struct GeoArrowCoordView coords;
 };
