@@ -91,20 +91,13 @@ GeoArrowErrorCode GeoArrowArrayViewInitFromSchema(struct GeoArrowArrayView* arra
 static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_view,
                                              struct ArrowArray* array,
                                              struct GeoArrowError* error, int level) {
-  if (array->offset != 0) {
-    // This should be supported at some point
-    ArrowErrorSet((struct ArrowError*)error,
-                  "ArrowArray with offset != 0 is not yet supported in "
-                  "GeoArrowArrayViewSetArray()");
-    return ENOTSUP;
-  }
-
   if (level == array_view->n_offsets) {
     // We're at the coord array!
 
     // n_coords is last_offset[level - 1] or array->length if level == 0
     if (level > 0) {
-      array_view->coords.n_coords = array_view->last_offset[level - 1];
+      int32_t first_offset = array_view->first_offset[level - 1];
+      array_view->coords.n_coords = array_view->last_offset[level - 1] - first_offset;
     } else {
       array_view->coords.n_coords = array->length;
     }
@@ -183,10 +176,12 @@ static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_vie
   // Set the offsets buffer and the last_offset value of level
   if (array->length > 0) {
     array_view->offsets[level] = (const int32_t*)array->buffers[1];
+    array_view->first_offset[level] = array_view->offsets[level][array->offset];
     array_view->last_offset[level] =
         array_view->offsets[level][array->offset + array->length];
   } else {
     array_view->offsets[level] = &kZeroInt32;
+    array_view->first_offset[level] = 0;
     array_view->last_offset[level] = 0;
   }
 
@@ -199,6 +194,7 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
                                             struct GeoArrowError* error) {
   NANOARROW_RETURN_NOT_OK(GeoArrowArrayViewSetArrayInternal(array_view, array, error, 0));
   array_view->validity_bitmap = array->buffers[0];
+  array_view->offset = array->offset;
   array_view->length = array->length;
   return GEOARROW_OK;
 }
@@ -220,10 +216,11 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitPoint(struct GeoArrowArrayView* a
   for (int64_t i = 0; i < length; i++) {
     NANOARROW_RETURN_NOT_OK(v->feat_start(v));
     if (!array_view->validity_bitmap ||
-        ArrowBitGet(array_view->validity_bitmap, offset + i)) {
+        ArrowBitGet(array_view->validity_bitmap, array_view->offset + offset + i)) {
       NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POINT,
                                             array_view->schema_view.dimensions));
-      GeoArrowCoordViewUpdate(&array_view->coords, &coords, offset + i, 1);
+      GeoArrowCoordViewUpdate(&array_view->coords, &coords,
+                              array_view->offset + offset + i, 1);
       NANOARROW_RETURN_NOT_OK(v->coords(v, &coords));
       NANOARROW_RETURN_NOT_OK(v->geom_end(v));
     } else {
@@ -250,11 +247,12 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitLinestring(
   for (int64_t i = 0; i < length; i++) {
     NANOARROW_RETURN_NOT_OK(v->feat_start(v));
     if (!array_view->validity_bitmap ||
-        ArrowBitGet(array_view->validity_bitmap, offset + i)) {
+        ArrowBitGet(array_view->validity_bitmap, array_view->offset + offset + i)) {
       NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_LINESTRING,
                                             array_view->schema_view.dimensions));
-      coord_offset = array_view->offsets[0][offset + i];
-      n_coords = array_view->offsets[0][offset + i + 1] - coord_offset;
+      coord_offset = array_view->offsets[0][array_view->offset + offset + i];
+      n_coords =
+          array_view->offsets[0][array_view->offset + offset + i + 1] - coord_offset;
       GeoArrowCoordViewUpdate(&array_view->coords, &coords, coord_offset, n_coords);
       NANOARROW_RETURN_NOT_OK(v->coords(v, &coords));
       NANOARROW_RETURN_NOT_OK(v->geom_end(v));
@@ -280,11 +278,11 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitPolygon(
   for (int64_t i = 0; i < length; i++) {
     NANOARROW_RETURN_NOT_OK(v->feat_start(v));
     if (!array_view->validity_bitmap ||
-        ArrowBitGet(array_view->validity_bitmap, offset + i)) {
+        ArrowBitGet(array_view->validity_bitmap, array_view->offset + offset + i)) {
       NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POLYGON,
                                             array_view->schema_view.dimensions));
-      ring_offset = array_view->offsets[0][offset + i];
-      n_rings = array_view->offsets[0][offset + i + 1] - ring_offset;
+      ring_offset = array_view->offsets[0][array_view->offset + offset + i];
+      n_rings = array_view->offsets[0][array_view->offset + offset + i + 1] - ring_offset;
 
       for (int64_t j = 0; j < n_rings; j++) {
         NANOARROW_RETURN_NOT_OK(v->ring_start(v));
@@ -316,11 +314,12 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitMultipoint(
   for (int64_t i = 0; i < length; i++) {
     NANOARROW_RETURN_NOT_OK(v->feat_start(v));
     if (!array_view->validity_bitmap ||
-        ArrowBitGet(array_view->validity_bitmap, offset + i)) {
+        ArrowBitGet(array_view->validity_bitmap, array_view->offset + offset + i)) {
       NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_MULTIPOINT,
                                             array_view->schema_view.dimensions));
-      coord_offset = array_view->offsets[0][offset + i];
-      n_coords = array_view->offsets[0][offset + i + 1] - coord_offset;
+      coord_offset = array_view->offsets[0][array_view->offset + offset + i];
+      n_coords =
+          array_view->offsets[0][array_view->offset + offset + i + 1] - coord_offset;
       for (int64_t j = 0; j < n_coords; j++) {
         NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POINT,
                                               array_view->schema_view.dimensions));
@@ -351,11 +350,12 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitMultilinestring(
   for (int64_t i = 0; i < length; i++) {
     NANOARROW_RETURN_NOT_OK(v->feat_start(v));
     if (!array_view->validity_bitmap ||
-        ArrowBitGet(array_view->validity_bitmap, offset + i)) {
+        ArrowBitGet(array_view->validity_bitmap, array_view->offset + offset + i)) {
       NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_MULTILINESTRING,
                                             array_view->schema_view.dimensions));
-      linestring_offset = array_view->offsets[0][offset + i];
-      n_linestrings = array_view->offsets[0][offset + i + 1] - linestring_offset;
+      linestring_offset = array_view->offsets[0][array_view->offset + offset + i];
+      n_linestrings =
+          array_view->offsets[0][array_view->offset + offset + i + 1] - linestring_offset;
 
       for (int64_t j = 0; j < n_linestrings; j++) {
         NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_LINESTRING,
@@ -392,12 +392,13 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitMultipolygon(
   for (int64_t i = 0; i < length; i++) {
     NANOARROW_RETURN_NOT_OK(v->feat_start(v));
     if (!array_view->validity_bitmap ||
-        ArrowBitGet(array_view->validity_bitmap, offset + i)) {
+        ArrowBitGet(array_view->validity_bitmap, array_view->offset + offset + i)) {
       NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON,
                                             array_view->schema_view.dimensions));
 
-      polygon_offset = array_view->offsets[0][offset + i];
-      n_polygons = array_view->offsets[0][offset + i + 1] - polygon_offset;
+      polygon_offset = array_view->offsets[0][array_view->offset + offset + i];
+      n_polygons =
+          array_view->offsets[0][array_view->offset + offset + i + 1] - polygon_offset;
 
       for (int64_t j = 0; j < n_polygons; j++) {
         NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POLYGON,
