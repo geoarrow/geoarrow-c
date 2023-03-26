@@ -81,36 +81,7 @@ ga.wkt().wrap_array(existing_array)
 
 
 
-
-```python
-import pyarrow.parquet as parquet
-
-table = parquet.read_table("/Users/deweydunnington/Desktop/rscratch/geoarrow-public-data/release-files/microsoft-building-footprints-1.parquet")
-```
-
-
-```python
-table.column('geometry').type
-table.column('geometry').chunk(0)
-```
-
-
-
-
-    PolygonArray:PolygonType(interleaved geoarrow.polygon)[131072]
-    <POLYGON ((-114.127454 34.265674, -114.127476 34.265839, -114.1275...>
-    <POLYGON ((-114.127694 34.260939, -114.127695 34.260933, -114.1275...>
-    <POLYGON ((-114.127988 34.264977, -114.127988 34.265075, -114.1281...>
-    <POLYGON ((-114.129007 34.260229, -114.128906 34.260229, -114.1289...>
-    <POLYGON ((-114.129611 34.261105, -114.129611 34.261185, -114.1297...>
-    ...131062 values...
-    <POLYGON ((-118.032067 33.846036, -118.031924 33.846039, -118.0319...>
-    <POLYGON ((-118.032091 33.954667, -118.032014 33.954769, -118.0321...>
-    <POLYGON ((-118.032093 34.5606, -118.031978 34.560602, -118.031981...>
-    <POLYGON ((-118.032108 33.771735, -118.032019 33.771732, -118.0320...>
-    <POLYGON ((-118.032127 33.908022, -118.032025 33.908022, -118.0320...>
-
-
+Importing `geoarrow.pyarrow` will register the geoarrow extension types with pyarrow such that you can read/write Arrow streams, Arrow files, and Parquet that contains Geoarrow extension types. A number of these files are available from the [geoarrow-data](https://github.com/paleolimbot/geoarrow-data) repository.
 
 ## Geopandas
 
