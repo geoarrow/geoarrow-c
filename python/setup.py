@@ -54,7 +54,7 @@ setup(
     ext_modules=[
         Extension(
             name='geoarrow._lib',
-            include_dirs=['geoarrow/geoarrow'],
+            include_dirs=['geoarrow/geoarrow', 'geoarrow/geoarrow_python'],
             language='c++',
             sources=['geoarrow/_lib.pyx'] + sources,
             extra_compile_args = ['-std=c++11'],

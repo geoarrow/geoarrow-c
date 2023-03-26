@@ -4,7 +4,7 @@
 """Low-level geoarrow Python bindings."""
 
 from libc.stdint cimport uint8_t, int32_t, int64_t, uintptr_t
-from cpython cimport Py_buffer
+from cpython cimport Py_buffer, PyObject
 from libcpp cimport bool
 from libcpp.string cimport string
 
@@ -122,6 +122,15 @@ cdef extern from "geoarrow_type.h":
         int32_t last_offset[3]
         GeoArrowCoordView coords
 
+
+
+    struct GeoArrowBuilder:
+        pass
+
+
+cdef extern from "geoarrow.h":
+    GeoArrowErrorCode GeoArrowKernelInit(GeoArrowKernel* kernel, const char* name, const char* options)
+
     GeoArrowErrorCode GeoArrowArrayViewInitFromSchema(GeoArrowArrayView* array_view,
                                                       ArrowSchema* schema,
                                                       GeoArrowError* error)
@@ -130,9 +139,23 @@ cdef extern from "geoarrow_type.h":
                                                 ArrowArray* array,
                                                 GeoArrowError* error)
 
+    GeoArrowErrorCode GeoArrowBuilderInitFromSchema(GeoArrowBuilder* builder,
+                                                    ArrowSchema* schema,
+                                                    GeoArrowError* error)
 
-cdef extern from "geoarrow.h":
-    GeoArrowErrorCode GeoArrowKernelInit(GeoArrowKernel* kernel, const char* name, const char* options)
+    GeoArrowErrorCode GeoArrowBuilderAppendBuffer(
+        GeoArrowBuilder* builder, int64_t i, GeoArrowBufferView value)
+
+    void GeoArrowBuilderReset(GeoArrowBuilder* builder)
+
+    GeoArrowErrorCode GeoArrowBuilderFinish(GeoArrowBuilder* builder,
+                                            ArrowArray* array,
+                                            GeoArrowError* error)
+
+cdef extern from "geoarrow_python.h":
+
+    GeoArrowErrorCode GeoArrowBuilderSetPyBuffer(GeoArrowBuilder* builder, int64_t i, PyObject* obj,
+                                                 const uint8_t* ptr, int64_t size)
 
 
 cdef extern from "geoarrow.hpp" namespace "geoarrow":
@@ -531,3 +554,42 @@ cdef class CArrayViewBuffer:
 
     def __releasebuffer__(self, Py_buffer *buffer):
         pass
+
+
+cdef class CBuilder:
+    cdef GeoArrowBuilder c_builder
+    cdef SchemaHolder _schema
+
+    def __init__(self, SchemaHolder schema):
+        self._schema = schema
+        cdef GeoArrowError error
+        cdef int result = GeoArrowBuilderInitFromSchema(&self.c_builder, &schema.c_schema, &error)
+        if result != GEOARROW_OK:
+            raise ValueError(error.message.decode('UTF-8'))
+
+    def __del__(self):
+        GeoArrowBuilderReset(&self.c_builder)
+
+    def set_buffer(self, int64_t i, object obj):
+        cdef const unsigned char[:] view = memoryview(obj)
+        cdef int result = GeoArrowBuilderSetPyBuffer(&self.c_builder, i, <PyObject*>obj, &(view[0]), view.shape[0])
+        if result != 0:
+            raise ValueError("GeoArrowBuilderSetPyBuffer() failed")
+
+    def set_buffer_clone(self, int64_t i, object obj):
+        cdef const unsigned char[:] view = memoryview(obj)
+        cdef GeoArrowBufferView value
+        value.data = &(view[0])
+        value.size_bytes = view.shape[0]
+        cdef int result = GeoArrowBuilderAppendBuffer(&self.c_builder, i, value)
+        if result != 0:
+            raise ValueError("GeoArrowBuilderSetBuffer() failed")
+
+    @property
+    def schema(self):
+        return self._schema
+
+    def finish(self):
+        out = ArrayHolder()
+
+
