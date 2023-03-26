@@ -129,7 +129,7 @@ wkb_array
 
     /Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/geopandas/_compat.py:123: UserWarning: The Shapely GEOS version (3.11.1-CAPI-1.17.1) is incompatible with the GEOS version PyGEOS was compiled with (3.10.1-CAPI-1.16.0). Conversions between both will be slow.
       warnings.warn(
-    Warning 1: File /vsimem/30cbaf5b3a0a4f4eb19aa1573d1abdce has GPKG application_id, but non conformant file extension
+    Warning 1: File /vsimem/e0acae235392478fb4cf4bec24c55045 has GPKG application_id, but non conformant file extension
 
 
 
@@ -153,27 +153,6 @@ wkb_array
 By default, `geoarrow.array()` performs the fewest transformations required, which in
 this case means we get a well-known binary representation in Arrow form. To get a
 geoarrow-encoded version, use `.as_geoarrow()`:
-
-
-```python
-%timeit wkb_array.as_geoarrow(ga.multilinestring().with_dimensions(ga.Dimensions.XYZ))
-```
-
-    235 µs ± 12.7 µs per loop (mean ± std. dev. of 7 runs, 1000 loops each)
-
-
-
-```python
-pd_wkb = df.geometry.to_wkb()
-```
-
-
-```python
-%timeit geopandas.GeoSeries.from_wkb(pd_wkb)
-```
-
-    1.02 ms ± 6.28 µs per loop (mean ± std. dev. of 7 runs, 1000 loops each)
-
 
 
 ```python
