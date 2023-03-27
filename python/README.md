@@ -81,6 +81,49 @@ ga.wkt().wrap_array(existing_array)
 
 
 
+Alternatively, you can construct GeoArrow arrays directly from a series of buffers as described in the specification:
+
+
+```python
+import numpy as np
+
+ga.point().from_geobuffers(
+    None, 
+    np.array([1.0, 2.0, 3.0]),
+    np.array([3.0, 4.0, 5.0])
+)
+```
+
+
+
+
+    PointArray:PointType(geoarrow.point)[3]
+    <POINT (1 3)>
+    <POINT (2 4)>
+    <POINT (3 5)>
+
+
+
+
+
+```python
+ga.point().with_coord_type(ga.CoordType.INTERLEAVED).from_geobuffers(
+    None,
+    np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+)
+```
+
+
+
+
+    PointArray:PointType(interleaved geoarrow.point)[3]
+    <POINT (1 2)>
+    <POINT (3 4)>
+    <POINT (5 6)>
+
+
+
+
 Importing `geoarrow.pyarrow` will register the geoarrow extension types with pyarrow such that you can read/write Arrow streams, Arrow files, and Parquet that contains Geoarrow extension types. A number of these files are available from the [geoarrow-data](https://github.com/paleolimbot/geoarrow-data) repository.
 
 ## Geopandas
@@ -100,7 +143,7 @@ wkb_array
 
     /Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/geopandas/_compat.py:123: UserWarning: The Shapely GEOS version (3.11.1-CAPI-1.17.1) is incompatible with the GEOS version PyGEOS was compiled with (3.10.1-CAPI-1.16.0). Conversions between both will be slow.
       warnings.warn(
-    Warning 1: File /vsimem/e0acae235392478fb4cf4bec24c55045 has GPKG application_id, but non conformant file extension
+    Warning 1: File /vsimem/dd517105c8364dc2a3e5a888a841c433 has GPKG application_id, but non conformant file extension
 
 
 
@@ -222,6 +265,63 @@ geoarrow_array.geobuffers()
 ```python
 assert geoarrow_array.as_wkt() == wkb_array.as_wkt()
 ```
+
+You can do the inverse operation (from raw buffers to GeoPandas) using `.from_geobuffers()`, and `.as_wkb()`:
+
+
+```python
+ga_type = ga.multilinestring() \
+    .with_dimensions(ga.Dimensions.XYZ) \
+    .with_crs(geoarrow_array.type.crs)
+geoarrow_array2 = ga_type.from_geobuffers(*geoarrow_array.geobuffers())
+geoarrow_array2
+```
+
+
+
+
+    MultiLinestringArray:MultiLinestringType(geoarrow.multilinestring_z <{"$schema":"https://proj.org/schem...>)[255]
+    <MULTILINESTRING Z ((648686.0197000001 5099181.984099999 0, 648626...>
+    <MULTILINESTRING Z ((687687.8200000003 5117029.181600001 0, 686766...>
+    <MULTILINESTRING Z ((631355.5193999996 5122892.2849 0, 631364.3433...>
+    <MULTILINESTRING Z ((665166.0199999996 5138641.9825 0, 665146.0199...>
+    <MULTILINESTRING Z ((673606.0199999996 5162961.9823 0, 673606.0199...>
+    ...245 values...
+    <MULTILINESTRING Z ((681672.6200000001 5078601.5823 0, 681866.0199...>
+    <MULTILINESTRING Z ((414867.9170000004 5093040.8807 0, 414793.8169...>
+    <MULTILINESTRING Z ((414867.9170000004 5093040.8807 0, 414829.7170...>
+    <MULTILINESTRING Z ((414867.9170000004 5093040.8807 0, 414937.2170...>
+    <MULTILINESTRING Z ((648686.0197000001 5099181.984099999 0, 648866...>
+
+
+
+
+```python
+assert geoarrow_array2 == geoarrow_array
+```
+
+
+```python
+geopandas.GeoSeries.from_wkb(geoarrow_array2.as_wkb())
+```
+
+
+
+
+    0      MULTILINESTRING Z ((648686.020 5099181.984 0.0...
+    1      MULTILINESTRING Z ((687687.820 5117029.182 0.0...
+    2      MULTILINESTRING Z ((631355.519 5122892.285 0.0...
+    3      MULTILINESTRING Z ((665166.020 5138641.982 0.0...
+    4      MULTILINESTRING Z ((673606.020 5162961.982 0.0...
+                                 ...                        
+    250    MULTILINESTRING Z ((681672.620 5078601.582 0.0...
+    251    MULTILINESTRING Z ((414867.917 5093040.881 0.0...
+    252    MULTILINESTRING Z ((414867.917 5093040.881 0.0...
+    253    MULTILINESTRING Z ((414867.917 5093040.881 0.0...
+    254    MULTILINESTRING Z ((648686.020 5099181.984 0.0...
+    Length: 255, dtype: geometry
+
+
 
 ## Building
 
