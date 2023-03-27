@@ -1,6 +1,6 @@
 
 from . import _lib
-from ._lib import CKernel, SchemaHolder, ArrayHolder, CVectorType, CArrayView
+from ._lib import CKernel, SchemaHolder, ArrayHolder, CVectorType, CArrayView, CBuilder
 
 
 class GeometryType:

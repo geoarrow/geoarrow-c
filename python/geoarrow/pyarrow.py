@@ -206,6 +206,26 @@ class VectorType(pa.ExtensionType):
 
         return out
 
+    def from_geobuffers(self, *args, **kwargs) -> VectorArray:
+        raise NotImplementedError()
+
+    def _from_geobuffers_internal(self, args):
+        builder = lib.CBuilder(self._type.to_schema())
+        for i, buf_type, buf in args:
+            if buf is None:
+                continue
+            if buf_type == 'uint8':
+                builder.set_buffer_uint8(i, buf)
+            elif buf_type == 'int32':
+                builder.set_buffer_int32(i, buf)
+            elif buf_type == 'double':
+                builder.set_buffer_double(i, buf)
+            else:
+                raise ValueError(f'Unknown type: {buf_type}')
+
+        carray = builder.finish()
+        return pa.Array._import_from_c(carray._addr(), self)
+
     @property
     def id(self):
         return self._type.id
@@ -282,25 +302,116 @@ class WktType(VectorType):
 class PointType(VectorType):
     _extension_name = 'geoarrow.point'
 
+    def from_geobuffers(self, validity, x, y=None, z_or_m=None, m=None) -> PointArray:
+        buffers = [
+            (0, 'uint8', validity),
+            (1, 'double', x),
+            (2, 'double', y),
+            (3, 'double', z_or_m),
+            (4, 'double', m)
+        ]
+
+        return self._from_geobuffers_internal(buffers)
+
 
 class LinestringType(VectorType):
     _extension_name = 'geoarrow.linestring'
+
+    def from_geobuffers(self, validity,
+                        coord_offsets,
+                        x, y=None, z_or_m=None, m=None) -> LinestringArray:
+        buffers = [
+            (0, 'uint8', validity),
+            (1, 'int32', coord_offsets),
+            (2, 'double', x),
+            (3, 'double', y),
+            (4, 'double', z_or_m),
+            (5, 'double', m)
+        ]
+
+        return self._from_geobuffers_internal(buffers)
 
 
 class PolygonType(VectorType):
     _extension_name = 'geoarrow.polygon'
 
+    def from_geobuffers(self,
+                        validity,
+                        ring_offsets,
+                        coord_offsets,
+                        x, y=None, z_or_m=None, m=None) -> PolygonArray:
+        buffers = [
+            (0, 'uint8', validity),
+            (1, 'int32', ring_offsets),
+            (2, 'int32', coord_offsets),
+            (3, 'double', x),
+            (4, 'double', y),
+            (5, 'double', z_or_m),
+            (6, 'double', m)
+        ]
+
+        return self._from_geobuffers_internal(buffers)
+
+
 
 class MultiPointType(VectorType):
     _extension_name = 'geoarrow.multipoint'
+
+    def from_geobuffers(self, validity,
+                        coord_offsets,
+                        x, y=None, z_or_m=None, m=None) -> MultiPointArray:
+        buffers = [
+            (0, 'uint8', validity),
+            (1, 'int32', coord_offsets),
+            (2, 'double', x),
+            (3, 'double', y),
+            (4, 'double', z_or_m),
+            (5, 'double', m)
+        ]
+
+        return self._from_geobuffers_internal(buffers)
 
 
 class MultiLinestringType(VectorType):
     _extension_name = 'geoarrow.multilinestring'
 
+    def from_geobuffers(self, validity,
+                        linestring_offsets,
+                        coord_offsets,
+                        x, y=None, z_or_m=None, m=None) -> MultiLinestringArray:
+        buffers = [
+            (0, 'uint8', validity),
+            (1, 'int32', linestring_offsets),
+            (2, 'int32', coord_offsets),
+            (3, 'double', x),
+            (4, 'double', y),
+            (5, 'double', z_or_m),
+            (6, 'double', m)
+        ]
+
+        return self._from_geobuffers_internal(buffers)
+
 
 class MultiPolygonType(VectorType):
     _extension_name = 'geoarrow.multipolygon'
+
+    def from_geobuffers(self, validity,
+                        polygon_offsets,
+                        ring_offsets,
+                        coord_offsets,
+                        x, y=None, z_or_m=None, m=None) -> MultiPolygonArray:
+        buffers = [
+            (0, 'uint8', validity),
+            (1, 'int32', polygon_offsets),
+            (2, 'int32', ring_offsets),
+            (3, 'int32', coord_offsets),
+            (4, 'double', x),
+            (5, 'double', y),
+            (6, 'double', z_or_m),
+            (7, 'double', m)
+        ]
+
+        return self._from_geobuffers_internal(buffers)
 
 
 def _type_cls_from_name(name):
