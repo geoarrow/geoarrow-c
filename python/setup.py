@@ -35,7 +35,7 @@ vendor_dir = os.path.join(this_dir, 'geoarrow', 'geoarrow')
 vendored_files = os.listdir(vendor_dir)
 sources = [f'geoarrow/geoarrow/{f}' for f in vendored_files if f.endswith('.c')]
 
-# Workdaround because setuptools has no easy way to mix C and C++ sources
+# Workaround because setuptools has no easy way to mix C and C++ sources
 # if extra flags are required (e.g., -std=c++11 like we need here).
 class build_ext_subclass(build_ext):
     def build_extensions(self):

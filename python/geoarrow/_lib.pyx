@@ -155,7 +155,7 @@ cdef extern from "geoarrow.h":
 cdef extern from "geoarrow_python.h":
 
     GeoArrowErrorCode GeoArrowBuilderSetPyBuffer(GeoArrowBuilder* builder, int64_t i, PyObject* obj,
-                                                 const uint8_t* ptr, int64_t size)
+                                                 const void* ptr, int64_t size)
 
 
 cdef extern from "geoarrow.hpp" namespace "geoarrow":
@@ -570,20 +570,23 @@ cdef class CBuilder:
     def __del__(self):
         GeoArrowBuilderReset(&self.c_builder)
 
-    def set_buffer(self, int64_t i, object obj):
+    def set_buffer_uint8(self, int64_t i, object obj):
         cdef const unsigned char[:] view = memoryview(obj)
         cdef int result = GeoArrowBuilderSetPyBuffer(&self.c_builder, i, <PyObject*>obj, &(view[0]), view.shape[0])
         if result != 0:
             raise ValueError("GeoArrowBuilderSetPyBuffer() failed")
 
-    def set_buffer_clone(self, int64_t i, object obj):
-        cdef const unsigned char[:] view = memoryview(obj)
-        cdef GeoArrowBufferView value
-        value.data = &(view[0])
-        value.size_bytes = view.shape[0]
-        cdef int result = GeoArrowBuilderAppendBuffer(&self.c_builder, i, value)
+    def set_buffer_int32(self, int64_t i, object obj):
+        cdef const int32_t[:] view = memoryview(obj)
+        cdef int result = GeoArrowBuilderSetPyBuffer(&self.c_builder, i, <PyObject*>obj, &(view[0]), view.shape[0] * 4)
         if result != 0:
-            raise ValueError("GeoArrowBuilderSetBuffer() failed")
+            raise ValueError("GeoArrowBuilderSetPyBuffer() failed")
+
+    def set_buffer_double(self, int64_t i, object obj):
+        cdef const double[:] view = memoryview(obj)
+        cdef int result = GeoArrowBuilderSetPyBuffer(&self.c_builder, i, <PyObject*>obj, &(view[0]), view.shape[0] * 8)
+        if result != 0:
+            raise ValueError("GeoArrowBuilderSetPyBuffer() failed")
 
     @property
     def schema(self):
@@ -591,5 +594,8 @@ cdef class CBuilder:
 
     def finish(self):
         out = ArrayHolder()
-
-
+        cdef GeoArrowError error
+        cdef int result = GeoArrowBuilderFinish(&self.c_builder, &out.c_array, &error)
+        if result != GEOARROW_OK:
+            raise ValueError(error.decode('UTF-8'))
+        return out

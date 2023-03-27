@@ -1,4 +1,5 @@
 
+import numpy as np
 import pyarrow as pa
 import pytest
 
@@ -124,3 +125,22 @@ def test_kernel_void_agg():
 def test_kernel_init_error():
     with pytest.raises(ValueError):
         lib.CKernel(b'not_a_kernel')
+
+def test_builder():
+    type_obj = lib.CVectorType.Make(
+        lib.GeometryType.LINESTRING,
+        ga.Dimensions.XY,
+        ga.CoordType.SEPARATE
+    )
+    schema = type_obj.to_schema()
+
+    builder = lib.CBuilder(schema)
+    builder.set_buffer_uint8(0, b'\xff')
+    builder.set_buffer_int32(1, np.array([0, 3], dtype=np.int32))
+    builder.set_buffer_double(2, np.array([0.0, 1.0, 2.0]))
+    builder.set_buffer_double(3, np.array([3.0, 4.0, 5.0]))
+    array = builder.finish()
+
+    storage_schema = type_obj.to_storage_schema()
+    storage = pa.Array._import_from_c(array._addr(), storage_schema._addr())
+    storage.validate()

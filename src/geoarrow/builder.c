@@ -165,6 +165,10 @@ GeoArrowErrorCode GeoArrowBuilderSetOwnedBuffer(
     struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value,
     void (*custom_free)(uint8_t* ptr, int64_t size, void* private_data),
     void* private_data) {
+  if (i < 0 || i >= builder->view.n_buffers) {
+    return EINVAL;
+  }
+
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
   struct ArrowBuffer* buffer_src = private->buffers[i];
 
@@ -184,6 +188,11 @@ GeoArrowErrorCode GeoArrowBuilderSetOwnedBuffer(
   buffer_src->data = (uint8_t*)value.data;
   buffer_src->size_bytes = value.size_bytes;
   buffer_src->capacity_bytes = value.size_bytes;
+
+  // Sync this information to the writable view
+  builder->view.buffers[i].data.data = buffer_src->data;
+  builder->view.buffers[i].size_bytes = buffer_src->size_bytes;
+  builder->view.buffers[i].capacity_bytes = buffer_src->capacity_bytes;
 
   return GEOARROW_OK;
 }
