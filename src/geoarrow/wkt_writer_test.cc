@@ -729,6 +729,48 @@ TEST(WKTWriterTest, WKTWriterTestStreamingCoords) {
   GeoArrowWKTWriterReset(&writer);
 }
 
+TEST(WKTWriterTest, WKTWriterTestMaxFeatLen) {
+  struct GeoArrowWKTWriter writer;
+  struct GeoArrowVisitor v;
+  GeoArrowWKTWriterInit(&writer);
+  writer.max_element_size_bytes = 0;
+  GeoArrowWKTWriterInitVisitor(&writer, &v);
+
+  TestCoords coords({1, 2}, {2, 3});
+
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), EQFULL);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  // Make sure we can try again with another feature
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  EXPECT_EQ(v.coords(&v, coords.view()), EQFULL);
+  EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  struct ArrowArray array;
+  EXPECT_EQ(GeoArrowWKTWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+  EXPECT_EQ(array.length, 2);
+  EXPECT_EQ(array.null_count, 0);
+
+  struct ArrowArrayView view;
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
+  ArrowArrayViewSetArray(&view, &array, nullptr);
+
+  struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "LINESTRING (1 2");
+
+  value = ArrowArrayViewGetStringUnsafe(&view, 1);
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "LINESTRING (1 2");
+
+  ArrowArrayViewReset(&view);
+  array.release(&array);
+  GeoArrowWKTWriterReset(&writer);
+}
+
 TEST(WKTWriterTest, WKTWriterTestVeryLongCoords) {
   struct GeoArrowWKTWriter writer;
   struct GeoArrowVisitor v;
