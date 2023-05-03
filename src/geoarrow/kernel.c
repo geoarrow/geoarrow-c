@@ -247,22 +247,15 @@ static int kernel_push_batch_geoarrow_by_feature(struct GeoArrowKernel* kernel,
       GeoArrowArrayViewSetArray(&private_data->array_view, array, error));
 
   private_data->v.error = error;
-  struct ArrowArrayView* array_view = &private_data->na_array_view;
 
   for (int64_t i = 0; i < array->length; i++) {
-    if (ArrowArrayViewIsNull(array_view, i)) {
-      NANOARROW_RETURN_NOT_OK(private_data->v.feat_start(&private_data->v));
-      NANOARROW_RETURN_NOT_OK(private_data->v.null_feat(&private_data->v));
-      NANOARROW_RETURN_NOT_OK(private_data->v.feat_end(&private_data->v));
-    } else {
-      int result =
-          GeoArrowArrayViewVisit(&private_data->array_view, i, 1, &private_data->v);
+    int result =
+        GeoArrowArrayViewVisit(&private_data->array_view, i, 1, &private_data->v);
 
-      if (result == EAGAIN) {
-        NANOARROW_RETURN_NOT_OK(private_data->v.feat_end(&private_data->v));
-      } else if (result != NANOARROW_OK) {
-        return result;
-      }
+    if (result == EAGAIN) {
+      NANOARROW_RETURN_NOT_OK(private_data->v.feat_end(&private_data->v));
+    } else if (result != NANOARROW_OK) {
+      return result;
     }
   }
 

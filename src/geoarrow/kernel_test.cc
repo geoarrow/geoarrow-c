@@ -318,8 +318,62 @@ TEST(KernelTest, KernelTestFormatWKTFromWKB) {
   ASSERT_EQ(GeoArrowSchemaInitExtension(&schema_in, GEOARROW_TYPE_WKB), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayInitFromSchema(&array_in, &schema_in, nullptr), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayStartAppending(&array_in), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendBytes(&array_in, data),
+  ASSERT_EQ(ArrowArrayAppendBytes(&array_in, data), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+
+  struct ArrowBuffer buffer;
+  ASSERT_EQ(ArrowMetadataBuilderInit(&buffer, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowMetadataBuilderAppend(&buffer, ArrowCharView("max_element_size_bytes"),
+                                       ArrowCharView("10")),
             GEOARROW_OK);
+
+  EXPECT_EQ(GeoArrowKernelInit(&kernel, "format_wkt", nullptr), GEOARROW_OK);
+  EXPECT_EQ(kernel.start(&kernel, &schema_in, (char*)buffer.data, &schema_out, &error),
+            GEOARROW_OK);
+  EXPECT_STREQ(schema_out.format, "u");
+  EXPECT_EQ(kernel.push_batch(&kernel, &array_in, &array_out1, &error), GEOARROW_OK);
+  EXPECT_EQ(kernel.finish(&kernel, nullptr, &error), GEOARROW_OK);
+
+  kernel.release(&kernel);
+  EXPECT_EQ(kernel.release, nullptr);
+
+  EXPECT_EQ(array_out1.length, 2);
+  EXPECT_EQ(array_out1.null_count, 1);
+
+  struct ArrowArrayView array_view;
+  struct ArrowStringView item;
+  ASSERT_EQ(ArrowArrayViewInitFromSchema(&array_view, &schema_out, nullptr), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array_out1, nullptr), GEOARROW_OK);
+  item = ArrowArrayViewGetStringUnsafe(&array_view, 0);
+  EXPECT_EQ(std::string(item.data, item.size_bytes), "POINT (30 ");
+  EXPECT_TRUE(ArrowArrayViewIsNull(&array_view, 1));
+
+  ArrowArrayViewReset(&array_view);
+  schema_in.release(&schema_in);
+  schema_out.release(&schema_out);
+  array_in.release(&array_in);
+  array_out1.release(&array_out1);
+  ArrowBufferReset(&buffer);
+}
+
+TEST(KernelTest, KernelTestFormatWKTFromGeoArrow) {
+  struct GeoArrowKernel kernel;
+  struct GeoArrowError error;
+
+  struct ArrowSchema schema_in;
+  struct ArrowSchema schema_out;
+  struct ArrowArray array_in;
+  struct ArrowArray array_out1;
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&schema_in, GEOARROW_TYPE_POINT), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array_in, &schema_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array_in), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendInt(array_in.children[0], 30), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendInt(array_in.children[1], 10), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(&array_in), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
 
