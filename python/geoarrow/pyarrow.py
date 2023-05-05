@@ -635,6 +635,15 @@ class Kernel:
         return Kernel('as_wkb', type_in)
 
     @staticmethod
+    def format_wkt(type_in, significant_digits=None, max_element_size_bytes=None):
+        return Kernel(
+            'format_wkt',
+            type_in,
+            significant_digits=significant_digits,
+            max_element_size_bytes=max_element_size_bytes
+        )
+
+    @staticmethod
     def as_geoarrow(type_in, type_id):
         return Kernel('as_geoarrow', type_in, type=type_id)
 
@@ -643,6 +652,7 @@ class Kernel:
         if not options:
             return b''
 
+        options = {k: v for k, v in options.items() if v is not None}
         bytes = len(options).to_bytes(4, sys.byteorder, signed=True)
         for k, v in options.items():
             k = str(k)
