@@ -1,9 +1,15 @@
 
 on:
   push:
-    branches: [main, master]
+    branches:
+      - main
   pull_request:
-    branches: [main, master]
+    branches:
+      - main
+    paths:
+      - '.github/workflows/build-and-test.yaml'
+      - 'src/geoarrow/**'
+      - 'CMakeLists.txt'
 
 name: Build and Test
 
