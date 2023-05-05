@@ -67,6 +67,7 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 struct GeoArrowWKTWriter {
   int significant_digits;
   int use_flat_multipoint;
+  int64_t max_element_size_bytes;
   void* private_data;
 };
 

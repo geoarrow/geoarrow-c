@@ -28,8 +28,10 @@ struct WKTWriterPrivate {
   int32_t level;
   int64_t length;
   int64_t null_count;
+  int64_t values_feat_start;
   int significant_digits;
   int use_flat_multipoint;
+  int64_t max_element_size_bytes;
   int feat_is_null;
 };
 
@@ -57,6 +59,7 @@ static int feat_start_wkt(struct GeoArrowVisitor* v) {
   private->level = -1;
   private->length++;
   private->feat_is_null = 0;
+  private->values_feat_start = private->values.size_bytes;
   return ArrowBufferAppendInt32(&private->offsets, private->values.size_bytes);
 }
 
@@ -154,6 +157,12 @@ static int coords_wkt(struct GeoArrowVisitor* v, const struct GeoArrowCoordView*
                              (n_coords * (n_dims - 1)) +  // spaces between ordinates
                              ((private->significant_digits + 1 + 5) * n_coords *
                               n_dims);  // significant digits + decimal + exponent
+  if (private->max_element_size_bytes >= 0 &&
+      max_chars_needed > private->max_element_size_bytes) {
+    // Because we write a coordinate before actually checking
+    max_chars_needed = private->max_element_size_bytes + 1024;
+  }
+
   NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(&private->values, max_chars_needed));
 
   // Write the first coordinate, possibly with a leading comma if there was
@@ -176,6 +185,12 @@ static int coords_wkt(struct GeoArrowVisitor* v, const struct GeoArrowCoordView*
 
   // Write the remaining coordinates (which all have leading commas)
   for (int64_t i = 1; i < n_coords; i++) {
+    if (private->max_element_size_bytes >= 0 &&
+        (private->values.size_bytes - private->values_feat_start) >=
+            private->max_element_size_bytes) {
+      return EAGAIN;
+    }
+
     ArrowBufferAppendUnsafe(&private->values, ", ", 2);
     WKTWriterWriteDoubleUnsafe(private, coords->values[0][i * coords->coords_stride]);
     for (int32_t j = 1; j < n_dims; j++) {
@@ -233,6 +248,12 @@ static int feat_end_wkt(struct GeoArrowVisitor* v) {
     return ArrowBitmapAppend(&private->validity, 1, 1);
   }
 
+  if (private->max_element_size_bytes >= 0 &&
+      (private->values.size_bytes - private->values_feat_start) >
+          private->max_element_size_bytes) {
+    private->values.size_bytes = private->values_feat_start + private->max_element_size_bytes;
+  }
+
   return GEOARROW_OK;
 }
 
@@ -254,6 +275,8 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer) {
   private->significant_digits = 16;
   writer->use_flat_multipoint = 1;
   private->use_flat_multipoint = 1;
+  writer->max_element_size_bytes = -1;
+  private->max_element_size_bytes = -1;
   writer->private_data = private;
 
   return GEOARROW_OK;
@@ -266,6 +289,7 @@ void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
   private->significant_digits = writer->significant_digits;
   private->use_flat_multipoint = writer->use_flat_multipoint;
+  private->max_element_size_bytes = writer->max_element_size_bytes;
 
   v->private_data = writer->private_data;
   v->feat_start = &feat_start_wkt;
