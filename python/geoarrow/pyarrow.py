@@ -1,4 +1,3 @@
-
 import sys
 
 import pyarrow as pa
@@ -36,9 +35,9 @@ class MultiPolygonScalar(VectorScalar):
 
 
 class VectorArray(pa.ExtensionArray):
-
     def geobuffers(self):
         import numpy as np
+
         cschema = lib.SchemaHolder()
         self.type._export_to_c(cschema._addr())
         carray = lib.ArrayHolder()
@@ -49,27 +48,27 @@ class VectorArray(pa.ExtensionArray):
         return [np.array(b) if b is not None else None for b in buffers]
 
     def as_wkt(self):
-        if self.type.extension_name == 'geoarrow.wkt':
+        if self.type.extension_name == "geoarrow.wkt":
             return self
         kernel = Kernel.as_wkt(self.type)
         return kernel.push(self)
 
     def as_wkb(self):
-        if self.type.extension_name == 'geoarrow.wkb':
+        if self.type.extension_name == "geoarrow.wkb":
             return self
         kernel = Kernel.as_wkb(self.type)
         return kernel.push(self)
 
     def as_geoarrow(self, type_to=None):
         if type_to is None:
-            raise NotImplementedError('Auto-detection of best geoarrow type')
+            raise NotImplementedError("Auto-detection of best geoarrow type")
 
         if isinstance(type_to, WktType):
             return self.as_wkt()
         elif isinstance(type_to, WkbType):
             return self.as_wkb()
         elif not isinstance(type_to, VectorType):
-            raise TypeError('type_to must inherit from VectorType')
+            raise TypeError("type_to must inherit from VectorType")
 
         if self.type._type.id == type_to._type.id:
             return self
@@ -83,13 +82,13 @@ class VectorArray(pa.ExtensionArray):
 
         if len(self) > n_values_to_show:
             n_extra = len(self) - n_values_to_show
-            value_s = 'values' if n_extra != 1 else 'value'
-            head = self[:int(n_values_to_show / 2)]
-            mid = f'...{n_extra} {value_s}...'
-            tail = self[int(-n_values_to_show / 2):]
+            value_s = "values" if n_extra != 1 else "value"
+            head = self[: int(n_values_to_show / 2)]
+            mid = f"...{n_extra} {value_s}..."
+            tail = self[int(-n_values_to_show / 2) :]
         else:
             head = self
-            mid = ''
+            mid = ""
             tail = self[:0]
 
         try:
@@ -97,27 +96,26 @@ class VectorArray(pa.ExtensionArray):
             head = kernel.push(head)
             tail = kernel.push(tail)
         except Exception as e:
-            err = f'* 1 or more display values failed to parse\n* {str(e)}'
+            err = f"* 1 or more display values failed to parse\n* {str(e)}"
             type_name = type(self).__name__
             super_repr = super().__repr__()
-            return f'{type_name}:{repr(self.type)}[{len(self)}]\n{err}\n{super_repr}'
+            return f"{type_name}:{repr(self.type)}[{len(self)}]\n{err}\n{super_repr}"
 
-
-        head_str = [f'<{item.as_py()}>' for item in head]
-        tail_str = [f'<{item.as_py()}>' for item in tail]
+        head_str = [f"<{item.as_py()}>" for item in head]
+        tail_str = [f"<{item.as_py()}>" for item in tail]
         for i in range(len(head)):
             if len(head_str[i]) > max_width:
-                head_str[i] = f'{head_str[i][:(max_width - 4)]}...>'
+                head_str[i] = f"{head_str[i][:(max_width - 4)]}...>"
         for i in range(len(tail)):
             if len(tail_str[i]) > max_width:
-                tail_str[i] = f'{tail_str[i][:(max_width - 4)]}...>'
+                tail_str[i] = f"{tail_str[i][:(max_width - 4)]}...>"
 
         type_name = type(self).__name__
-        head_str = '\n'.join(head_str)
-        tail_str = '\n'.join(tail_str)
-        items_str = f'{head_str}\n{mid}\n{tail_str}'
+        head_str = "\n".join(head_str)
+        tail_str = "\n".join(tail_str)
+        items_str = f"{head_str}\n{mid}\n{tail_str}"
 
-        return f'{type_name}:{repr(self.type)}[{len(self)}]\n{items_str}'
+        return f"{type_name}:{repr(self.type)}[{len(self)}]\n{items_str}"
 
 
 class PointArray(VectorArray):
@@ -149,18 +147,21 @@ class VectorType(pa.ExtensionType):
 
     def __init__(self, c_vector_type):
         if not isinstance(c_vector_type, lib.CVectorType):
-            raise TypeError('geoarrow.pyarrow.VectorType must be created from a CVectorType')
+            raise TypeError(
+                "geoarrow.pyarrow.VectorType must be created from a CVectorType"
+            )
         self._type = c_vector_type
         if self._type.extension_name != type(self)._extension_name:
             raise ValueError(
-                f'Expected CVectorType with extension name "{type(self)._extension_name}" but got "{self._type.extension_name}"')
+                f'Expected CVectorType with extension name "{type(self)._extension_name}" but got "{self._type.extension_name}"'
+            )
 
         storage_schema = self._type.to_storage_schema()
         storage_type = pa.DataType._import_from_c(storage_schema._addr())
         pa.ExtensionType.__init__(self, storage_type, self._type.extension_name)
 
     def __repr__(self):
-        return f'{type(self).__name__}({repr(self._type)})'
+        return f"{type(self).__name__}({repr(self._type)})"
 
     def __arrow_ext_serialize__(self):
         return self._type.extension_metadata
@@ -168,14 +169,14 @@ class VectorType(pa.ExtensionType):
     @staticmethod
     def _import_from_c(addr):
         field = pa.Field._import_from_c(addr)
-        if not field.metadata or 'ARROW:extension:name' not in field.metadata:
+        if not field.metadata or "ARROW:extension:name" not in field.metadata:
             return field.type
 
         schema = lib.SchemaHolder()
         field._export_to_c(schema._addr())
 
         c_vector_type = lib.CVectorType.FromExtension(schema)
-        cls = _type_cls_from_name(c_vector_type.extension_name.decode('UTF-8'))
+        cls = _type_cls_from_name(c_vector_type.extension_name.decode("UTF-8"))
         cls(c_vector_type)
 
     @classmethod
@@ -184,9 +185,7 @@ class VectorType(pa.ExtensionType):
         storage_type._export_to_c(schema._addr())
 
         c_vector_type = lib.CVectorType.FromStorage(
-            schema,
-            cls._extension_name.encode('UTF-8'),
-            serialized
+            schema, cls._extension_name.encode("UTF-8"), serialized
         )
 
         return cls(c_vector_type)
@@ -214,14 +213,14 @@ class VectorType(pa.ExtensionType):
         for i, buf_type, buf in args:
             if buf is None:
                 continue
-            if buf_type == 'uint8':
+            if buf_type == "uint8":
                 builder.set_buffer_uint8(i, buf)
-            elif buf_type == 'int32':
+            elif buf_type == "int32":
                 builder.set_buffer_int32(i, buf)
-            elif buf_type == 'double':
+            elif buf_type == "double":
                 builder.set_buffer_double(i, buf)
             else:
-                raise ValueError(f'Unknown type: {buf_type}')
+                raise ValueError(f"Unknown type: {buf_type}")
 
         carray = builder.finish()
         return pa.Array._import_from_c(carray._addr(), self)
@@ -252,7 +251,7 @@ class VectorType(pa.ExtensionType):
 
     @property
     def crs(self):
-        return self._type.crs.decode('UTF-8')
+        return self._type.crs.decode("UTF-8")
 
     def with_geometry_type(self, geometry_type):
         ctype = self._type.with_geometry_type(geometry_type)
@@ -272,205 +271,215 @@ class VectorType(pa.ExtensionType):
 
     def with_crs(self, crs, crs_type=None):
         if crs_type is None and crs is None:
-            ctype = self._type.with_crs(b'', CrsType.NONE)
+            ctype = self._type.with_crs(b"", CrsType.NONE)
         elif crs_type is None:
             if not isinstance(crs, bytes):
-                crs = crs.encode('UTF-8')
+                crs = crs.encode("UTF-8")
             ctype = self._type.with_crs(crs, CrsType.UNKNOWN)
         else:
             if not isinstance(crs, bytes):
-                crs = crs.encode('UTF-8')
+                crs = crs.encode("UTF-8")
             ctype = self._type.with_crs(crs, crs_type)
 
         return _ctype_to_extension_type(ctype)
 
 
 class WkbType(VectorType):
-    _extension_name = 'geoarrow.wkb'
+    _extension_name = "geoarrow.wkb"
 
     def wrap_array(self, obj, validate=True):
         return super().wrap_array(obj, validate=validate)
 
 
 class WktType(VectorType):
-    _extension_name = 'geoarrow.wkt'
+    _extension_name = "geoarrow.wkt"
 
     def wrap_array(self, obj, validate=True):
         return super().wrap_array(obj, validate=validate)
 
 
 class PointType(VectorType):
-    _extension_name = 'geoarrow.point'
+    _extension_name = "geoarrow.point"
 
     def from_geobuffers(self, validity, x, y=None, z_or_m=None, m=None) -> PointArray:
         buffers = [
-            (0, 'uint8', validity),
-            (1, 'double', x),
-            (2, 'double', y),
-            (3, 'double', z_or_m),
-            (4, 'double', m)
+            (0, "uint8", validity),
+            (1, "double", x),
+            (2, "double", y),
+            (3, "double", z_or_m),
+            (4, "double", m),
         ]
 
         return self._from_geobuffers_internal(buffers)
 
 
 class LinestringType(VectorType):
-    _extension_name = 'geoarrow.linestring'
+    _extension_name = "geoarrow.linestring"
 
-    def from_geobuffers(self, validity,
-                        coord_offsets,
-                        x, y=None, z_or_m=None, m=None) -> LinestringArray:
+    def from_geobuffers(
+        self, validity, coord_offsets, x, y=None, z_or_m=None, m=None
+    ) -> LinestringArray:
         buffers = [
-            (0, 'uint8', validity),
-            (1, 'int32', coord_offsets),
-            (2, 'double', x),
-            (3, 'double', y),
-            (4, 'double', z_or_m),
-            (5, 'double', m)
+            (0, "uint8", validity),
+            (1, "int32", coord_offsets),
+            (2, "double", x),
+            (3, "double", y),
+            (4, "double", z_or_m),
+            (5, "double", m),
         ]
 
         return self._from_geobuffers_internal(buffers)
 
 
 class PolygonType(VectorType):
-    _extension_name = 'geoarrow.polygon'
+    _extension_name = "geoarrow.polygon"
 
-    def from_geobuffers(self,
-                        validity,
-                        ring_offsets,
-                        coord_offsets,
-                        x, y=None, z_or_m=None, m=None) -> PolygonArray:
+    def from_geobuffers(
+        self, validity, ring_offsets, coord_offsets, x, y=None, z_or_m=None, m=None
+    ) -> PolygonArray:
         buffers = [
-            (0, 'uint8', validity),
-            (1, 'int32', ring_offsets),
-            (2, 'int32', coord_offsets),
-            (3, 'double', x),
-            (4, 'double', y),
-            (5, 'double', z_or_m),
-            (6, 'double', m)
+            (0, "uint8", validity),
+            (1, "int32", ring_offsets),
+            (2, "int32", coord_offsets),
+            (3, "double", x),
+            (4, "double", y),
+            (5, "double", z_or_m),
+            (6, "double", m),
         ]
 
         return self._from_geobuffers_internal(buffers)
 
 
-
 class MultiPointType(VectorType):
-    _extension_name = 'geoarrow.multipoint'
+    _extension_name = "geoarrow.multipoint"
 
-    def from_geobuffers(self, validity,
-                        coord_offsets,
-                        x, y=None, z_or_m=None, m=None) -> MultiPointArray:
+    def from_geobuffers(
+        self, validity, coord_offsets, x, y=None, z_or_m=None, m=None
+    ) -> MultiPointArray:
         buffers = [
-            (0, 'uint8', validity),
-            (1, 'int32', coord_offsets),
-            (2, 'double', x),
-            (3, 'double', y),
-            (4, 'double', z_or_m),
-            (5, 'double', m)
+            (0, "uint8", validity),
+            (1, "int32", coord_offsets),
+            (2, "double", x),
+            (3, "double", y),
+            (4, "double", z_or_m),
+            (5, "double", m),
         ]
 
         return self._from_geobuffers_internal(buffers)
 
 
 class MultiLinestringType(VectorType):
-    _extension_name = 'geoarrow.multilinestring'
+    _extension_name = "geoarrow.multilinestring"
 
-    def from_geobuffers(self, validity,
-                        linestring_offsets,
-                        coord_offsets,
-                        x, y=None, z_or_m=None, m=None) -> MultiLinestringArray:
+    def from_geobuffers(
+        self,
+        validity,
+        linestring_offsets,
+        coord_offsets,
+        x,
+        y=None,
+        z_or_m=None,
+        m=None,
+    ) -> MultiLinestringArray:
         buffers = [
-            (0, 'uint8', validity),
-            (1, 'int32', linestring_offsets),
-            (2, 'int32', coord_offsets),
-            (3, 'double', x),
-            (4, 'double', y),
-            (5, 'double', z_or_m),
-            (6, 'double', m)
+            (0, "uint8", validity),
+            (1, "int32", linestring_offsets),
+            (2, "int32", coord_offsets),
+            (3, "double", x),
+            (4, "double", y),
+            (5, "double", z_or_m),
+            (6, "double", m),
         ]
 
         return self._from_geobuffers_internal(buffers)
 
 
 class MultiPolygonType(VectorType):
-    _extension_name = 'geoarrow.multipolygon'
+    _extension_name = "geoarrow.multipolygon"
 
-    def from_geobuffers(self, validity,
-                        polygon_offsets,
-                        ring_offsets,
-                        coord_offsets,
-                        x, y=None, z_or_m=None, m=None) -> MultiPolygonArray:
+    def from_geobuffers(
+        self,
+        validity,
+        polygon_offsets,
+        ring_offsets,
+        coord_offsets,
+        x,
+        y=None,
+        z_or_m=None,
+        m=None,
+    ) -> MultiPolygonArray:
         buffers = [
-            (0, 'uint8', validity),
-            (1, 'int32', polygon_offsets),
-            (2, 'int32', ring_offsets),
-            (3, 'int32', coord_offsets),
-            (4, 'double', x),
-            (5, 'double', y),
-            (6, 'double', z_or_m),
-            (7, 'double', m)
+            (0, "uint8", validity),
+            (1, "int32", polygon_offsets),
+            (2, "int32", ring_offsets),
+            (3, "int32", coord_offsets),
+            (4, "double", x),
+            (5, "double", y),
+            (6, "double", z_or_m),
+            (7, "double", m),
         ]
 
         return self._from_geobuffers_internal(buffers)
 
 
 def _type_cls_from_name(name):
-    if name == 'geoarrow.wkb':
+    if name == "geoarrow.wkb":
         return WkbType
-    elif name == 'geoarrow.wkt':
+    elif name == "geoarrow.wkt":
         return WktType
-    elif name == 'geoarrow.point':
+    elif name == "geoarrow.point":
         return PointType
-    elif name == 'geoarrow.linestring':
+    elif name == "geoarrow.linestring":
         return LinestringType
-    elif name == 'geoarrow.polygon':
+    elif name == "geoarrow.polygon":
         return PolygonType
-    elif name == 'geoarrow.multipoint':
+    elif name == "geoarrow.multipoint":
         return MultiPointType
-    elif name == 'geoarrow.multilinestring':
+    elif name == "geoarrow.multilinestring":
         return MultiLinestringType
-    elif name == 'geoarrow.multipolygon':
+    elif name == "geoarrow.multipolygon":
         return MultiPolygonType
     else:
         raise ValueError(f'Expected valid extension name but got "{name}"')
 
+
 def _array_cls_from_name(name):
-    if name == 'geoarrow.wkb':
+    if name == "geoarrow.wkb":
         return VectorArray
-    elif name == 'geoarrow.wkt':
+    elif name == "geoarrow.wkt":
         return VectorArray
-    elif name == 'geoarrow.point':
+    elif name == "geoarrow.point":
         return PointArray
-    elif name == 'geoarrow.linestring':
+    elif name == "geoarrow.linestring":
         return LinestringArray
-    elif name == 'geoarrow.polygon':
+    elif name == "geoarrow.polygon":
         return PolygonArray
-    elif name == 'geoarrow.multipoint':
+    elif name == "geoarrow.multipoint":
         return MultiPointArray
-    elif name == 'geoarrow.multilinestring':
+    elif name == "geoarrow.multilinestring":
         return MultiLinestringArray
-    elif name == 'geoarrow.multipolygon':
+    elif name == "geoarrow.multipolygon":
         return MultiPolygonArray
     else:
         raise ValueError(f'Expected valid extension name but got "{name}"')
 
 
 def _scalar_cls_from_name(name):
-    if name == 'geoarrow.wkb':
+    if name == "geoarrow.wkb":
         return VectorScalar
-    elif name == 'geoarrow.wkt':
+    elif name == "geoarrow.wkt":
         return VectorScalar
-    elif name == 'geoarrow.point':
+    elif name == "geoarrow.point":
         return PointScalar
-    elif name == 'geoarrow.linestring':
+    elif name == "geoarrow.linestring":
         return LinestringScalar
-    elif name == 'geoarrow.polygon':
+    elif name == "geoarrow.polygon":
         return PolygonScalar
-    elif name == 'geoarrow.multipoint':
+    elif name == "geoarrow.multipoint":
         return MultiPointScalar
-    elif name == 'geoarrow.multilinestring':
+    elif name == "geoarrow.multilinestring":
         return MultiLinestringScalar
-    elif name == 'geoarrow.multipolygon':
+    elif name == "geoarrow.multipolygon":
         return MultiPolygonScalar
     else:
         raise ValueError(f'Expected valid extension name but got "{name}"')
@@ -487,19 +496,19 @@ def _make_default(geometry_type, cls):
 
 
 def wkb() -> WkbType:
-    return WkbType.__arrow_ext_deserialize__(pa.binary(), b'')
+    return WkbType.__arrow_ext_deserialize__(pa.binary(), b"")
 
 
-def large_wkb() ->WkbType:
-    return WkbType.__arrow_ext_deserialize__(pa.large_binary(), b'')
+def large_wkb() -> WkbType:
+    return WkbType.__arrow_ext_deserialize__(pa.large_binary(), b"")
 
 
 def wkt() -> WktType:
-    return WktType.__arrow_ext_deserialize__(pa.utf8(), b'')
+    return WktType.__arrow_ext_deserialize__(pa.utf8(), b"")
 
 
 def large_wkt() -> WktType:
-    return WktType.__arrow_ext_deserialize__(pa.large_utf8(), b'')
+    return WktType.__arrow_ext_deserialize__(pa.large_utf8(), b"")
 
 
 def point() -> PointType:
@@ -521,22 +530,26 @@ def multipoint() -> MultiPointType:
 def multilinestring() -> MultiLinestringType:
     return _make_default(GeometryType.MULTILINESTRING, MultiLinestringType)
 
+
 def multipolygon() -> MultiPolygonType:
     return _make_default(GeometryType.MULTIPOLYGON, MultiPolygonType)
 
 
-def vector_type(geometry_type,
-                dimensions=Dimensions.XY,
-                coord_type=CoordType.SEPARATE,
-                edge_type=EdgeType.PLANAR,
-                crs=None, crs_type=None) -> VectorType:
+def vector_type(
+    geometry_type,
+    dimensions=Dimensions.XY,
+    coord_type=CoordType.SEPARATE,
+    edge_type=EdgeType.PLANAR,
+    crs=None,
+    crs_type=None,
+) -> VectorType:
     ctype = lib.CVectorType.Make(geometry_type, dimensions, coord_type)
     cls = _type_cls_from_name(ctype.extension_name)
     return cls(ctype).with_edge_type(edge_type).with_crs(crs, crs_type)
 
 
 def array(obj, type_=None, *args, validate=True, **kwargs) -> VectorArray:
-    if type(obj).__name__ == 'GeoSeries':
+    if type(obj).__name__ == "GeoSeries":
         if obj.crs:
             try:
                 type_ = wkb().with_crs(obj.crs.to_json())
@@ -556,10 +569,12 @@ def array(obj, type_=None, *args, validate=True, **kwargs) -> VectorArray:
         elif arr.type == pa.binary():
             return wkb().wrap_array(arr, validate=validate)
         else:
-            raise TypeError(f"Can't create geoarrow.array from Arrow array of type {type_}")
+            raise TypeError(
+                f"Can't create geoarrow.array from Arrow array of type {type_}"
+            )
 
     type_is_geoarrow = isinstance(type_, VectorType)
-    type_is_wkb_or_wkt = type_.extension_name in ('geoarrow.wkt', 'geoarrow.wkb')
+    type_is_wkb_or_wkt = type_.extension_name in ("geoarrow.wkt", "geoarrow.wkb")
 
     if type_is_geoarrow and type_is_wkb_or_wkt:
         arr = pa.array(obj, type_.storage_type, *args, **kwargs)
@@ -569,16 +584,16 @@ def array(obj, type_=None, *args, validate=True, **kwargs) -> VectorArray:
     # into a geoarrow type)
     raise TypeError(f"Can't create geoarrow.array for type {type_}")
 
-class Kernel:
 
+class Kernel:
     def __init__(self, name, type_in, **kwargs) -> None:
         if not isinstance(type_in, pa.DataType):
-            raise TypeError('Expected `type_in` to inherit from pyarrow.DataType')
+            raise TypeError("Expected `type_in` to inherit from pyarrow.DataType")
 
         self._name = str(name)
-        self._kernel = lib.CKernel(self._name.encode('UTF-8'))
+        self._kernel = lib.CKernel(self._name.encode("UTF-8"))
         # True for all the kernels that currently exist
-        self._is_agg = self._name.endswith('_agg')
+        self._is_agg = self._name.endswith("_agg")
 
         type_in_schema = lib.SchemaHolder()
         type_in._export_to_c(type_in_schema._addr())
@@ -596,7 +611,9 @@ class Kernel:
                 chunks_out.append(self.push(chunk_in))
             return pa.chunked_array(chunks_out)
         elif not isinstance(arr, pa.Array):
-            raise TypeError(f'Expected pyarrow.Array or pyarrow.ChunkedArray but got {type(arr)}')
+            raise TypeError(
+                f"Expected pyarrow.Array or pyarrow.ChunkedArray but got {type(arr)}"
+            )
 
         array_in = lib.ArrayHolder()
         arr._export_to_c(array_in._addr())
@@ -616,57 +633,58 @@ class Kernel:
 
     @staticmethod
     def void(type_in):
-        return Kernel('void', type_in)
+        return Kernel("void", type_in)
 
     @staticmethod
     def void_agg(type_in):
-        return Kernel('void_agg', type_in)
+        return Kernel("void_agg", type_in)
 
     @staticmethod
     def visit_void_agg(type_in):
-        return Kernel('visit_void_agg', type_in)
+        return Kernel("visit_void_agg", type_in)
 
     @staticmethod
     def as_wkt(type_in):
-        return Kernel('as_wkt', type_in)
+        return Kernel("as_wkt", type_in)
 
     @staticmethod
     def as_wkb(type_in):
-        return Kernel('as_wkb', type_in)
+        return Kernel("as_wkb", type_in)
 
     @staticmethod
     def format_wkt(type_in, significant_digits=None, max_element_size_bytes=None):
         return Kernel(
-            'format_wkt',
+            "format_wkt",
             type_in,
             significant_digits=significant_digits,
-            max_element_size_bytes=max_element_size_bytes
+            max_element_size_bytes=max_element_size_bytes,
         )
 
     @staticmethod
     def as_geoarrow(type_in, type_id):
-        return Kernel('as_geoarrow', type_in, type=type_id)
+        return Kernel("as_geoarrow", type_in, type=type_id)
 
     @staticmethod
     def _pack_options(options):
         if not options:
-            return b''
+            return b""
 
         options = {k: v for k, v in options.items() if v is not None}
         bytes = len(options).to_bytes(4, sys.byteorder, signed=True)
         for k, v in options.items():
             k = str(k)
             bytes += len(k).to_bytes(4, sys.byteorder, signed=True)
-            bytes += k.encode('UTF-8')
+            bytes += k.encode("UTF-8")
 
             v = str(v)
             bytes += len(v).to_bytes(4, sys.byteorder, signed=True)
-            bytes += v.encode('UTF-8')
+            bytes += v.encode("UTF-8")
 
         return bytes
 
 
 _extension_types_registered = False
+
 
 def register_extension_types(lazy=True):
     global _extension_types_registered
@@ -677,9 +695,14 @@ def register_extension_types(lazy=True):
     _extension_types_registered = None
 
     all_types = [
-        wkt(), wkb(),
-        point(), linestring(), polygon(),
-        multipoint(), multilinestring(), multipolygon()
+        wkt(),
+        wkb(),
+        point(),
+        linestring(),
+        polygon(),
+        multipoint(),
+        multilinestring(),
+        multipolygon(),
     ]
 
     n_registered = 0
@@ -691,7 +714,7 @@ def register_extension_types(lazy=True):
             pass
 
     if n_registered != len(all_types):
-        raise RuntimeError('Failed to register one or more extension types')
+        raise RuntimeError("Failed to register one or more extension types")
 
     _extension_types_registered = True
 
@@ -705,9 +728,14 @@ def unregister_extension_types(lazy=True):
     _extension_types_registered = None
 
     all_type_names = [
-        'geoarrow.wkb', 'geoarrow.wkt',
-        'geoarrow.point', 'geoarrow.linestring', 'geoarrow.polygon',
-        'geoarrow.multipoint', 'geoarrow.multilinestring', 'geoarrow.multipolygon'
+        "geoarrow.wkb",
+        "geoarrow.wkt",
+        "geoarrow.point",
+        "geoarrow.linestring",
+        "geoarrow.polygon",
+        "geoarrow.multipoint",
+        "geoarrow.multilinestring",
+        "geoarrow.multipolygon",
     ]
 
     n_unregistered = 0
@@ -719,9 +747,10 @@ def unregister_extension_types(lazy=True):
             pass
 
     if n_unregistered != len(all_type_names):
-        raise RuntimeError('Failed to unregister one or more extension types')
+        raise RuntimeError("Failed to unregister one or more extension types")
 
     _extension_types_registered = False
+
 
 # Do it!
 register_extension_types()
