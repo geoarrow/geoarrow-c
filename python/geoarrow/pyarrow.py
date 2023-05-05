@@ -93,9 +93,9 @@ class VectorArray(pa.ExtensionArray):
             tail = self[:0]
 
         try:
-            kernel = Kernel.as_wkt(self.type)
-            head = kernel.push(head).storage
-            tail = kernel.push(tail).storage
+            kernel = Kernel.format_wkt(self.type, max_element_size_bytes=max_width)
+            head = kernel.push(head)
+            tail = kernel.push(tail)
         except Exception as e:
             err = f'* 1 or more display values failed to parse\n* {str(e)}'
             type_name = type(self).__name__
