@@ -1,0 +1,41 @@
+name: test-python
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/python.yaml'
+      - 'src/geoarrow/**'
+      - 'python/**'
+
+jobs:
+  test-python:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ['3.10']
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install geoarrow
+        run: |
+          pushd python
+          pip install .[test]
+          popd
+          pip list
+      - name: Run tests
+        run: |
+          pytest python/tests -v -s
