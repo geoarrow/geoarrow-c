@@ -80,6 +80,12 @@ static void GeoArrowKernelInitVoidAgg(struct GeoArrowKernel* kernel) {
 // "cast to GeoArrow in batches then do the thing" (but require these kernels to
 // do the "cast to GeoArrow" step).
 
+struct GeoArrowGeometryTypesVisitorPrivate {
+  enum GeoArrowGeometryType geometry_type;
+  enum GeoArrowDimensions dimensions;
+  uint64_t geometry_types_mask;
+};
+
 struct GeoArrowVisitorKernelPrivate {
   struct GeoArrowVisitor v;
   int visit_by_feature;
@@ -90,6 +96,7 @@ struct GeoArrowVisitorKernelPrivate {
   struct GeoArrowWKBWriter wkb_writer;
   struct GeoArrowWKTWriter wkt_writer;
   struct GeoArrowBuilder builder;
+  struct GeoArrowGeometryTypesVisitorPrivate geometry_types_private;
   int (*finish_push_batch)(struct GeoArrowVisitorKernelPrivate* private_data,
                            struct ArrowArray* out, struct GeoArrowError* error);
   int (*finish_start)(struct GeoArrowVisitorKernelPrivate* private_data,
@@ -428,34 +435,112 @@ static int finish_push_batch_as_geoarrow(
 
 // Kernel unique_geometry_types_agg
 //
-// This kernel collects all geometry types in the input.
+// This kernel collects all geometry type + dimension combinations in the
+// input. EMPTY values are not counted as any particular geometry type;
+// however, note that POINTs as represented in WKB or GeoArrow cannot be
+// EMPTY and this kernel does not check for the convention of EMPTY as
+// all coordinates == nan. This is mosty to facilitate choosing an appropriate destination
+// type (e.g., point, linestring, etc.). This is the only kernel whose visitor is not
+// exposed as a standalone visitor in the geoarrow.h header.
+//
+// The internals use GeoArrowDimensions * 8 + GeoArrowGeometryType as the
+// "key" for a given combination. This gives an integer between 0 and 39.
+// The types are accumulated in a uint64_t bitmask and translated into the
+// corresponding ISO WKB type codes at the end.
+static int32_t kGeoArrowGeometryTypeWkbValues[] = {
+    -1000, -999, -998, -997, -996, -995, -994, -993, 0,    1,    2,    3,    4,    5,
+    6,     7,    1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 2000, 2001, 2002, 2003,
+    2004,  2005, 2006, 2007, 3000, 3001, 3002, 3003, 3004, 3005, 3006, 3007};
+
+static int feat_start_geometry_types(struct GeoArrowVisitor* v) {
+  struct GeoArrowVisitorKernelPrivate* private_data =
+      (struct GeoArrowVisitorKernelPrivate*)v->private_data;
+  private_data->geometry_types_private.geometry_type = GEOARROW_GEOMETRY_TYPE_GEOMETRY;
+  private_data->geometry_types_private.dimensions = GEOARROW_DIMENSIONS_UNKNOWN;
+  return GEOARROW_OK;
+}
+
+static int geom_start_geometry_types(struct GeoArrowVisitor* v,
+                                     enum GeoArrowGeometryType geometry_type,
+                                     enum GeoArrowDimensions dimensions) {
+  struct GeoArrowVisitorKernelPrivate* private_data =
+      (struct GeoArrowVisitorKernelPrivate*)v->private_data;
+
+  // Only record the first seen geometry type/dimension combination
+  if (private_data->geometry_types_private.geometry_type ==
+      GEOARROW_GEOMETRY_TYPE_GEOMETRY) {
+    private_data->geometry_types_private.geometry_type = geometry_type;
+    private_data->geometry_types_private.dimensions = dimensions;
+  }
+
+  return GEOARROW_OK;
+}
+
+static int coords_geometry_types(struct GeoArrowVisitor* v,
+                                 const struct GeoArrowCoordView* coords) {
+  if (coords->n_coords > 0) {
+    struct GeoArrowVisitorKernelPrivate* private_data =
+        (struct GeoArrowVisitorKernelPrivate*)v->private_data;
+
+    // At the first coordinate, add the geometry type to the bitmask
+    int bitshift = private_data->geometry_types_private.dimensions * 8 +
+                   private_data->geometry_types_private.geometry_type;
+    uint64_t bitmask = ((uint64_t)1) << bitshift;
+    private_data->geometry_types_private.geometry_types_mask |= bitmask;
+    return EAGAIN;
+  } else {
+    return GEOARROW_OK;
+  }
+}
+
 static int finish_start_unique_geometry_types_agg(
     struct GeoArrowVisitorKernelPrivate* private_data, struct ArrowSchema* schema,
     const char* options, struct ArrowSchema* out, struct GeoArrowError* error) {
-  struct ArrowSchema tmp;
-  ArrowSchemaInit(&tmp);
-  NANOARROW_RETURN_NOT_OK(ArrowSchemaSetType(&tmp, NANOARROW_TYPE_LIST));
-  int result = ArrowSchemaSetType(tmp.children[0], NANOARROW_TYPE_INT32);
-  if (result != NANOARROW_OK) {
-    tmp.release(&tmp);
-    return result;
-  }
-
-  ArrowSchemaMove(&tmp, out);
-  return NANOARROW_OK;
-}
-
-static int finish_push_batch_unique_geometry_types_agg(
-    struct GeoArrowVisitorKernelPrivate* private_data, struct ArrowArray* out,
-    struct GeoArrowError* error) {
-  // foo
-  return ENOTSUP;
+  private_data->v.feat_start = &feat_start_geometry_types;
+  private_data->v.geom_start = &geom_start_geometry_types;
+  private_data->v.coords = &coords_geometry_types;
+  return ArrowSchemaInitFromType(out, NANOARROW_TYPE_INT32);
 }
 
 static int kernel_finish_unique_geometry_types_agg(struct GeoArrowKernel* kernel,
                                                    struct ArrowArray* out,
                                                    struct GeoArrowError* error) {
-  return ENOTSUP;
+  struct GeoArrowVisitorKernelPrivate* private_data =
+      (struct GeoArrowVisitorKernelPrivate*)kernel->private_data;
+  uint64_t result_mask = private_data->geometry_types_private.geometry_types_mask;
+
+  int n_types = 0;
+  for (int i = 0; i < 40; i++) {
+    uint64_t bitmask = ((uint64_t)1) << i;
+    n_types += (result_mask & bitmask) != 0;
+  }
+
+  struct ArrowArray tmp;
+  NANOARROW_RETURN_NOT_OK(ArrowArrayInitFromType(&tmp, NANOARROW_TYPE_INT32));
+  struct ArrowBuffer* data = ArrowArrayBuffer(&tmp, 1);
+  int result = ArrowBufferReserve(data, n_types * sizeof(int32_t));
+  if (result != NANOARROW_OK) {
+    tmp.release(&tmp);
+    return result;
+  }
+
+  int result_i = 0;
+  int32_t* data_int32 = (int32_t*)data->data;
+  for (int i = 0; i < 40; i++) {
+    uint64_t bitmask = ((uint64_t)1) << i;
+    if (result_mask & bitmask) {
+      data_int32[result_i++] = kGeoArrowGeometryTypeWkbValues[i];
+    }
+  }
+
+  result = ArrowArrayFinishBuilding(&tmp, NULL);
+  if (result != NANOARROW_OK) {
+    tmp.release(&tmp);
+    return result;
+  }
+
+  ArrowArrayMove(&tmp, out);
+  return GEOARROW_OK;
 }
 
 static int GeoArrowInitVisitorKernelInternal(struct GeoArrowKernel* kernel,
@@ -499,7 +584,6 @@ static int GeoArrowInitVisitorKernelInternal(struct GeoArrowKernel* kernel,
   } else if (strcmp(name, "unique_geometry_types") == 0) {
     kernel->finish = &kernel_finish_unique_geometry_types_agg;
     private_data->finish_start = &finish_start_unique_geometry_types_agg;
-    private_data->finish_push_batch = &finish_push_batch_unique_geometry_types_agg;
     private_data->visit_by_feature = 1;
   }
 
