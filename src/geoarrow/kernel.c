@@ -305,6 +305,7 @@ static int kernel_visitor_start(struct GeoArrowKernel* kernel, struct ArrowSchem
 // This kernel visits every feature and returns a single null item at the end.
 // This is useful for (1) testing and (2) validating well-known text or well-known
 // binary.
+
 static int finish_start_visit_void_agg(struct GeoArrowVisitorKernelPrivate* private_data,
                                        struct ArrowSchema* schema, const char* options,
                                        struct ArrowSchema* out,
@@ -317,6 +318,7 @@ static int finish_start_visit_void_agg(struct GeoArrowVisitorKernelPrivate* priv
 // Visits every feature in the input and writes the corresponding well-known text output.
 // For the format_wkt kernel, optionally specify significant_digits and
 // max_element_size_bytes.
+
 static int finish_start_as_wkt(struct GeoArrowVisitorKernelPrivate* private_data,
                                struct ArrowSchema* schema, const char* options,
                                struct ArrowSchema* out, struct GeoArrowError* error) {
@@ -424,6 +426,38 @@ static int finish_push_batch_as_geoarrow(
   }
 }
 
+// Kernel unique_geometry_types_agg
+//
+// This kernel collects all geometry types in the input.
+static int finish_start_unique_geometry_types_agg(
+    struct GeoArrowVisitorKernelPrivate* private_data, struct ArrowSchema* schema,
+    const char* options, struct ArrowSchema* out, struct GeoArrowError* error) {
+  struct ArrowSchema tmp;
+  ArrowSchemaInit(&tmp);
+  NANOARROW_RETURN_NOT_OK(ArrowSchemaSetType(&tmp, NANOARROW_TYPE_LIST));
+  int result = ArrowSchemaSetType(tmp.children[0], NANOARROW_TYPE_INT32);
+  if (result != NANOARROW_OK) {
+    tmp.release(&tmp);
+    return result;
+  }
+
+  ArrowSchemaMove(&tmp, out);
+  return NANOARROW_OK;
+}
+
+static int finish_push_batch_unique_geometry_types_agg(
+    struct GeoArrowVisitorKernelPrivate* private_data, struct ArrowArray* out,
+    struct GeoArrowError* error) {
+  // foo
+  return ENOTSUP;
+}
+
+static int kernel_finish_unique_geometry_types_agg(struct GeoArrowKernel* kernel,
+                                                   struct ArrowArray* out,
+                                                   struct GeoArrowError* error) {
+  return ENOTSUP;
+}
+
 static int GeoArrowInitVisitorKernelInternal(struct GeoArrowKernel* kernel,
                                              const char* name) {
   struct GeoArrowVisitorKernelPrivate* private_data =
@@ -462,6 +496,11 @@ static int GeoArrowInitVisitorKernelInternal(struct GeoArrowKernel* kernel,
     kernel->finish = &kernel_finish_void;
     private_data->finish_start = &finish_start_as_geoarrow;
     private_data->finish_push_batch = &finish_push_batch_as_geoarrow;
+  } else if (strcmp(name, "unique_geometry_types") == 0) {
+    kernel->finish = &kernel_finish_unique_geometry_types_agg;
+    private_data->finish_start = &finish_start_unique_geometry_types_agg;
+    private_data->finish_push_batch = &finish_push_batch_unique_geometry_types_agg;
+    private_data->visit_by_feature = 1;
   }
 
   kernel->start = &kernel_visitor_start;
@@ -489,6 +528,8 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
   } else if (strcmp(name, "as_wkb") == 0) {
     return GeoArrowInitVisitorKernelInternal(kernel, name);
   } else if (strcmp(name, "as_geoarrow") == 0) {
+    return GeoArrowInitVisitorKernelInternal(kernel, name);
+  } else if (strcmp(name, "unique_geometry_types") == 0) {
     return GeoArrowInitVisitorKernelInternal(kernel, name);
   }
 
