@@ -499,6 +499,7 @@ static int finish_start_unique_geometry_types_agg(
   private_data->v.feat_start = &feat_start_geometry_types;
   private_data->v.geom_start = &geom_start_geometry_types;
   private_data->v.coords = &coords_geometry_types;
+  private_data->v.private_data = private_data;
   return ArrowSchemaInitFromType(out, NANOARROW_TYPE_INT32);
 }
 
@@ -539,6 +540,8 @@ static int kernel_finish_unique_geometry_types_agg(struct GeoArrowKernel* kernel
     return result;
   }
 
+  tmp.length = n_types;
+  tmp.null_count = 0;
   ArrowArrayMove(&tmp, out);
   return GEOARROW_OK;
 }
