@@ -582,7 +582,8 @@ TEST(KernelTest, KernelTestUniqueGeometryTypes) {
 
   ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowKernelInit(&kernel, "unique_geometry_types", nullptr), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowKernelInit(&kernel, "unique_geometry_types_agg", nullptr),
+            GEOARROW_OK);
   EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
   EXPECT_STREQ(schema_out.format, "i");
   EXPECT_EQ(kernel.push_batch(&kernel, &array_in, nullptr, &error), GEOARROW_OK);

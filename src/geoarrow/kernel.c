@@ -584,7 +584,7 @@ static int GeoArrowInitVisitorKernelInternal(struct GeoArrowKernel* kernel,
     kernel->finish = &kernel_finish_void;
     private_data->finish_start = &finish_start_as_geoarrow;
     private_data->finish_push_batch = &finish_push_batch_as_geoarrow;
-  } else if (strcmp(name, "unique_geometry_types") == 0) {
+  } else if (strcmp(name, "unique_geometry_types_agg") == 0) {
     kernel->finish = &kernel_finish_unique_geometry_types_agg;
     private_data->finish_start = &finish_start_unique_geometry_types_agg;
     private_data->visit_by_feature = 1;
@@ -616,7 +616,7 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
     return GeoArrowInitVisitorKernelInternal(kernel, name);
   } else if (strcmp(name, "as_geoarrow") == 0) {
     return GeoArrowInitVisitorKernelInternal(kernel, name);
-  } else if (strcmp(name, "unique_geometry_types") == 0) {
+  } else if (strcmp(name, "unique_geometry_types_agg") == 0) {
     return GeoArrowInitVisitorKernelInternal(kernel, name);
   }
 
