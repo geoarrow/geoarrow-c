@@ -551,3 +551,65 @@ TEST(KernelTest, KernelTestAsGeoArrow) {
   array_out1.release(&array_out1);
   array_out2.release(&array_out2);
 }
+
+TEST(KernelTest, KernelTestUniqueGeometryTypes) {
+  struct GeoArrowKernel kernel;
+  struct GeoArrowError error;
+
+  struct ArrowSchema schema_in;
+  struct ArrowSchema schema_out;
+  struct ArrowArray array_in;
+  struct ArrowArray array_out1;
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&schema_in, GEOARROW_TYPE_WKT), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array_in, &schema_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array_in), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("POINT (30 10)")),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("POINT (0 1)")), GEOARROW_OK);
+  ASSERT_EQ(
+      ArrowArrayAppendString(&array_in, ArrowCharView("LINESTRING Z (30 10 1, 0 0 2)")),
+      GEOARROW_OK);
+  ASSERT_EQ(
+      ArrowArrayAppendString(&array_in, ArrowCharView("LINESTRING M EMPTY")),
+      GEOARROW_OK);
+  ASSERT_EQ(
+      ArrowArrayAppendString(
+          &array_in, ArrowCharView("MULTIPOLYGON M (((0 0 0, 1 0 0, 0 1 0, 0 0 0)))")),
+      GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendString(
+                &array_in, ArrowCharView("GEOMETRYCOLLECTION ZM (POINT ZM (30 10 0 0))")),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+
+  EXPECT_EQ(GeoArrowKernelInit(&kernel, "unique_geometry_types_agg", nullptr),
+            GEOARROW_OK);
+  EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
+  EXPECT_STREQ(schema_out.format, "i");
+  EXPECT_EQ(kernel.push_batch(&kernel, &array_in, nullptr, &error), GEOARROW_OK);
+  EXPECT_EQ(kernel.finish(&kernel, &array_out1, &error), GEOARROW_OK);
+
+  kernel.release(&kernel);
+  EXPECT_EQ(kernel.release, nullptr);
+
+  ASSERT_EQ(array_out1.length, 4);
+  EXPECT_EQ(array_out1.null_count, 0);
+
+  struct ArrowArrayView array_view;
+  ASSERT_EQ(ArrowArrayViewInitFromSchema(&array_view, &schema_out, nullptr), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array_out1, nullptr), GEOARROW_OK);
+  EXPECT_EQ(ArrowArrayViewGetIntUnsafe(&array_view, 0), 1);
+  EXPECT_EQ(ArrowArrayViewGetIntUnsafe(&array_view, 1), 1002);
+  EXPECT_EQ(ArrowArrayViewGetIntUnsafe(&array_view, 2), 2006);
+  EXPECT_EQ(ArrowArrayViewGetIntUnsafe(&array_view, 3), 3007);
+
+  ArrowArrayViewReset(&array_view);
+  schema_in.release(&schema_in);
+  schema_out.release(&schema_out);
+  array_in.release(&array_in);
+  array_out1.release(&array_out1);
+}
