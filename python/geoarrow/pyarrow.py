@@ -605,9 +605,13 @@ class Kernel:
         self._type_in = type_in
 
     def push(self, arr):
-        if isinstance(arr, pa.ChunkedArray):
+        if isinstance(arr, pa.ChunkedArray) and self._is_agg:
+            for chunk_in in arr.chunks:
+                self.push(chunk_in)
+            return
+        elif isinstance(arr, pa.ChunkedArray):
             chunks_out = []
-            for chunk_in in arr:
+            for chunk_in in arr.chunks:
                 chunks_out.append(self.push(chunk_in))
             return pa.chunked_array(chunks_out)
         elif not isinstance(arr, pa.Array):
