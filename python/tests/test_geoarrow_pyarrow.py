@@ -245,6 +245,17 @@ def test_kernel_format():
     assert out[0].as_py() == "POINT (30.123 1"
 
 
+def test_kernel_unique_geometry_types():
+    array = ga.array(["POINT (0 1)", "POINT (30 10)", "LINESTRING Z (0 1 2, 3 4 5)"])
+    kernel = ga.Kernel.unique_geometry_types_agg(array.type)
+    kernel.push(array)
+    out = kernel.finish()
+
+    assert out.type == pa.int32()
+    out_py = [item.as_py() for item in out]
+    assert out_py == [1, 1002]
+
+
 def test_kernel_visit_void():
     array = ga.array(["POINT (30 10)"], ga.wkt())
     kernel = ga.Kernel.visit_void_agg(array.type)

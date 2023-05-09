@@ -664,6 +664,9 @@ class Kernel:
     def as_geoarrow(type_in, type_id):
         return Kernel("as_geoarrow", type_in, type=type_id)
 
+    def unique_geometry_types_agg(type_in):
+        return Kernel("unique_geometry_types_agg", type_in)
+
     @staticmethod
     def _pack_options(options):
         if not options:
