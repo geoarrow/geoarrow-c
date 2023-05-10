@@ -44,7 +44,7 @@ jobs:
       - name: Coverage
         if: success() && matrix.python-version == '3.10'
         run: |
-          pip uninstall geoarrow
+          pip uninstall --yes geoarrow
           pip install pytest-cov
           pushd python
 
