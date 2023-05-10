@@ -36,6 +36,37 @@ jobs:
           pip install .[test]
           popd
           pip list
+
       - name: Run tests
         run: |
           pytest python/tests -v -s
+
+      - name: Coverage
+        if: success() && matrix.python-version == '3.10'
+        run: |
+          pip uninstall geoarrow
+          pip install pytest-cov
+          pushd python
+
+          # Build with Cython + gcc coverage options
+          GEOARROW_COVERAGE=1 python3 setup.py build_ext --inplace
+
+          # Run tests + coverage.py (generates .coverage file)
+          python -m pytest --cov ./geoarrow
+
+          # Collect C coverage information
+          lcov \
+            --capture --directory build \
+            --exclude "/usr/*" \
+            --exclude "/Library/*" \
+            --exclude "*/_lib.cpp" \
+            --exclude "*/geoarrow/geoarrow/*" \
+            --output-file=coverage.info
+
+          lcov --list coverage.info
+
+      - name: Upload coverage to codecov
+        if: success() && matrix.python-version == '3.10'
+        uses: codecov/codecov-action@v2
+        with:
+          files: 'python/coverage.info,python/.coverage'
