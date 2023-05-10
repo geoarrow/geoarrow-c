@@ -45,7 +45,7 @@ jobs:
         if: success() && matrix.python-version == '3.10'
         run: |
           pip uninstall --yes geoarrow
-          pip install pytest-cov
+          pip install pytest-cov Cython
           pushd python
 
           # Build with Cython + gcc coverage options
