@@ -1,3 +1,4 @@
 # .coveragerc to control coverage.py
 [run]
 plugins = Cython.Coverage
+relative_files = true
