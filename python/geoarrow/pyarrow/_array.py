@@ -2,7 +2,7 @@ import pyarrow as pa
 
 from .. import lib
 
-from ._compute import Kernel
+from ._kernel import Kernel
 from ._type import WktType, WkbType, VectorType, wkb, wkt, large_wkb, large_wkt
 
 

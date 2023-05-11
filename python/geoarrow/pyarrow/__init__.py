@@ -17,7 +17,7 @@ from ._type import (
     unregister_extension_types,
 )
 
-from ._compute import Kernel
+from ._kernel import Kernel
 
 from ._array import array
 
