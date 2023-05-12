@@ -35,7 +35,7 @@ class Kernel:
             chunks_out = []
             for chunk_in in arr.chunks:
                 chunks_out.append(self.push(chunk_in))
-            return pa.chunked_array(chunks_out)
+            return pa.chunked_array(chunks_out, type=self._type_out)
         elif not isinstance(arr, pa.Array):
             raise TypeError(
                 f"Expected pyarrow.Array or pyarrow.ChunkedArray but got {type(arr)}"
