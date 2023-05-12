@@ -23,4 +23,6 @@ from ._array import array
 
 from . import _scalar
 
+from ._compute import parse_all, as_wkt, as_wkb
+
 register_extension_types()
