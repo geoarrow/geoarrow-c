@@ -6,6 +6,7 @@
 
 from libc.stdint cimport uint8_t, int32_t, int64_t, uintptr_t
 from cpython cimport Py_buffer, PyObject
+from cpython.exc cimport PyErr_CheckSignals
 from libcpp cimport bool
 from libcpp.string cimport string
 
@@ -100,9 +101,9 @@ cdef extern from "geoarrow_type.h":
         int (*start)(GeoArrowKernel* kernel, ArrowSchema* schema,
                      const char* options, ArrowSchema* out, GeoArrowError* error)
         int (*push_batch)(GeoArrowKernel* kernel, ArrowArray* array,
-                          ArrowArray* out, GeoArrowError* error)
+                          ArrowArray* out, GeoArrowError* error) nogil
         int (*finish)(GeoArrowKernel* kernel, ArrowArray* out,
-                      GeoArrowError* error)
+                      GeoArrowError* error) nogil
         void (*release)(GeoArrowKernel* kernel)
         void* private_data
 
@@ -417,8 +418,10 @@ cdef class CKernel:
     def push_batch(self, ArrayHolder array):
         cdef GeoArrowError error
         out = ArrayHolder()
-        cdef int result = self.c_kernel.push_batch(&self.c_kernel, &array.c_array,
-                                                   &out.c_array, &error)
+        cdef int result
+        with nogil:
+            result = self.c_kernel.push_batch(&self.c_kernel, &array.c_array,
+                                              &out.c_array, &error)
         if result != GEOARROW_OK:
             raise ValueError(error.message)
 
@@ -427,7 +430,9 @@ cdef class CKernel:
     def finish(self):
         cdef GeoArrowError error
         out = ArrayHolder()
-        cdef int result = self.c_kernel.finish(&self.c_kernel, &out.c_array, &error)
+        cdef int result
+        with nogil:
+            result = self.c_kernel.finish(&self.c_kernel, &out.c_array, &error)
         if result != GEOARROW_OK:
             raise ValueError(error.message)
 

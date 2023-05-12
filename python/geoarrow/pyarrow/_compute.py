@@ -1,5 +1,5 @@
 import json
-from concurrent.futures import ThreadPoolExecutor, wait
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait
 
 import pyarrow as pa
 
@@ -8,6 +8,7 @@ from ._array import array
 from ._kernel import Kernel
 
 _max_workers = 1
+
 
 def set_max_workers(max_workers=None):
     global _max_workers
@@ -18,17 +19,24 @@ def set_max_workers(max_workers=None):
     _max_workers = max_workers
     return prev
 
+
 def obj_as_array_or_chunked(obj_in):
-    if (isinstance(obj_in, pa.Array) or isinstance(obj_in, pa.ChunkedArray)) and isinstance(obj_in.type, _type.VectorType):
+    if (
+        isinstance(obj_in, pa.Array) or isinstance(obj_in, pa.ChunkedArray)
+    ) and isinstance(obj_in.type, _type.VectorType):
         return obj_in
     else:
         return array(obj_in, validate=False)
+
 
 def construct_kernel_and_push1(kernel_constructor, obj, args):
     kernel = kernel_constructor(obj.type, **args)
     return kernel.push(obj)
 
-def push_all(kernel_constructor, obj, args=None, is_agg=False, max_workers=None, result=True):
+
+def push_all(
+    kernel_constructor, obj, args=None, is_agg=False, max_workers=None, result=True
+):
     if args is None:
         args = {}
 
@@ -46,12 +54,18 @@ def push_all(kernel_constructor, obj, args=None, is_agg=False, max_workers=None,
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = []
         for chunk in obj.chunks:
-            future = executor.submit(construct_kernel_and_push1, kernel_constructor, chunk, args)
+            future = executor.submit(
+                construct_kernel_and_push1, kernel_constructor, chunk, args
+            )
             futures.append(future)
-        wait(futures, return_when="FIRST_EXCEPTION")
 
-        chunks_out = [future.result() for future in futures]
+        # TODO: This doesn't cancel on Control-C properly
+        done, not_done = 0, futures
+        while not_done:
+            done, not_done = wait(futures, 0.5, return_when="FIRST_EXCEPTION")
+
         if result:
+            chunks_out = [future.result() for future in futures]
             return pa.chunked_array(chunks_out)
 
 
@@ -64,6 +78,7 @@ def parse_all(obj):
 
     return None
 
+
 def as_wkt(obj):
     obj = obj_as_array_or_chunked(obj)
 
@@ -71,6 +86,7 @@ def as_wkt(obj):
         return obj
 
     return push_all(Kernel.as_wkt, obj)
+
 
 def as_wkb(obj):
     obj = obj_as_array_or_chunked(obj)

@@ -1,4 +1,3 @@
-
 import pyarrow as pa
 import numpy as np
 import pytest
@@ -7,10 +6,12 @@ import geoarrow.pyarrow as ga
 import geoarrow.pyarrow._kernel as _kernel
 import geoarrow.pyarrow._compute as _compute
 
+
 def test_set_max_workers():
     current_max_workers = _compute.set_max_workers(123)
     assert _compute._max_workers == 123
     assert _compute.set_max_workers(current_max_workers) == 123
+
 
 def test_as_array_or_chunked():
     wkt_array = ga.array(["POINT (0 1)"])
@@ -24,6 +25,7 @@ def test_as_array_or_chunked():
 
     wkt_array3 = _compute.obj_as_array_or_chunked(wkt_array.storage)
     assert wkt_array3.storage == wkt_array.storage
+
 
 def test_push_all():
     current_max_workers = _compute.set_max_workers(1)
@@ -54,6 +56,7 @@ def test_push_all():
 
     _compute.set_max_workers(current_max_workers)
 
+
 def test_parse_all():
     assert _compute.parse_all(["POINT (0 1)"]) is None
     with pytest.raises(ValueError):
@@ -62,11 +65,13 @@ def test_parse_all():
     geoarrow_array = ga.array(["POINT (0 1)"]).as_geoarrow(ga.point())
     assert _compute.parse_all(geoarrow_array) is None
 
+
 def test_as_wkt():
     wkt_array = ga.array(["POINT (0 1)"])
     assert _compute.as_wkt(wkt_array) is wkt_array
 
     assert _compute.as_wkt(wkt_array.as_wkb()).storage == wkt_array.storage
+
 
 def test_as_wkb():
     wkb_array = ga.array(["POINT (0 1)"]).as_wkb()
