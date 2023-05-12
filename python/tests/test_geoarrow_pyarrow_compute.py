@@ -33,7 +33,6 @@ def test_push_all():
     wkt_chunked1 = pa.chunked_array([wkt_array])
     wkt_chunked2 = pa.chunked_array([wkt_array, ga.array(["POINT (2 3)"])])
 
-
     result_array = _compute.push_all(_kernel.Kernel.as_wkt, wkt_array)
     assert result_array.storage == wkt_array.storage
 
@@ -55,4 +54,22 @@ def test_push_all():
 
     _compute.set_max_workers(current_max_workers)
 
+def test_parse_all():
+    assert _compute.parse_all(["POINT (0 1)"]) is None
+    with pytest.raises(ValueError):
+        _compute.parse_all(["not valid wkt"])
 
+    geoarrow_array = ga.array(["POINT (0 1)"]).as_geoarrow(ga.point())
+    assert _compute.parse_all(geoarrow_array) is None
+
+def test_as_wkt():
+    wkt_array = ga.array(["POINT (0 1)"])
+    assert _compute.as_wkt(wkt_array) is wkt_array
+
+    assert _compute.as_wkt(wkt_array.as_wkb()).storage == wkt_array.storage
+
+def test_as_wkb():
+    wkb_array = ga.array(["POINT (0 1)"]).as_wkb()
+    assert _compute.as_wkb(wkb_array) is wkb_array
+
+    assert _compute.as_wkb(wkb_array.as_wkt()).storage == wkb_array.storage

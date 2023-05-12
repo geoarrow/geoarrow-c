@@ -22,7 +22,7 @@ def obj_as_array_or_chunked(obj_in):
     if (isinstance(obj_in, pa.Array) or isinstance(obj_in, pa.ChunkedArray)) and isinstance(obj_in.type, _type.VectorType):
         return obj_in
     else:
-        return array(obj_in)
+        return array(obj_in, validate=False)
 
 def construct_kernel_and_push1(kernel_constructor, obj, args):
     kernel = kernel_constructor(obj.type, **args)
@@ -70,6 +70,12 @@ def as_wkt(obj):
     if isinstance(obj.type, _type.WktType):
         return obj
 
-    return push_all(obj)
+    return push_all(Kernel.as_wkt, obj)
 
+def as_wkb(obj):
+    obj = obj_as_array_or_chunked(obj)
 
+    if isinstance(obj.type, _type.WkbType):
+        return obj
+
+    return push_all(Kernel.as_wkb, obj)
