@@ -1,5 +1,4 @@
 import pyarrow as pa
-import numpy as np
 import pytest
 
 import geoarrow.pyarrow as ga
@@ -78,3 +77,47 @@ def test_as_wkb():
     assert _compute.as_wkb(wkb_array) is wkb_array
 
     assert _compute.as_wkb(wkb_array.as_wkt()).storage == wkb_array.storage
+
+
+def test_format_wkt():
+    wkt_array = ga.array(["POINT (0 1)"])
+    assert _compute.format_wkt(wkt_array, max_element_size_bytes=5) == pa.array(
+        ["POINT"]
+    )
+
+
+def test_unique_geometry_types():
+    ga_array = ga.array(pa.array([], type=pa.utf8())).as_geoarrow(ga.point())
+    out = _compute.unique_geometry_types(ga_array).flatten()
+    assert out[0] == pa.array([ga.GeometryType.POINT], type=pa.int32())
+    assert out[1] == pa.array([ga.Dimensions.XY], type=pa.int32())
+
+    wkt_array = ga.array(
+        [
+            "POINT ZM (0 1 2 3)",
+            "LINESTRING M (0 0 0, 1 1 1)",
+            "POLYGON Z ((0 0 0, 1 0 0, 0 1 0, 0 0 0))",
+            "MULTIPOINT (0 1)",
+        ]
+    )
+
+    out = _compute.unique_geometry_types(wkt_array).flatten()
+    assert out[0] == pa.array(
+        [
+            ga.GeometryType.MULTIPOINT,
+            ga.GeometryType.POLYGON,
+            ga.GeometryType.LINESTRING,
+            ga.GeometryType.POINT,
+        ],
+        type=pa.int32(),
+    )
+
+    assert out[1] == pa.array(
+        [
+            ga.Dimensions.XY,
+            ga.Dimensions.XYZ,
+            ga.Dimensions.XYM,
+            ga.Dimensions.XYZM,
+        ],
+        type=pa.int32(),
+    )

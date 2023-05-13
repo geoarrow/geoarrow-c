@@ -1,8 +1,8 @@
-import json
-from concurrent.futures import ThreadPoolExecutor, as_completed, wait
+from concurrent.futures import ThreadPoolExecutor, wait
 
 import pyarrow as pa
 
+from ..lib import GeometryType, Dimensions
 from . import _type
 from ._array import array
 from ._kernel import Kernel
@@ -41,7 +41,7 @@ def push_all(
         args = {}
 
     if is_agg:
-        kernel = kernel_constructor(**args)
+        kernel = kernel_constructor(obj.type, **args)
         kernel.push(obj)
         return kernel.finish()
 
@@ -79,6 +79,47 @@ def parse_all(obj):
     return None
 
 
+def unique_geometry_types(obj):
+    obj = obj_as_array_or_chunked(obj)
+    out_type = pa.struct([("geometry_type", pa.int32()), ("dimensions", pa.int32())])
+
+    if not isinstance(obj.type, _type.WktType) and not isinstance(
+        obj.type, _type.WkbType
+    ):
+        return pa.array(
+            [
+                {
+                    "geometry_type": obj.type.geometry_type,
+                    "dimensions": obj.type.dimensions,
+                }
+            ],
+            type=out_type,
+        )
+
+    result = push_all(Kernel.unique_geometry_types_agg, obj, is_agg=True)
+
+    # Kernel currently returns ISO code integers (e.g., 2002):
+    # convert to struct(geometry_type, dimensions)
+    py_geometry_types = []
+    for item in result:
+        item_int = item.as_py()
+        if item_int >= 3000:
+            dimensions = Dimensions.XYZM
+            item_int -= 3000
+        elif item_int >= 2000:
+            dimensions = Dimensions.XYM
+            item_int -= 2000
+        elif item_int >= 1000:
+            dimensions = Dimensions.XYZ
+            item_int -= 1000
+        else:
+            dimensions = Dimensions.XY
+
+        py_geometry_types.append({"geometry_type": item_int, "dimensions": dimensions})
+
+    return pa.array(py_geometry_types, type=out_type)
+
+
 def as_wkt(obj):
     obj = obj_as_array_or_chunked(obj)
 
@@ -95,3 +136,14 @@ def as_wkb(obj):
         return obj
 
     return push_all(Kernel.as_wkb, obj)
+
+
+def format_wkt(obj, significant_digits=None, max_element_size_bytes=None):
+    return push_all(
+        Kernel.format_wkt,
+        obj,
+        args={
+            "significant_digits": significant_digits,
+            "max_element_size_bytes": max_element_size_bytes,
+        },
+    )
