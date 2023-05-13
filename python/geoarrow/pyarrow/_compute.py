@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor, wait
 
 import pyarrow as pa
 
-from ..lib import GeometryType, Dimensions
+from ..lib import GeometryType, Dimensions, CoordType
 from . import _type
 from ._array import array
 from ._kernel import Kernel
@@ -118,6 +118,63 @@ def unique_geometry_types(obj):
         py_geometry_types.append({"geometry_type": item_int, "dimensions": dimensions})
 
     return pa.array(py_geometry_types, type=out_type)
+
+
+def infer_type_common(obj, coord_type=None):
+    obj = obj_as_array_or_chunked(obj)
+
+    if not isinstance(obj.type, _type.WktType) and not isinstance(
+        obj.type, _type.WkbType
+    ):
+        if coord_type is None:
+            return obj.type
+        else:
+            return obj.type.with_coord_type(coord_type)
+
+    if coord_type is None:
+        coord_type = CoordType.SEPARATE
+
+    types = unique_geometry_types(obj)
+    if len(types) == 0:
+        # Not ideal: we probably want a _type.empty() that keeps the CRS
+        return pa.null()
+
+    types = types.flatten()
+
+    unique_dims = types[1].unique().to_pylist()
+    has_z = any(dim in (Dimensions.XYZ, Dimensions.XYZM) for dim in unique_dims)
+    has_m = any(dim in (Dimensions.XYM, Dimensions.XYZM) for dim in unique_dims)
+    if has_z and has_m:
+        dimensions = Dimensions.XYZM
+    elif has_z:
+        dimensions = Dimensions.XYM
+    elif has_m:
+        dimensions = Dimensions.XYZ
+    else:
+        dimensions = Dimensions.XY
+
+    unique_geom_types = types[0].unique().to_pylist()
+    if len(unique_geom_types) == 1:
+        geometry_type = unique_geom_types[0]
+    elif all(unique_geom_types in (GeometryType.POINT, GeometryType.MULTIPOINT)):
+        geometry_type = GeometryType.MULTIPOINT
+    elif all(
+        unique_geom_types in (GeometryType.LINESTRING, GeometryType.MULTILINESTRING)
+    ):
+        geometry_type = GeometryType.MULTILINESTRING
+    elif all(unique_geom_types in (GeometryType.POLYGON, GeometryType.MULTIPOLYGON)):
+        geometry_type = GeometryType.MULTIPOLYGON
+    else:
+        return _type.wkb().with_crs(obj.type.crs, obj.type.crs_type)
+
+    return _type.vector_type(
+        geometry_type,
+        dimensions,
+        coord_type,
+        edge_type=obj.type.edge_type,
+        crs=obj.type.crs,
+        crs_type=obj.type.crs_type,
+    )
 
 
 def as_wkt(obj):

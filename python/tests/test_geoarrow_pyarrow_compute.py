@@ -121,3 +121,8 @@ def test_unique_geometry_types():
         ],
         type=pa.int32(),
     )
+
+def test_infer_type_common():
+    point = ga.array(["POINT (0 1)"])
+    point_type = _compute.infer_type_common(point)
+    assert point_type.id == ga.point().id
