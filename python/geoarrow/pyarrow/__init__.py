@@ -23,6 +23,14 @@ from ._array import array
 
 from . import _scalar
 
-from ._compute import parse_all, as_wkt, as_wkb
+from ._compute import (
+    parse_all,
+    as_wkt,
+    as_wkb,
+    infer_type_common,
+    as_geoarrow,
+    format_wkt,
+    unique_geometry_types,
+)
 
 register_extension_types()
