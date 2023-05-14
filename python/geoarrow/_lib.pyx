@@ -6,7 +6,6 @@
 
 from libc.stdint cimport uint8_t, int32_t, int64_t, uintptr_t
 from cpython cimport Py_buffer, PyObject
-from cpython.exc cimport PyErr_CheckSignals
 from libcpp cimport bool
 from libcpp.string cimport string
 
@@ -208,7 +207,7 @@ cdef class SchemaHolder:
     def __init__(self):
         self.c_schema.release = NULL
 
-    def __del__(self):
+    def __dealloc__(self):
         if self.c_schema.release != NULL:
           self.c_schema.release(&self.c_schema)
 
@@ -230,7 +229,7 @@ cdef class ArrayHolder:
     def __init__(self):
         self.c_array.release = NULL
 
-    def __del__(self):
+    def __dealloc__(self):
         if self.c_array.release != NULL:
           self.c_array.release(&self.c_array)
 
@@ -402,8 +401,9 @@ cdef class CKernel:
         if result != GEOARROW_OK:
             raise ValueError('GeoArrowKernelInit() failed')
 
-    def __del__(self):
-        self.c_kernel.release(&self.c_kernel)
+    def __dealloc__(self):
+        if self.c_kernel.release != NULL:
+            self.c_kernel.release(&self.c_kernel)
 
     def start(self, SchemaHolder schema, const char* options):
         cdef GeoArrowError error
@@ -573,7 +573,7 @@ cdef class CBuilder:
         if result != GEOARROW_OK:
             raise ValueError(error.message.decode('UTF-8'))
 
-    def __del__(self):
+    def __dealloc__(self):
         GeoArrowBuilderReset(&self.c_builder)
 
     def set_buffer_uint8(self, int64_t i, object obj):
