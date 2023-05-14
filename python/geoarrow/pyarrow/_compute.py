@@ -156,13 +156,19 @@ def infer_type_common(obj, coord_type=None):
     unique_geom_types = types[0].unique().to_pylist()
     if len(unique_geom_types) == 1:
         geometry_type = unique_geom_types[0]
-    elif all(unique_geom_types in (GeometryType.POINT, GeometryType.MULTIPOINT)):
+    elif all(
+        t in (GeometryType.POINT, GeometryType.MULTIPOINT) for t in unique_geom_types
+    ):
         geometry_type = GeometryType.MULTIPOINT
     elif all(
-        unique_geom_types in (GeometryType.LINESTRING, GeometryType.MULTILINESTRING)
+        t in (GeometryType.LINESTRING, GeometryType.MULTILINESTRING)
+        for t in unique_geom_types
     ):
         geometry_type = GeometryType.MULTILINESTRING
-    elif all(unique_geom_types in (GeometryType.POLYGON, GeometryType.MULTIPOLYGON)):
+    elif all(
+        t in (GeometryType.POLYGON, GeometryType.MULTIPOLYGON)
+        for t in unique_geom_types
+    ):
         geometry_type = GeometryType.MULTIPOLYGON
     else:
         return _type.wkb().with_crs(obj.type.crs, obj.type.crs_type)

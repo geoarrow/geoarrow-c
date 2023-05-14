@@ -122,7 +122,46 @@ def test_unique_geometry_types():
         type=pa.int32(),
     )
 
+
 def test_infer_type_common():
-    point = ga.array(["POINT (0 1)"])
-    point_type = _compute.infer_type_common(point)
-    assert point_type.id == ga.point().id
+    empty = ga.wkt().wrap_array(pa.array([], type=pa.utf8()))
+    common = _compute.infer_type_common(empty)
+    assert common == pa.null()
+
+    point = ga.wkt().with_crs("EPSG:1234").wrap_array(pa.array(["POINT (0 1)"]))
+    common = _compute.infer_type_common(point)
+    assert common.id == ga.point().id
+    assert common.crs == "EPSG:1234"
+
+    point_z_and_zm = ga.array(["POINT (0 1)", "POINT ZM (0 1 2 3)"])
+    common = _compute.infer_type_common(point_z_and_zm)
+    assert common.id == ga.point().with_dimensions(ga.Dimensions.XYZM).id
+
+    point_m_and_z = ga.array(["POINT M (0 1 2)", "POINT Z (0 1 2)"])
+    common = _compute.infer_type_common(point_m_and_z)
+    assert common.id == ga.point().with_dimensions(ga.Dimensions.XYZM).id
+
+    mixed = (
+        ga.wkt()
+        .with_crs("EPSG:1234")
+        .wrap_array(pa.array(["POINT (0 1)", "LINESTRING (0 1, 2 3)"]))
+    )
+    common = _compute.infer_type_common(mixed)
+    assert common.id == ga.wkb().id
+    assert common.crs == "EPSG:1234"
+
+    point_and_multi = ga.array(["POINT (0 1)", "MULTIPOINT (2 3)"])
+    common = _compute.infer_type_common(point_and_multi)
+    assert common.id == ga.multipoint().id
+
+    linestring_and_multi = ga.array(
+        ["LINESTRING (0 1, 2 3)", "MULTILINESTRING ((0 1, 2 3))"]
+    )
+    common = _compute.infer_type_common(linestring_and_multi)
+    assert common.id == ga.multilinestring().id
+
+    polygon_and_multi = ga.array(
+        ["POLYGON ((0 0, 0 1, 1 0, 0 0))", "MULTIPOLYGON (((0 0, 0 1, 1 0, 0 0)))"]
+    )
+    common = _compute.infer_type_common(polygon_and_multi)
+    assert common.id == ga.multipolygon().id
