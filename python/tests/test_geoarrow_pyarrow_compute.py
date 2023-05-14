@@ -176,3 +176,23 @@ def test_infer_type_common():
     )
     common = _compute.infer_type_common(polygon_and_multi)
     assert common.id == ga.multipolygon().id
+
+
+def test_as_geoarrow():
+    array = _compute.as_geoarrow(["POINT (0 1)"])
+    assert array.type.id == ga.point().id
+
+    array2 = _compute.as_geoarrow(array)
+    assert array2 is array
+
+    array2 = _compute.as_geoarrow(array, coord_type=ga.CoordType.INTERLEAVED)
+    assert array2.type.id == ga.point().with_coord_type(ga.CoordType.INTERLEAVED).id
+
+    array = _compute.as_geoarrow(["POINT (0 1)"], coord_type=ga.CoordType.INTERLEAVED)
+    assert array.type.id == ga.point().with_coord_type(ga.CoordType.INTERLEAVED).id
+
+    array = _compute.as_geoarrow(["POINT (0 1)"], type=ga.multipoint())
+    assert array.type.id == ga.multipoint().id
+
+    array = _compute.as_geoarrow(["POINT (0 1)", "LINESTRING (0 1, 2 3)"])
+    assert array.type.id == ga.wkb().id

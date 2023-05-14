@@ -205,6 +205,23 @@ def as_wkb(obj):
     return push_all(Kernel.as_wkb, obj)
 
 
+def as_geoarrow(obj, type=None, coord_type=None):
+    obj = obj_as_array_or_chunked(obj)
+
+    if type is None:
+        type = infer_type_common(obj, coord_type=coord_type)
+
+    if obj.type.id == type.id:
+        return obj
+
+    if type.extension_name == "geoarrow.wkt":
+        return push_all(Kernel.as_wkt, obj)
+    elif type._extension_name == "geoarrow.wkb":
+        return push_all(Kernel.as_wkb, obj)
+    else:
+        return push_all(Kernel.as_geoarrow, obj, args={"type_id": type.id})
+
+
 def format_wkt(obj, significant_digits=None, max_element_size_bytes=None):
     return push_all(
         Kernel.format_wkt,
