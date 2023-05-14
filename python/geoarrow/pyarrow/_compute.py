@@ -147,9 +147,9 @@ def infer_type_common(obj, coord_type=None):
     if has_z and has_m:
         dimensions = Dimensions.XYZM
     elif has_z:
-        dimensions = Dimensions.XYM
-    elif has_m:
         dimensions = Dimensions.XYZ
+    elif has_m:
+        dimensions = Dimensions.XYM
     else:
         dimensions = Dimensions.XY
 
