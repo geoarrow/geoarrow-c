@@ -128,6 +128,17 @@ def test_infer_type_common():
     common = _compute.infer_type_common(empty)
     assert common == pa.null()
 
+    already_geoarrow = ga.array(["POINT (0 1)"]).as_geoarrow(ga.point())
+    common = _compute.infer_type_common(already_geoarrow)
+    assert common.id == already_geoarrow.type.id
+    common_interleaved = _compute.infer_type_common(
+        already_geoarrow, coord_type=ga.CoordType.INTERLEAVED
+    )
+    assert (
+        common_interleaved.id
+        == already_geoarrow.type.with_coord_type(ga.CoordType.INTERLEAVED).id
+    )
+
     point = ga.wkt().with_crs("EPSG:1234").wrap_array(pa.array(["POINT (0 1)"]))
     common = _compute.infer_type_common(point)
     assert common.id == ga.point().id

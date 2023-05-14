@@ -171,7 +171,11 @@ def infer_type_common(obj, coord_type=None):
     ):
         geometry_type = GeometryType.MULTIPOLYGON
     else:
-        return _type.wkb().with_crs(obj.type.crs, obj.type.crs_type)
+        return (
+            _type.wkb()
+            .with_edge_type(obj.type.edge_type)
+            .with_crs(obj.type.crs, obj.type.crs_type)
+        )
 
     return _type.vector_type(
         geometry_type,
