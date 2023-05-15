@@ -6,6 +6,8 @@ import pytest
 
 import geoarrow.lib as lib
 import geoarrow.pyarrow as ga
+import geoarrow.pyarrow._type as _type
+import geoarrow.pyarrow._array as _array
 
 
 def test_vector_type_basic():
@@ -13,7 +15,7 @@ def test_vector_type_basic():
         ga.GeometryType.POINT, ga.Dimensions.XY, ga.CoordType.SEPARATE
     )
 
-    pa_type = ga.PointType(ctype)
+    pa_type = _type.PointType(ctype)
 
     assert pa_type.geometry_type == ga.GeometryType.POINT
     assert pa_type.dimensions == ga.Dimensions.XY
@@ -25,7 +27,7 @@ def test_vector_type_basic():
     assert pa_type.storage_type == expected_storage
 
     with pytest.raises(ValueError):
-        ga.LinestringType(ctype)
+        _type.LinestringType(ctype)
 
 
 def test_vector_type_with():
@@ -33,7 +35,7 @@ def test_vector_type_with():
         ga.GeometryType.POINT, ga.Dimensions.XY, ga.CoordType.SEPARATE
     )
 
-    type_obj = ga.PointType(ctype)
+    type_obj = _type.PointType(ctype)
 
     type_linestring = type_obj.with_geometry_type(ga.GeometryType.LINESTRING)
     assert type_linestring.geometry_type == ga.GeometryType.LINESTRING
@@ -99,7 +101,7 @@ def test_register_extension_types():
     # Reset state
     ga.unregister_extension_types()
     ga.register_extension_types()
-    assert ga._extension_types_registered is True
+    assert _type._extension_types_registered is True
 
 
 def test_array():
@@ -213,14 +215,14 @@ def test_kernel_as():
     out = kernel.push(array)
     assert out.type.extension_name == "geoarrow.wkt"
     assert out.type.crs == "EPSG:1234"
-    assert isinstance(out, ga.VectorArray)
+    assert isinstance(out, _array.VectorArray)
 
     array = ga.array(["POINT (30 10)"], ga.wkt().with_crs("EPSG:1234"))
     kernel = ga.Kernel.as_wkb(array.type)
     out = kernel.push(array)
     assert out.type.extension_name == "geoarrow.wkb"
     assert out.type.crs == "EPSG:1234"
-    assert isinstance(out, ga.VectorArray)
+    assert isinstance(out, _array.VectorArray)
 
     if sys.byteorder == "little":
         wkb_item = b"\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x3e\x40\x00\x00\x00\x00\x00\x00\x24\x40"
@@ -231,7 +233,7 @@ def test_kernel_as():
     out = kernel.push(array)
     assert out.type.extension_name == "geoarrow.point"
     assert out.type.crs == "EPSG:1234"
-    assert isinstance(out, ga.PointArray)
+    assert isinstance(out, _array.PointArray)
 
 
 def test_kernel_format():

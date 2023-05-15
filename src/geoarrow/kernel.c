@@ -560,6 +560,8 @@ static int GeoArrowInitVisitorKernelInternal(struct GeoArrowKernel* kernel,
   GeoArrowVisitorInitVoid(&private_data->v);
   private_data->visit_by_feature = 0;
 
+  int result = GEOARROW_OK;
+
   if (strcmp(name, "visit_void_agg") == 0) {
     kernel->finish = &kernel_finish_void_agg;
     private_data->finish_start = &finish_start_visit_void_agg;
@@ -567,18 +569,18 @@ static int GeoArrowInitVisitorKernelInternal(struct GeoArrowKernel* kernel,
     kernel->finish = &kernel_finish_void;
     private_data->finish_start = &finish_start_as_wkt;
     private_data->finish_push_batch = &finish_push_batch_as_wkt;
-    NANOARROW_RETURN_NOT_OK(GeoArrowWKTWriterInit(&private_data->wkt_writer));
+    result = GeoArrowWKTWriterInit(&private_data->wkt_writer);
   } else if (strcmp(name, "format_wkt") == 0) {
     kernel->finish = &kernel_finish_void;
     private_data->finish_start = &finish_start_format_wkt;
     private_data->finish_push_batch = &finish_push_batch_as_wkt;
-    NANOARROW_RETURN_NOT_OK(GeoArrowWKTWriterInit(&private_data->wkt_writer));
+    result = GeoArrowWKTWriterInit(&private_data->wkt_writer);
     private_data->visit_by_feature = 1;
   } else if (strcmp(name, "as_wkb") == 0) {
     kernel->finish = &kernel_finish_void;
     private_data->finish_start = &finish_start_as_wkb;
     private_data->finish_push_batch = &finish_push_batch_as_wkb;
-    NANOARROW_RETURN_NOT_OK(GeoArrowWKBWriterInit(&private_data->wkb_writer));
+    result = GeoArrowWKBWriterInit(&private_data->wkb_writer);
     GeoArrowWKBWriterInitVisitor(&private_data->wkb_writer, &private_data->v);
   } else if (strcmp(name, "as_geoarrow") == 0) {
     kernel->finish = &kernel_finish_void;
@@ -590,12 +592,17 @@ static int GeoArrowInitVisitorKernelInternal(struct GeoArrowKernel* kernel,
     private_data->visit_by_feature = 1;
   }
 
+  if (result != GEOARROW_OK) {
+    ArrowFree(private_data);
+    return result;
+  }
+
   kernel->start = &kernel_visitor_start;
   kernel->push_batch = &kernel_push_batch_void_agg;
   kernel->release = &kernel_release_visitor;
   kernel->private_data = private_data;
 
-  return NANOARROW_OK;
+  return GEOARROW_OK;
 }
 
 GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* name,
