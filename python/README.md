@@ -1,12 +1,10 @@
 # geoarrow for Python
 
-Python bindings for geoarrow-cpp. These are in a preliminary state: see open issues
-and tests/test_geoarrow.py for usage.
+The geoarrow Python package provides bindings to the geoarrow-c implementation of the [GeoArrow specification](https://github.com/geoarrow/geoarrow). The geoarrow Python bindings provide input/output to/from Arrow-friendly formats (e.g., Parquet, Arrow Stream, Arrow File) and general-purpose coordinate shuffling tools among GeoArrow, WKT, and WKB encodings. 
 
 ## Installation
 
-Python bindings for nanoarrow are not yet available on PyPI. You can install via
-URL (requires a C compiler):
+Python bindings for nanoarrow are not yet available on PyPI. You can install via URL (requires a C++ compiler):
 
 ```bash
 python -m pip install "https://github.com/geoarrow/geoarrow-cpp/archive/refs/heads/main.zip#egg=geoarrow&subdirectory=python"
@@ -21,65 +19,30 @@ import geoarrow.pyarrow as ga
 
 ## Examples
 
-You can create geoarrow types with `geoarrow.wkt()`, `geoarrow.wkb()`, and friends. Use the `.with_*()` modifiers to assign differing dimensions, geometry types, edge types, or coordinate reference system values; use `geoarrow.vector_type()` to specify everything at once.
+You can create geoarrow-encoded arrays with `as_geoarrow()`:
 
 
 ```python
-ga.wkb().with_crs('EPSG:1234')
+ga.as_geoarrow(["POINT (0 1)"])
 ```
 
 
 
 
-    WkbType(geoarrow.wkb <EPSG:1234>)
+    PointArray:PointType(geoarrow.point)[1]
+    <POINT (0 1)>
 
 
 
 
-```python
-ga.linestring().with_dimensions(ga.Dimensions.XYZ)
-```
+This will work with:
 
+- An existing array created by geoarrow
+- A `geopandas.GeoSeries`
+- A `pyarrow.Array` or `pyarrow.ChunkedArray` (geoarrow text interpreted as well-known text; binary interpreted as well-known binary)
+- Anything that `pyarrow.array()` will convert to a text or binary array
 
-
-
-    LinestringType(geoarrow.linestring_z)
-
-
-
-You can create arrays from iterables of Python objects using `geoarrow.array()`. String-like values are assumed to be (and are validated as) well-known text; bytes-like values are assumed to be (and are validated as) well-known binary.
-
-
-```python
-ga.array(['POINT (30 10)'], ga.wkt())
-```
-
-
-
-
-    VectorArray:WktType(geoarrow.wkt)[1]
-    <POINT (30 10)>
-
-
-
-
-If you already have a `pyarrow.Array` or `pyarrow.ChunkedArray`, you can use `<Type>.wrap_array()`:
-
-
-```python
-import pyarrow as pa
-existing_array = pa.array(['POINT (30 10)'])
-ga.wkt().wrap_array(existing_array)
-```
-
-
-
-
-    VectorArray:WktType(geoarrow.wkt)[1]
-    <POINT (30 10)>
-
-
-
+If there is no common geometry type among elements of the input, `as_geoarrow()` will fall back to well-known binary encoding. To explicitly convert to well-known text or binary, use `as_wkt()` or `as_wkb()`.
 
 Alternatively, you can construct GeoArrow arrays directly from a series of buffers as described in the specification:
 
@@ -124,71 +87,106 @@ ga.point().with_coord_type(ga.CoordType.INTERLEAVED).from_geobuffers(
 
 
 
-Importing `geoarrow.pyarrow` will register the geoarrow extension types with pyarrow such that you can read/write Arrow streams, Arrow files, and Parquet that contains Geoarrow extension types. A number of these files are available from the [geoarrow-data](https://github.com/paleolimbot/geoarrow-data) repository.
+Importing `geoarrow.pyarrow` will register the geoarrow extension types with pyarrow such that you can read/write Arrow streams, Arrow files, and Parquet that contains Geoarrow extension types. A number of these files are available from the [geoarrow-data](https://github.com/geoarrow/geoarrow-data) repository.
 
-## Geopandas
 
-You can convert from geopandas using `geoarrow.array()`:
+```python
+import urllib.request
+import pyarrow.parquet as pq
+
+url = "https://github.com/geoarrow/geoarrow-data/releases/download/latest-dev/ns-water-basin_line.parquet"
+local_filename, headers = urllib.request.urlretrieve(url)
+pq.read_table(local_filename).schema
+```
+
+
+
+
+    OBJECTID: int64
+    FEAT_CODE: string
+    LINE_CLASS: int32
+    MISCID_1: string
+    MISCNAME_1: string
+    MISCID_2: string
+    MISCNAME_2: string
+    HID: string
+    MISCID_3: string
+    MISCNAME_3: string
+    MISCID_4: string
+    MISCNAME_4: string
+    SHAPE_LEN: double
+    geometry: extension<geoarrow.multilinestring<MultiLinestringType>>
+    -- schema metadata --
+    geo: '
+        {
+        "columns": {
+            "geometry": {
+            "encoding": "' + 2919
+
+
 
 
 ```python
 import geopandas
 
-url = "https://github.com/paleolimbot/geoarrow-data/releases/download/v0.0.1/nshn_basin_line.gpkg"
+url = "https://github.com/geoarrow/geoarrow-data/releases/download/latest-dev/ns-water-basin_line.gpkg"
 df = geopandas.read_file(url)
-wkb_array = ga.array(df.geometry)
-wkb_array
-
+array = ga.as_geoarrow(df.geometry)
+array
 ```
 
-    /Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/geopandas/_compat.py:123: UserWarning: The Shapely GEOS version (3.11.1-CAPI-1.17.1) is incompatible with the GEOS version PyGEOS was compiled with (3.10.1-CAPI-1.16.0). Conversions between both will be slow.
+    /Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/geopandas/_compat.py:124: UserWarning: The Shapely GEOS version (3.11.1-CAPI-1.17.1) is incompatible with the GEOS version PyGEOS was compiled with (3.10.1-CAPI-1.16.0). Conversions between both will be slow.
       warnings.warn(
-    Warning 1: File /vsimem/dd517105c8364dc2a3e5a888a841c433 has GPKG application_id, but non conformant file extension
+    /var/folders/gt/l87wjg8s7312zs9s7c1fgs900000gn/T/ipykernel_81348/2107898165.py:1: DeprecationWarning: Shapely 2.0 is installed, but because PyGEOS is also installed, GeoPandas still uses PyGEOS by default. However, starting with version 0.14, the default will switch to Shapely. To force to use Shapely 2.0 now, you can either uninstall PyGEOS or set the environment variable USE_PYGEOS=0. You can do this before starting the Python process, or in your code before importing geopandas:
+    
+    import os
+    os.environ['USE_PYGEOS'] = '0'
+    import geopandas
+    
+    In the next release, GeoPandas will switch to using Shapely by default, even if PyGEOS is installed. If you only have PyGEOS installed to get speed-ups, this switch should be smooth. However, if you are using PyGEOS directly (calling PyGEOS functions on geometries from GeoPandas), this will then stop working and you are encouraged to migrate from PyGEOS to Shapely 2.0 (https://shapely.readthedocs.io/en/latest/migration_pygeos.html).
+      import geopandas
 
 
 
 
 
-    VectorArray:WkbType(geoarrow.wkb <{"$schema":"https://proj.org/schem...>)[255]
-    <MULTILINESTRING Z ((648686.0197000001 5099181.984099999 0, 648626...>
-    <MULTILINESTRING Z ((687687.8200000003 5117029.181600001 0, 686766...>
-    <MULTILINESTRING Z ((631355.5193999996 5122892.2849 0, 631364.3433...>
-    <MULTILINESTRING Z ((665166.0199999996 5138641.9825 0, 665146.0199...>
-    <MULTILINESTRING Z ((673606.0199999996 5162961.9823 0, 673606.0199...>
+    MultiLinestringArray:MultiLinestringType(geoarrow.multilinestring <{"$schema":"https://proj.org/schem...>)[255]
+    <MULTILINESTRING ((648686.0197000001 5099181.984099999, 648626.018...>
+    <MULTILINESTRING ((687687.8200000003 5117029.181600001, 686766.020...>
+    <MULTILINESTRING ((631355.5193999996 5122892.2849, 631364.34339999...>
+    <MULTILINESTRING ((665166.0199999996 5138641.9825, 665146.01999999...>
+    <MULTILINESTRING ((673606.0199999996 5162961.9823, 673606.01999999...>
     ...245 values...
-    <MULTILINESTRING Z ((681672.6200000001 5078601.5823 0, 681866.0199...>
-    <MULTILINESTRING Z ((414867.9170000004 5093040.8807 0, 414793.8169...>
-    <MULTILINESTRING Z ((414867.9170000004 5093040.8807 0, 414829.7170...>
-    <MULTILINESTRING Z ((414867.9170000004 5093040.8807 0, 414937.2170...>
-    <MULTILINESTRING Z ((648686.0197000001 5099181.984099999 0, 648866...>
+    <MULTILINESTRING ((681672.6200000001 5078601.5823, 681866.01999999...>
+    <MULTILINESTRING ((414867.9170000004 5093040.8807, 414793.81699999...>
+    <MULTILINESTRING ((414867.9170000004 5093040.8807, 414829.71700000...>
+    <MULTILINESTRING ((414867.9170000004 5093040.8807, 414937.21700000...>
+    <MULTILINESTRING ((648686.0197000001 5099181.984099999, 648866.019...>
 
 
 
-By default, `geoarrow.array()` performs the fewest transformations required, which in
-this case means we get a well-known binary representation in Arrow form. To get a
-geoarrow-encoded version, use `.as_geoarrow()`:
+You can convert back to geopandas using `as_wkb()` and `GeoSeries.from_wkb()`:
 
 
 ```python
-geoarrow_array = wkb_array.as_geoarrow(ga.multilinestring().with_dimensions(ga.Dimensions.XYZ))
-geoarrow_array
+geopandas.GeoSeries.from_wkb(ga.as_wkb(array))
 ```
 
 
 
 
-    MultiLinestringArray:MultiLinestringType(geoarrow.multilinestring_z <{"$schema":"https://proj.org/schem...>)[255]
-    <MULTILINESTRING Z ((648686.0197000001 5099181.984099999 0, 648626...>
-    <MULTILINESTRING Z ((687687.8200000003 5117029.181600001 0, 686766...>
-    <MULTILINESTRING Z ((631355.5193999996 5122892.2849 0, 631364.3433...>
-    <MULTILINESTRING Z ((665166.0199999996 5138641.9825 0, 665146.0199...>
-    <MULTILINESTRING Z ((673606.0199999996 5162961.9823 0, 673606.0199...>
-    ...245 values...
-    <MULTILINESTRING Z ((681672.6200000001 5078601.5823 0, 681866.0199...>
-    <MULTILINESTRING Z ((414867.9170000004 5093040.8807 0, 414793.8169...>
-    <MULTILINESTRING Z ((414867.9170000004 5093040.8807 0, 414829.7170...>
-    <MULTILINESTRING Z ((414867.9170000004 5093040.8807 0, 414937.2170...>
-    <MULTILINESTRING Z ((648686.0197000001 5099181.984099999 0, 648866...>
+    0      MULTILINESTRING ((648686.020 5099181.984, 6486...
+    1      MULTILINESTRING ((687687.820 5117029.182, 6867...
+    2      MULTILINESTRING ((631355.519 5122892.285, 6313...
+    3      MULTILINESTRING ((665166.020 5138641.982, 6651...
+    4      MULTILINESTRING ((673606.020 5162961.982, 6736...
+                                 ...                        
+    250    MULTILINESTRING ((681672.620 5078601.582, 6818...
+    251    MULTILINESTRING ((414867.917 5093040.881, 4147...
+    252    MULTILINESTRING ((414867.917 5093040.881, 4148...
+    253    MULTILINESTRING ((414867.917 5093040.881, 4149...
+    254    MULTILINESTRING ((648686.020 5099181.984, 6488...
+    Length: 255, dtype: geometry
 
 
 
@@ -197,7 +195,7 @@ using `.geobuffers()`:
 
 
 ```python
-geoarrow_array.geobuffers()
+array.geobuffers()
 ```
 
 
@@ -256,70 +254,36 @@ geoarrow_array.geobuffers()
      array([648686.0197, 648626.0187, 648586.0197, ..., 658335.0659,
             658341.5039, 658351.4199]),
      array([5099181.9841, 5099181.9841, 5099161.9831, ..., 5099975.8904,
-            5099981.8684, 5099991.9824]),
-     array([0., 0., 0., ..., 0., 0., 0.])]
+            5099981.8684, 5099991.9824])]
 
 
-
-
-```python
-assert geoarrow_array.as_wkt() == wkb_array.as_wkt()
-```
 
 You can do the inverse operation (from raw buffers to GeoPandas) using `.from_geobuffers()`, and `.as_wkb()`:
 
 
 ```python
 ga_type = ga.multilinestring() \
-    .with_dimensions(ga.Dimensions.XYZ) \
-    .with_crs(geoarrow_array.type.crs)
-geoarrow_array2 = ga_type.from_geobuffers(*geoarrow_array.geobuffers())
+    .with_dimensions(ga.Dimensions.XY) \
+    .with_crs(array.type.crs)
+geoarrow_array2 = ga_type.from_geobuffers(*array.geobuffers())
 geoarrow_array2
 ```
 
 
 
 
-    MultiLinestringArray:MultiLinestringType(geoarrow.multilinestring_z <{"$schema":"https://proj.org/schem...>)[255]
-    <MULTILINESTRING Z ((648686.0197000001 5099181.984099999 0, 648626...>
-    <MULTILINESTRING Z ((687687.8200000003 5117029.181600001 0, 686766...>
-    <MULTILINESTRING Z ((631355.5193999996 5122892.2849 0, 631364.3433...>
-    <MULTILINESTRING Z ((665166.0199999996 5138641.9825 0, 665146.0199...>
-    <MULTILINESTRING Z ((673606.0199999996 5162961.9823 0, 673606.0199...>
+    MultiLinestringArray:MultiLinestringType(geoarrow.multilinestring <{"$schema":"https://proj.org/schem...>)[255]
+    <MULTILINESTRING ((648686.0197000001 5099181.984099999, 648626.018...>
+    <MULTILINESTRING ((687687.8200000003 5117029.181600001, 686766.020...>
+    <MULTILINESTRING ((631355.5193999996 5122892.2849, 631364.34339999...>
+    <MULTILINESTRING ((665166.0199999996 5138641.9825, 665146.01999999...>
+    <MULTILINESTRING ((673606.0199999996 5162961.9823, 673606.01999999...>
     ...245 values...
-    <MULTILINESTRING Z ((681672.6200000001 5078601.5823 0, 681866.0199...>
-    <MULTILINESTRING Z ((414867.9170000004 5093040.8807 0, 414793.8169...>
-    <MULTILINESTRING Z ((414867.9170000004 5093040.8807 0, 414829.7170...>
-    <MULTILINESTRING Z ((414867.9170000004 5093040.8807 0, 414937.2170...>
-    <MULTILINESTRING Z ((648686.0197000001 5099181.984099999 0, 648866...>
-
-
-
-
-```python
-assert geoarrow_array2 == geoarrow_array
-```
-
-
-```python
-geopandas.GeoSeries.from_wkb(geoarrow_array2.as_wkb())
-```
-
-
-
-
-    0      MULTILINESTRING Z ((648686.020 5099181.984 0.0...
-    1      MULTILINESTRING Z ((687687.820 5117029.182 0.0...
-    2      MULTILINESTRING Z ((631355.519 5122892.285 0.0...
-    3      MULTILINESTRING Z ((665166.020 5138641.982 0.0...
-    4      MULTILINESTRING Z ((673606.020 5162961.982 0.0...
-                                 ...                        
-    250    MULTILINESTRING Z ((681672.620 5078601.582 0.0...
-    251    MULTILINESTRING Z ((414867.917 5093040.881 0.0...
-    252    MULTILINESTRING Z ((414867.917 5093040.881 0.0...
-    253    MULTILINESTRING Z ((414867.917 5093040.881 0.0...
-    254    MULTILINESTRING Z ((648686.020 5099181.984 0.0...
-    Length: 255, dtype: geometry
+    <MULTILINESTRING ((681672.6200000001 5078601.5823, 681866.01999999...>
+    <MULTILINESTRING ((414867.9170000004 5093040.8807, 414793.81699999...>
+    <MULTILINESTRING ((414867.9170000004 5093040.8807, 414829.71700000...>
+    <MULTILINESTRING ((414867.9170000004 5093040.8807, 414937.21700000...>
+    <MULTILINESTRING ((648686.0197000001 5099181.984099999, 648866.019...>
 
 
 
