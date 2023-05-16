@@ -345,7 +345,7 @@ static int finish_start_format_wkt(struct GeoArrowVisitorKernelPrivate* private_
   long significant_digits = private_data->wkt_writer.significant_digits;
   NANOARROW_RETURN_NOT_OK(
       kernel_get_arg_long(options, "significant_digits", &significant_digits, 0, error));
-  private_data->wkt_writer.significant_digits = significant_digits;
+  private_data->wkt_writer.significant_digits = (int)significant_digits;
 
   long max_element_size_bytes = private_data->wkt_writer.max_element_size_bytes;
   NANOARROW_RETURN_NOT_OK(kernel_get_arg_long(options, "max_element_size_bytes",

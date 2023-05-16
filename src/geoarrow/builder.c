@@ -210,7 +210,7 @@ GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
 
   // If the coordinate appender was used, we may need to update the buffer sizes
   struct GeoArrowWritableCoordView* writable_view = &builder->view.coords;
-  int last_buffer = builder->view.n_buffers - 1;
+  int64_t last_buffer = builder->view.n_buffers - 1;
   int n_values = writable_view->n_values;
   int64_t size_by_coords;
 
@@ -223,7 +223,7 @@ GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
       break;
 
     case GEOARROW_COORD_TYPE_SEPARATE:
-      for (int i = last_buffer - n_values + 1; i <= last_buffer; i++) {
+      for (int64_t i = last_buffer - n_values + 1; i <= last_buffer; i++) {
         size_by_coords = writable_view->size_coords * sizeof(double);
         if (size_by_coords > builder->view.buffers[i].size_bytes) {
           builder->view.buffers[i].size_bytes = size_by_coords;
@@ -557,7 +557,10 @@ static int ring_end_multipoint(struct GeoArrowVisitor* v) {
 
   private->level--;
   private->size[0]++;
-  int32_t n_coord32 = builder->view.coords.size_coords;
+  if (builder->view.coords.size_coords > 2147483647) {
+    return EOVERFLOW;
+  }
+  int32_t n_coord32 = (int32_t)builder->view.coords.size_coords;
   NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 0, &n_coord32, 1));
 
   return GEOARROW_OK;
@@ -576,7 +579,10 @@ static int geom_end_multipoint(struct GeoArrowVisitor* v) {
   if (private->level == 1) {
     private->size[0]++;
     private->level--;
-    int32_t n_coord32 = builder->view.coords.size_coords;
+    if (builder->view.coords.size_coords > 2147483647) {
+      return EOVERFLOW;
+    }
+    int32_t n_coord32 = (int32_t)builder->view.coords.size_coords;
     NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 0, &n_coord32, 1));
   }
 
@@ -597,7 +603,10 @@ static int feat_end_multipoint(struct GeoArrowVisitor* v) {
   // If we didn't finish any sequences, finish at least one. This is usually an
   // EMPTY but could also be a single point.
   if (private->size[0] == 0) {
-    int32_t n_coord32 = builder->view.coords.size_coords;
+    if (builder->view.coords.size_coords > 2147483647) {
+      return EOVERFLOW;
+    }
+    int32_t n_coord32 = (int32_t)builder->view.coords.size_coords;
     NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 0, &n_coord32, 1));
   } else if (private->size[0] != 1) {
     ArrowErrorSet((struct ArrowError*)v->error,
@@ -690,7 +699,10 @@ static int ring_end_multilinestring(struct GeoArrowVisitor* v) {
 
   private->level--;
   if (private->size[1] > 0) {
-    int32_t n_coord32 = builder->view.coords.size_coords;
+    if (builder->view.coords.size_coords > 2147483647) {
+      return EOVERFLOW;
+    }
+    int32_t n_coord32 = (int32_t)builder->view.coords.size_coords;
     NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 1, &n_coord32, 1));
     private->size[0]++;
     private->size[1] = 0;
@@ -706,7 +718,10 @@ static int geom_end_multilinestring(struct GeoArrowVisitor* v) {
   if (private->level == 1) {
     private->level--;
     if (private->size[1] > 0) {
-      int32_t n_coord32 = builder->view.coords.size_coords;
+      if (builder->view.coords.size_coords > 2147483647) {
+        return EOVERFLOW;
+      }
+      int32_t n_coord32 = (int32_t)builder->view.coords.size_coords;
       NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 1, &n_coord32, 1));
       private->size[0]++;
       private->size[1] = 0;
@@ -730,13 +745,16 @@ static int feat_end_multilinestring(struct GeoArrowVisitor* v) {
   // If we have an unfinished sequence left over, finish it now. This could have
   // occurred if the last geometry that was visited was a POINT.
   if (private->size[1] > 0) {
-    int32_t n_coord32 = builder->view.coords.size_coords;
+    if (builder->view.coords.size_coords > 2147483647) {
+      return EOVERFLOW;
+    }
+    int32_t n_coord32 = (int32_t)builder->view.coords.size_coords;
     NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 1, &n_coord32, 1));
   }
 
   // Finish off the sequence of sequences. This is a polygon or multilinestring
   // so it can any number of them.
-  int32_t n_seq32 = builder->view.buffers[2].size_bytes / sizeof(int32_t) - 1;
+  int32_t n_seq32 = (int32_t)(builder->view.buffers[2].size_bytes / sizeof(int32_t)) - 1;
   NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 0, &n_seq32, 1));
 
   if (private->feat_is_null) {
@@ -827,7 +845,10 @@ static int ring_end_multipolygon(struct GeoArrowVisitor* v) {
 
   private->level--;
   if (private->size[2] > 0) {
-    int32_t n_coord32 = builder->view.coords.size_coords;
+    if (builder->view.coords.size_coords > 2147483647) {
+      return EOVERFLOW;
+    }
+    int32_t n_coord32 = (int32_t)builder->view.coords.size_coords;
     NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 2, &n_coord32, 1));
     private->size[1]++;
     private->size[2] = 0;
@@ -843,7 +864,10 @@ static int geom_end_multipolygon(struct GeoArrowVisitor* v) {
   if (private->level == 2) {
     private->level--;
     if (private->size[2] > 0) {
-      int32_t n_coord32 = builder->view.coords.size_coords;
+      if (builder->view.coords.size_coords > 2147483647) {
+        return EOVERFLOW;
+      }
+      int32_t n_coord32 = (int32_t)builder->view.coords.size_coords;
       NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 2, &n_coord32, 1));
       private->size[1]++;
       private->size[2] = 0;
@@ -851,7 +875,8 @@ static int geom_end_multipolygon(struct GeoArrowVisitor* v) {
   } else if (private->level == 1) {
     private->level--;
     if (private->size[1] > 0) {
-      int32_t n_seq32 = builder->view.buffers[3].size_bytes / sizeof(int32_t) - 1;
+      int32_t n_seq32 =
+          (int32_t)(builder->view.buffers[3].size_bytes / sizeof(int32_t)) - 1;
       NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 1, &n_seq32, 1));
       private->size[0]++;
       private->size[1] = 0;
@@ -875,7 +900,10 @@ static int feat_end_multipolygon(struct GeoArrowVisitor* v) {
   // If we have an unfinished sequence left over, finish it now. This could have
   // occurred if the last geometry that was visited was a POINT.
   if (private->size[2] > 0) {
-    int32_t n_coord32 = builder->view.coords.size_coords;
+    if (builder->view.coords.size_coords > 2147483647) {
+      return EOVERFLOW;
+    }
+    int32_t n_coord32 = (int32_t)builder->view.coords.size_coords;
     NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 2, &n_coord32, 1));
     private->size[1]++;
   }
@@ -883,13 +911,15 @@ static int feat_end_multipolygon(struct GeoArrowVisitor* v) {
   // If we have an unfinished sequence of sequences left over, finish it now.
   // This could have occurred if the last geometry that was visited was a POINT.
   if (private->size[1] > 0) {
-    int32_t n_seq32 = builder->view.buffers[3].size_bytes / sizeof(int32_t) - 1;
+    int32_t n_seq32 =
+        (int32_t)(builder->view.buffers[3].size_bytes / sizeof(int32_t)) - 1;
     NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 1, &n_seq32, 1));
   }
 
   // Finish off the sequence of sequence of sequences. This is a multipolygon
   // so it can be any number of them.
-  int32_t n_seq_seq32 = builder->view.buffers[2].size_bytes / sizeof(int32_t) - 1;
+  int32_t n_seq_seq32 =
+      (int32_t)(builder->view.buffers[2].size_bytes / sizeof(int32_t)) - 1;
   NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 0, &n_seq_seq32, 1));
 
   if (private->feat_is_null) {

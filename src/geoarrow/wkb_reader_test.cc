@@ -205,7 +205,7 @@ TEST(WKBReaderTest, WKBReaderTestNestedCollection) {
            0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40}));
 }
 
-TEST(WKTReaderTest, WKTReaderTestManyCoordinates) {
+TEST(WKBReaderTest, WKTReaderTestManyCoordinates) {
   // The reader uses an internal coordinate buffer of 3072 ordinates; however,
   // none of the above tests have enough coordinates to run into a situation
   // where it must be flushed.

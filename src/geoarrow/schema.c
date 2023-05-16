@@ -8,11 +8,10 @@
 
 static GeoArrowErrorCode GeoArrowSchemaInitCoordFixedSizeList(struct ArrowSchema* schema,
                                                               const char* dims) {
-  int n_dims = strlen(dims);
-  char dim_name[] = {'\0', '\0'};
+  int64_t n_dims = strlen(dims);
   ArrowSchemaInit(schema);
   NANOARROW_RETURN_NOT_OK(
-      ArrowSchemaSetTypeFixedSize(schema, NANOARROW_TYPE_FIXED_SIZE_LIST, n_dims));
+      ArrowSchemaSetTypeFixedSize(schema, NANOARROW_TYPE_FIXED_SIZE_LIST, (int32_t)n_dims));
   NANOARROW_RETURN_NOT_OK(ArrowSchemaSetName(schema->children[0], dims));
   NANOARROW_RETURN_NOT_OK(ArrowSchemaSetType(schema->children[0], NANOARROW_TYPE_DOUBLE));
 
@@ -21,11 +20,11 @@ static GeoArrowErrorCode GeoArrowSchemaInitCoordFixedSizeList(struct ArrowSchema
 
 static GeoArrowErrorCode GeoArrowSchemaInitCoordStruct(struct ArrowSchema* schema,
                                                        const char* dims) {
-  int n_dims = strlen(dims);
+  int64_t n_dims = strlen(dims);
   char dim_name[] = {'\0', '\0'};
   NANOARROW_RETURN_NOT_OK(ArrowSchemaInitFromType(schema, NANOARROW_TYPE_STRUCT));
   NANOARROW_RETURN_NOT_OK(ArrowSchemaAllocateChildren(schema, n_dims));
-  for (int i = 0; i < n_dims; i++) {
+  for (int64_t i = 0; i < n_dims; i++) {
     dim_name[0] = dims[i];
     NANOARROW_RETURN_NOT_OK(
         ArrowSchemaInitFromType(schema->children[i], NANOARROW_TYPE_DOUBLE));

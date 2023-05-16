@@ -1,14 +1,29 @@
 
 message(STATUS "Building using CMake version: ${CMAKE_VERSION}")
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.14)
 
-project(GeoArrow)
+if(NOT DEFINED CMAKE_C_STANDARD)
+  set(CMAKE_C_STANDARD 99)
+endif()
 
+set(GEOARROW_VERSION "0.2.0-SNAPSHOT")
+string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" GEOARROW_BASE_VERSION "${GEOARROW_VERSION}")
+project(geoarrow VERSION "${GEOARROW_BASE_VERSION}")
 
+set(GEOARROW_VERSION_MAJOR "${geoarrow_VERSION_MAJOR}")
+set(GEOARROW_VERSION_MINOR "${geoarrow_VERSION_MINOR}")
+set(GEOARROW_VERSION_PATCH "${geoarrow_VERSION_PATCH}")
+
+option(GEOARROW_BUILD_TESTS "Build tests" OFF)
 option(GEOARROW_CODE_COVERAGE "Enable coverage reporting" OFF)
+
 add_library(coverage_config INTERFACE)
 
-include_directories(src)
+if(GEOARROW_CODE_COVERAGE)
+  target_compile_options(coverage_config INTERFACE -O0 -g --coverage)
+  target_link_options(coverage_config INTERFACE --coverage)
+endif()
+
 add_library(
   geoarrow
   src/geoarrow/schema.c
@@ -24,27 +39,84 @@ add_library(
   src/geoarrow/wkt_writer.c
   src/geoarrow/nanoarrow.c)
 
-if(GEOARROW_CODE_COVERAGE)
-  target_compile_options(coverage_config INTERFACE -O0 -g --coverage)
-  target_link_options(coverage_config INTERFACE --coverage)
+target_include_directories(geoarrow PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+  $<INSTALL_INTERFACE:include>)
+target_compile_definitions(geoarrow PUBLIC
+  "$<$<CONFIG:Debug>:NANOARROW_DEBUG>"
+  "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(
+      geoarrow
+      PRIVATE
+      -Wall
+      -Werror
+      -Wextra
+      -Wno-type-limits
+      -Wno-unused-parameter
+      -Wpedantic
+      -Wunused-result)
+  elseif(CMAKE_C_COMPILER_ID STREQUAL "AppleClang" OR
+    CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(
+      geoarrow
+      PRIVATE
+      -Wall
+      -Werror
+      -Wextra
+      -Wdocumentation
+      -Wno-unused-parameter
+      -Wshorten-64-to-32)
+  endif()
 endif()
 
+install(TARGETS geoarrow DESTINATION lib)
+install(DIRECTORY src/ DESTINATION include FILES_MATCHING PATTERN "*.h")
 
-if (GEOARROW_BUILD_TESTS)
-
+if(GEOARROW_BUILD_TESTS)
   set(MEMORYCHECK_COMMAND_OPTIONS "--leak-check=full --suppressions=${CMAKE_CURRENT_LIST_DIR}/valgrind.supp --error-exitcode=1")
   include(CTest)
   include(FetchContent)
 
-  set(CMAKE_CXX_STANDARD 17)
-  set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
   find_package(Arrow REQUIRED)
 
-  FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/release-1.11.0.zip
-  )
+  if(${ARROW_VERSION} VERSION_GREATER_EQUAL "10.0.0")
+    set(CMAKE_CXX_STANDARD 17)
+  else()
+    set(CMAKE_CXX_STANDARD 11)
+  endif()
+
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.23")
+    cmake_policy(SET CMP0135 NEW)
+  endif()
+
+  if(MSVC)
+    set(gtest_force_shared_crt on)
+    set(NANOARROW_ARROW_TARGET arrow_static)
+  else()
+    set(NANOARROW_ARROW_TARGET arrow_shared)
+  endif()
+
+  # Use an old version of googletest if we have to to support gcc 4.8
+  if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
+    CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "5.0.0")
+    FetchContent_Declare(
+      googletest
+      URL https://github.com/google/googletest/archive/release-1.11.0.zip
+      URL_HASH SHA256=353571c2440176ded91c2de6d6cd88ddd41401d14692ec1f99e35d013feda55a
+    )
+  else()
+    FetchContent_Declare(
+      googletest
+      URL https://github.com/google/googletest/archive/release-1.10.0.zip
+      URL_HASH SHA256=94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91
+    )
+  endif()
+
   FetchContent_MakeAvailable(googletest)
 
   enable_testing()
@@ -66,9 +138,9 @@ if (GEOARROW_BUILD_TESTS)
   add_executable(geoarrow_arrow_test src/geoarrow/geoarrow_arrow_test.cc)
 
   if(GEOARROW_CODE_COVERAGE)
-      target_compile_options(coverage_config INTERFACE -O0 -g --coverage)
-      target_link_options(coverage_config INTERFACE --coverage)
-      target_link_libraries(geoarrow coverage_config)
+    target_compile_options(coverage_config INTERFACE -O0 -g --coverage)
+    target_link_options(coverage_config INTERFACE --coverage)
+    target_link_libraries(geoarrow coverage_config)
   endif()
 
   target_link_libraries(geoarrow_hpp_test geoarrow gtest_main)
