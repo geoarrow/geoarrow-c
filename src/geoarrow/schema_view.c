@@ -251,8 +251,6 @@ GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
   NANOARROW_RETURN_NOT_OK(ArrowSchemaViewInit(&na_schema_view, schema, na_error));
 
   const char* ext_name = na_schema_view.extension_name.data;
-  int64_t ext_len = na_schema_view.extension_name.size_bytes;
-
   if (ext_name == NULL) {
     ArrowErrorSet(na_error, "Expected extension type");
     return EINVAL;

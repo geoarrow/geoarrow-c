@@ -6,9 +6,9 @@
 
 #include "geoarrow.h"
 
-#define CHECK_POS(n)         \
-  if ((pos + n) > pos_max) { \
-    return EINVAL;           \
+#define CHECK_POS(n)                               \
+  if ((pos + (int32_t)(n)) > ((int32_t)pos_max)) { \
+    return EINVAL;                                 \
   }
 
 // A early draft implementation used something like the Arrow C Data interface
@@ -17,7 +17,7 @@
 static GeoArrowErrorCode GeoArrowMetadataViewInitDeprecated(
     struct GeoArrowMetadataView* metadata_view, struct GeoArrowError* error) {
   const char* metadata = metadata_view->metadata.data;
-  int32_t pos_max = metadata_view->metadata.size_bytes;
+  int32_t pos_max = (int32_t)metadata_view->metadata.size_bytes;
   int32_t pos = 0;
   int32_t name_len;
   int32_t value_len;
@@ -66,14 +66,6 @@ static GeoArrowErrorCode GeoArrowMetadataViewInitDeprecated(
   return GEOARROW_OK;
 }
 
-static int AssertChar(struct ArrowStringView* s, char c) {
-  if (s->size_bytes > 0 && s->data[0] == c) {
-    return GEOARROW_OK;
-  } else {
-    return EINVAL;
-  }
-}
-
 static int ParseChar(struct ArrowStringView* s, char c) {
   if (s->size_bytes > 0 && s->data[0] == c) {
     s->size_bytes--;
@@ -97,14 +89,14 @@ static void SkipWhitespace(struct ArrowStringView* s) {
 }
 
 static int SkipUntil(struct ArrowStringView* s, const char* items) {
-  int n_items = strlen(items);
+  int64_t n_items = strlen(items);
   while (s->size_bytes > 0) {
     char c = *(s->data);
     if (c == '\0') {
       return 0;
     }
 
-    for (int i = 0; i < n_items; i++) {
+    for (int64_t i = 0; i < n_items; i++) {
       if (c == items[i]) {
         return 1;
       }

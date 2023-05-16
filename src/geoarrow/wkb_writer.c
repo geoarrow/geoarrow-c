@@ -49,7 +49,11 @@ static int feat_start_wkb(struct GeoArrowVisitor* v) {
   private->size[private->level] = 0;
   private->length++;
   private->feat_is_null = 0;
-  return ArrowBufferAppendInt32(&private->offsets, private->values.size_bytes);
+
+  if (private->values.size_bytes > 2147483647) {
+    return EOVERFLOW;
+  }
+  return ArrowBufferAppendInt32(&private->offsets, (int32_t) private->values.size_bytes);
 }
 
 static int null_feat_wkb(struct GeoArrowVisitor* v) {
@@ -199,8 +203,6 @@ void GeoArrowWKBWriterInitVisitor(struct GeoArrowWKBWriter* writer,
                                   struct GeoArrowVisitor* v) {
   GeoArrowVisitorInitVoid(v);
 
-  struct WKBWriterPrivate* private = (struct WKBWriterPrivate*)writer->private_data;
-
   v->private_data = writer->private_data;
   v->feat_start = &feat_start_wkb;
   v->null_feat = &null_feat_wkb;
@@ -218,8 +220,12 @@ GeoArrowErrorCode GeoArrowWKBWriterFinish(struct GeoArrowWKBWriter* writer,
   struct WKBWriterPrivate* private = (struct WKBWriterPrivate*)writer->private_data;
   array->release = NULL;
 
+  if (private->values.size_bytes > 2147483647) {
+    return EOVERFLOW;
+  }
+
   NANOARROW_RETURN_NOT_OK(
-      ArrowBufferAppendInt32(&private->offsets, private->values.size_bytes));
+      ArrowBufferAppendInt32(&private->offsets, (int32_t) private->values.size_bytes));
   NANOARROW_RETURN_NOT_OK(ArrowArrayInitFromType(array, private->storage_type));
   ArrowArraySetValidityBitmap(array, &private->validity);
   NANOARROW_RETURN_NOT_OK(ArrowArraySetBuffer(array, 1, &private->offsets));

@@ -185,7 +185,7 @@ static inline GeoArrowErrorCode GeoArrowBuilderCoordsReserve(
 
   struct GeoArrowWritableCoordView* writable_view = &builder->view.coords;
   int result;
-  int last_buffer = builder->view.n_buffers - 1;
+  int64_t last_buffer = builder->view.n_buffers - 1;
   int n_values = writable_view->n_values;
 
   switch (builder->view.schema_view.coord_type) {
@@ -211,7 +211,7 @@ static inline GeoArrowErrorCode GeoArrowBuilderCoordsReserve(
       return GEOARROW_OK;
 
     case GEOARROW_COORD_TYPE_SEPARATE:
-      for (int i = last_buffer - n_values + 1; i <= last_buffer; i++) {
+      for (int64_t i = last_buffer - n_values + 1; i <= last_buffer; i++) {
         // Sync the coord view size back to the buffer size
         builder->view.buffers[i].size_bytes = writable_view->size_coords * sizeof(double);
 

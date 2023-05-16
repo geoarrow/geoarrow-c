@@ -53,14 +53,14 @@ static inline void SkipWhitespace(struct WKTReaderPrivate* s) {
 }
 
 static inline int SkipUntil(struct WKTReaderPrivate* s, const char* items) {
-  int n_items = strlen(items);
+  int64_t n_items = strlen(items);
   while (s->size_bytes > 0) {
     char c = *(s->data);
     if (c == '\0') {
       return 0;
     }
 
-    for (int i = 0; i < n_items; i++) {
+    for (int64_t i = 0; i < n_items; i++) {
       if (c == items[i]) {
         return 1;
       }
