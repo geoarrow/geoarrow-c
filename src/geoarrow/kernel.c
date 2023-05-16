@@ -418,19 +418,7 @@ static int finish_start_as_geoarrow(struct GeoArrowVisitorKernelPrivate* private
 static int finish_push_batch_as_geoarrow(
     struct GeoArrowVisitorKernelPrivate* private_data, struct ArrowArray* out,
     struct GeoArrowError* error) {
-  // The GeoArrowBuilder is not currently designed to visit + finish more than
-  // once and until it is, we have to reset + reinit here.
-  int result = GeoArrowBuilderFinish(&private_data->builder, out, error);
-  enum GeoArrowType type = private_data->builder.view.schema_view.type;
-  GeoArrowBuilderReset(&private_data->builder);
-  int result2 = GeoArrowBuilderInitFromType(&private_data->builder, type);
-  if (result != GEOARROW_OK) {
-    return result;
-  } else if (result2 != GEOARROW_OK) {
-    return result2;
-  } else {
-    return GEOARROW_OK;
-  }
+  return GeoArrowBuilderFinish(&private_data->builder, out, error);
 }
 
 // Kernel unique_geometry_types_agg
