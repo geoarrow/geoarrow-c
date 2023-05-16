@@ -75,6 +75,9 @@ static GeoArrowErrorCode GeoArrowBuilderPrepareForVisiting(
       NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, i, &zero, 1));
     }
 
+    builder->view.coords.size_coords = 0;
+    builder->view.coords.capacity_coords = 0;
+
     private->visitor_initialized = 1;
   }
 
