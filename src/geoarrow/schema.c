@@ -10,8 +10,8 @@ static GeoArrowErrorCode GeoArrowSchemaInitCoordFixedSizeList(struct ArrowSchema
                                                               const char* dims) {
   int64_t n_dims = strlen(dims);
   ArrowSchemaInit(schema);
-  NANOARROW_RETURN_NOT_OK(
-      ArrowSchemaSetTypeFixedSize(schema, NANOARROW_TYPE_FIXED_SIZE_LIST, (int32_t)n_dims));
+  NANOARROW_RETURN_NOT_OK(ArrowSchemaSetTypeFixedSize(
+      schema, NANOARROW_TYPE_FIXED_SIZE_LIST, (int32_t)n_dims));
   NANOARROW_RETURN_NOT_OK(ArrowSchemaSetName(schema->children[0], dims));
   NANOARROW_RETURN_NOT_OK(ArrowSchemaSetType(schema->children[0], NANOARROW_TYPE_DOUBLE));
 
@@ -113,7 +113,7 @@ GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowTy
       switch (coord_type) {
         case GEOARROW_COORD_TYPE_SEPARATE:
           return GeoArrowSchemaInitCoordStruct(schema, dims);
-         case GEOARROW_COORD_TYPE_INTERLEAVED:
+        case GEOARROW_COORD_TYPE_INTERLEAVED:
           return GeoArrowSchemaInitCoordFixedSizeList(schema, dims);
         default:
           return EINVAL;

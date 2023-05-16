@@ -571,9 +571,8 @@ TEST(KernelTest, KernelTestUniqueGeometryTypes) {
   ASSERT_EQ(
       ArrowArrayAppendString(&array_in, ArrowCharView("LINESTRING Z (30 10 1, 0 0 2)")),
       GEOARROW_OK);
-  ASSERT_EQ(
-      ArrowArrayAppendString(&array_in, ArrowCharView("LINESTRING M EMPTY")),
-      GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("LINESTRING M EMPTY")),
+            GEOARROW_OK);
   ASSERT_EQ(
       ArrowArrayAppendString(
           &array_in, ArrowCharView("MULTIPOLYGON M (((0 0 0, 1 0 0, 0 1 0, 0 0 0)))")),
