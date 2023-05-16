@@ -12,6 +12,9 @@ static uint8_t kEmptyPointCoords[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 
                                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f};
 
 struct BuilderPrivate {
+  // The ArrowSchema (without extension) for this builder
+  struct ArrowSchema schema;
+
   // The ArrowArray responsible for owning the memory
   struct ArrowArray array;
 
@@ -33,6 +36,51 @@ struct BuilderPrivate {
   int64_t null_count;
 };
 
+static ArrowErrorCode GeoArrowBuilderInitArrayAndCachePointers(
+    struct GeoArrowBuilder* builder) {
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+
+  NANOARROW_RETURN_NOT_OK(
+      ArrowArrayInitFromSchema(&private->array, &private->schema, NULL));
+
+  private->validity = ArrowArrayValidityBitmap(&private->array);
+
+  struct _GeoArrowFindBufferResult res;
+  for (int64_t i = 0; i < builder->view.n_buffers; i++) {
+    res.array = NULL;
+    _GeoArrowArrayFindBuffer(&private->array, &res, i, 0, 0);
+    if (res.array == NULL) {
+      return EINVAL;
+    }
+
+    private->buffers[i] = ArrowArrayBuffer(res.array, res.i);
+  }
+
+  // Set the null_count to zero
+  private->null_count = 0;
+
+  // When we use the visitor pattern we initialize some things that need
+  // to happen exactly once (e.g., append an initial zero to offset buffers)
+  private->visitor_initialized = 0;
+
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowBuilderPrepareForVisiting(
+    struct GeoArrowBuilder* builder) {
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+  if (!private->visitor_initialized) {
+    int32_t zero = 0;
+    for (int i = 0; i < builder->view.n_offsets; i++) {
+      NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, i, &zero, 1));
+    }
+
+    private->visitor_initialized = 1;
+  }
+
+  return GEOARROW_OK;
+}
+
 static GeoArrowErrorCode GeoArrowBuilderInitInternal(struct GeoArrowBuilder* builder) {
   enum GeoArrowType type = builder->view.schema_view.type;
 
@@ -47,22 +95,18 @@ static GeoArrowErrorCode GeoArrowBuilderInitInternal(struct GeoArrowBuilder* bui
   }
 
   memset(private, 0, sizeof(struct BuilderPrivate));
+  builder->private_data = private;
 
-  struct ArrowSchema schema;
-  int result = GeoArrowSchemaInit(&schema, type);
+  // Initialize our copy of the schema for the storage type
+  int result = GeoArrowSchemaInit(&private->schema, type);
   if (result != GEOARROW_OK) {
     ArrowFree(private);
-    return result;
-  }
-
-  result = ArrowArrayInitFromSchema(&private->array, &schema, NULL);
-  schema.release(&schema);
-  if (result != GEOARROW_OK) {
-    ArrowFree(private);
+    builder->private_data = NULL;
     return result;
   }
 
   // Update a few things about the writable view from the regular view
+  // that never change.
   builder->view.coords.n_values = array_view.coords.n_values;
   builder->view.coords.coords_stride = array_view.coords.coords_stride;
   builder->view.n_offsets = array_view.n_offsets;
@@ -77,19 +121,13 @@ static GeoArrowErrorCode GeoArrowBuilderInitInternal(struct GeoArrowBuilder* bui
       break;
   }
 
-  // Cache the ArrowBitmap and ArrowBuffer pointers we need to allocate
-  private->validity = ArrowArrayValidityBitmap(&private->array);
-
-  struct _GeoArrowFindBufferResult res;
-  for (int64_t i = 0; i < builder->view.n_buffers; i++) {
-    res.array = NULL;
-    _GeoArrowArrayFindBuffer(&private->array, &res, i, 0, 0);
-    if (res.array == NULL) {
-      ArrowFree(private);
-      return EINVAL;
-    }
-
-    private->buffers[i] = ArrowArrayBuffer(res.array, res.i);
+  // Initialize an empty array; cache the ArrowBitmap and ArrowBuffer pointers we need
+  result = GeoArrowBuilderInitArrayAndCachePointers(builder);
+  if (result != GEOARROW_OK) {
+    private->schema.release(&private->schema);
+    ArrowFree(private);
+    builder->private_data = NULL;
+    return result;
   }
 
   // Initalize one empty coordinate for the visitor pattern
@@ -102,14 +140,6 @@ static GeoArrowErrorCode GeoArrowBuilderInitInternal(struct GeoArrowBuilder* bui
   private->empty_coord.n_values = 4;
   private->empty_coord.coords_stride = 1;
 
-  // Set the null_count to zero
-  private->null_count = 0;
-
-  // When we use the visitor pattern we initialize some things that need
-  // to happen exactly once (e.g., append an initial zero to offset buffers)
-  private->visitor_initialized = 0;
-
-  builder->private_data = private;
   return GEOARROW_OK;
 }
 
@@ -274,16 +304,39 @@ GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
     private->array.null_count = -1;
   }
 
-  // Move the result
-  memcpy(array, &private->array, sizeof(struct ArrowArray));
-  private->array.release = NULL;
+  // Move the result out of private so we can maybe prepare for the next round
+  struct ArrowArray tmp;
+  ArrowArrayMove(&private->array, &tmp);
 
+  // Prepare for another round of visiting (e.g., append zeroes to the offset arrays)
+  int need_reinit_visitor = private->visitor_initialized;
+  int result = GeoArrowBuilderInitArrayAndCachePointers(builder);
+  if (result != GEOARROW_OK) {
+    tmp.release(&tmp);
+    return result;
+  }
+
+  if (need_reinit_visitor) {
+    result = GeoArrowBuilderPrepareForVisiting(builder);
+    if (result != GEOARROW_OK) {
+      tmp.release(&tmp);
+      return result;
+    }
+  }
+
+  // Move the result
+  ArrowArrayMove(&tmp, array);
   return GEOARROW_OK;
 }
 
 void GeoArrowBuilderReset(struct GeoArrowBuilder* builder) {
   if (builder->private_data != NULL) {
     struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+
+    if (private->schema.release != NULL) {
+      private->schema.release(&private->schema);
+    }
+
     if (private->array.release != NULL) {
       private->array.release(&private->array);
     }
@@ -976,15 +1029,6 @@ GeoArrowErrorCode GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
       return EINVAL;
   }
 
-  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
-  if (!private->visitor_initialized) {
-    int32_t zero = 0;
-    for (int i = 0; i < builder->view.n_offsets; i++) {
-      NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, i, &zero, 1));
-    }
-
-    private->visitor_initialized = 1;
-  }
-
+  NANOARROW_RETURN_NOT_OK(GeoArrowBuilderPrepareForVisiting(builder));
   return GEOARROW_OK;
 }
