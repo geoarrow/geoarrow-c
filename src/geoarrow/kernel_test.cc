@@ -625,18 +625,15 @@ TEST(KernelTest, KernelTestBox) {
   ASSERT_EQ(GeoArrowSchemaInitExtension(&schema_in, GEOARROW_TYPE_WKT), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayInitFromSchema(&array_in, &schema_in, nullptr), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayStartAppending(&array_in), GEOARROW_OK);
-  ASSERT_EQ(
-      ArrowArrayAppendString(&array_in, ArrowCharView("LINESTRING (3 -1, 0 10)")),
-      GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("LINESTRING (3 -1, 0 10)")),
+            GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("LINESTRING (20 -40, 21 5)")),
             GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
 
-
   EXPECT_EQ(GeoArrowKernelInit(&kernel, "box", nullptr), GEOARROW_OK);
-  EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error),
-            GEOARROW_OK);
+  EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
   EXPECT_STREQ(schema_out.format, "+s");
   EXPECT_EQ(schema_out.n_children, 4);
   for (int i = 0; i < schema_out.n_children; i++) {

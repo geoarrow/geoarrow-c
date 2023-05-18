@@ -91,7 +91,9 @@ struct GeoArrowBox2DPrivate {
   int feat_null;
   double min_values[2];
   double max_values[2];
+  struct ArrowBitmap validity;
   struct ArrowBuffer values[4];
+  int64_t null_count;
 };
 
 struct GeoArrowVisitorKernelPrivate {
@@ -169,6 +171,8 @@ static void kernel_release_visitor(struct GeoArrowKernel* kernel) {
   for (int i = 0; i < 4; i++) {
     ArrowBufferReset(&private_data->box2d_private.values[i]);
   }
+
+  ArrowBitmapReset(&private_data->box2d_private.validity);
 
   ArrowFree(private_data);
   kernel->release = NULL;
@@ -608,7 +612,7 @@ static ArrowErrorCode box_finish(struct GeoArrowVisitorKernelPrivate* private_da
   }
 
   tmp.length = length;
-  tmp.null_count = 0;
+  ArrowArraySetValidityBitmap(&tmp, &private_data->box2d_private.validity);
 
   result = ArrowArrayFinishBuilding(&tmp, ((struct ArrowError*)error));
   if (result != GEOARROW_OK) {
@@ -616,6 +620,8 @@ static ArrowErrorCode box_finish(struct GeoArrowVisitorKernelPrivate* private_da
     return result;
   }
 
+  tmp.null_count = private_data->box2d_private.null_count;
+  private_data->box2d_private.null_count = 0;
   ArrowArrayMove(&tmp, out);
   return GEOARROW_OK;
 }
@@ -664,7 +670,18 @@ static int feat_end_box(struct GeoArrowVisitor* v) {
       (struct GeoArrowVisitorKernelPrivate*)v->private_data;
 
   if (private_data->box2d_private.feat_null) {
-    // Handle null bitmap
+    if (private_data->box2d_private.validity.buffer.data == NULL) {
+      int64_t length = private_data->box2d_private.values[0].size_bytes / sizeof(double);
+      NANOARROW_RETURN_NOT_OK(
+          ArrowBitmapAppend(&private_data->box2d_private.validity, 1, length));
+    }
+
+    NANOARROW_RETURN_NOT_OK(
+        ArrowBitmapAppend(&private_data->box2d_private.validity, 0, 1));
+    private_data->box2d_private.null_count++;
+  } else if (private_data->box2d_private.validity.buffer.data != NULL) {
+    NANOARROW_RETURN_NOT_OK(
+        ArrowBitmapAppend(&private_data->box2d_private.validity, 1, 1));
   }
 
   NANOARROW_RETURN_NOT_OK(box_flush(private_data));
@@ -683,6 +700,7 @@ static int finish_start_box_agg(struct GeoArrowVisitorKernelPrivate* private_dat
   private_data->box2d_private.min_values[1] = INFINITY;
   private_data->box2d_private.feat_null = 0;
 
+  ArrowBitmapInit(&private_data->box2d_private.validity);
   for (int i = 0; i < 4; i++) {
     ArrowBufferInit(&private_data->box2d_private.values[i]);
   }
@@ -717,6 +735,7 @@ static int finish_start_box(struct GeoArrowVisitorKernelPrivate* private_data,
   private_data->v.feat_end = &feat_end_box;
   private_data->v.private_data = private_data;
 
+  ArrowBitmapInit(&private_data->box2d_private.validity);
   for (int i = 0; i < 4; i++) {
     ArrowBufferInit(&private_data->box2d_private.values[i]);
   }
