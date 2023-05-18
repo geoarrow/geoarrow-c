@@ -1,4 +1,5 @@
 import sys
+from math import inf
 
 import pyarrow as pa
 import numpy as np
@@ -256,6 +257,25 @@ def test_kernel_unique_geometry_types():
     assert out.type == pa.int32()
     out_py = [item.as_py() for item in out]
     assert out_py == [1, 1002]
+
+
+def test_kernel_box():
+    array = ga.array(["POINT (0 1)", "POINT (30 10)", "LINESTRING EMPTY"])
+    kernel = ga.Kernel.box(array.type)
+    out = kernel.push(array)
+
+    assert out[0].as_py() == {"xmin": 0, "xmax": 0, "ymin": 1, "ymax": 1}
+    assert out[1].as_py() == {"xmin": 30, "xmax": 30, "ymin": 10, "ymax": 10}
+    assert out[2].as_py() == {"xmin": inf, "xmax": -inf, "ymin": inf, "ymax": -inf}
+
+
+def test_kernel_box_agg():
+    array = ga.array(["POINT (0 1)", "POINT (30 10)", "LINESTRING EMPTY"])
+    kernel = ga.Kernel.box_agg(array.type)
+    kernel.push(array)
+    out = kernel.finish()
+
+    assert out[0].as_py() == {"xmin": 0, "xmax": 30, "ymin": 1, "ymax": 10}
 
 
 def test_kernel_visit_void():
