@@ -612,7 +612,11 @@ static ArrowErrorCode box_finish(struct GeoArrowVisitorKernelPrivate* private_da
   }
 
   tmp.length = length;
-  ArrowArraySetValidityBitmap(&tmp, &private_data->box2d_private.validity);
+  if (private_data->box2d_private.null_count > 0) {
+    ArrowArraySetValidityBitmap(&tmp, &private_data->box2d_private.validity);
+  } else {
+    ArrowBitmapReset(&private_data->box2d_private.validity);
+  }
 
   result = ArrowArrayFinishBuilding(&tmp, ((struct ArrowError*)error));
   if (result != GEOARROW_OK) {

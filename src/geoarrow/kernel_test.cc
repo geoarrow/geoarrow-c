@@ -627,9 +627,10 @@ TEST(KernelTest, KernelTestBox) {
   ASSERT_EQ(ArrowArrayStartAppending(&array_in), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("LINESTRING (3 -1, 0 10)")),
             GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("LINESTRING (20 -40, 21 5)")),
             GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
+
   ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowKernelInit(&kernel, "box", nullptr), GEOARROW_OK);
@@ -658,12 +659,66 @@ TEST(KernelTest, KernelTestBox) {
   EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[2], 0), -1);
   EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[3], 0), 10);
 
-  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[0], 1), 20);
-  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[1], 1), 21);
-  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[2], 1), -40);
-  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[3], 1), 5);
+  EXPECT_TRUE(ArrowArrayViewIsNull(&array_view, 1));
 
-  EXPECT_TRUE(ArrowArrayViewIsNull(&array_view, 2));
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[0], 2), 20);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[1], 2), 21);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[2], 2), -40);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[3], 2), 5);
+
+  ArrowArrayViewReset(&array_view);
+  schema_in.release(&schema_in);
+  schema_out.release(&schema_out);
+  array_in.release(&array_in);
+  array_out1.release(&array_out1);
+}
+
+
+TEST(KernelTest, KernelTestBoxAgg) {
+  struct GeoArrowKernel kernel;
+  struct GeoArrowError error;
+
+  struct ArrowSchema schema_in;
+  struct ArrowSchema schema_out;
+  struct ArrowArray array_in;
+  struct ArrowArray array_out1;
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&schema_in, GEOARROW_TYPE_WKT), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array_in, &schema_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array_in), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("LINESTRING (3 -1, 0 10)")),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("LINESTRING (20 -40, 21 5)")),
+            GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+
+  EXPECT_EQ(GeoArrowKernelInit(&kernel, "box_agg", nullptr), GEOARROW_OK);
+  EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
+  EXPECT_STREQ(schema_out.format, "+s");
+  EXPECT_EQ(schema_out.n_children, 4);
+  for (int i = 0; i < schema_out.n_children; i++) {
+    EXPECT_STREQ(schema_out.children[i]->format, "g");
+  }
+
+  EXPECT_EQ(kernel.push_batch(&kernel, &array_in, nullptr, &error), GEOARROW_OK);
+  EXPECT_EQ(kernel.finish(&kernel, &array_out1, &error), GEOARROW_OK);
+
+  kernel.release(&kernel);
+  EXPECT_EQ(kernel.release, nullptr);
+
+  EXPECT_EQ(array_out1.length, 1);
+  EXPECT_EQ(array_out1.null_count, 0);
+
+  struct ArrowArrayView array_view;
+  ASSERT_EQ(ArrowArrayViewInitFromSchema(&array_view, &schema_out, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array_out1, nullptr), GEOARROW_OK);
+
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[0], 0), 0);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[1], 0), 21);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[2], 0), -40);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[3], 0), 10);
 
   ArrowArrayViewReset(&array_view);
   schema_in.release(&schema_in);
