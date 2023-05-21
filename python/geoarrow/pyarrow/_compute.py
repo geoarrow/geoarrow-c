@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor, wait
 
 import pyarrow as pa
+import pyarrow.compute as pc
 
 from ..lib import GeometryType, Dimensions, CoordType
 from . import _type
@@ -231,3 +232,67 @@ def format_wkt(obj, significant_digits=None, max_element_size_bytes=None):
             "max_element_size_bytes": max_element_size_bytes,
         },
     )
+
+
+def box(obj):
+    obj = obj_as_array_or_chunked(obj)
+
+    # Optimization: a box of points is just x, x, y, y with zero-copy
+    # if the coord type is struct
+    if obj.type.coord_type == CoordType.SEPARATE and len(obj) > 0:
+        if obj.type.geometry_type == GeometryType.POINT and isinstance(
+            obj, pa.ChunkedArray
+        ):
+            chunks = [box(chunk) for chunk in obj.chunks]
+            return pa.chunked_array(chunks)
+        elif obj.type.geometry_type == GeometryType.POINT:
+            arrays = obj.storage.flatten()
+            return pa.StructArray.from_arrays(
+                [arrays[0], arrays[0], arrays[1], arrays[1]],
+                names=["xmin", "xmax", "ymin", "ymax"],
+            )
+
+    return push_all(Kernel.box, obj)
+
+
+def _box_agg_point_struct(storage, n_unnest):
+    if n_unnest > 0:
+        return _box_agg_point_struct(storage.flatten(), n_unnest - 1)
+
+    arrays = storage.flatten()
+    out = [list(pc.min_max(array).values()) for array in arrays]
+    out_dict = {
+        "xmin": out[0][0].as_py(),
+        "xmax": out[0][1].as_py(),
+        "ymin": out[1][0].as_py(),
+        "ymax": out[1][1].as_py(),
+    }
+
+    # Apparently pyarrow reorders dict keys when inferring scalar types?
+    return pa.scalar(
+        out_dict, pa.struct([(nm, pa.float64()) for nm in out_dict.keys()])
+    )
+
+
+def box_agg(obj):
+    obj = obj_as_array_or_chunked(obj)
+
+    # Optimization: pyarrow's minmax kernel is very fast and we can use it if we have struct
+    # coords.
+    if obj.type.coord_type == CoordType.SEPARATE and len(obj) > 0:
+        if obj.type.geometry_type == GeometryType.POINT:
+            return _box_agg_point_struct(obj.storage, 0)
+        elif obj.type.geometry_type in (
+            GeometryType.LINESTRING,
+            GeometryType.MULTIPOINT,
+        ):
+            return _box_agg_point_struct(obj.storage, 1)
+        elif obj.type.geometry_type in (
+            GeometryType.POLYGON,
+            GeometryType.MULTILINESTRING,
+        ):
+            return _box_agg_point_struct(obj.storage, 2)
+        elif obj.type.geometry_type == GeometryType.MULTIPOLYGON:
+            return _box_agg_point_struct(obj.storage, 3)
+
+    return push_all(Kernel.box_agg, obj, is_agg=True)[0]
