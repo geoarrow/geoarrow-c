@@ -499,8 +499,7 @@ static inline int ReadTaggedGeometry(struct WKTReaderPrivate* s,
       NANOARROW_RETURN_NOT_OK(ReadGeometryCollection(s, v));
       break;
     default:
-      ArrowErrorSet((struct ArrowError*)v->error,
-                    "Internal error: unrecognized geometry type id");
+      GeoArrowErrorSet(v->error, "Internal error: unrecognized geometry type id");
       return EINVAL;
   }
 

@@ -514,8 +514,7 @@ static int feat_end_point(struct GeoArrowVisitor* v) {
     private->empty_coord.n_values = n_dim;
     NANOARROW_RETURN_NOT_OK(coords_point(v, &private->empty_coord));
   } else if (private->size[0] != 1) {
-    ArrowErrorSet((struct ArrowError*)v->error,
-                  "Can't convert feature with >1 coordinate to POINT");
+    GeoArrowErrorSet(v->error, "Can't convert feature with >1 coordinate to POINT");
     return EINVAL;
   }
 
@@ -665,8 +664,7 @@ static int feat_end_multipoint(struct GeoArrowVisitor* v) {
     int32_t n_coord32 = (int32_t)builder->view.coords.size_coords;
     NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, 0, &n_coord32, 1));
   } else if (private->size[0] != 1) {
-    ArrowErrorSet((struct ArrowError*)v->error,
-                  "Can't convert feature with >1 sequence to LINESTRING");
+    GeoArrowErrorSet(v->error, "Can't convert feature with >1 sequence to LINESTRING");
     return EINVAL;
   }
 

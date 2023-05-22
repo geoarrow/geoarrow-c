@@ -210,9 +210,9 @@ static int WKBReaderReadGeometry(struct WKBReaderPrivate* s, struct GeoArrowVisi
       }
       break;
     default:
-      ArrowErrorSet((struct ArrowError*)v->error,
-                    "Expected valid geometry type code but found %u at byte %ld",
-                    (unsigned int)geometry_type, (long)(data_at_geom_type - s->data0));
+      GeoArrowErrorSet(v->error,
+                       "Expected valid geometry type code but found %u at byte %ld",
+                       (unsigned int)geometry_type, (long)(data_at_geom_type - s->data0));
       return EINVAL;
   }
 
