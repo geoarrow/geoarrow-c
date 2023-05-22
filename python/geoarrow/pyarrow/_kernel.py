@@ -90,8 +90,17 @@ class Kernel:
     def as_geoarrow(type_in, type_id):
         return Kernel("as_geoarrow", type_in, type=type_id)
 
+    @staticmethod
     def unique_geometry_types_agg(type_in):
         return Kernel("unique_geometry_types_agg", type_in)
+
+    @staticmethod
+    def box(type_in):
+        return Kernel("box", type_in)
+
+    @staticmethod
+    def box_agg(type_in):
+        return Kernel("box_agg", type_in)
 
     @staticmethod
     def _pack_options(options):

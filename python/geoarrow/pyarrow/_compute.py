@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor, wait
 
 import pyarrow as pa
+import pyarrow.compute as pc
 
 from ..lib import GeometryType, Dimensions, CoordType
 from . import _type
@@ -231,3 +232,62 @@ def format_wkt(obj, significant_digits=None, max_element_size_bytes=None):
             "max_element_size_bytes": max_element_size_bytes,
         },
     )
+
+
+def _box_point_struct(storage):
+    arrays = storage.flatten()
+    return pa.StructArray.from_arrays(
+        [arrays[0], arrays[0], arrays[1], arrays[1]],
+        names=["xmin", "xmax", "ymin", "ymax"],
+    )
+
+
+def box(obj):
+    obj = obj_as_array_or_chunked(obj)
+
+    # Optimization: a box of points is just x, x, y, y with zero-copy
+    # if the coord type is struct
+    if obj.type.coord_type == CoordType.SEPARATE and len(obj) > 0:
+        if obj.type.geometry_type == GeometryType.POINT and isinstance(
+            obj, pa.ChunkedArray
+        ):
+            chunks = [_box_point_struct(chunk.storage) for chunk in obj.chunks]
+            return pa.chunked_array(chunks)
+        elif obj.type.geometry_type == GeometryType.POINT:
+            return _box_point_struct(obj.storage)
+
+    return push_all(Kernel.box, obj)
+
+
+def _box_agg_point_struct(arrays):
+    out = [list(pc.min_max(array).values()) for array in arrays]
+    out_dict = {
+        "xmin": out[0][0].as_py(),
+        "xmax": out[0][1].as_py(),
+        "ymin": out[1][0].as_py(),
+        "ymax": out[1][1].as_py(),
+    }
+
+    # Apparently pyarrow reorders dict keys when inferring scalar types?
+    return pa.scalar(
+        out_dict, pa.struct([(nm, pa.float64()) for nm in out_dict.keys()])
+    )
+
+
+def box_agg(obj):
+    obj = obj_as_array_or_chunked(obj)
+
+    # Optimization: pyarrow's minmax kernel is fast and we can use it if we have struct
+    # coords. So far, only a measurable improvement for points.
+    if obj.type.coord_type == CoordType.SEPARATE and len(obj) > 0:
+        if obj.type.geometry_type == GeometryType.POINT and isinstance(
+            obj, pa.ChunkedArray
+        ):
+            chunks = [chunk.storage.flatten()[:2] for chunk in obj.chunks]
+            chunked_x = pa.chunked_array([chunk[0] for chunk in chunks])
+            chunked_y = pa.chunked_array([chunk[1] for chunk in chunks])
+            return _box_agg_point_struct([chunked_x, chunked_y])
+        elif obj.type.geometry_type == GeometryType.POINT:
+            return _box_agg_point_struct(obj.storage.flatten()[:2])
+
+    return push_all(Kernel.box_agg, obj, is_agg=True)[0]

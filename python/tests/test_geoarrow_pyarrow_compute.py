@@ -196,3 +196,34 @@ def test_as_geoarrow():
 
     array = _compute.as_geoarrow(["POINT (0 1)", "LINESTRING (0 1, 2 3)"])
     assert array.type.id == ga.wkb().id
+
+
+def test_box():
+    wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
+    box = _compute.box(wkt_array)
+    assert box[0].as_py() == {"xmin": 0, "xmax": 0, "ymin": 1, "ymax": 1}
+    assert box[1].as_py() == {"xmin": 2, "xmax": 2, "ymin": 3, "ymax": 3}
+
+    # Test optmizations that zero-copy rearrange the points
+    array = _compute.as_geoarrow(["POINT (0 1)", "POINT (2 3)"])
+    box2 = _compute.box(array)
+    assert box2 == box
+
+    chunked_array = pa.chunked_array([array])
+    box2 = _compute.box(chunked_array)
+    assert box2 == pa.chunked_array([box])
+
+
+def test_box_agg():
+    wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
+    box = _compute.box_agg(wkt_array)
+    assert box.as_py() == {"xmin": 0, "xmax": 2, "ymin": 1, "ymax": 3}
+
+    # Test optmization that uses pyarrow.compute.min_max()
+    array = _compute.as_geoarrow(["POINT (0 1)", "POINT (2 3)"])
+    box2 = _compute.box_agg(array)
+    assert box2 == box
+
+    chunked_array = pa.chunked_array([array])
+    box2 = _compute.box_agg(chunked_array)
+    assert box2 == box

@@ -31,6 +31,8 @@ from ._compute import (
     as_geoarrow,
     format_wkt,
     unique_geometry_types,
+    box,
+    box_agg
 )
 
 register_extension_types()
