@@ -32,7 +32,7 @@ static int GeoArrowArrayViewInitInternal(struct GeoArrowArrayView* array_view,
 
   array_view->length = 0;
   array_view->validity_bitmap = NULL;
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 3; i++) {
     array_view->offsets[i] = NULL;
   }
 

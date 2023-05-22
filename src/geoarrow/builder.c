@@ -405,7 +405,7 @@ static void GeoArrowSetCoordContainerLength(struct GeoArrowBuilder* builder) {
 
   // At this point all the array lengths should be set except for the
   // fixed-size list or struct parent to the coordinate array(s).
-  int scale;
+  int scale = -1;
   switch (builder->view.schema_view.coord_type) {
     case GEOARROW_COORD_TYPE_SEPARATE:
       scale = 1;
