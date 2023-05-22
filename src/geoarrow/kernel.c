@@ -122,7 +122,7 @@ static int kernel_get_arg_long(const char* options, const char* key, long* out,
   type_str.size_bytes = 0;
   NANOARROW_RETURN_NOT_OK(ArrowMetadataGetValue(options, ArrowCharView(key), &type_str));
   if (type_str.data == NULL && required) {
-    ArrowErrorSet((struct ArrowError*)error, "Missing required parameter '%s'", key);
+    GeoArrowErrorSet(error, "Missing required parameter '%s'", key);
     return EINVAL;
   } else if (type_str.data == NULL && !required) {
     return NANOARROW_OK;
