@@ -209,33 +209,21 @@ def test_box():
     box2 = _compute.box(array)
     assert box2 == box
 
+    chunked_array = pa.chunked_array([array])
+    box2 = _compute.box(chunked_array)
+    assert box2 == pa.chunked_array([box])
+
 
 def test_box_agg():
     wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
     box = _compute.box_agg(wkt_array)
     assert box.as_py() == {"xmin": 0, "xmax": 2, "ymin": 1, "ymax": 3}
 
-    # Test optmizations that use pyarrow.compute.min_max()
+    # Test optmization that uses pyarrow.compute.min_max()
     array = _compute.as_geoarrow(["POINT (0 1)", "POINT (2 3)"])
     box2 = _compute.box_agg(array)
     assert box2 == box
 
-    array = _compute.as_geoarrow(["LINESTRING (0 1, 2 3)"])
-    box2 = _compute.box_agg(array)
-    assert box2 == box
-
-    array = _compute.as_geoarrow(["MULTIPOINT (0 1, 2 3)"])
-    box2 = _compute.box_agg(array)
-    assert box2 == box
-
-    array = _compute.as_geoarrow(["POLYGON ((0 1, 2 3, 2 1, 0 1))"])
-    box2 = _compute.box_agg(array)
-    assert box2 == box
-
-    array = _compute.as_geoarrow(["MULTILINESTRING ((0 1, 2 3))"])
-    box2 = _compute.box_agg(array)
-    assert box2 == box
-
-    array = _compute.as_geoarrow(["MULTIPOLYGON (((0 1, 2 3, 2 1, 0 1)))"])
-    box2 = _compute.box_agg(array)
+    chunked_array = pa.chunked_array([array])
+    box2 = _compute.box_agg(chunked_array)
     assert box2 == box

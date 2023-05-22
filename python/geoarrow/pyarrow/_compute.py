@@ -234,6 +234,14 @@ def format_wkt(obj, significant_digits=None, max_element_size_bytes=None):
     )
 
 
+def _box_point_struct(storage):
+    arrays = storage.flatten()
+    return pa.StructArray.from_arrays(
+        [arrays[0], arrays[0], arrays[1], arrays[1]],
+        names=["xmin", "xmax", "ymin", "ymax"],
+    )
+
+
 def box(obj):
     obj = obj_as_array_or_chunked(obj)
 
@@ -243,23 +251,15 @@ def box(obj):
         if obj.type.geometry_type == GeometryType.POINT and isinstance(
             obj, pa.ChunkedArray
         ):
-            chunks = [box(chunk) for chunk in obj.chunks]
+            chunks = [_box_point_struct(chunk.storage) for chunk in obj.chunks]
             return pa.chunked_array(chunks)
         elif obj.type.geometry_type == GeometryType.POINT:
-            arrays = obj.storage.flatten()
-            return pa.StructArray.from_arrays(
-                [arrays[0], arrays[0], arrays[1], arrays[1]],
-                names=["xmin", "xmax", "ymin", "ymax"],
-            )
+            return _box_point_struct(obj.storage)
 
     return push_all(Kernel.box, obj)
 
 
-def _box_agg_point_struct(storage, n_unnest):
-    if n_unnest > 0:
-        return _box_agg_point_struct(storage.flatten(), n_unnest - 1)
-
-    arrays = storage.flatten()
+def _box_agg_point_struct(arrays):
     out = [list(pc.min_max(array).values()) for array in arrays]
     out_dict = {
         "xmin": out[0][0].as_py(),
@@ -277,22 +277,17 @@ def _box_agg_point_struct(storage, n_unnest):
 def box_agg(obj):
     obj = obj_as_array_or_chunked(obj)
 
-    # Optimization: pyarrow's minmax kernel is very fast and we can use it if we have struct
-    # coords.
+    # Optimization: pyarrow's minmax kernel is fast and we can use it if we have struct
+    # coords. So far, only a measurable improvement for points.
     if obj.type.coord_type == CoordType.SEPARATE and len(obj) > 0:
-        if obj.type.geometry_type == GeometryType.POINT:
-            return _box_agg_point_struct(obj.storage, 0)
-        elif obj.type.geometry_type in (
-            GeometryType.LINESTRING,
-            GeometryType.MULTIPOINT,
+        if obj.type.geometry_type == GeometryType.POINT and isinstance(
+            obj, pa.ChunkedArray
         ):
-            return _box_agg_point_struct(obj.storage, 1)
-        elif obj.type.geometry_type in (
-            GeometryType.POLYGON,
-            GeometryType.MULTILINESTRING,
-        ):
-            return _box_agg_point_struct(obj.storage, 2)
-        elif obj.type.geometry_type == GeometryType.MULTIPOLYGON:
-            return _box_agg_point_struct(obj.storage, 3)
+            chunks = [chunk.storage.flatten()[:2] for chunk in obj.chunks]
+            chunked_x = pa.chunked_array([chunk[0] for chunk in chunks])
+            chunked_y = pa.chunked_array([chunk[1] for chunk in chunks])
+            return _box_agg_point_struct([chunked_x, chunked_y])
+        elif obj.type.geometry_type == GeometryType.POINT:
+            return _box_agg_point_struct(obj.storage.flatten()[:2])
 
     return push_all(Kernel.box_agg, obj, is_agg=True)[0]
