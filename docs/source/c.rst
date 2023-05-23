@@ -2,4 +2,4 @@
 C API Reference
 ==================
 
-.. doxygengroup:: nanoarrow
+.. doxygengroup:: geoarrow

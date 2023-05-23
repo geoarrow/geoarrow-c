@@ -1,4 +1,3 @@
-
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -14,13 +13,14 @@
 import os
 import sys
 import datetime
-sys.path.insert(0, os.path.abspath('..'))
+
+sys.path.insert(0, os.path.abspath(".."))
 
 # -- Project information -----------------------------------------------------
 
-project = 'geoarrow'
-copyright = f'2016-{datetime.datetime.now().year} Dewey Dunnington'
-author = 'Dewey Dunnington'
+project = "geoarrow"
+copyright = f"2016-{datetime.datetime.now().year} Dewey Dunnington"
+author = "Dewey Dunnington"
 
 
 # -- General configuration ---------------------------------------------------
@@ -29,8 +29,8 @@ author = 'Dewey Dunnington'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'breathe',
-    'sphinx.ext.autodoc',
+    "breathe",
+    "sphinx.ext.autodoc",
 ]
 
 # Breathe configuration
@@ -40,12 +40,12 @@ breathe_projects = {
 breathe_default_project = "geoarrow_c"
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['README_generated.rst']
+exclude_patterns = ["README_generated.rst"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -53,14 +53,12 @@ exclude_patterns = ['README_generated.rst']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'pydata_sphinx_theme'
+html_theme = "pydata_sphinx_theme"
 
 html_theme_options = {
     "show_toc_level": 2,
     "use_edit_page_button": True,
-    "external_links": [
-      {"name": "R Package", "url": "r/index.html"},
-  ],
+    "external_links": [],
 }
 
 html_context = {
@@ -70,9 +68,7 @@ html_context = {
     "doc_path": "docs/source",
 }
 
-html_sidebars = {
-    "**": ["search-field", "sidebar-nav-bs"]
-}
+html_sidebars = {"**": ["search-field", "sidebar-nav-bs"]}
 
 
 # Add any paths that contain custom static files (such as style sheets) here,
