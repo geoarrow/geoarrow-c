@@ -101,7 +101,7 @@ static inline void SetParseErrorAuto(const char* expected, struct WKTReaderPriva
                                      struct GeoArrowError* error) {
   long pos = s->data - s->data0;
   // TODO: "but found ..." from s
-  ArrowErrorSet((struct ArrowError*)error, "Expected %s at byte %ld", expected, pos);
+  GeoArrowErrorSet(error, "Expected %s at byte %ld", expected, pos);
 }
 
 static inline int AssertChar(struct WKTReaderPrivate* s, char c,
@@ -499,8 +499,7 @@ static inline int ReadTaggedGeometry(struct WKTReaderPrivate* s,
       NANOARROW_RETURN_NOT_OK(ReadGeometryCollection(s, v));
       break;
     default:
-      ArrowErrorSet((struct ArrowError*)v->error,
-                    "Internal error: unrecognized geometry type id");
+      GeoArrowErrorSet(v->error, "Internal error: unrecognized geometry type id");
       return EINVAL;
   }
 

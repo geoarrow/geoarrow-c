@@ -25,8 +25,7 @@ static int GeoArrowArrayViewInitInternal(struct GeoArrowArrayView* array_view,
       array_view->n_offsets = 3;
       break;
     default:
-      ArrowErrorSet((struct ArrowError*)error,
-                    "Unsupported geometry type in GeoArrowArrayViewInit()");
+      GeoArrowErrorSet(error, "Unsupported geometry type in GeoArrowArrayViewInit()");
       return EINVAL;
   }
 
@@ -49,8 +48,7 @@ static int GeoArrowArrayViewInitInternal(struct GeoArrowArrayView* array_view,
       array_view->coords.n_values = 4;
       break;
     default:
-      ArrowErrorSet((struct ArrowError*)error,
-                    "Unsupported dimensions in GeoArrowArrayViewInit()");
+      GeoArrowErrorSet(error, "Unsupported dimensions in GeoArrowArrayViewInit()");
       return EINVAL;
   }
 
@@ -62,8 +60,7 @@ static int GeoArrowArrayViewInitInternal(struct GeoArrowArrayView* array_view,
       array_view->coords.coords_stride = array_view->coords.n_values;
       break;
     default:
-      ArrowErrorSet((struct ArrowError*)error,
-                    "Unsupported coord type in GeoArrowArrayViewInit()");
+      GeoArrowErrorSet(error, "Unsupported coord type in GeoArrowArrayViewInit()");
       return EINVAL;
   }
 
@@ -105,9 +102,9 @@ static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_vie
     switch (array_view->schema_view.coord_type) {
       case GEOARROW_COORD_TYPE_SEPARATE:
         if (array->n_children != array_view->coords.n_values) {
-          ArrowErrorSet((struct ArrowError*)error,
-                        "Unexpected number of children for struct coordinate array "
-                        "in GeoArrowArrayViewSetArray()");
+          GeoArrowErrorSet(error,
+                           "Unexpected number of children for struct coordinate array "
+                           "in GeoArrowArrayViewSetArray()");
           return EINVAL;
         }
 
@@ -128,9 +125,10 @@ static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_vie
 
       case GEOARROW_COORD_TYPE_INTERLEAVED:
         if (array->n_children != 1) {
-          ArrowErrorSet((struct ArrowError*)error,
-                        "Unexpected number of children for interleaved coordinate array "
-                        "in GeoArrowArrayViewSetArray()");
+          GeoArrowErrorSet(
+              error,
+              "Unexpected number of children for interleaved coordinate array "
+              "in GeoArrowArrayViewSetArray()");
           return EINVAL;
         }
 
@@ -151,8 +149,7 @@ static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_vie
         break;
 
       default:
-        ArrowErrorSet((struct ArrowError*)error,
-                      "Unexpected coordinate type GeoArrowArrayViewSetArray()");
+        GeoArrowErrorSet(error, "Unexpected coordinate type GeoArrowArrayViewSetArray()");
         return EINVAL;
     }
 

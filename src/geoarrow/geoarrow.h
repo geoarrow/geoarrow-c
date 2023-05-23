@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+GeoArrowErrorCode GeoArrowErrorSet(struct GeoArrowError* error, const char* fmt, ...);
+
 GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowType type);
 
 GeoArrowErrorCode GeoArrowSchemaInitExtension(struct ArrowSchema* schema,

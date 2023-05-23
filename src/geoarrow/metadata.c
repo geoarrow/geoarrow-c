@@ -292,9 +292,8 @@ static GeoArrowErrorCode GeoArrowMetadataViewInitJSON(
   SkipWhitespace(&s);
 
   if (ParseJSONMetadata(metadata_view, &s) != GEOARROW_OK) {
-    ArrowErrorSet((struct ArrowError*)error,
-                  "Expected valid GeoArrow JSON metadata but got '%.*s'",
-                  (int)metadata.size_bytes, metadata.data);
+    GeoArrowErrorSet(error, "Expected valid GeoArrow JSON metadata but got '%.*s'",
+                     (int)metadata.size_bytes, metadata.data);
     return EINVAL;
   }
 

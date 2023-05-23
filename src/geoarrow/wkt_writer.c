@@ -90,8 +90,7 @@ static int geom_start_wkt(struct GeoArrowVisitor* v,
                                  GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION) {
     const char* geometry_type_name = GeoArrowGeometryTypeString(geometry_type);
     if (geometry_type_name == NULL) {
-      ArrowErrorSet((struct ArrowError*)v->error,
-                    "WKTWriter::geom_start(): Unexpected `geometry_type`");
+      GeoArrowErrorSet(v->error, "WKTWriter::geom_start(): Unexpected `geometry_type`");
       return EINVAL;
     }
 
@@ -110,8 +109,7 @@ static int geom_start_wkt(struct GeoArrowVisitor* v,
         NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, " ZM"));
         break;
       default:
-        ArrowErrorSet((struct ArrowError*)v->error,
-                      "WKTWriter::geom_start(): Unexpected `dimensions`");
+        GeoArrowErrorSet(v->error, "WKTWriter::geom_start(): Unexpected `dimensions`");
         return EINVAL;
     }
 

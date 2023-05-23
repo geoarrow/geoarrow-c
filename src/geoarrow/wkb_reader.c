@@ -52,9 +52,8 @@ static inline int WKBReaderReadEndian(struct WKBReaderPrivate* s,
     s->size_bytes--;
     return GEOARROW_OK;
   } else {
-    ArrowErrorSet((struct ArrowError*)error,
-                  "Expected endian byte but found end of buffer at byte %ld",
-                  (long)(s->data - s->data0));
+    GeoArrowErrorSet(error, "Expected endian byte but found end of buffer at byte %ld",
+                     (long)(s->data - s->data0));
     return EINVAL;
   }
 }
@@ -70,9 +69,8 @@ static inline int WKBReaderReadUInt32(struct WKBReaderPrivate* s, uint32_t* out,
     }
     return GEOARROW_OK;
   } else {
-    ArrowErrorSet((struct ArrowError*)error,
-                  "Expected uint32 but found end of buffer at byte %ld",
-                  (long)(s->data - s->data0));
+    GeoArrowErrorSet(error, "Expected uint32 but found end of buffer at byte %ld",
+                     (long)(s->data - s->data0));
     return EINVAL;
   }
 }
@@ -212,9 +210,9 @@ static int WKBReaderReadGeometry(struct WKBReaderPrivate* s, struct GeoArrowVisi
       }
       break;
     default:
-      ArrowErrorSet((struct ArrowError*)v->error,
-                    "Expected valid geometry type code but found %u at byte %ld",
-                    (unsigned int)geometry_type, (long)(data_at_geom_type - s->data0));
+      GeoArrowErrorSet(v->error,
+                       "Expected valid geometry type code but found %u at byte %ld",
+                       (unsigned int)geometry_type, (long)(data_at_geom_type - s->data0));
       return EINVAL;
   }
 
