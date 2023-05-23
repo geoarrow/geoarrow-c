@@ -47,6 +47,11 @@ main() {
    doxygen
    popd
 
+   # Build Python bindings
+   pushd Python
+   pip3 install .
+   popd
+
    pushd docs
 
    show_header "Build Sphinx project"
