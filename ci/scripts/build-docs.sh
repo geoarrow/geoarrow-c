@@ -48,7 +48,7 @@ main() {
    popd
 
    # Build Python bindings
-   pushd Python
+   pushd python
    pip3 install .
    popd
 
