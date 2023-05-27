@@ -47,9 +47,15 @@ main() {
    doxygen
    popd
 
-   # Build Python bindings
+   # Build + install Python bindings
+   # pip install . doesn't quite work with the versions available on the
+   # ubuntu docker image, hopefully fixable in the image later on
+   apt-get install -y python3-venv
+   pip3 install build pyarrow
    pushd python
-   pip3 install .
+   rm -rf dist
+   python3 -m build --wheel
+   pip3 install dist/geoarrow-*.whl
    popd
 
    pushd docs
