@@ -30,7 +30,7 @@ jobs:
       - name: Upload built documentation
         uses: actions/upload-artifact@main
         with:
-          name: nanarrow-docs
+          name: geoarrow-docs
           path: docs/_build/html
 
       - name: Clone gh-pages branch
