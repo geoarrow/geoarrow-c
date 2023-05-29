@@ -48,10 +48,9 @@ main() {
    popd
 
    # Build + install Python bindings
-   # pip install . doesn't quite work with the versions available on the
-   # ubuntu docker image, hopefully fixable in the image later on
-   apt-get install -y python3-venv
-   pip3 install build pyarrow
+   # pip install . doesn't quite work with the setuptools available on the
+   # ubuntu docker image...python -m build works I think because it sets up
+   # a virtualenv
    pushd python
    rm -rf dist
    python3 -m build --wheel
