@@ -1,0 +1,17 @@
+
+version: '3.5'
+
+services:
+
+  docs:
+    image: ${REPO}:ubuntu-${GEOARROW_ARCH}
+    build:
+      context: .
+      cache_from:
+        - ${REPO}:ubuntu-${GEOARROW_ARCH}
+      dockerfile: ci/docker/ubuntu.dockerfile
+      args:
+        GEOARROW_ARCH: ${GEOARROW_ARCH}
+    volumes:
+      - .:/geoarrow-c
+    command: "/bin/bash /geoarrow-c/ci/scripts/build-docs.sh"

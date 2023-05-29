@@ -1,3 +1,12 @@
+"""
+Contains pyarrow integration for the geoarrow Python bindings.
+
+Examples
+--------
+
+>>> import geoarrow.pyarrow as ga
+"""
+
 from ..lib import GeometryType, Dimensions, CoordType, EdgeType, CrsType
 
 from ._type import (

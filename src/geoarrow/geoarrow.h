@@ -10,6 +10,15 @@
 extern "C" {
 #endif
 
+/// \defgroup geoarrow geoarrow C library
+///
+/// Except where noted, objects are not thread-safe and clients should
+/// take care to serialize accesses to methods.
+///
+/// Because this library is intended to be vendored, it provides full type
+/// definitions and encourages clients to stack or statically allocate
+/// where convenient.
+
 GeoArrowErrorCode GeoArrowErrorSet(struct GeoArrowError* error, const char* fmt, ...);
 
 GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowType type);
