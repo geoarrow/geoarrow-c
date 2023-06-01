@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, wait
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from ..lib import GeometryType, Dimensions, CoordType
+from ..lib import GeometryType, Dimensions, CoordType, EdgeType
 from . import _type
 from ._array import array
 from ._kernel import Kernel
@@ -291,3 +291,53 @@ def box_agg(obj):
             return _box_agg_point_struct(obj.storage.flatten()[:2])
 
     return push_all(Kernel.box_agg, obj, is_agg=True)[0]
+
+def _rechunk_max_bytes_internal(obj, max_bytes, chunks):
+    n = len(obj)
+    if n == 0:
+        return
+
+    if obj.nbytes <= max_bytes or n <= 1:
+        chunks.append(obj)
+    else:
+        _rechunk_max_bytes_internal(obj[:(n // 2)], max_bytes, chunks)
+        _rechunk_max_bytes_internal(obj[(n // 2):], max_bytes, chunks)
+
+def rechunk(obj, max_bytes):
+    obj = obj_as_array_or_chunked(obj)
+    chunks = []
+
+    if isinstance(obj, pa.ChunkedArray):
+        for chunk in obj.chunks:
+            _rechunk_max_bytes_internal(chunk, max_bytes, chunks)
+    else:
+        _rechunk_max_bytes_internal(obj, max_bytes, chunks)
+
+    return pa.chunked_array(chunks, type=obj.type)
+
+def with_coord_type(obj, coord_type):
+    return as_geoarrow(obj, coord_type=coord_type)
+
+
+def with_edge_type(obj, edge_type):
+    obj = obj_as_array_or_chunked(obj)
+    new_type = obj.type.with_edge_type(edge_type)
+    return new_type.wrap_array(obj.storage)
+
+
+def with_dimensions(obj, dimensions):
+    obj = as_geoarrow(obj)
+    new_type = obj.type.with_dimensions(dimensions)
+    return new_type.wrap_array(obj.storage)
+
+
+def with_crs(obj, crs, crs_type=None):
+    obj = obj_as_array_or_chunked(obj)
+    new_type = obj.type.with_crs(crs, crs_type)
+    return new_type.wrap_array(obj.storage)
+
+
+def with_geometry_type(obj, geometry_type):
+    obj = as_geoarrow(obj)
+    new_type = obj.type.with_geometry_type(geometry_type)
+    return new_type.wrap_array(obj.storage)

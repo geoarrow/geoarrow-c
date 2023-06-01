@@ -227,3 +227,14 @@ def test_box_agg():
     chunked_array = pa.chunked_array([array])
     box2 = _compute.box_agg(chunked_array)
     assert box2 == box
+
+def test_rechunk_max_bytes():
+    wkt_array = ga.array(["LINESTRING (0 1, 2 3, 4 5)", "LINESTRING (0 1, 2 3)", "POINT (0 1)"])
+    not_rechunked = _compute.rechunk(wkt_array, max_bytes=1000)
+    assert isinstance(not_rechunked, pa.ChunkedArray)
+    assert not_rechunked.chunks[0] == wkt_array
+
+    rechunked = _compute.rechunk(wkt_array, max_bytes=4)
+    assert isinstance(rechunked, pa.ChunkedArray)
+    assert rechunked.num_chunks == 3
+    assert len(rechunked) == 3
