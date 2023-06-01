@@ -477,7 +477,7 @@ static int geom_start_point(struct GeoArrowVisitor* v,
   // error for mismatch, fill, or drop behaviour
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
-  private->last_dimensions = builder->view.schema_view.dimensions;
+  private->last_dimensions = dimensions;
   return GEOARROW_OK;
 }
 
@@ -567,7 +567,7 @@ static int geom_start_multipoint(struct GeoArrowVisitor* v,
                                  enum GeoArrowDimensions dimensions) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
-  private->last_dimensions = builder->view.schema_view.dimensions;
+  private->last_dimensions = dimensions;
 
   switch (geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
@@ -716,7 +716,7 @@ static int geom_start_multilinestring(struct GeoArrowVisitor* v,
                                       enum GeoArrowDimensions dimensions) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
-  private->last_dimensions = builder->view.schema_view.dimensions;
+  private->last_dimensions = dimensions;
 
   switch (geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
@@ -860,7 +860,7 @@ static int geom_start_multipolygon(struct GeoArrowVisitor* v,
                                    enum GeoArrowDimensions dimensions) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;
   struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
-  private->last_dimensions = builder->view.schema_view.dimensions;
+  private->last_dimensions = dimensions;
 
   switch (geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:

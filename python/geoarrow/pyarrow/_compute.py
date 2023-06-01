@@ -292,6 +292,7 @@ def box_agg(obj):
 
     return push_all(Kernel.box_agg, obj, is_agg=True)[0]
 
+
 def _rechunk_max_bytes_internal(obj, max_bytes, chunks):
     n = len(obj)
     if n == 0:
@@ -300,8 +301,9 @@ def _rechunk_max_bytes_internal(obj, max_bytes, chunks):
     if obj.nbytes <= max_bytes or n <= 1:
         chunks.append(obj)
     else:
-        _rechunk_max_bytes_internal(obj[:(n // 2)], max_bytes, chunks)
-        _rechunk_max_bytes_internal(obj[(n // 2):], max_bytes, chunks)
+        _rechunk_max_bytes_internal(obj[: (n // 2)], max_bytes, chunks)
+        _rechunk_max_bytes_internal(obj[(n // 2) :], max_bytes, chunks)
+
 
 def rechunk(obj, max_bytes):
     obj = obj_as_array_or_chunked(obj)
@@ -315,6 +317,7 @@ def rechunk(obj, max_bytes):
 
     return pa.chunked_array(chunks, type=obj.type)
 
+
 def with_coord_type(obj, coord_type):
     return as_geoarrow(obj, coord_type=coord_type)
 
@@ -325,19 +328,25 @@ def with_edge_type(obj, edge_type):
     return new_type.wrap_array(obj.storage)
 
 
-def with_dimensions(obj, dimensions):
-    obj = as_geoarrow(obj)
-    new_type = obj.type.with_dimensions(dimensions)
-    return new_type.wrap_array(obj.storage)
-
-
 def with_crs(obj, crs, crs_type=None):
     obj = obj_as_array_or_chunked(obj)
     new_type = obj.type.with_crs(crs, crs_type)
     return new_type.wrap_array(obj.storage)
 
 
+def with_dimensions(obj, dimensions):
+    obj = as_geoarrow(obj)
+    if dimensions == obj.type.dimensions:
+        return obj
+
+    new_type = obj.type.with_dimensions(dimensions)
+    return as_geoarrow(obj, type=new_type)
+
+
 def with_geometry_type(obj, geometry_type):
     obj = as_geoarrow(obj)
+    if geometry_type == obj.type.geometry_type:
+        return obj
+
     new_type = obj.type.with_geometry_type(geometry_type)
-    return new_type.wrap_array(obj.storage)
+    return as_geoarrow(obj, type=new_type)

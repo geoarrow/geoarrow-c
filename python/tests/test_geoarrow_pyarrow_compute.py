@@ -228,8 +228,11 @@ def test_box_agg():
     box2 = _compute.box_agg(chunked_array)
     assert box2 == box
 
+
 def test_rechunk_max_bytes():
-    wkt_array = ga.array(["LINESTRING (0 1, 2 3, 4 5)", "LINESTRING (0 1, 2 3)", "POINT (0 1)"])
+    wkt_array = ga.array(
+        ["LINESTRING (0 1, 2 3, 4 5)", "LINESTRING (0 1, 2 3)", "POINT (0 1)"]
+    )
     not_rechunked = _compute.rechunk(wkt_array, max_bytes=1000)
     assert isinstance(not_rechunked, pa.ChunkedArray)
     assert not_rechunked.chunks[0] == wkt_array
@@ -238,3 +241,39 @@ def test_rechunk_max_bytes():
     assert isinstance(rechunked, pa.ChunkedArray)
     assert rechunked.num_chunks == 3
     assert len(rechunked) == 3
+
+
+def test_with_edge_type():
+    wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
+    spherical = _compute.with_edge_type(wkt_array, ga.EdgeType.SPHERICAL)
+    assert spherical.type.edge_type == ga.EdgeType.SPHERICAL
+
+    planar = _compute.with_edge_type(spherical, ga.EdgeType.PLANAR)
+    assert planar.type.edge_type == ga.EdgeType.PLANAR
+
+
+def test_with_crs():
+    wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
+    crsified = _compute.with_crs(wkt_array, "EPSG:1234")
+    assert crsified.type.crs == "EPSG:1234"
+
+    crsnope = _compute.with_crs(crsified, None)
+    assert crsnope.type.crs == ""
+    assert crsnope.type.crs_type == ga.CrsType.NONE
+
+
+def test_with_coord_type():
+    wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
+    with_interleaved = _compute.with_coord_type(wkt_array, ga.CoordType.INTERLEAVED)
+    assert with_interleaved.type.coord_type == ga.CoordType.INTERLEAVED
+
+    with_struct = _compute.with_coord_type(with_interleaved, ga.CoordType.SEPARATE)
+    assert with_struct.type.coord_type == ga.CoordType.SEPARATE
+
+
+def test_with_dimensions():
+    wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
+    xy = _compute.as_geoarrow(wkt_array)
+    xyz = _compute.with_dimensions(xy, ga.Dimensions.XYZ)
+    assert xyz.type.dimensions == ga.Dimensions.XYZ
+    assert _compute.as_wkt(xyz).storage[0].as_py() == "POINT Z (0 1 nan)"
