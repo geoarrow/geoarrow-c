@@ -242,6 +242,16 @@ def test_rechunk_max_bytes():
     assert rechunked.num_chunks == 3
     assert len(rechunked) == 3
 
+    rechunked_chunked_array = _compute.rechunk(
+        pa.chunked_array([wkt_array]), max_bytes=4
+    )
+    assert rechunked_chunked_array == rechunked
+
+    rechunked_with_empty_chunk = _compute.rechunk(
+        pa.chunked_array(wkt_array[:0]), max_bytes=4
+    )
+    assert rechunked_with_empty_chunk == pa.chunked_array([], type=wkt_array.type)
+
 
 def test_with_edge_type():
     wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
@@ -273,7 +283,22 @@ def test_with_coord_type():
 
 def test_with_dimensions():
     wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
-    xy = _compute.as_geoarrow(wkt_array)
-    xyz = _compute.with_dimensions(xy, ga.Dimensions.XYZ)
+    xyz = _compute.with_dimensions(wkt_array, ga.Dimensions.XYZ)
     assert xyz.type.dimensions == ga.Dimensions.XYZ
     assert _compute.as_wkt(xyz).storage[0].as_py() == "POINT Z (0 1 nan)"
+
+    xyz2 = _compute.with_dimensions(xyz, ga.Dimensions.XYZ)
+    assert xyz2 == xyz
+
+
+def test_with_geometry_type():
+    wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
+    point = _compute.as_geoarrow(wkt_array)
+    multipoint = _compute.with_geometry_type(point, ga.GeometryType.MULTIPOINT)
+    assert multipoint.type.geometry_type == ga.GeometryType.MULTIPOINT
+
+    multipoint2 = _compute.with_geometry_type(multipoint, ga.GeometryType.MULTIPOINT)
+    assert multipoint2 == multipoint
+
+    point2 = _compute.with_geometry_type(multipoint2, ga.GeometryType.POINT)
+    assert point2 == point
