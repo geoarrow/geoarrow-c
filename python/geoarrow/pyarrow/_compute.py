@@ -250,6 +250,10 @@ def _box_point_struct(storage):
 def box(obj):
     obj = obj_as_array_or_chunked(obj)
 
+    # Spherical edges aren't supported by this algorithm
+    if obj.type.edge_type == EdgeType.SPHERICAL:
+        raise TypeError("Can't compute box of type with spherical edges")
+
     # Optimization: a box of points is just x, x, y, y with zero-copy
     # if the coord type is struct
     if obj.type.coord_type == CoordType.SEPARATE and len(obj) > 0:
@@ -281,6 +285,10 @@ def _box_agg_point_struct(arrays):
 
 def box_agg(obj):
     obj = obj_as_array_or_chunked(obj)
+
+    # Spherical edges aren't supported by this algorithm
+    if obj.type.edge_type == EdgeType.SPHERICAL:
+        raise TypeError("Can't compute box of type with spherical edges")
 
     # Optimization: pyarrow's minmax kernel is fast and we can use it if we have struct
     # coords. So far, only a measurable improvement for points.

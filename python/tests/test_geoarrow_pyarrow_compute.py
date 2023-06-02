@@ -144,7 +144,7 @@ def test_infer_type_common():
     assert common.id == ga.point().id
     assert common.crs == "EPSG:1234"
 
-    common_promote_multi =  _compute.infer_type_common(point, promote_multi=True)
+    common_promote_multi = _compute.infer_type_common(point, promote_multi=True)
     assert common_promote_multi.id == ga.multipoint().id
 
     point_z_and_zm = ga.array(["POINT (0 1)", "POINT ZM (0 1 2 3)"])
@@ -216,6 +216,11 @@ def test_box():
     box2 = _compute.box(chunked_array)
     assert box2 == pa.chunked_array([box])
 
+    # Make sure spherical edges error
+    with pytest.raises(TypeError):
+        wkt_spherical = _compute.with_edge_type(wkt_array, ga.EdgeType.SPHERICAL)
+        _compute.box(wkt_spherical)
+
 
 def test_box_agg():
     wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
@@ -230,6 +235,11 @@ def test_box_agg():
     chunked_array = pa.chunked_array([array])
     box2 = _compute.box_agg(chunked_array)
     assert box2 == box
+
+    # Make sure spherical edges error
+    with pytest.raises(TypeError):
+        wkt_spherical = _compute.with_edge_type(wkt_array, ga.EdgeType.SPHERICAL)
+        _compute.box(wkt_spherical)
 
 
 def test_rechunk_max_bytes():
