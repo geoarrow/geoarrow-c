@@ -144,6 +144,9 @@ def test_infer_type_common():
     assert common.id == ga.point().id
     assert common.crs == "EPSG:1234"
 
+    common_promote_multi =  _compute.infer_type_common(point, promote_multi=True)
+    assert common_promote_multi.id == ga.multipoint().id
+
     point_z_and_zm = ga.array(["POINT (0 1)", "POINT ZM (0 1 2 3)"])
     common = _compute.infer_type_common(point_z_and_zm)
     assert common.id == ga.point().with_dimensions(ga.Dimensions.XYZM).id

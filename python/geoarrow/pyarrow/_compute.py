@@ -121,7 +121,7 @@ def unique_geometry_types(obj):
     return pa.array(py_geometry_types, type=out_type)
 
 
-def infer_type_common(obj, coord_type=None):
+def infer_type_common(obj, coord_type=None, promote_multi=False):
     obj = obj_as_array_or_chunked(obj)
 
     if not isinstance(obj.type, _type.WktType) and not isinstance(
@@ -178,6 +178,9 @@ def infer_type_common(obj, coord_type=None):
             .with_crs(obj.type.crs, obj.type.crs_type)
         )
 
+    if promote_multi and geometry_type <= GeometryType.POLYGON:
+        geometry_type += 3
+
     return _type.vector_type(
         geometry_type,
         dimensions,
@@ -206,11 +209,13 @@ def as_wkb(obj):
     return push_all(Kernel.as_wkb, obj)
 
 
-def as_geoarrow(obj, type=None, coord_type=None):
+def as_geoarrow(obj, type=None, coord_type=None, promote_multi=False):
     obj = obj_as_array_or_chunked(obj)
 
     if type is None:
-        type = infer_type_common(obj, coord_type=coord_type)
+        type = infer_type_common(
+            obj, coord_type=coord_type, promote_multi=promote_multi
+        )
 
     if obj.type.id == type.id:
         return obj
