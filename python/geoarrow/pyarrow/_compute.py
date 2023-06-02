@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, wait
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from ..lib import GeometryType, Dimensions, CoordType
+from ..lib import GeometryType, Dimensions, CoordType, EdgeType
 from . import _type
 from ._array import array
 from ._kernel import Kernel
@@ -121,7 +121,7 @@ def unique_geometry_types(obj):
     return pa.array(py_geometry_types, type=out_type)
 
 
-def infer_type_common(obj, coord_type=None):
+def infer_type_common(obj, coord_type=None, promote_multi=False):
     obj = obj_as_array_or_chunked(obj)
 
     if not isinstance(obj.type, _type.WktType) and not isinstance(
@@ -178,6 +178,9 @@ def infer_type_common(obj, coord_type=None):
             .with_crs(obj.type.crs, obj.type.crs_type)
         )
 
+    if promote_multi and geometry_type <= GeometryType.POLYGON:
+        geometry_type += 3
+
     return _type.vector_type(
         geometry_type,
         dimensions,
@@ -206,11 +209,13 @@ def as_wkb(obj):
     return push_all(Kernel.as_wkb, obj)
 
 
-def as_geoarrow(obj, type=None, coord_type=None):
+def as_geoarrow(obj, type=None, coord_type=None, promote_multi=False):
     obj = obj_as_array_or_chunked(obj)
 
     if type is None:
-        type = infer_type_common(obj, coord_type=coord_type)
+        type = infer_type_common(
+            obj, coord_type=coord_type, promote_multi=promote_multi
+        )
 
     if obj.type.id == type.id:
         return obj
@@ -245,6 +250,10 @@ def _box_point_struct(storage):
 def box(obj):
     obj = obj_as_array_or_chunked(obj)
 
+    # Spherical edges aren't supported by this algorithm
+    if obj.type.edge_type == EdgeType.SPHERICAL:
+        raise TypeError("Can't compute box of type with spherical edges")
+
     # Optimization: a box of points is just x, x, y, y with zero-copy
     # if the coord type is struct
     if obj.type.coord_type == CoordType.SEPARATE and len(obj) > 0:
@@ -277,6 +286,10 @@ def _box_agg_point_struct(arrays):
 def box_agg(obj):
     obj = obj_as_array_or_chunked(obj)
 
+    # Spherical edges aren't supported by this algorithm
+    if obj.type.edge_type == EdgeType.SPHERICAL:
+        raise TypeError("Can't compute box of type with spherical edges")
+
     # Optimization: pyarrow's minmax kernel is fast and we can use it if we have struct
     # coords. So far, only a measurable improvement for points.
     if obj.type.coord_type == CoordType.SEPARATE and len(obj) > 0:
@@ -291,3 +304,62 @@ def box_agg(obj):
             return _box_agg_point_struct(obj.storage.flatten()[:2])
 
     return push_all(Kernel.box_agg, obj, is_agg=True)[0]
+
+
+def _rechunk_max_bytes_internal(obj, max_bytes, chunks):
+    n = len(obj)
+    if n == 0:
+        return
+
+    if obj.nbytes <= max_bytes or n <= 1:
+        chunks.append(obj)
+    else:
+        _rechunk_max_bytes_internal(obj[: (n // 2)], max_bytes, chunks)
+        _rechunk_max_bytes_internal(obj[(n // 2) :], max_bytes, chunks)
+
+
+def rechunk(obj, max_bytes):
+    obj = obj_as_array_or_chunked(obj)
+    chunks = []
+
+    if isinstance(obj, pa.ChunkedArray):
+        for chunk in obj.chunks:
+            _rechunk_max_bytes_internal(chunk, max_bytes, chunks)
+    else:
+        _rechunk_max_bytes_internal(obj, max_bytes, chunks)
+
+    return pa.chunked_array(chunks, type=obj.type)
+
+
+def with_coord_type(obj, coord_type):
+    return as_geoarrow(obj, coord_type=coord_type)
+
+
+def with_edge_type(obj, edge_type):
+    obj = obj_as_array_or_chunked(obj)
+    new_type = obj.type.with_edge_type(edge_type)
+    return new_type.wrap_array(obj.storage)
+
+
+def with_crs(obj, crs, crs_type=None):
+    obj = obj_as_array_or_chunked(obj)
+    new_type = obj.type.with_crs(crs, crs_type)
+    return new_type.wrap_array(obj.storage)
+
+
+def with_dimensions(obj, dimensions):
+    obj = as_geoarrow(obj)
+    if dimensions == obj.type.dimensions:
+        return obj
+
+    new_type = obj.type.with_dimensions(dimensions)
+    return as_geoarrow(obj, type=new_type)
+
+
+def with_geometry_type(obj, geometry_type):
+    obj = as_geoarrow(obj)
+    if geometry_type == obj.type.geometry_type:
+        return obj
+
+    new_type = obj.type.with_geometry_type(geometry_type)
+    return as_geoarrow(obj, type=new_type)

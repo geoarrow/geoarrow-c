@@ -144,6 +144,9 @@ def test_infer_type_common():
     assert common.id == ga.point().id
     assert common.crs == "EPSG:1234"
 
+    common_promote_multi = _compute.infer_type_common(point, promote_multi=True)
+    assert common_promote_multi.id == ga.multipoint().id
+
     point_z_and_zm = ga.array(["POINT (0 1)", "POINT ZM (0 1 2 3)"])
     common = _compute.infer_type_common(point_z_and_zm)
     assert common.id == ga.point().with_dimensions(ga.Dimensions.XYZM).id
@@ -213,6 +216,11 @@ def test_box():
     box2 = _compute.box(chunked_array)
     assert box2 == pa.chunked_array([box])
 
+    # Make sure spherical edges error
+    with pytest.raises(TypeError):
+        wkt_spherical = _compute.with_edge_type(wkt_array, ga.EdgeType.SPHERICAL)
+        _compute.box(wkt_spherical)
+
 
 def test_box_agg():
     wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
@@ -227,3 +235,83 @@ def test_box_agg():
     chunked_array = pa.chunked_array([array])
     box2 = _compute.box_agg(chunked_array)
     assert box2 == box
+
+    # Make sure spherical edges error
+    with pytest.raises(TypeError):
+        wkt_spherical = _compute.with_edge_type(wkt_array, ga.EdgeType.SPHERICAL)
+        _compute.box(wkt_spherical)
+
+
+def test_rechunk_max_bytes():
+    wkt_array = ga.array(
+        ["LINESTRING (0 1, 2 3, 4 5)", "LINESTRING (0 1, 2 3)", "POINT (0 1)"]
+    )
+    not_rechunked = _compute.rechunk(wkt_array, max_bytes=1000)
+    assert isinstance(not_rechunked, pa.ChunkedArray)
+    assert not_rechunked.chunks[0] == wkt_array
+
+    rechunked = _compute.rechunk(wkt_array, max_bytes=4)
+    assert isinstance(rechunked, pa.ChunkedArray)
+    assert rechunked.num_chunks == 3
+    assert len(rechunked) == 3
+
+    rechunked_chunked_array = _compute.rechunk(
+        pa.chunked_array([wkt_array]), max_bytes=4
+    )
+    assert rechunked_chunked_array == rechunked
+
+    rechunked_with_empty_chunk = _compute.rechunk(
+        pa.chunked_array(wkt_array[:0]), max_bytes=4
+    )
+    assert rechunked_with_empty_chunk == pa.chunked_array([], type=wkt_array.type)
+
+
+def test_with_edge_type():
+    wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
+    spherical = _compute.with_edge_type(wkt_array, ga.EdgeType.SPHERICAL)
+    assert spherical.type.edge_type == ga.EdgeType.SPHERICAL
+
+    planar = _compute.with_edge_type(spherical, ga.EdgeType.PLANAR)
+    assert planar.type.edge_type == ga.EdgeType.PLANAR
+
+
+def test_with_crs():
+    wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
+    crsified = _compute.with_crs(wkt_array, "EPSG:1234")
+    assert crsified.type.crs == "EPSG:1234"
+
+    crsnope = _compute.with_crs(crsified, None)
+    assert crsnope.type.crs == ""
+    assert crsnope.type.crs_type == ga.CrsType.NONE
+
+
+def test_with_coord_type():
+    wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
+    with_interleaved = _compute.with_coord_type(wkt_array, ga.CoordType.INTERLEAVED)
+    assert with_interleaved.type.coord_type == ga.CoordType.INTERLEAVED
+
+    with_struct = _compute.with_coord_type(with_interleaved, ga.CoordType.SEPARATE)
+    assert with_struct.type.coord_type == ga.CoordType.SEPARATE
+
+
+def test_with_dimensions():
+    wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
+    xyz = _compute.with_dimensions(wkt_array, ga.Dimensions.XYZ)
+    assert xyz.type.dimensions == ga.Dimensions.XYZ
+    assert _compute.as_wkt(xyz).storage[0].as_py() == "POINT Z (0 1 nan)"
+
+    xyz2 = _compute.with_dimensions(xyz, ga.Dimensions.XYZ)
+    assert xyz2 == xyz
+
+
+def test_with_geometry_type():
+    wkt_array = ga.array(["POINT (0 1)", "POINT (2 3)"])
+    point = _compute.as_geoarrow(wkt_array)
+    multipoint = _compute.with_geometry_type(point, ga.GeometryType.MULTIPOINT)
+    assert multipoint.type.geometry_type == ga.GeometryType.MULTIPOINT
+
+    multipoint2 = _compute.with_geometry_type(multipoint, ga.GeometryType.MULTIPOINT)
+    assert multipoint2 == multipoint
+
+    point2 = _compute.with_geometry_type(multipoint2, ga.GeometryType.POINT)
+    assert point2 == point

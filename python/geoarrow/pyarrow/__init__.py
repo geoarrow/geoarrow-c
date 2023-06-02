@@ -41,7 +41,13 @@ from ._compute import (
     format_wkt,
     unique_geometry_types,
     box,
-    box_agg
+    box_agg,
+    with_coord_type,
+    with_crs,
+    with_dimensions,
+    with_edge_type,
+    with_geometry_type,
+    rechunk
 )
 
 register_extension_types()
