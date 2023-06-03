@@ -81,6 +81,10 @@ def parse_all(obj):
 
 
 def unique_geometry_types(obj):
+    """Compute unique geometry types from ``obj`` as a struct with columns
+    geometry_type and dimensions. The values of these columns correspond to the
+    values of the :class:`geoarrow.GeometryType` and :class:`geoarrow.Dimensions`
+    enumerators."""
     obj = obj_as_array_or_chunked(obj)
     out_type = pa.struct([("geometry_type", pa.int32()), ("dimensions", pa.int32())])
 
@@ -122,6 +126,10 @@ def unique_geometry_types(obj):
 
 
 def infer_type_common(obj, coord_type=None, promote_multi=False):
+    """Infer a common :class:`geoarrow.pyarrow.VectorType` for the
+    geometries in ``obj``, preferring geoarrow-encoded types and falling back
+    to well-known binary.
+    """
     obj = obj_as_array_or_chunked(obj)
 
     if not isinstance(obj.type, _type.WktType) and not isinstance(
@@ -192,6 +200,7 @@ def infer_type_common(obj, coord_type=None, promote_multi=False):
 
 
 def as_wkt(obj):
+    """Encode ``obj`` as :func:`geoarrow.pyarrow.wkt`."""
     obj = obj_as_array_or_chunked(obj)
 
     if isinstance(obj.type, _type.WktType):
@@ -201,6 +210,8 @@ def as_wkt(obj):
 
 
 def as_wkb(obj):
+    """Encode ``obj`` as :func:`geoarrow.pyarrow.wkb`.
+    """
     obj = obj_as_array_or_chunked(obj)
 
     if isinstance(obj.type, _type.WkbType):
@@ -210,6 +221,9 @@ def as_wkb(obj):
 
 
 def as_geoarrow(obj, type=None, coord_type=None, promote_multi=False):
+    """Encode ``obj`` as a geoarrow-encoded array, preferring geoarrow encodings
+    and falling back to well-known binary if no common geoemtry type is found.
+    """
     obj = obj_as_array_or_chunked(obj)
 
     if type is None:
@@ -229,6 +243,8 @@ def as_geoarrow(obj, type=None, coord_type=None, promote_multi=False):
 
 
 def format_wkt(obj, significant_digits=None, max_element_size_bytes=None):
+    """Format geometries in an object as well-known text with an optional cap
+    on digits and element size to prevent excessive output for large features."""
     return push_all(
         Kernel.format_wkt,
         obj,
@@ -248,6 +264,8 @@ def _box_point_struct(storage):
 
 
 def box(obj):
+    """Compute a Cartesian 2D bounding box for each feature in ``obj`` as
+    a struct(xmin, xmax, ymin, ymax) array."""
     obj = obj_as_array_or_chunked(obj)
 
     # Spherical edges aren't supported by this algorithm
@@ -284,6 +302,10 @@ def _box_agg_point_struct(arrays):
 
 
 def box_agg(obj):
+    """Compute a Cartesian 2D bounding box for all features in ``obj`` as
+    a scalar struct(xmin, xmax, ymin, ymax). Values that are null are currently
+    ignored.
+    """
     obj = obj_as_array_or_chunked(obj)
 
     # Spherical edges aren't supported by this algorithm
@@ -319,6 +341,9 @@ def _rechunk_max_bytes_internal(obj, max_bytes, chunks):
 
 
 def rechunk(obj, max_bytes):
+    """Split up chunks of ``obj`` into zero-copy slices with a maximum size of
+    ``max_bytes``. This may be useful to more predictibly parallelize a
+    computation for variable feature sizes."""
     obj = obj_as_array_or_chunked(obj)
     chunks = []
 
@@ -332,22 +357,32 @@ def rechunk(obj, max_bytes):
 
 
 def with_coord_type(obj, coord_type):
+    """Attempt to convert ``obj`` to a geoarrow-encoded array with a
+    specific :class:`CoordType`.
+    """
     return as_geoarrow(obj, coord_type=coord_type)
 
 
 def with_edge_type(obj, edge_type):
+    """Force a :class:`geoarrow.EdgeType` on an array.
+    """
     obj = obj_as_array_or_chunked(obj)
     new_type = obj.type.with_edge_type(edge_type)
     return new_type.wrap_array(obj.storage)
 
 
 def with_crs(obj, crs, crs_type=None):
+    """Force a :class:`geoarrow.CrsType`/crs value on an array.
+    """
     obj = obj_as_array_or_chunked(obj)
     new_type = obj.type.with_crs(crs, crs_type)
     return new_type.wrap_array(obj.storage)
 
 
 def with_dimensions(obj, dimensions):
+    """Attempt to convert ``obj`` to a geoarrow-encoded array with a
+    specific :class:`geoarrow.Dimensions`.
+    """
     obj = as_geoarrow(obj)
     if dimensions == obj.type.dimensions:
         return obj
@@ -357,6 +392,9 @@ def with_dimensions(obj, dimensions):
 
 
 def with_geometry_type(obj, geometry_type):
+    """Attempt to convert ``obj`` to a geoarrow-encoded array with a
+    specific :class:`geoarrow.GeometryType`.
+    """
     obj = as_geoarrow(obj)
     if geometry_type == obj.type.geometry_type:
         return obj

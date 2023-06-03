@@ -27,6 +27,37 @@ Python PyArrow integration
 
     .. autofunction:: multipolygon
 
+    Compute functions
+    -----------------
+
+    .. autofunction:: unique_geometry_types
+
+    .. autofunction:: infer_type_common
+
+    .. autofunction:: as_wkt
+
+    .. autofunction:: as_wkb
+
+    .. autofunction:: as_geoarrow
+
+    .. autofunction:: format_wkt
+
+    .. autofunction:: box
+
+    .. autofunction:: box_agg
+
+    .. autofunction:: rechunk
+
+    .. autofunction:: with_coord_type
+
+    .. autofunction:: with_edge_type
+
+    .. autofunction:: with_crs
+
+    .. autofunction:: with_dimensions
+
+    .. autofunction:: with_geometry_type
+
     API Reference
     -------------
 
