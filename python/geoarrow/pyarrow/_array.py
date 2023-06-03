@@ -87,7 +87,7 @@ class VectorArray(pa.ExtensionArray):
         tail_str = "\n".join(tail_str)
         items_str = f"{head_str}\n{mid}\n{tail_str}"
 
-        return f"{type_name}:{repr(self.type)}[{len(self)}]\n{items_str}"
+        return f"{type_name}:{repr(self.type)}[{len(self)}]\n{items_str}".strip()
 
 
 class PointArray(VectorArray):
@@ -148,6 +148,14 @@ def array(obj, type_=None, *args, validate=True, **kwargs) -> VectorArray:
     a geoarrow-encoding based on a common geometry type. GeoPandas objects are
     supported. This implementation relies heavily on ``pyarrow.array()`` and has
     similar behaviour.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.array(["POINT (0 1)"])
+    VectorArray:WktType(geoarrow.wkt)[1]
+    <POINT (0 1)>
+    >>> ga.as_geoarrow(["POINT (0 1)"])
+    PointArray:PointType(geoarrow.point)[1]
+    <POINT (0 1)>
     """
     if type(obj).__name__ == "GeoSeries":
         if obj.crs:
