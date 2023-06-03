@@ -71,6 +71,9 @@ def push_all(
 
 
 def parse_all(obj):
+    """Parse all features and return nothing. This is useful for
+    :func:`geoarrow.pyarrow.wkb` and :func:`geoarrow.pyarrow.wkt`-encoded
+    arrays to validate their contents. For other types, this is a no-op."""
     obj = obj_as_array_or_chunked(obj)
 
     # Non-wkb or wkt types are a no-op here since they don't need parsing
@@ -210,8 +213,7 @@ def as_wkt(obj):
 
 
 def as_wkb(obj):
-    """Encode ``obj`` as :func:`geoarrow.pyarrow.wkb`.
-    """
+    """Encode ``obj`` as :func:`geoarrow.pyarrow.wkb`."""
     obj = obj_as_array_or_chunked(obj)
 
     if isinstance(obj.type, _type.WkbType):
@@ -364,16 +366,14 @@ def with_coord_type(obj, coord_type):
 
 
 def with_edge_type(obj, edge_type):
-    """Force a :class:`geoarrow.EdgeType` on an array.
-    """
+    """Force a :class:`geoarrow.EdgeType` on an array."""
     obj = obj_as_array_or_chunked(obj)
     new_type = obj.type.with_edge_type(edge_type)
     return new_type.wrap_array(obj.storage)
 
 
 def with_crs(obj, crs, crs_type=None):
-    """Force a :class:`geoarrow.CrsType`/crs value on an array.
-    """
+    """Force a :class:`geoarrow.CrsType`/crs value on an array."""
     obj = obj_as_array_or_chunked(obj)
     new_type = obj.type.with_crs(crs, crs_type)
     return new_type.wrap_array(obj.storage)

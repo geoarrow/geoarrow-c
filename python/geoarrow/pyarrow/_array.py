@@ -143,7 +143,9 @@ if VectorType._array_cls_from_name is None:
 def array(obj, type_=None, *args, validate=True, **kwargs) -> VectorArray:
     """Attempt to create an Array or ChunkedArray with a geoarrow extension type
     from ``obj``. This constructor attempts to perform the fewest transformations
-    possible (i.e., WKB is left as WKB, WKT is left as WKT). GeoPandas objects are
+    possible (i.e., WKB is left as WKB, WKT is left as WKT), whereas
+    :func:`geoarrow.pyarrow.as_geoarrow` actively attempts a conversion to
+    a geoarrow-encoding based on a common geometry type. GeoPandas objects are
     supported. This implementation relies heavily on ``pyarrow.array()`` and has
     similar behaviour.
     """

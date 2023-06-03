@@ -4,6 +4,11 @@ Python PyArrow integration
 
 .. automodule:: geoarrow.pyarrow
 
+    Array constructors
+    ------------------
+
+    .. autofunction:: array
+
     Type Constructors
     -----------------
 
@@ -29,6 +34,8 @@ Python PyArrow integration
 
     Compute functions
     -----------------
+
+    .. autofunction:: parse_all
 
     .. autofunction:: unique_geometry_types
 
@@ -58,7 +65,7 @@ Python PyArrow integration
 
     .. autofunction:: with_geometry_type
 
-    API Reference
+    Class Reference
     -------------
 
     .. autoclass:: VectorType
