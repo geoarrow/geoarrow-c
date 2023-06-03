@@ -100,13 +100,24 @@ class VectorType(pa.ExtensionType):
 
     @property
     def id(self):
-        """A unique identifier for the memory layout of this type."""
+        """A unique identifier for the memory layout of this type.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.wkb().id
+        100001
+        """
         return self._type.id
 
     @property
     def geometry_type(self):
         """The :class:`geoarrow.GeometryType` of this type or ``GEOMETRY`` for
         types where this is not constant (i.e., WKT and WKB).
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.wkb().geometry_type == ga.GeometryType.GEOMETRY
+        True
+        >>> ga.linestring().geometry_type == ga.GeometryType.LINESTRING
+        True
         """
         return self._type.geometry_type
 
@@ -114,53 +125,110 @@ class VectorType(pa.ExtensionType):
     def dimensions(self):
         """The :class:`geoarrow.Dimensions` of this type or ``UNKNOWN`` for
         types where this is not constant (i.e., WKT and WKT).
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.wkb().dimensions == ga.Dimensions.UNKNOWN
+        True
+        >>> ga.linestring().dimensions == ga.Dimensions.XY
+        True
         """
         return self._type.dimensions
 
     @property
     def coord_type(self):
-        """The :class:`geoarrow.CoordType` of this type."""
+        """The :class:`geoarrow.CoordType` of this type.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.linestring().coord_type == ga.CoordType.SEPARATE
+        True
+        >>> ga.linestring().with_coord_type(ga.CoordType.INTERLEAVED).coord_type
+        2
+        """
         return self._type.coord_type
 
     @property
     def edge_type(self):
-        """The :class:`geoarrow.EdgeType` of this type."""
+        """The :class:`geoarrow.EdgeType` of this type.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.linestring().edge_type == ga.EdgeType.PLANAR
+        True
+        >>> ga.linestring().with_edge_type(ga.EdgeType.SPHERICAL).edge_type
+        1
+        """
         return self._type.edge_type
 
     @property
     def crs_type(self):
-        """The :class:`geoarrow.CrsType` of the :attr:`crs` value."""
+        """The :class:`geoarrow.CrsType` of the :attr:`crs` value.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.point().crs_type == ga.CrsType.NONE
+        True
+        >>> ga.point().with_crs("EPSG:1234").crs_type
+        1
+        """
         return self._type.crs_type
 
     @property
     def crs(self):
-        """The coordinate reference system of this type."""
+        """The coordinate reference system of this type.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.point().with_crs("EPSG:1234").crs
+        'EPSG:1234'
+        """
         return self._type.crs.decode("UTF-8")
 
     def with_geometry_type(self, geometry_type):
-        """Returns a new type with the specified :class:`geoarrow.GeometryType`."""
+        """Returns a new type with the specified :class:`geoarrow.GeometryType`.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.point().with_geometry_type(ga.GeometryType.LINESTRING)
+        LinestringType(geoarrow.linestring)
+        """
         ctype = self._type.with_geometry_type(geometry_type)
         return _ctype_to_extension_type(ctype)
 
     def with_dimensions(self, dimensions):
-        """Returns a new type with the specified :class:`geoarrow.Dimensions`."""
+        """Returns a new type with the specified :class:`geoarrow.Dimensions`.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.point().with_dimensions(ga.Dimensions.XYZ)
+        PointType(geoarrow.point_z)
+        """
         ctype = self._type.with_dimensions(dimensions)
         return _ctype_to_extension_type(ctype)
 
     def with_coord_type(self, coord_type):
-        """Returns a new type with the specified :class:`geoarrow.CoordType`."""
+        """Returns a new type with the specified :class:`geoarrow.CoordType`.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.point().with_coord_type(ga.CoordType.INTERLEAVED)
+        PointType(interleaved geoarrow.point)
+        """
         ctype = self._type.with_coord_type(coord_type)
         return _ctype_to_extension_type(ctype)
 
     def with_edge_type(self, edge_type):
-        """Returns a new type with the specified :class:`geoarrow.EdgeType`."""
+        """Returns a new type with the specified :class:`geoarrow.EdgeType`.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.linestring().with_edge_type(ga.EdgeType.SPHERICAL)
+        LinestringType(spherical geoarrow.linestring)
+        """
         ctype = self._type.with_edge_type(edge_type)
         return _ctype_to_extension_type(ctype)
 
     def with_crs(self, crs, crs_type=None):
         """Returns a new type with the specified coordinate reference system
         :class:`geoarrow.CrsType` combination. The ``crs_type`` defaults to
-        ``NONE`` if ``crs`` is ``None``, otherwise ``UNKNOWN``."""
+        ``NONE`` if ``crs`` is ``None``, otherwise ``UNKNOWN``.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.linestring().with_crs("EPSG:1234")
+        LinestringType(geoarrow.linestring <EPSG:1234>)
+        """
         if crs_type is None and crs is None:
             ctype = self._type.with_crs(b"", lib.CrsType.NONE)
         elif crs_type is None:
