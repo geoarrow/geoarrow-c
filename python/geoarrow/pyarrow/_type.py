@@ -370,60 +370,120 @@ def _make_default(geometry_type, cls):
 
 def wkb() -> WkbType:
     """Well-known binary with a maximum array size of 2 GB per chunk.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.wkb()
+    WkbType(geoarrow.wkb)
+    >>> ga.wkb().storage_type
+    DataType(binary)
     """
     return WkbType.__arrow_ext_deserialize__(pa.binary(), b"")
 
 
 def large_wkb() -> WkbType:
     """Well-known binary using 64-bit integer offsets.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.large_wkb()
+    WkbType(geoarrow.wkb)
+    >>> ga.large_wkb().storage_type
+    DataType(large_binary)
     """
     return WkbType.__arrow_ext_deserialize__(pa.large_binary(), b"")
 
 
 def wkt() -> WktType:
     """Well-known text with a maximum array size of 2 GB per chunk.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.wkt()
+    WktType(geoarrow.wkt)
+    >>> ga.wkt().storage_type
+    DataType(string)
     """
     return WktType.__arrow_ext_deserialize__(pa.utf8(), b"")
 
 
 def large_wkt() -> WktType:
     """Well-known text using 64-bit integer offsets.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.large_wkt()
+    WktType(geoarrow.wkt)
+    >>> ga.large_wkt().storage_type
+    DataType(large_string)
     """
     return WktType.__arrow_ext_deserialize__(pa.large_utf8(), b"")
 
 
 def point() -> PointType:
     """Geoarrow-encoded point features.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.point()
+    PointType(geoarrow.point)
+    >>> ga.point().storage_type
+    StructType(struct<x: double, y: double>)
     """
     return _make_default(lib.GeometryType.POINT, PointType)
 
 
 def linestring() -> PointType:
     """Geoarrow-encoded line features.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.linestring()
+    LinestringType(geoarrow.linestring)
+    >>> ga.linestring().storage_type
+    ListType(list<vertices: struct<x: double, y: double>>)
     """
     return _make_default(lib.GeometryType.LINESTRING, LinestringType)
 
 
 def polygon() -> PolygonType:
     """Geoarrow-encoded polygon features.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.polygon()
+    PolygonType(geoarrow.polygon)
+    >>> ga.polygon().storage_type
+    ListType(list<rings: list<vertices: struct<x: double, y: double>>>)
     """
     return _make_default(lib.GeometryType.POLYGON, PolygonType)
 
 
 def multipoint() -> MultiPointType:
     """Geoarrow-encoded multipoint features.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.multipoint()
+    MultiPointType(geoarrow.multipoint)
+    >>> ga.multipoint().storage_type
+    ListType(list<points: struct<x: double, y: double>>)
     """
     return _make_default(lib.GeometryType.MULTIPOINT, MultiPointType)
 
 
 def multilinestring() -> MultiLinestringType:
     """Geoarrow-encoded multilinestring features.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.multilinestring()
+    MultiLinestringType(geoarrow.multilinestring)
+    >>> ga.multilinestring().storage_type
+    ListType(list<linestrings: list<vertices: struct<x: double, y: double>>>)
     """
     return _make_default(lib.GeometryType.MULTILINESTRING, MultiLinestringType)
 
 
 def multipolygon() -> MultiPolygonType:
     """Geoarrow-encoded polygon features.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.multipolygon()
+    MultiPolygonType(geoarrow.multipolygon)
+    >>> ga.multipolygon().storage_type
+    ListType(list<polygons: list<rings: list<vertices: struct<x: double, y: double>>>>)
     """
     return _make_default(lib.GeometryType.MULTIPOLYGON, MultiPolygonType)
 
@@ -437,6 +497,10 @@ def vector_type(
     crs_type=None,
 ) -> VectorType:
     """Generic vector geometry type constructor.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.vector_type(ga.GeometryType.POINT, crs="EPSG:1234")
+    PointType(geoarrow.point <EPSG:1234>)
     """
     ctype = lib.CVectorType.Make(geometry_type, dimensions, coord_type)
     cls = type_cls_from_name(ctype.extension_name)
