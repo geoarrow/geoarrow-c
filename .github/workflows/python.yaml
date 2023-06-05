@@ -41,6 +41,11 @@ jobs:
         run: |
           pytest python/tests -v -s
 
+      - name: Run doctests
+        run: |
+          cd python
+          pytest --doctest-modules
+
       - name: Coverage
         if: success() && matrix.python-version == '3.10'
         run: |
