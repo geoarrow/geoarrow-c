@@ -1,6 +1,6 @@
 
-Python PyArrow integration
-==========================
+Integration with pyarrow
+========================
 
 .. automodule:: geoarrow.pyarrow
 
@@ -66,7 +66,7 @@ Python PyArrow integration
     .. autofunction:: with_geometry_type
 
     Class Reference
-    -------------
+    ---------------
 
     .. autoclass:: VectorType
         :members:

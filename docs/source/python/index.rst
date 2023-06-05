@@ -1,27 +1,6 @@
 
-Python API
-===================
-
-.. automodule:: geoarrow
-   :members:
-
-Constants
---------------------------
-
-.. autoclass:: GeometryType
-   :members:
-
-.. autoclass:: Dimensions
-   :members:
-
-.. autoclass:: CoordType
-   :members:
-
-.. autoclass:: EdgeType
-   :members:
-
-.. autoclass:: CrsType
-   :members:
+Python
+======
 
 Contents
 --------
@@ -29,4 +8,5 @@ Contents
 .. toctree::
     :maxdepth: 2
 
+    GeoArrow core library <geoarrow>
     PyArrow integration <pyarrow>
