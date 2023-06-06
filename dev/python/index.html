@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Python API &#8212; geoarrow  documentation</title>
+    <title>Python &#8212; geoarrow  documentation</title>
   
   
   
@@ -40,7 +40,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'python/index';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Python PyArrow integration" href="pyarrow.html" />
+    <link rel="next" title="Core API" href="geoarrow.html" />
     <link rel="prev" title="C API Reference" href="../c/index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -125,14 +125,14 @@
     
                     <li class="nav-item">
                       <a class="nav-link nav-internal" href="../c/index.html">
-                        C API Reference
+                        C/C++
                       </a>
                     </li>
                 
 
                     <li class="nav-item current active">
                       <a class="nav-link nav-internal" href="#">
-                        Python API Reference
+                        Python
                       </a>
                     </li>
                 
@@ -215,14 +215,14 @@ document.write(`
     
                     <li class="nav-item">
                       <a class="nav-link nav-internal" href="../c/index.html">
-                        C API Reference
+                        C/C++
                       </a>
                     </li>
                 
 
                     <li class="nav-item current active">
                       <a class="nav-link nav-internal" href="#">
-                        Python API Reference
+                        Python
                       </a>
                     </li>
                 
@@ -272,6 +272,7 @@ document.write(`
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="geoarrow.html">GeoArrow core library</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pyarrow.html">PyArrow integration</a></li>
 </ul>
 </div>
@@ -310,7 +311,7 @@ document.write(`
         <i class="fa-solid fa-home"></i>
       </a>
     </li>
-    <li class="breadcrumb-item active" aria-current="page">Python API</li>
+    <li class="breadcrumb-item active" aria-current="page">Python</li>
   </ul>
 </nav>
 </div>
@@ -327,21 +328,23 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article" role="main">
                   
-  <section id="module-geoarrow">
-<span id="python-api"></span><h1>Python API<a class="headerlink" href="#module-geoarrow" title="Permalink to this heading">#</a></h1>
-<p>The root import for geoarrow.</p>
-<section id="examples">
-<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading">#</a></h2>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow</span> <span class="k">as</span> <span class="nn">ga</span>
-</pre></div>
-</div>
-</section>
+  <section id="python">
+<h1>Python<a class="headerlink" href="#python" title="Permalink to this heading">#</a></h1>
 <section id="contents">
 <h2>Contents<a class="headerlink" href="#contents" title="Permalink to this heading">#</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="geoarrow.html">GeoArrow core library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="geoarrow.html#examples">Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="geoarrow.html#constants">Constants</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="pyarrow.html">PyArrow integration</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="pyarrow.html#examples">Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyarrow.html#array-constructors">Array constructors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyarrow.html#type-constructors">Type Constructors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyarrow.html#compute-functions">Compute functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyarrow.html#class-reference">Class Reference</a></li>
 </ul>
 </li>
 </ul>
@@ -370,11 +373,11 @@ document.write(`
       </div>
     </a>
     <a class="right-next"
-       href="pyarrow.html"
+       href="geoarrow.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Python PyArrow integration</p>
+        <p class="prev-next-title">Core API</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -396,7 +399,6 @@ document.write(`
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#contents">Contents</a></li>
 </ul>
   </nav></div>

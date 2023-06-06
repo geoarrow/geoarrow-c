@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>geoarrow-cpp &#8212; geoarrow  documentation</title>
+    <title>geoarrow-c &#8212; geoarrow  documentation</title>
   
   
   
@@ -124,14 +124,14 @@
     
                     <li class="nav-item">
                       <a class="nav-link nav-internal" href="c/index.html">
-                        C API Reference
+                        C/C++
                       </a>
                     </li>
                 
 
                     <li class="nav-item">
                       <a class="nav-link nav-internal" href="python/index.html">
-                        Python API Reference
+                        Python
                       </a>
                     </li>
                 
@@ -214,14 +214,14 @@ document.write(`
     
                     <li class="nav-item">
                       <a class="nav-link nav-internal" href="c/index.html">
-                        C API Reference
+                        C/C++
                       </a>
                     </li>
                 
 
                     <li class="nav-item">
                       <a class="nav-link nav-internal" href="python/index.html">
-                        Python API Reference
+                        Python
                       </a>
                     </li>
                 
@@ -292,21 +292,37 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article" role="main">
                   
-  <section id="geoarrow-cpp">
-<h1>geoarrow-cpp<a class="headerlink" href="#geoarrow-cpp" title="Permalink to this heading">#</a></h1>
-<p>This repository is an experimental C and C++ implementation of the
-GeoArrow specification using
-<a class="reference external" href="https://github.com/apache/arrow-nanoarrow">nanoarrow</a>. The
-implementation is under construction and is intended to serve as a
-concrete place to discuss implementation details and implications of the
-specification for implementors.</p>
+  <section id="geoarrow-c">
+<h1>geoarrow-c<a class="headerlink" href="#geoarrow-c" title="Permalink to this heading">#</a></h1>
+<p><a class="reference external" href="https://app.codecov.io/gh/geoarrow/geoarrow-c?branch=main"><img alt="Codecov test coverage" src="https://codecov.io/gh/geoarrow/geoarrow-c/branch/main/graph/badge.svg" /></a> <a class="reference external" href="https://geoarrow.github.io/geoarrow-c/dev"><img alt="Documentation" src="https://img.shields.io/badge/Documentation-dev-yellow" /></a> <a class="reference external" href="https://github.com/geoarrow/geoarrow-c"><img alt="nanoarrow on GitHub" src="https://img.shields.io/badge/GitHub-apache%2Farrow--nanoarrow-blue" /></a></p>
+<p>The geoarrow C library is a geospatial type system and generic
+coordinate-shuffling library written in C with bindings in C++, R, and
+Python. The library supports well-known binary (WKB), well-known text
+(ISO) and <a class="reference external" href="https://github.com/geoarrow/geoarrow">geoarrow</a> encodings
+as Arrow extension types with all possible mutual conversions including
+support for Z, M, and ZM geometries.</p>
+<p>The library and bindings are still in draft form pending an initial
+release of the geoarrow specification.</p>
+<section id="get-started-in-python">
+<h2>Get started in Python<a class="headerlink" href="#get-started-in-python" title="Permalink to this heading">#</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">geoarrow.pyarrow</span> <span class="k">as</span> <span class="nn">ga</span>
+
+<span class="n">ga</span><span class="o">.</span><span class="n">point</span><span class="p">()</span>
+<span class="c1"># PointType(geoarrow.point)</span>
+<span class="n">ga</span><span class="o">.</span><span class="n">point</span><span class="p">()</span><span class="o">.</span><span class="n">storage_type</span>
+<span class="c1"># StructType(struct&lt;x: double, y: double&gt;)</span>
+<span class="n">ga</span><span class="o">.</span><span class="n">as_geoarrow</span><span class="p">([</span><span class="s2">&quot;POINT (0 1)&quot;</span><span class="p">])</span>
+<span class="c1"># PointArray:PointType(geoarrow.point)[1]</span>
+<span class="c1"># &lt;POINT (0 1)&gt;</span>
+</pre></div>
+</div>
+</section>
 <section id="contents">
 <h2>Contents<a class="headerlink" href="#contents" title="Permalink to this heading">#</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="c/index.html">C API Reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="python/index.html">Python API Reference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="python/index.html#examples">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="c/index.html">C/C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python/index.html">Python</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="python/index.html#contents">Contents</a></li>
 </ul>
 </li>
@@ -353,6 +369,7 @@ specification for implementors.</p>
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#get-started-in-python">Get started in Python</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#contents">Contents</a></li>
 </ul>
   </nav></div>
