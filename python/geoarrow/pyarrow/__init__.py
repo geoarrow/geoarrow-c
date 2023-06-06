@@ -11,6 +11,14 @@ from ..lib import GeometryType, Dimensions, CoordType, EdgeType, CrsType
 
 from ._type import (
     VectorType,
+    WktType,
+    WkbType,
+    PointType,
+    LinestringType,
+    PolygonType,
+    MultiPointType,
+    MultiLinestringType,
+    MultiPolygonType,
     wkb,
     large_wkb,
     wkt,

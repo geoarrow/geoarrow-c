@@ -4,6 +4,8 @@ from .. import lib
 
 
 class VectorType(pa.ExtensionType):
+    """Extension type base class for vector geometry types."""
+
     _extension_name = None
 
     # These are injected into the class when imported by the type and scalar
@@ -74,6 +76,9 @@ class VectorType(pa.ExtensionType):
         return VectorType._scalar_cls_from_name(self.extension_name)
 
     def from_geobuffers(self, *args, **kwargs):
+        """Create an array from the appropriate number of buffers
+        for this type.
+        """
         raise NotImplementedError()
 
     def _from_geobuffers_internal(self, args):
@@ -95,49 +100,135 @@ class VectorType(pa.ExtensionType):
 
     @property
     def id(self):
+        """A unique identifier for the memory layout of this type.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.wkb().id
+        100001
+        """
         return self._type.id
 
     @property
     def geometry_type(self):
+        """The :class:`geoarrow.GeometryType` of this type or ``GEOMETRY`` for
+        types where this is not constant (i.e., WKT and WKB).
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.wkb().geometry_type == ga.GeometryType.GEOMETRY
+        True
+        >>> ga.linestring().geometry_type == ga.GeometryType.LINESTRING
+        True
+        """
         return self._type.geometry_type
 
     @property
     def dimensions(self):
+        """The :class:`geoarrow.Dimensions` of this type or ``UNKNOWN`` for
+        types where this is not constant (i.e., WKT and WKT).
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.wkb().dimensions == ga.Dimensions.UNKNOWN
+        True
+        >>> ga.linestring().dimensions == ga.Dimensions.XY
+        True
+        """
         return self._type.dimensions
 
     @property
     def coord_type(self):
+        """The :class:`geoarrow.CoordType` of this type.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.linestring().coord_type == ga.CoordType.SEPARATE
+        True
+        >>> ga.linestring().with_coord_type(ga.CoordType.INTERLEAVED).coord_type
+        2
+        """
         return self._type.coord_type
 
     @property
     def edge_type(self):
+        """The :class:`geoarrow.EdgeType` of this type.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.linestring().edge_type == ga.EdgeType.PLANAR
+        True
+        >>> ga.linestring().with_edge_type(ga.EdgeType.SPHERICAL).edge_type
+        1
+        """
         return self._type.edge_type
 
     @property
     def crs_type(self):
+        """The :class:`geoarrow.CrsType` of the :attr:`crs` value.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.point().crs_type == ga.CrsType.NONE
+        True
+        >>> ga.point().with_crs("EPSG:1234").crs_type
+        1
+        """
         return self._type.crs_type
 
     @property
     def crs(self):
+        """The coordinate reference system of this type.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.point().with_crs("EPSG:1234").crs
+        'EPSG:1234'
+        """
         return self._type.crs.decode("UTF-8")
 
     def with_geometry_type(self, geometry_type):
+        """Returns a new type with the specified :class:`geoarrow.GeometryType`.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.point().with_geometry_type(ga.GeometryType.LINESTRING)
+        LinestringType(geoarrow.linestring)
+        """
         ctype = self._type.with_geometry_type(geometry_type)
         return _ctype_to_extension_type(ctype)
 
     def with_dimensions(self, dimensions):
+        """Returns a new type with the specified :class:`geoarrow.Dimensions`.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.point().with_dimensions(ga.Dimensions.XYZ)
+        PointType(geoarrow.point_z)
+        """
         ctype = self._type.with_dimensions(dimensions)
         return _ctype_to_extension_type(ctype)
 
     def with_coord_type(self, coord_type):
+        """Returns a new type with the specified :class:`geoarrow.CoordType`.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.point().with_coord_type(ga.CoordType.INTERLEAVED)
+        PointType(interleaved geoarrow.point)
+        """
         ctype = self._type.with_coord_type(coord_type)
         return _ctype_to_extension_type(ctype)
 
     def with_edge_type(self, edge_type):
+        """Returns a new type with the specified :class:`geoarrow.EdgeType`.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.linestring().with_edge_type(ga.EdgeType.SPHERICAL)
+        LinestringType(spherical geoarrow.linestring)
+        """
         ctype = self._type.with_edge_type(edge_type)
         return _ctype_to_extension_type(ctype)
 
     def with_crs(self, crs, crs_type=None):
+        """Returns a new type with the specified coordinate reference system
+        :class:`geoarrow.CrsType` combination. The ``crs_type`` defaults to
+        ``NONE`` if ``crs`` is ``None``, otherwise ``UNKNOWN``.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.linestring().with_crs("EPSG:1234")
+        LinestringType(geoarrow.linestring <EPSG:1234>)
+        """
         if crs_type is None and crs is None:
             ctype = self._type.with_crs(b"", lib.CrsType.NONE)
         elif crs_type is None:
@@ -153,6 +244,10 @@ class VectorType(pa.ExtensionType):
 
 
 class WkbType(VectorType):
+    """Extension type whose storage is a binary or large binary array of
+    well-known binary. Even though the draft specification currently mandates
+    ISO well-known binary, EWKB is supported by the parser.
+    """
     _extension_name = "geoarrow.wkb"
 
     def wrap_array(self, obj, validate=True):
@@ -160,6 +255,9 @@ class WkbType(VectorType):
 
 
 class WktType(VectorType):
+    """Extension type whose storage is a utf8 or large utf8 array of
+    well-known text.
+    """
     _extension_name = "geoarrow.wkt"
 
     def wrap_array(self, obj, validate=True):
@@ -167,6 +265,10 @@ class WktType(VectorType):
 
 
 class PointType(VectorType):
+    """Extension type whose storage is an array of points stored
+    as either a struct with one child per dimension or a fixed-size
+    list whose single child is composed of interleaved ordinate values.
+    """
     _extension_name = "geoarrow.point"
 
     def from_geobuffers(self, validity, x, y=None, z_or_m=None, m=None):
@@ -182,6 +284,9 @@ class PointType(VectorType):
 
 
 class LinestringType(VectorType):
+    """Extension type whose storage is an array of linestrings stored
+    as a list of points as described in :class:`PointType`.
+    """
     _extension_name = "geoarrow.linestring"
 
     def from_geobuffers(self, validity, coord_offsets, x, y=None, z_or_m=None, m=None):
@@ -198,6 +303,9 @@ class LinestringType(VectorType):
 
 
 class PolygonType(VectorType):
+    """Extension type whose storage is an array of polygons stored
+    as a list of a list of points as described in :class:`PointType`.
+    """
     _extension_name = "geoarrow.polygon"
 
     def from_geobuffers(
@@ -217,6 +325,9 @@ class PolygonType(VectorType):
 
 
 class MultiPointType(VectorType):
+    """Extension type whose storage is an array of polygons stored
+    as a list of points as described in :class:`PointType`.
+    """
     _extension_name = "geoarrow.multipoint"
 
     def from_geobuffers(self, validity, coord_offsets, x, y=None, z_or_m=None, m=None):
@@ -233,6 +344,9 @@ class MultiPointType(VectorType):
 
 
 class MultiLinestringType(VectorType):
+    """Extension type whose storage is an array of multilinestrings stored
+    as a list of a list of points as described in :class:`PointType`.
+    """
     _extension_name = "geoarrow.multilinestring"
 
     def from_geobuffers(
@@ -259,6 +373,9 @@ class MultiLinestringType(VectorType):
 
 
 class MultiPolygonType(VectorType):
+    """Extension type whose storage is an array of multilinestrings stored
+    as a list of a list of a list of points as described in :class:`PointType`.
+    """
     _extension_name = "geoarrow.multipolygon"
 
     def from_geobuffers(
@@ -320,42 +437,122 @@ def _make_default(geometry_type, cls):
 
 
 def wkb() -> WkbType:
+    """Well-known binary with a maximum array size of 2 GB per chunk.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.wkb()
+    WkbType(geoarrow.wkb)
+    >>> ga.wkb().storage_type
+    DataType(binary)
+    """
     return WkbType.__arrow_ext_deserialize__(pa.binary(), b"")
 
 
 def large_wkb() -> WkbType:
+    """Well-known binary using 64-bit integer offsets.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.large_wkb()
+    WkbType(geoarrow.wkb)
+    >>> ga.large_wkb().storage_type
+    DataType(large_binary)
+    """
     return WkbType.__arrow_ext_deserialize__(pa.large_binary(), b"")
 
 
 def wkt() -> WktType:
+    """Well-known text with a maximum array size of 2 GB per chunk.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.wkt()
+    WktType(geoarrow.wkt)
+    >>> ga.wkt().storage_type
+    DataType(string)
+    """
     return WktType.__arrow_ext_deserialize__(pa.utf8(), b"")
 
 
 def large_wkt() -> WktType:
+    """Well-known text using 64-bit integer offsets.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.large_wkt()
+    WktType(geoarrow.wkt)
+    >>> ga.large_wkt().storage_type
+    DataType(large_string)
+    """
     return WktType.__arrow_ext_deserialize__(pa.large_utf8(), b"")
 
 
 def point() -> PointType:
+    """Geoarrow-encoded point features.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.point()
+    PointType(geoarrow.point)
+    >>> ga.point().storage_type
+    StructType(struct<x: double, y: double>)
+    """
     return _make_default(lib.GeometryType.POINT, PointType)
 
 
 def linestring() -> PointType:
+    """Geoarrow-encoded line features.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.linestring()
+    LinestringType(geoarrow.linestring)
+    >>> ga.linestring().storage_type
+    ListType(list<vertices: struct<x: double, y: double>>)
+    """
     return _make_default(lib.GeometryType.LINESTRING, LinestringType)
 
 
 def polygon() -> PolygonType:
+    """Geoarrow-encoded polygon features.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.polygon()
+    PolygonType(geoarrow.polygon)
+    >>> ga.polygon().storage_type
+    ListType(list<rings: list<vertices: struct<x: double, y: double>>>)
+    """
     return _make_default(lib.GeometryType.POLYGON, PolygonType)
 
 
 def multipoint() -> MultiPointType:
+    """Geoarrow-encoded multipoint features.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.multipoint()
+    MultiPointType(geoarrow.multipoint)
+    >>> ga.multipoint().storage_type
+    ListType(list<points: struct<x: double, y: double>>)
+    """
     return _make_default(lib.GeometryType.MULTIPOINT, MultiPointType)
 
 
 def multilinestring() -> MultiLinestringType:
+    """Geoarrow-encoded multilinestring features.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.multilinestring()
+    MultiLinestringType(geoarrow.multilinestring)
+    >>> ga.multilinestring().storage_type
+    ListType(list<linestrings: list<vertices: struct<x: double, y: double>>>)
+    """
     return _make_default(lib.GeometryType.MULTILINESTRING, MultiLinestringType)
 
 
 def multipolygon() -> MultiPolygonType:
+    """Geoarrow-encoded polygon features.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.multipolygon()
+    MultiPolygonType(geoarrow.multipolygon)
+    >>> ga.multipolygon().storage_type
+    ListType(list<polygons: list<rings: list<vertices: struct<x: double, y: double>>>>)
+    """
     return _make_default(lib.GeometryType.MULTIPOLYGON, MultiPolygonType)
 
 
@@ -367,6 +564,12 @@ def vector_type(
     crs=None,
     crs_type=None,
 ) -> VectorType:
+    """Generic vector geometry type constructor.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.vector_type(ga.GeometryType.POINT, crs="EPSG:1234")
+    PointType(geoarrow.point <EPSG:1234>)
+    """
     ctype = lib.CVectorType.Make(geometry_type, dimensions, coord_type)
     cls = type_cls_from_name(ctype.extension_name)
     return cls(ctype).with_edge_type(edge_type).with_crs(crs, crs_type)
@@ -376,6 +579,10 @@ _extension_types_registered = False
 
 
 def register_extension_types(lazy=True):
+    """Register the extension types in the geoarrow namespace with the pyarrow
+    registry. This enables geoarrow types to be read, written, imported, and
+    exported like any other Arrow type.
+    """
     global _extension_types_registered
 
     if lazy and _extension_types_registered is True:
@@ -409,6 +616,8 @@ def register_extension_types(lazy=True):
 
 
 def unregister_extension_types(lazy=True):
+    """Unregister extension types in the geoarrow namespace.
+    """
     global _extension_types_registered
 
     if lazy and _extension_types_registered is False:

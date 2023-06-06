@@ -1,13 +1,12 @@
 
-Python API
-===================
-
-.. automodule:: geoarrow
+Python
+======
 
 Contents
 --------
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
 
-   PyArrow integration <pyarrow>
+    GeoArrow core library <geoarrow>
+    PyArrow integration <pyarrow>
