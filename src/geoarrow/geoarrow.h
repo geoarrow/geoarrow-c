@@ -19,41 +19,98 @@ extern "C" {
 /// definitions and encourages clients to stack or statically allocate
 /// where convenient.
 
+
+/// \defgroup geoarrow-errors Error Handling
+///
+/// The geoarrow C library follows the same error idioms as the nanoarrow C
+/// library: GEOARROW_OK is returned on success, and a GeoArrowError is populated
+/// with a null-terminated error message otherwise if there is an opportunity to
+/// provide one. The provided GeoArrowError can always be NULL if a detailed message
+/// is not important to the caller. Pointer output arguments are not modified unless
+/// GEOARROW_OK is returned.
+///
+/// @{
+
+/// \brief Populate a GeoArrowError using a printf-style format string
 GeoArrowErrorCode GeoArrowErrorSet(struct GeoArrowError* error, const char* fmt, ...);
 
+/// @}
+
+/// \defgroup geoarrow-schema Schema creation and inspection
+///
+/// The ArrowSchema is the ABI-stable way to communicate type information using the
+/// Arrow C Data interface. These functions export ArrowSchema objects or parse
+/// their content into a more easily inspectable object. All unique memory layouts
+/// have a GeoArrowType identifier, most of which can be decomposed into
+/// GeoArrowGeometryType, GeoArrowDimensions, and GeoArrowCoordType.
+///
+/// In addition to memory layout, these functions provide a mechanism to serialize
+/// and deserialize Arrow extension type information. The serialization format
+/// is a JSON object and three keys are currently encoded: crs_type, crs, and
+/// edge_type. The embedded parser is not a complete JSON parser and in some
+/// circumstances will accept or transport invalid JSON without erroring.
+///
+/// Serializing extension type information into an ArrowSchema and parsing an
+/// ArrowSchema is expensive and should be avoided where possible.
+///
+/// @{
+
+/// \brief Initialize an ArrowSchema with a geoarrow storage type
 GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowType type);
 
+/// \brief Initialize an ArrowSchema with a geoarrow extension type
 GeoArrowErrorCode GeoArrowSchemaInitExtension(struct ArrowSchema* schema,
                                               enum GeoArrowType type);
 
+/// \brief Parse an ArrowSchema extension type into a GeoArrowSchemaView
 GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
                                          struct ArrowSchema* schema,
                                          struct GeoArrowError* error);
 
+/// \brief Parse an ArrowSchema storage type into a GeoArrowSchemaView
 GeoArrowErrorCode GeoArrowSchemaViewInitFromStorage(
     struct GeoArrowSchemaView* schema_view, struct ArrowSchema* schema,
     struct GeoArrowStringView extension_name, struct GeoArrowError* error);
 
+/// \brief Initialize a GeoArrowSchemaView directly from a GeoArrowType identifier
 GeoArrowErrorCode GeoArrowSchemaViewInitFromType(struct GeoArrowSchemaView* schema_view,
                                                  enum GeoArrowType type);
 
+/// \brief Initialize a GeoArrowSchemaView directly from a GeoArrowType identifier
 GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata_view,
                                            struct GeoArrowStringView metadata,
                                            struct GeoArrowError* error);
 
+/// \brief Serialize parsed metadata into JSON
 int64_t GeoArrowMetadataSerialize(const struct GeoArrowMetadataView* metadata_view,
                                   char* out, int64_t n);
 
+/// \brief Update extension metadata associated with an existing ArrowSchema
 GeoArrowErrorCode GeoArrowSchemaSetMetadata(
     struct ArrowSchema* schema, const struct GeoArrowMetadataView* metadata_view);
 
+/// \brief Deprecated function used for backward compatability with very early
+/// versions of geoarrow
 GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
     struct ArrowSchema* schema, const struct GeoArrowMetadataView* metadata_view);
 
+/// \brief Update extension metadata associated with an existing ArrowSchema
+/// based on the extension metadata of another
 GeoArrowErrorCode GeoArrowSchemaSetMetadataFrom(struct ArrowSchema* schema,
                                                 struct ArrowSchema* schema_src);
 
+/// \brief Unescape a coordinate reference system value
+///
+/// The crs member of the GeoArrowMetadataView is a view into the extension metadata;
+/// however, in some cases this will be a quoted string (i.e., `"EPSG:4326"`) and in
+/// others it will be a JSON object (i.e., PROJJSON like
+/// `{"some key": "some value", ..}`). When passing this string elsewhere, you will
+/// almost always want the quoted value to be unescaped (i.e., the JSON string value),
+/// but the JSON object to remain as-is. GeoArrowUnescapeCrs() performs this logic
+/// based on the value of the first character.
 int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n);
+
+/// @}
 
 GeoArrowErrorCode GeoArrowArrayViewInitFromType(struct GeoArrowArrayView* array_view,
                                                 enum GeoArrowType type);
@@ -171,120 +228,5 @@ void GeoArrowBuilderReset(struct GeoArrowBuilder* builder);
 #endif
 
 #include "geoarrow_type_inline.h"
-
-// These functions have to live here because they are inline but use non-inline
-// functions too.
-
-static inline GeoArrowErrorCode GeoArrowBuilderAppendBuffer(
-    struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value) {
-  if (!GeoArrowBuilderBufferCheck(builder, i, value.size_bytes)) {
-    int result = GeoArrowBuilderReserveBuffer(builder, i, value.size_bytes);
-    if (result != GEOARROW_OK) {
-      return result;
-    }
-  }
-
-  GeoArrowBuilderAppendBufferUnsafe(builder, i, value);
-  return GEOARROW_OK;
-}
-
-static inline GeoArrowErrorCode GeoArrowBuilderCoordsReserve(
-    struct GeoArrowBuilder* builder, int64_t additional_size_coords) {
-  if (GeoArrowBuilderCoordsCheck(builder, additional_size_coords)) {
-    return GEOARROW_OK;
-  }
-
-  struct GeoArrowWritableCoordView* writable_view = &builder->view.coords;
-  int result;
-  int64_t last_buffer = builder->view.n_buffers - 1;
-  int n_values = writable_view->n_values;
-
-  switch (builder->view.schema_view.coord_type) {
-    case GEOARROW_COORD_TYPE_INTERLEAVED:
-      // Sync the coord view size back to the buffer size
-      builder->view.buffers[last_buffer].size_bytes =
-          writable_view->size_coords * sizeof(double) * n_values;
-
-      // Use the normal reserve
-      result = GeoArrowBuilderReserveBuffer(
-          builder, last_buffer, additional_size_coords * sizeof(double) * n_values);
-      if (result != GEOARROW_OK) {
-        return result;
-      }
-
-      // Sync the capacity and pointers back to the writable view
-      writable_view->capacity_coords =
-          builder->view.buffers[last_buffer].capacity_bytes / sizeof(double) / n_values;
-      for (int i = 0; i < n_values; i++) {
-        writable_view->values[i] = builder->view.buffers[last_buffer].data.as_double + i;
-      }
-
-      return GEOARROW_OK;
-
-    case GEOARROW_COORD_TYPE_SEPARATE:
-      for (int64_t i = last_buffer - n_values + 1; i <= last_buffer; i++) {
-        // Sync the coord view size back to the buffer size
-        builder->view.buffers[i].size_bytes = writable_view->size_coords * sizeof(double);
-
-        // Use the normal reserve
-        result = GeoArrowBuilderReserveBuffer(builder, i,
-                                              additional_size_coords * sizeof(double));
-        if (result != GEOARROW_OK) {
-          return result;
-        }
-      }
-
-      // Sync the capacity and pointers back to the writable view
-      writable_view->capacity_coords =
-          builder->view.buffers[last_buffer].capacity_bytes / sizeof(double);
-      for (int i = 0; i < n_values; i++) {
-        writable_view->values[i] =
-            builder->view.buffers[last_buffer - n_values + 1 + i].data.as_double;
-      }
-
-      return GEOARROW_OK;
-    default:
-      // Beacuse there is no include <errno.h> here yet
-      return -1;
-  }
-}
-
-static inline GeoArrowErrorCode GeoArrowBuilderCoordsAppend(
-    struct GeoArrowBuilder* builder, const struct GeoArrowCoordView* coords,
-    enum GeoArrowDimensions dimensions, int64_t offset, int64_t n) {
-  if (!GeoArrowBuilderCoordsCheck(builder, n)) {
-    int result = GeoArrowBuilderCoordsReserve(builder, n);
-    if (result != GEOARROW_OK) {
-      return result;
-    }
-  }
-
-  GeoArrowBuilderCoordsAppendUnsafe(builder, coords, dimensions, offset, n);
-  return GEOARROW_OK;
-}
-
-static inline GeoArrowErrorCode GeoArrowBuilderOffsetReserve(
-    struct GeoArrowBuilder* builder, int32_t i, int64_t additional_size_elements) {
-  if (GeoArrowBuilderOffsetCheck(builder, i, additional_size_elements)) {
-    return GEOARROW_OK;
-  }
-
-  return GeoArrowBuilderReserveBuffer(builder, i + 1,
-                                      additional_size_elements * sizeof(int32_t));
-}
-
-static inline GeoArrowErrorCode GeoArrowBuilderOffsetAppend(
-    struct GeoArrowBuilder* builder, int32_t i, int32_t* data,
-    int64_t additional_size_elements) {
-  if (!GeoArrowBuilderOffsetCheck(builder, i, additional_size_elements)) {
-    int result = GeoArrowBuilderOffsetReserve(builder, i, additional_size_elements);
-    if (result != GEOARROW_OK) {
-      return result;
-    }
-  }
-
-  GeoArrowBuilderOffsetAppendUnsafe(builder, i, data, additional_size_elements);
-  return GEOARROW_OK;
-}
 
 #endif
