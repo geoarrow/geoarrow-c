@@ -112,23 +112,90 @@ int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n)
 
 /// @}
 
+/// \defgroup geoarrow-array_view Array inspection
+///
+/// The GeoArrowArrayView is the primary means by which an ArrowArray of a
+/// valid type can be inspected. The GeoArrowArrayView is intended to be
+/// initialized once for a given type and re-used for multiple arrays
+/// (e.g., in a stream).
+///
+/// @{
+
+/// \brief Initialize a GeoArrowArrayView from a GeoArrowType identifier
 GeoArrowErrorCode GeoArrowArrayViewInitFromType(struct GeoArrowArrayView* array_view,
                                                 enum GeoArrowType type);
 
+/// \brief Initialize a GeoArrowArrayView from an ArrowSchema
 GeoArrowErrorCode GeoArrowArrayViewInitFromSchema(struct GeoArrowArrayView* array_view,
                                                   struct ArrowSchema* schema,
                                                   struct GeoArrowError* error);
 
+/// \brief Populate the members of the GeoArrowArrayView from an ArrowArray
 GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view,
                                             struct ArrowArray* array,
                                             struct GeoArrowError* error);
 
+/// \brief Visit the features of a GeoArrowArrayView
 GeoArrowErrorCode GeoArrowArrayViewVisit(struct GeoArrowArrayView* array_view,
                                          int64_t offset, int64_t length,
                                          struct GeoArrowVisitor* v);
 
+/// @}
+
+
+/// \defgroup geoarrow-compute Transform Arrays
+///
+/// The GeoArrow C library provides limited support for transforming arrays.
+/// Notably, it provides support for parsing WKT and WKB into GeoArrow
+/// native encoding and serializing GeoArrow arrays to WKT and/or WKB.
+///
+/// @{
+
+/// \brief Initialize a GeoArrowVisitor with a visitor that does nothing
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
+/// \brief Initialize a GeoArrowKernel
+///
+/// The GeoArrowKernel is a generalization of the compute operations available
+/// in this build of the GeoArrow C library. Two types of kernels are implemented:
+/// scalar and aggregate. Scalar kernels always output an `ArrowArray` of the same
+/// length as the input from `push_batch()` and do not output an `ArrowArray` from
+/// `finish()`; aggregate kernels do not output an `ArrowArray` from `push_batch()`
+/// and output a single `ArrowArray` from `finish()` with no constraint on the length
+/// of the array that is produced. This is intended to minimize the number of patterns
+/// needed in wrapper code rather than be a perfect abstraction of a compute function.
+///
+/// - void: Scalar kernel that outputs a null array of the same length as the input
+///   for each batch.
+/// - void_agg: Aggregate kernel that outputs a null array of length 1 for any number
+///   of inputs.
+/// - visit_void_agg: Aggregate kernel that visits every coordinate of every feature
+///   of the input, outputting a null array of length 1 for any number of inputs.
+///   This is useful for validating well-known text and well-known binary as it will
+///   error for input that cannot be visited completely.
+/// - as_wkt: Scalar kernel that outputs the well-known text version of the input
+///   as faithfully as possible (including transferring metadata from the input).
+///   Arrays with valid `GeoArrowType`s are supported.
+/// - as_wkb: Scalar kernel that outputs the well-known binary version of the input
+///   as faithfully as possible (including transferring metadata from the input).
+///   Arrays with valid `GeoArrowType`s are supported.
+/// - as_geoarrow: Scalar kernel that outputs the GeoArrow version of the input
+///   as faithfully as possible (including transferring metadata from the input).
+///   Arrays with valid `GeoArrowType`s are supported.
+/// - format_wkt: A variation on as_wkt that supports options `significant_digits`
+///   and `max_element_size_bytes`. This kernel is lazy and does not visit an entire
+///   feature beyond that required for `max_element_size_bytes`.
+/// - unique_geometry_types_agg: An aggregate kernel that collects unique geometry
+///   types in the input. The output is a single int32 array of ISO WKB type codes.
+/// - box: A scalar kernel that returns the 2-dimensional bounding box by feature.
+///   the output bounding box is represented as a struct array with column order
+///   xmin, xmax, ymin, ymax. Null features are recorded as a null item in the
+///   output; empty features are recorded as Inf, -Inf, Inf, -Inf.
+/// - box_agg: An aggregate kernel that returns the 2-dimensional bounding box
+///   containing all features of the input in the same form as the box kernel.
+///   the result is always length one and is never null. For the purposes of this
+///   kernel, null are treated as empty.
+///
 GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* name,
                                      const char* options);
 
@@ -188,6 +255,8 @@ void GeoArrowWKBReaderReset(struct GeoArrowWKBReader* reader);
 GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowBufferView src,
                                          struct GeoArrowVisitor* v);
+
+/// @}
 
 GeoArrowErrorCode GeoArrowBuilderInitFromType(struct GeoArrowBuilder* builder,
                                               enum GeoArrowType type);
