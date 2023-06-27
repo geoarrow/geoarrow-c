@@ -19,7 +19,6 @@ extern "C" {
 /// definitions and encourages clients to stack or statically allocate
 /// where convenient.
 
-
 /// \defgroup geoarrow-errors Error Handling
 ///
 /// The geoarrow C library follows the same error idioms as the nanoarrow C
@@ -142,7 +141,6 @@ GeoArrowErrorCode GeoArrowArrayViewVisit(struct GeoArrowArrayView* array_view,
 
 /// @}
 
-
 /// \defgroup geoarrow-compute Transform Arrays
 ///
 /// The GeoArrow C library provides limited support for transforming arrays.
@@ -162,8 +160,14 @@ void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 /// length as the input from `push_batch()` and do not output an `ArrowArray` from
 /// `finish()`; aggregate kernels do not output an `ArrowArray` from `push_batch()`
 /// and output a single `ArrowArray` from `finish()` with no constraint on the length
-/// of the array that is produced. This is intended to minimize the number of patterns
-/// needed in wrapper code rather than be a perfect abstraction of a compute function.
+/// of the array that is produced. For both kernel types, the `ArrowSchema` of the
+/// output is returned by the `start()` method, where `options` (serialized in the
+/// same form as the `ArrowSchema` metadata member) can also be passed. Current
+/// implementations do not validate options except to the extent needed to avoid
+/// a crash.
+///
+/// This is intended to minimize the number of patterns needed in wrapper code rather than
+/// be a perfect abstraction of a compute function.
 ///
 /// - void: Scalar kernel that outputs a null array of the same length as the input
 ///   for each batch.
@@ -181,7 +185,8 @@ void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 ///   Arrays with valid `GeoArrowType`s are supported.
 /// - as_geoarrow: Scalar kernel that outputs the GeoArrow version of the input
 ///   as faithfully as possible (including transferring metadata from the input).
-///   Arrays with valid `GeoArrowType`s are supported.
+///   Arrays with valid `GeoArrowType`s are supported. The type of the output is
+///   controlled by the `type` option, specified as a `GeoArrowType` cast to integer.
 /// - format_wkt: A variation on as_wkt that supports options `significant_digits`
 ///   and `max_element_size_bytes`. This kernel is lazy and does not visit an entire
 ///   feature beyond that required for `max_element_size_bytes`.
