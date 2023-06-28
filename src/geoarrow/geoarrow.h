@@ -136,15 +136,83 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
 
 /// @}
 
+/// \defgroup geoarrow-builder Array creation
+///
+/// The GeoArrowBuilder supports creating GeoArrow-encoded arrays. There are
+/// three ways to do so:
+///
+/// - Build the individual buffers yourself and transfer ownership to the
+///   array for each using GeoArrowBuilderSetOwnedBuffer()
+/// - Append the appropriate values to each buffer in-place using
+///   GeoArrowBuilderAppendBuffer()
+/// - Use GeoArrowBuilderInitVisitor() and let the visitor build the buffers
+///   for you.
+///
+/// For all methods you can re-use the builder object for multiple batches
+/// and call GeoArrowBuilderFinish() multiple times. You should
+/// use the same mechanism for building an array when reusing a builder
+/// object.
+///
+/// The GeoArrowBuilder models GeoArrow arrays as a sequence of buffers numbered
+/// from the outer array inwards. The 0th buffer is always the validity buffer
+/// and can be omitted for arrays that contain no null features. This is followed
+/// by between 0 (point) and 3 (multipolygon) int32 offset buffers and between
+/// 1 (interleaved) and 4 (xyzm struct) double buffers representing coordinate
+/// values. The GeoArrowBuilder omits validity buffers for inner arrays since
+/// the GeoArrow specification states that these arrays must contain zero nulls.
+///
+/// @{
+
+/// \brief Initialize memory for a GeoArrowBuilder based on a GeoArrowType identifier
+GeoArrowErrorCode GeoArrowBuilderInitFromType(struct GeoArrowBuilder* builder,
+                                              enum GeoArrowType type);
+
+/// \brief Initialize memory for a GeoArrowBuilder based on an ArrowSchema
+GeoArrowErrorCode GeoArrowBuilderInitFromSchema(struct GeoArrowBuilder* builder,
+                                                struct ArrowSchema* schema,
+                                                struct GeoArrowError* error);
+
+/// \brief Reserve additional space for a buffer in a GeoArrowBuilder
+GeoArrowErrorCode GeoArrowBuilderReserveBuffer(struct GeoArrowBuilder* builder, int64_t i,
+                                               int64_t additional_size_bytes);
+
+/// \brief Check if a call to GeoArrowBuilderReserveBuffer() is needed
+static inline int GeoArrowBuilderBufferCheck(struct GeoArrowBuilder* builder, int64_t i,
+                                             int64_t additional_size_bytes);
+
+/// \brief Append data to a buffer in a GeoArrowBuilder without checking if a reserve
+/// is needed
+static inline void GeoArrowBuilderAppendBufferUnsafe(struct GeoArrowBuilder* builder,
+                                                     int64_t i,
+                                                     struct GeoArrowBufferView value);
+
+/// \brief Append data to a buffer in a GeoArrowBuilder
+static inline GeoArrowErrorCode GeoArrowBuilderAppendBuffer(
+    struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value);
+
+/// \brief Replace a buffer with one whose lifecycle is externally managed.
+GeoArrowErrorCode GeoArrowBuilderSetOwnedBuffer(
+    struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value,
+    void (*custom_free)(uint8_t* ptr, int64_t size, void* private_data),
+    void* private_data);
+
+/// \brief Finish an ArrowArray containing the built input
+///
+/// This function can be called more than once to support multiple batches.
+GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
+                                        struct ArrowArray* array,
+                                        struct GeoArrowError* error);
+
+/// \brief Free resources held by a GeoArrowBuilder
+void GeoArrowBuilderReset(struct GeoArrowBuilder* builder);
+
+/// @}
+
 /// \defgroup geoarrow-kernels Transform Arrays
 ///
 /// The GeoArrow C library provides limited support for transforming arrays.
 /// Notably, it provides support for parsing WKT and WKB into GeoArrow
 /// native encoding and serializing GeoArrow arrays to WKT and/or WKB.
-///
-/// @{
-
-/// \brief Initialize a GeoArrowKernel
 ///
 /// The GeoArrowKernel is a generalization of the compute operations available
 /// in this build of the GeoArrow C library. Two types of kernels are implemented:
@@ -194,6 +262,12 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
 ///   the result is always length one and is never null. For the purposes of this
 ///   kernel, nulls are treated as empty.
 ///
+/// @{
+
+/// \brief Initialize memory for a GeoArrowKernel
+///
+/// If GEOARROW_OK is returned, the caller is responsible for calling the embedded
+/// release callback to free any resources that were allocated.
 GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* name,
                                      const char* options);
 
@@ -324,6 +398,7 @@ void GeoArrowWKBWriterReset(struct GeoArrowWKBWriter* writer);
 
 /// \brief Well-known binary (ISO or EWKB) reader
 struct GeoArrowWKBReader {
+  /// \brief Implmentation-specific data
   void* private_data;
 };
 
@@ -345,37 +420,6 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
 void GeoArrowWKBReaderReset(struct GeoArrowWKBReader* reader);
 
 /// @}
-
-GeoArrowErrorCode GeoArrowBuilderInitFromType(struct GeoArrowBuilder* builder,
-                                              enum GeoArrowType type);
-
-GeoArrowErrorCode GeoArrowBuilderInitFromSchema(struct GeoArrowBuilder* builder,
-                                                struct ArrowSchema* schema,
-                                                struct GeoArrowError* error);
-
-GeoArrowErrorCode GeoArrowBuilderReserveBuffer(struct GeoArrowBuilder* builder, int64_t i,
-                                               int64_t additional_size_bytes);
-
-static inline int GeoArrowBuilderBufferCheck(struct GeoArrowBuilder* builder, int64_t i,
-                                             int64_t additional_size_bytes);
-
-static inline void GeoArrowBuilderAppendBufferUnsafe(struct GeoArrowBuilder* builder,
-                                                     int64_t i,
-                                                     struct GeoArrowBufferView value);
-
-static inline GeoArrowErrorCode GeoArrowBuilderAppendBuffer(
-    struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value);
-
-GeoArrowErrorCode GeoArrowBuilderSetOwnedBuffer(
-    struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value,
-    void (*custom_free)(uint8_t* ptr, int64_t size, void* private_data),
-    void* private_data);
-
-GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
-                                        struct ArrowArray* array,
-                                        struct GeoArrowError* error);
-
-void GeoArrowBuilderReset(struct GeoArrowBuilder* builder);
 
 #ifdef __cplusplus
 }
