@@ -96,36 +96,51 @@ struct ArrowArrayStream {
 #endif  // ARROW_C_STREAM_INTERFACE
 #endif  // ARROW_FLAG_DICTIONARY_ORDERED
 
-typedef int GeoArrowErrorCode;
-
+/// \brief Return code for success
+/// \ingroup geoarrow-utility
 #define GEOARROW_OK 0
 
-struct GeoArrowStringView {
-  const char* data;
-  int64_t size_bytes;
-};
-
-struct GeoArrowBufferView {
-  const uint8_t* data;
-  int64_t size_bytes;
-};
-
-struct GeoArrowWritableBufferView {
-  union {
-    void* data;
-    char* as_char;
-    uint8_t* as_uint8;
-    int32_t* as_int32;
-    double* as_double;
-  } data;
-  int64_t size_bytes;
-  int64_t capacity_bytes;
-};
+/// \brief Represents an errno-compatible error code
+/// \ingroup geoarrow-utility
+typedef int GeoArrowErrorCode;
 
 struct GeoArrowError {
   char message[1024];
 };
 
+/// \brief A read-only view of a string
+/// \ingroup geoarrow-utility
+struct GeoArrowStringView {
+  /// \brief Pointer to the beginning of the string. May be NULL if size_bytes is 0.
+  /// there is no requirement that the strig is null-terminated.
+  const char* data;
+
+  /// \brief The size of the string in bytes
+  int64_t size_bytes;
+};
+
+/// \brief A read-only view of a buffer
+/// \ingroup geoarrow-utility
+struct GeoArrowBufferView {
+  /// \brief Pointer to the beginning of the string. May be NULL if size_bytes is 0.
+  const uint8_t* data;
+
+  /// \brief The size of the buffer in bytes
+  int64_t size_bytes;
+};
+
+/// \brief Type identifier for types supported by this library
+/// \ingroup geoarrow-schema
+///
+/// It is occasionally useful to represent each unique memory layout
+/// with a single type identifier. These types include both the serialized
+/// representations and the GeoArrow-native representations. Type identifiers
+/// for GeoArrow-native representations can be decomposed into or reconstructed
+/// from GeoArrowGeometryType, GeoArrowDimensions, and GeoArrowCoordType.
+///
+/// The values of this enum are chosen to support efficient decomposition
+/// and/or reconstruction into the components that make up this value; however,
+/// these values are not guaranteed to be stable.
 enum GeoArrowType {
   GEOARROW_TYPE_UNINITIALIZED = 0,
 
@@ -189,6 +204,11 @@ enum GeoArrowType {
   GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM = 13006
 };
 
+/// \brief Geometry type identifiers supported by GeoArrow
+/// \ingroup geoarrow-schema
+///
+/// The values of this enum are intentionally chosen to be equivalent to
+/// well-known binary type identifiers.
 enum GeoArrowGeometryType {
   GEOARROW_GEOMETRY_TYPE_GEOMETRY = 0,
   GEOARROW_GEOMETRY_TYPE_POINT = 1,
@@ -200,6 +220,8 @@ enum GeoArrowGeometryType {
   GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION = 7
 };
 
+/// \brief Dimension combinations supported by GeoArrow
+/// \ingroup geoarrow-schema
 enum GeoArrowDimensions {
   GEOARROW_DIMENSIONS_UNKNOWN = 0,
   GEOARROW_DIMENSIONS_XY = 1,
@@ -208,14 +230,20 @@ enum GeoArrowDimensions {
   GEOARROW_DIMENSIONS_XYZM = 4
 };
 
+/// \brief Coordinate types supported by GeoArrow
+/// \ingroup geoarrow-schema
 enum GeoArrowCoordType {
   GEOARROW_COORD_TYPE_UNKNOWN = 0,
   GEOARROW_COORD_TYPE_SEPARATE = 1,
   GEOARROW_COORD_TYPE_INTERLEAVED = 2
 };
 
+/// \brief Edge types/interpolations supported by GeoArrow
+/// \ingroup geoarrow-schema
 enum GeoArrowEdgeType { GEOARROW_EDGE_TYPE_PLANAR, GEOARROW_EDGE_TYPE_SPHERICAL };
 
+/// \brief Coordinate reference system types supported by GeoArrow
+/// \ingroup geoarrow-schema
 enum GeoArrowCrsType {
   GEOARROW_CRS_TYPE_NONE,
   GEOARROW_CRS_TYPE_UNKNOWN,
@@ -239,6 +267,29 @@ struct GeoArrowMetadataView {
   struct GeoArrowStringView crs;
 };
 
+/// \brief Union type representing a pointer to modifiable data
+/// \ingroup geoarrow-builder
+union GeoArrowWritableBufferViewData {
+  void* data;
+  char* as_char;
+  uint8_t* as_uint8;
+  int32_t* as_int32;
+  double* as_double;
+};
+
+/// \brief A view of a modifiable buffer
+/// \ingroup geoarrow-builder
+struct GeoArrowWritableBufferView {
+  /// \brief Pointer to the beginning of the data. May be NULL if capacity_bytes is 0.
+  union GeoArrowWritableBufferViewData data;
+
+  /// \brief The size of the buffer in bytes
+  int64_t size_bytes;
+
+  /// \brief The modifiable capacity of the buffer in bytes
+  int64_t capacity_bytes;
+};
+
 struct GeoArrowCoordView {
   const double* values[4];
   int64_t n_coords;
@@ -255,7 +306,7 @@ struct GeoArrowWritableCoordView {
 };
 
 #define GEOARROW_COORD_VIEW_VALUE(coords_, row_, col_) \
-  coords_->values[col_][(row_)*coords_->coords_stride]
+  (coords_)->values[(col_)][(row_) * (coords_)->coords_stride]
 
 struct GeoArrowArrayView {
   struct GeoArrowSchemaView schema_view;

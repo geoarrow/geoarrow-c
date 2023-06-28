@@ -19,7 +19,7 @@ extern "C" {
 /// definitions and encourages clients to stack or statically allocate
 /// where convenient.
 
-/// \defgroup geoarrow-errors Error Handling
+/// \defgroup geoarrow-utility Utilities and error Handling
 ///
 /// The geoarrow C library follows the same error idioms as the nanoarrow C
 /// library: GEOARROW_OK is returned on success, and a GeoArrowError is populated
