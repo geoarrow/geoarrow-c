@@ -324,6 +324,7 @@ struct GeoArrowWritableBufferView {
 };
 
 /// \brief A generic view of coordinates from a GeoArrow array
+/// \ingroup geoarrow-array_view
 ///
 /// This view is capable of representing both struct and interleaved coordinates.
 /// Use GEOARROW_COORD_VIEW_VALUE() to generically access an ordinate.
@@ -371,32 +372,73 @@ struct GeoArrowWritableCoordView {
 
 /// \brief Generically get or set an ordinate from a GeoArrowWritableCoordView or
 /// a GeoArrowCoordView.
+/// \ingroup geoarrow-array_view
 #define GEOARROW_COORD_VIEW_VALUE(coords_, row_, col_) \
   (coords_)->values[(col_)][(row_) * (coords_)->coords_stride]
 
+/// \brief A parsed view of memory from a GeoArrow-encoded array
+/// \ingroup geoarrow-array_view
+///
+/// This definition may change to more closely match the GeoArrowWritableArrayView
+/// in the future.
 struct GeoArrowArrayView {
+  /// \brief Type information for the array represented by this view
   struct GeoArrowSchemaView schema_view;
+
+  /// \brief The logical offset to apply into this array
   int64_t offset;
+
+  /// \brief The number of elements in this array
   int64_t length;
+
+  /// \brief The validity bitmap for this array
   const uint8_t* validity_bitmap;
+
+  /// \brief The number of offset buffers for the type represented by this array
   int32_t n_offsets;
+
+  /// \brief Pointers to the beginning of each offset buffer
   const int32_t* offsets[3];
+
+  /// \brief The first offset value in each offset bufer
   int32_t first_offset[3];
+
+  /// \brief The last offset value in each offset bufer
   int32_t last_offset[3];
+
+  /// \brief Generic view of the coordinates in this array
   struct GeoArrowCoordView coords;
 };
 
+/// \brief Structured view of writable memory managed by the GeoArrowBuilder
+/// \ingroup geoarrow-builder
 struct GeoArrowWritableArrayView {
+  /// \brief Type information for the array being built
   struct GeoArrowSchemaView schema_view;
+
+  /// \brief The number of elements that have been added to this array
   int64_t length;
+
+  /// \brief The number of buffers required to represent this type
   int64_t n_buffers;
+
+  /// \brief The number of offset buffers for the array being built
   int32_t n_offsets;
+
+  /// \brief Views into writable memory managed by the GeoArrowBuilder
   struct GeoArrowWritableBufferView buffers[8];
+
+  /// \brief View of writable coordinate memory managed by the GeoArrowBuilder
   struct GeoArrowWritableCoordView coords;
 };
 
+/// \brief Builder for GeoArrow-encoded arrays
+/// \ingroup geoarrow-builder
 struct GeoArrowBuilder {
+  /// \brief Structured view of the memory managed privately in private_data
   struct GeoArrowWritableArrayView view;
+
+  /// \brief Implementation-specific data
   void* private_data;
 };
 
