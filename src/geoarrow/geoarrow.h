@@ -134,23 +134,15 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
                                             struct ArrowArray* array,
                                             struct GeoArrowError* error);
 
-/// \brief Visit the features of a GeoArrowArrayView
-GeoArrowErrorCode GeoArrowArrayViewVisit(struct GeoArrowArrayView* array_view,
-                                         int64_t offset, int64_t length,
-                                         struct GeoArrowVisitor* v);
-
 /// @}
 
-/// \defgroup geoarrow-compute Transform Arrays
+/// \defgroup geoarrow-kernels Transform Arrays
 ///
 /// The GeoArrow C library provides limited support for transforming arrays.
 /// Notably, it provides support for parsing WKT and WKB into GeoArrow
 /// native encoding and serializing GeoArrow arrays to WKT and/or WKB.
 ///
 /// @{
-
-/// \brief Initialize a GeoArrowVisitor with a visitor that does nothing
-void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
 /// \brief Initialize a GeoArrowKernel
 ///
@@ -167,7 +159,8 @@ void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 /// a crash.
 ///
 /// This is intended to minimize the number of patterns needed in wrapper code rather than
-/// be a perfect abstraction of a compute function.
+/// be a perfect abstraction of a compute function. Similarly, these kernels are optimized
+/// for type coverage rather than performance.
 ///
 /// - void: Scalar kernel that outputs a null array of the same length as the input
 ///   for each batch.
@@ -199,67 +192,157 @@ void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 /// - box_agg: An aggregate kernel that returns the 2-dimensional bounding box
 ///   containing all features of the input in the same form as the box kernel.
 ///   the result is always length one and is never null. For the purposes of this
-///   kernel, null are treated as empty.
+///   kernel, nulls are treated as empty.
 ///
 GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* name,
                                      const char* options);
 
+/// @}
+
+/// \defgroup geoarrow-kernels Low-level reader/visitor interfaces
+///
+/// The GeoArrow specification defines memory layouts for many types.
+/// Whereas it is more performant to write dedicated conversions
+/// between each source and destination type, the number of conversions
+/// required prohibits a compact and maintainable general-purpose
+/// library. Instead, we define the GeoArrowVisitor and provide a means
+/// by which to "visit" each feature in an array of geometries for every
+/// supported type. Conversely, we provide a GeoArrowVisitor implementation
+/// to create arrays of each supported type upon visitation of an arbitrary
+/// source. This design also facilitates reusing the readers and writers
+/// provided here by other libraries.
+///
+/// @{
+
+/// \brief Initialize a GeoArrowVisitor with a visitor that does nothing
+void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
+
+/// \brief Populate a GeoArrowVisitor pointing to a GeoArrowBuilder
+GeoArrowErrorCode GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
+                                             struct GeoArrowVisitor* v);
+
+/// \brief Visit the features of a GeoArrowArrayView
+///
+/// The caller must have initialized the GeoArrowVisitor with the appropriate
+/// writer before calling this function.
+GeoArrowErrorCode GeoArrowArrayViewVisit(struct GeoArrowArrayView* array_view,
+                                         int64_t offset, int64_t length,
+                                         struct GeoArrowVisitor* v);
+
+/// \brief Well-known text writer
+///
+/// This struct also contains options for well-known text serialization.
+/// These options can be modified from the defaults after
+/// GeoArrowWKTWriterInit() and before GeoArrowWKTWriterInitVisitor().
 struct GeoArrowWKTWriter {
+  /// \brief The number of significant digits to include in the output (default: 16)
   int significant_digits;
+
+  /// \brief Set to 0 to use the verbose (but still technically valid) MULTIPOINT
+  /// representation (i.e., MULTIPOINT((0 1), (2 3))).
   int use_flat_multipoint;
+
+  /// \brief Constrain the maximum size of each element in the returned array
+  ///
+  /// Use -1 to denote an unlimited size for each element. When the limit is
+  /// reached or shortly after, the called handler method will return EAGAIN,
+  /// after which it is safe to call feat_end to end the feature. This ensures
+  /// that a finite amount of input is consumed if this elemtn is set.
   int64_t max_element_size_bytes;
+
+  /// \brief Implementation-specific details
   void* private_data;
 };
 
+/// \brief Initialize the memory of a GeoArrowWKTWriter
+///
+/// If GEOARROW_OK is returned, the caller is responsible for calling
+/// GeoArrowWKTWriterReset().
 GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer);
 
+/// \brief Populate a GeoArrowVisitor pointing to this writer
 void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
                                   struct GeoArrowVisitor* v);
 
+/// \brief Finish an ArrowArray containing elements from the visited input
+///
+/// This function can be called more than once to support multiple batches.
 GeoArrowErrorCode GeoArrowWKTWriterFinish(struct GeoArrowWKTWriter* writer,
                                           struct ArrowArray* array,
                                           struct GeoArrowError* error);
 
+/// \brief Free resources held by a GeoArrowWKTWriter
 void GeoArrowWKTWriterReset(struct GeoArrowWKTWriter* writer);
 
+/// \brief Well-known text reader
 struct GeoArrowWKTReader {
   void* private_data;
 };
 
+/// \brief Initialize the memory of a GeoArrowWKTReader
+///
+/// If GEOARROW_OK is returned, the caller is responsible for calling
+/// GeoArrowWKTReaderReset().
 GeoArrowErrorCode GeoArrowWKTReaderInit(struct GeoArrowWKTReader* reader);
 
+/// \brief Visit well-known text
+///
+/// The caller must have initialized the GeoArrowVisitor with the appropriate
+/// writer before calling this function.
 GeoArrowErrorCode GeoArrowWKTReaderVisit(struct GeoArrowWKTReader* reader,
                                          struct GeoArrowStringView s,
                                          struct GeoArrowVisitor* v);
 
+/// \brief Free resources held by a GeoArrowWKTReader
 void GeoArrowWKTReaderReset(struct GeoArrowWKTReader* reader);
 
+/// \brief ISO well-known binary writer
 struct GeoArrowWKBWriter {
+  /// \brief Implmentation-specific data
   void* private_data;
 };
 
+/// \brief Initialize the memory of a GeoArrowWKBWriter
+///
+/// If GEOARROW_OK is returned, the caller is responsible for calling
+/// GeoArrowWKBWriterReset().
 GeoArrowErrorCode GeoArrowWKBWriterInit(struct GeoArrowWKBWriter* writer);
 
+/// \brief Populate a GeoArrowVisitor pointing to this writer
 void GeoArrowWKBWriterInitVisitor(struct GeoArrowWKBWriter* writer,
                                   struct GeoArrowVisitor* v);
 
+/// \brief Finish an ArrowArray containing elements from the visited input
+///
+/// This function can be called more than once to support multiple batches.
 GeoArrowErrorCode GeoArrowWKBWriterFinish(struct GeoArrowWKBWriter* writer,
                                           struct ArrowArray* array,
                                           struct GeoArrowError* error);
 
+/// \brief Free resources held by a GeoArrowWKBWriter
 void GeoArrowWKBWriterReset(struct GeoArrowWKBWriter* writer);
 
+/// \brief Well-known binary (ISO or EWKB) reader
 struct GeoArrowWKBReader {
   void* private_data;
 };
 
+/// \brief Initialize the memory of a GeoArrowWKBReader
+///
+/// If GEOARROW_OK is returned, the caller is responsible for calling
+/// GeoArrowWKBReaderReset().
 GeoArrowErrorCode GeoArrowWKBReaderInit(struct GeoArrowWKBReader* reader);
 
-void GeoArrowWKBReaderReset(struct GeoArrowWKBReader* reader);
-
+/// \brief Visit well-known binary
+///
+/// The caller must have initialized the GeoArrowVisitor with the appropriate
+/// writer before calling this function.
 GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowBufferView src,
                                          struct GeoArrowVisitor* v);
+
+/// \brief Free resources held by a GeoArrowWKBWriter
+void GeoArrowWKBReaderReset(struct GeoArrowWKBReader* reader);
 
 /// @}
 
@@ -287,9 +370,6 @@ GeoArrowErrorCode GeoArrowBuilderSetOwnedBuffer(
     struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value,
     void (*custom_free)(uint8_t* ptr, int64_t size, void* private_data),
     void* private_data);
-
-GeoArrowErrorCode GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
-                                             struct GeoArrowVisitor* v);
 
 GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
                                         struct ArrowArray* array,
