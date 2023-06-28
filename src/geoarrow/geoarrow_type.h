@@ -323,21 +323,54 @@ struct GeoArrowWritableBufferView {
   int64_t capacity_bytes;
 };
 
+/// \brief A generic view of coordinates from a GeoArrow array
+///
+/// This view is capable of representing both struct and interleaved coordinates.
+/// Use GEOARROW_COORD_VIEW_VALUE() to generically access an ordinate.
 struct GeoArrowCoordView {
+  /// \brief Pointers to the beginning of each coordinate buffer
+  ///
+  /// May be NULL if n_coords is 0. For interleaved coordinates, these
+  /// will point to the first n_values elements of the same buffer.
   const double* values[4];
+
+  /// \brief The number of coordinates in this view
   int64_t n_coords;
+
+  /// \brief The number of pointers in the values array (i.e., number of dimensions)
   int32_t n_values;
+
+  /// \brief The number of elements to advance a given value pointer to the next ordinate
+  ///
+  /// For interleaved coordinates, coords_stride will equal n_values; for
+  /// struct coordinates, coords_stride will be 1.
   int32_t coords_stride;
 };
 
+/// \brief A generic view of a writable vector of coordinates
+///
+/// This view is capable of representing both struct and interleaved coordinates.
+/// Use GEOARROW_COORD_VIEW_VALUE() to generically access or set an ordinate
+/// from a pointer to this view.
 struct GeoArrowWritableCoordView {
+  /// \brief Pointers to the beginning of each coordinate buffer
   double* values[4];
+
+  /// \brief The number of coordinates in this view
   int64_t size_coords;
+
+  /// \brief The modifiable number of coordinates in this view
   int64_t capacity_coords;
+
+  /// \brief The number of pointers in the values array (i.e., number of dimensions)
   int32_t n_values;
+
+  /// \brief The number of elements to advance a given value pointer to the next ordinate
   int32_t coords_stride;
 };
 
+/// \brief Generically get or set an ordinate from a GeoArrowWritableCoordView or
+/// a GeoArrowCoordView.
 #define GEOARROW_COORD_VIEW_VALUE(coords_, row_, col_) \
   (coords_)->values[(col_)][(row_) * (coords_)->coords_stride]
 
