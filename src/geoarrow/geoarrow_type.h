@@ -250,20 +250,53 @@ enum GeoArrowCrsType {
   GEOARROW_CRS_TYPE_PROJJSON
 };
 
+/// \brief Parsed view of an ArrowSchema representation of a GeoArrowType
+///
+/// This structure can be initialized from an ArrowSchema or a GeoArrowType.
+/// It provides a structured view of memory held by an ArrowSchema or other
+/// object but does not hold any memory of its own.
 struct GeoArrowSchemaView {
+  /// \brief The optional ArrowSchema used to populate these values
   struct ArrowSchema* schema;
+
+  /// \brief The Arrow extension name for this type
   struct GeoArrowStringView extension_name;
+
+  /// \brief The serialized extension metadata for this type
+  ///
+  /// May be NULL if there is no metadata (i.e., the JSON object representing
+  /// this type would have no keys/values).
   struct GeoArrowStringView extension_metadata;
+
+  /// \brief The GeoArrowType representing this memory layout
   enum GeoArrowType type;
+
+  /// \brief The GeoArrowGeometryType representing this memory layout
   enum GeoArrowGeometryType geometry_type;
+
+  /// \brief The GeoArrowDimensions representing this memory layout
   enum GeoArrowDimensions dimensions;
+
+  /// \brief The GeoArrowCoordType representing this memory layout
   enum GeoArrowCoordType coord_type;
 };
 
+/// \brief Parsed view of GeoArrow extension metadata
 struct GeoArrowMetadataView {
+  /// \brief A view of the serialized metadata if this was used to populate the view
   struct GeoArrowStringView metadata;
+
+  /// \brief The GeoArrowEdgeType represented by metadata
   enum GeoArrowEdgeType edge_type;
+
+  /// \brief The GeoArrowEdgeType represented by metadata
   enum GeoArrowCrsType crs_type;
+
+  /// \brief The CRS represented by metadata
+  ///
+  /// Because this value is a view of memory from within a JSON metadata string,
+  /// it may contain the outer quotes and have escaped quotes inside it. Use
+  /// GeoArrowUnescapeCrs() to sanitize this value if you need to pass it elsewhere.
   struct GeoArrowStringView crs;
 };
 
