@@ -273,7 +273,7 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 
 /// @}
 
-/// \defgroup geoarrow-kernels Low-level reader/visitor interfaces
+/// \defgroup geoarrow-visitor Low-level reader/visitor interfaces
 ///
 /// The GeoArrow specification defines memory layouts for many types.
 /// Whereas it is more performant to write dedicated conversions

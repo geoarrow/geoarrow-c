@@ -443,6 +443,7 @@ struct GeoArrowBuilder {
 };
 
 /// \brief Visitor for an array of geometries
+/// \ingroup geoarrow-visitor
 ///
 /// A structure of function pointers and implementation-specific data used
 /// to allow geometry input from an abstract source. The visitor itself
@@ -513,7 +514,7 @@ struct GeoArrowVisitor {
   /// Every call to feat_start must have a matching call to feat_end.
   int (*feat_end)(struct GeoArrowVisitor* v);
 
-  /// \brief Visitor-specific data
+  /// \brief Opaque visitor-specific data
   void* private_data;
 
   /// \brief The error into which the reader and/or visitor can place a detailed
@@ -524,14 +525,37 @@ struct GeoArrowVisitor {
   struct GeoArrowError* error;
 };
 
+/// \brief Generalized compute kernel
+///
+/// Callers are responsible for calling the release callback when finished
+/// using the kernel.
 struct GeoArrowKernel {
+  /// \brief Called before any batches are pushed to compute the output schema
+  /// based on the input schema.
   int (*start)(struct GeoArrowKernel* kernel, struct ArrowSchema* schema,
                const char* options, struct ArrowSchema* out, struct GeoArrowError* error);
+
+  /// \brief Push a batch into the kernel
+  ///
+  /// Scalar kernels will populate out with the compute result; aggregate kernels
+  /// will not.
   int (*push_batch)(struct GeoArrowKernel* kernel, struct ArrowArray* array,
                     struct ArrowArray* out, struct GeoArrowError* error);
+
+  /// \brief Compute the final result
+  ///
+  /// For aggreate kernels, compute the result based on previous batches.
+  /// In theory, aggregate kernels should allow more than one call to
+  /// finish; however, this is not tested in any existing code.
   int (*finish)(struct GeoArrowKernel* kernel, struct ArrowArray* out,
                 struct GeoArrowError* error);
+
+  /// \brief Release resources held by the kernel
+  ///
+  /// Implementations must set the kernel->release member to NULL.
   void (*release)(struct GeoArrowKernel* kernel);
+
+  /// \brief Opaque, implementation-specific data
   void* private_data;
 };
 
