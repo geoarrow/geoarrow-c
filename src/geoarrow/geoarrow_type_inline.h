@@ -11,6 +11,8 @@
 extern "C" {
 #endif
 
+/// \brief Extract GeometryType from a GeoArrowType
+/// \ingroup geoarrow-schema
 static inline enum GeoArrowGeometryType GeoArrowGeometryTypeFromType(
     enum GeoArrowType type) {
   switch (type) {
@@ -48,6 +50,8 @@ static inline enum GeoArrowGeometryType GeoArrowGeometryTypeFromType(
   }
 }
 
+/// \brief Returns the Arrow extension name for a given GeoArrowType
+/// \ingroup geoarrow-schema
 static inline const char* GeoArrowExtensionNameFromType(enum GeoArrowType type) {
   switch (type) {
     case GEOARROW_TYPE_WKB:
@@ -80,6 +84,8 @@ static inline const char* GeoArrowExtensionNameFromType(enum GeoArrowType type) 
   }
 }
 
+/// \brief Extract GeoArrowDimensions from a GeoArrowType
+/// \ingroup geoarrow-schema
 static inline enum GeoArrowDimensions GeoArrowDimensionsFromType(enum GeoArrowType type) {
   switch (type) {
     case GEOARROW_TYPE_UNINITIALIZED:
@@ -114,6 +120,8 @@ static inline enum GeoArrowDimensions GeoArrowDimensionsFromType(enum GeoArrowTy
   }
 }
 
+/// \brief Extract GeoArrowCoordType from a GeoArrowType
+/// \ingroup geoarrow-schema
 static inline enum GeoArrowCoordType GeoArrowCoordTypeFromType(enum GeoArrowType type) {
   if (type >= GEOARROW_TYPE_WKB) {
     return GEOARROW_COORD_TYPE_UNKNOWN;
@@ -126,6 +134,9 @@ static inline enum GeoArrowCoordType GeoArrowCoordTypeFromType(enum GeoArrowType
   }
 }
 
+/// \brief Construct a GeometryType from a GeoArrowGeometryType, GeoArrowDimensions,
+/// and GeoArrowCoordType.
+/// \ingroup geoarrow-schema
 static inline enum GeoArrowType GeoArrowMakeType(enum GeoArrowGeometryType geometry_type,
                                                  enum GeoArrowDimensions dimensions,
                                                  enum GeoArrowCoordType coord_type) {
@@ -141,6 +152,8 @@ static inline enum GeoArrowType GeoArrowMakeType(enum GeoArrowGeometryType geome
   return (enum GeoArrowType)type_int;
 }
 
+/// \brief The all-caps string associated with a given GeometryType (e.g., POINT)
+/// \ingroup geoarrow-schema
 static inline const char* GeoArrowGeometryTypeString(
     enum GeoArrowGeometryType geometry_type) {
   switch (geometry_type) {
@@ -360,6 +373,118 @@ static inline int64_t _GeoArrowArrayFindBuffer(struct ArrowArray* array,
   }
 
   return total_buffers;
+}
+
+static inline GeoArrowErrorCode GeoArrowBuilderAppendBuffer(
+    struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value) {
+  if (!GeoArrowBuilderBufferCheck(builder, i, value.size_bytes)) {
+    int result = GeoArrowBuilderReserveBuffer(builder, i, value.size_bytes);
+    if (result != GEOARROW_OK) {
+      return result;
+    }
+  }
+
+  GeoArrowBuilderAppendBufferUnsafe(builder, i, value);
+  return GEOARROW_OK;
+}
+
+static inline GeoArrowErrorCode GeoArrowBuilderCoordsReserve(
+    struct GeoArrowBuilder* builder, int64_t additional_size_coords) {
+  if (GeoArrowBuilderCoordsCheck(builder, additional_size_coords)) {
+    return GEOARROW_OK;
+  }
+
+  struct GeoArrowWritableCoordView* writable_view = &builder->view.coords;
+  int result;
+  int64_t last_buffer = builder->view.n_buffers - 1;
+  int n_values = writable_view->n_values;
+
+  switch (builder->view.schema_view.coord_type) {
+    case GEOARROW_COORD_TYPE_INTERLEAVED:
+      // Sync the coord view size back to the buffer size
+      builder->view.buffers[last_buffer].size_bytes =
+          writable_view->size_coords * sizeof(double) * n_values;
+
+      // Use the normal reserve
+      result = GeoArrowBuilderReserveBuffer(
+          builder, last_buffer, additional_size_coords * sizeof(double) * n_values);
+      if (result != GEOARROW_OK) {
+        return result;
+      }
+
+      // Sync the capacity and pointers back to the writable view
+      writable_view->capacity_coords =
+          builder->view.buffers[last_buffer].capacity_bytes / sizeof(double) / n_values;
+      for (int i = 0; i < n_values; i++) {
+        writable_view->values[i] = builder->view.buffers[last_buffer].data.as_double + i;
+      }
+
+      return GEOARROW_OK;
+
+    case GEOARROW_COORD_TYPE_SEPARATE:
+      for (int64_t i = last_buffer - n_values + 1; i <= last_buffer; i++) {
+        // Sync the coord view size back to the buffer size
+        builder->view.buffers[i].size_bytes = writable_view->size_coords * sizeof(double);
+
+        // Use the normal reserve
+        result = GeoArrowBuilderReserveBuffer(builder, i,
+                                              additional_size_coords * sizeof(double));
+        if (result != GEOARROW_OK) {
+          return result;
+        }
+      }
+
+      // Sync the capacity and pointers back to the writable view
+      writable_view->capacity_coords =
+          builder->view.buffers[last_buffer].capacity_bytes / sizeof(double);
+      for (int i = 0; i < n_values; i++) {
+        writable_view->values[i] =
+            builder->view.buffers[last_buffer - n_values + 1 + i].data.as_double;
+      }
+
+      return GEOARROW_OK;
+    default:
+      // Beacuse there is no include <errno.h> here yet
+      return -1;
+  }
+}
+
+static inline GeoArrowErrorCode GeoArrowBuilderCoordsAppend(
+    struct GeoArrowBuilder* builder, const struct GeoArrowCoordView* coords,
+    enum GeoArrowDimensions dimensions, int64_t offset, int64_t n) {
+  if (!GeoArrowBuilderCoordsCheck(builder, n)) {
+    int result = GeoArrowBuilderCoordsReserve(builder, n);
+    if (result != GEOARROW_OK) {
+      return result;
+    }
+  }
+
+  GeoArrowBuilderCoordsAppendUnsafe(builder, coords, dimensions, offset, n);
+  return GEOARROW_OK;
+}
+
+static inline GeoArrowErrorCode GeoArrowBuilderOffsetReserve(
+    struct GeoArrowBuilder* builder, int32_t i, int64_t additional_size_elements) {
+  if (GeoArrowBuilderOffsetCheck(builder, i, additional_size_elements)) {
+    return GEOARROW_OK;
+  }
+
+  return GeoArrowBuilderReserveBuffer(builder, i + 1,
+                                      additional_size_elements * sizeof(int32_t));
+}
+
+static inline GeoArrowErrorCode GeoArrowBuilderOffsetAppend(
+    struct GeoArrowBuilder* builder, int32_t i, int32_t* data,
+    int64_t additional_size_elements) {
+  if (!GeoArrowBuilderOffsetCheck(builder, i, additional_size_elements)) {
+    int result = GeoArrowBuilderOffsetReserve(builder, i, additional_size_elements);
+    if (result != GEOARROW_OK) {
+      return result;
+    }
+  }
+
+  GeoArrowBuilderOffsetAppendUnsafe(builder, i, data, additional_size_elements);
+  return GEOARROW_OK;
 }
 
 #ifdef __cplusplus

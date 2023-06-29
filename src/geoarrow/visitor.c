@@ -3,12 +3,6 @@
 
 #include "geoarrow.h"
 
-static int reserve_coord_void(struct GeoArrowVisitor* v, int64_t n) {
-  return GEOARROW_OK;
-}
-
-static int reserve_feat_void(struct GeoArrowVisitor* v, int64_t n) { return GEOARROW_OK; }
-
 static int feat_start_void(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
 
 static int null_feat_void(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
@@ -33,8 +27,6 @@ static int geom_end_void(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
 static int feat_end_void(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
 
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v) {
-  v->reserve_coord = &reserve_coord_void;
-  v->reserve_feat = &reserve_feat_void;
   v->feat_start = &feat_start_void;
   v->null_feat = &null_feat_void;
   v->geom_start = &geom_start_void;
