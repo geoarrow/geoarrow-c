@@ -442,20 +442,86 @@ struct GeoArrowBuilder {
   void* private_data;
 };
 
+/// \brief Visitor for an array of geometries
+///
+/// A structure of function pointers and implementation-specific data used
+/// to allow geometry input from an abstract source. The visitor itself
+/// does not have a release callback and is not responsible for the
+/// lifecycle of any of its members. The order of method calls is essentially
+/// the same as the order these pieces of information would be encountered
+/// when parsing well-known text or well-known binary.
+///
+/// Implementations should perform enough checks to ensure that they do not
+/// crash if a reader calls its methods in an unexpected order; however, they
+/// are free to generate non-sensical output in this case.
+///
+/// For example: visiting the well-known text "MULTIPOINT (0 1, 2 3)" would
+/// result in the following visitor calls:
+///
+/// - feat_start
+/// - geom_start(GEOARROW_GEOMETRY_TYPE_MULTIPOINT, GEOARROW_DIMENSIONS_XY)
+/// - geom_start(GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY)
+/// - coords(0 1)
+/// - geom_end()
+/// - geom_start(GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY)
+/// - coords(2 3)
+/// - geom_end()
+/// - geom_end()
+/// - feat_end()
+///
+/// Most visitor implementations consume the entire input; however, some
+/// return early once they have all the information they need to compute
+/// a value for a given feature. In this case, visitors return EAGAIN
+/// and readers must pass this value back to the caller who in turn must
+/// provide a call to feat_end() to finish the feature.
 struct GeoArrowVisitor {
+  /// \brief Called when starting to iterate over a new feature
   int (*feat_start)(struct GeoArrowVisitor* v);
+
+  /// \brief Called after feat_start for a null_feature
   int (*null_feat)(struct GeoArrowVisitor* v);
+
+  /// \brief Called after feat_start for a new geometry
+  ///
+  /// Every non-null feature will have at least one call to geom_start.
+  /// Collections (including multi-geometry types) will have nested calls to geom_start.
   int (*geom_start)(struct GeoArrowVisitor* v, enum GeoArrowGeometryType geometry_type,
                     enum GeoArrowDimensions dimensions);
+
+  /// \brief For polygon geometries, called after geom_start at the beginning of a ring
   int (*ring_start)(struct GeoArrowVisitor* v);
+
+  /// \brief Called when a sequence of coordinates is encountered
+  ///
+  /// This callback may be called more than once (i.e., readers are free to chunk
+  /// coordinates however they see fit). The GeoArrowCoordView may represent
+  /// either interleaved of struct coordinates depending on the reader implementation.
   int (*coords)(struct GeoArrowVisitor* v, const struct GeoArrowCoordView* coords);
+
+  /// \brief For polygon geometries, called at the end of a ring
+  ///
+  /// Every call to ring_start must have a matching call to ring_end
   int (*ring_end)(struct GeoArrowVisitor* v);
+
+  /// \brief Called at the end of a geometry
+  ///
+  /// Every call to geom_start must have a matching call to geom_end.
   int (*geom_end)(struct GeoArrowVisitor* v);
+
+  /// \brief Called at the end of a feature, including null features
+  ///
+  /// Every call to feat_start must have a matching call to feat_end.
   int (*feat_end)(struct GeoArrowVisitor* v);
 
-  struct GeoArrowError* error;
-
+  /// \brief Visitor-specific data
   void* private_data;
+
+  /// \brief The error into which the reader and/or visitor can place a detailed
+  /// message.
+  ///
+  /// When a visitor is initializing callbacks and private_data it should take care
+  /// to not change the value of error. This value can be NULL.
+  struct GeoArrowError* error;
 };
 
 struct GeoArrowKernel {
