@@ -11,6 +11,8 @@
 extern "C" {
 #endif
 
+/// \brief Extract GeometryType from a GeoArrowType
+/// \ingroup geoarrow-schema
 static inline enum GeoArrowGeometryType GeoArrowGeometryTypeFromType(
     enum GeoArrowType type) {
   switch (type) {
@@ -48,6 +50,8 @@ static inline enum GeoArrowGeometryType GeoArrowGeometryTypeFromType(
   }
 }
 
+/// \brief Returns the Arrow extension name for a given GeoArrowType
+/// \ingroup geoarrow-schema
 static inline const char* GeoArrowExtensionNameFromType(enum GeoArrowType type) {
   switch (type) {
     case GEOARROW_TYPE_WKB:
@@ -80,6 +84,8 @@ static inline const char* GeoArrowExtensionNameFromType(enum GeoArrowType type) 
   }
 }
 
+/// \brief Extract GeoArrowDimensions from a GeoArrowType
+/// \ingroup geoarrow-schema
 static inline enum GeoArrowDimensions GeoArrowDimensionsFromType(enum GeoArrowType type) {
   switch (type) {
     case GEOARROW_TYPE_UNINITIALIZED:
@@ -114,6 +120,8 @@ static inline enum GeoArrowDimensions GeoArrowDimensionsFromType(enum GeoArrowTy
   }
 }
 
+/// \brief Extract GeoArrowCoordType from a GeoArrowType
+/// \ingroup geoarrow-schema
 static inline enum GeoArrowCoordType GeoArrowCoordTypeFromType(enum GeoArrowType type) {
   if (type >= GEOARROW_TYPE_WKB) {
     return GEOARROW_COORD_TYPE_UNKNOWN;
@@ -126,6 +134,9 @@ static inline enum GeoArrowCoordType GeoArrowCoordTypeFromType(enum GeoArrowType
   }
 }
 
+/// \brief Construct a GeometryType from a GeoArrowGeometryType, GeoArrowDimensions,
+/// and GeoArrowCoordType.
+/// \ingroup geoarrow-schema
 static inline enum GeoArrowType GeoArrowMakeType(enum GeoArrowGeometryType geometry_type,
                                                  enum GeoArrowDimensions dimensions,
                                                  enum GeoArrowCoordType coord_type) {
@@ -141,6 +152,8 @@ static inline enum GeoArrowType GeoArrowMakeType(enum GeoArrowGeometryType geome
   return (enum GeoArrowType)type_int;
 }
 
+/// \brief The all-caps string associated with a given GeometryType (e.g., POINT)
+/// \ingroup geoarrow-schema
 static inline const char* GeoArrowGeometryTypeString(
     enum GeoArrowGeometryType geometry_type) {
   switch (geometry_type) {

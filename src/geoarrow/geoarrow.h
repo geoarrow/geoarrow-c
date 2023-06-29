@@ -176,10 +176,6 @@ GeoArrowErrorCode GeoArrowBuilderInitFromSchema(struct GeoArrowBuilder* builder,
 GeoArrowErrorCode GeoArrowBuilderReserveBuffer(struct GeoArrowBuilder* builder, int64_t i,
                                                int64_t additional_size_bytes);
 
-/// \brief Check if a call to GeoArrowBuilderReserveBuffer() is needed
-static inline int GeoArrowBuilderBufferCheck(struct GeoArrowBuilder* builder, int64_t i,
-                                             int64_t additional_size_bytes);
-
 /// \brief Append data to a buffer in a GeoArrowBuilder without checking if a reserve
 /// is needed
 static inline void GeoArrowBuilderAppendBufferUnsafe(struct GeoArrowBuilder* builder,
