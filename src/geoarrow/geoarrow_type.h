@@ -443,9 +443,6 @@ struct GeoArrowBuilder {
 };
 
 struct GeoArrowVisitor {
-  int (*reserve_coord)(struct GeoArrowVisitor* v, int64_t n);
-  int (*reserve_feat)(struct GeoArrowVisitor* v, int64_t n);
-
   int (*feat_start)(struct GeoArrowVisitor* v);
   int (*null_feat)(struct GeoArrowVisitor* v);
   int (*geom_start)(struct GeoArrowVisitor* v, enum GeoArrowGeometryType geometry_type,
