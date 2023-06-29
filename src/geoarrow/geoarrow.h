@@ -19,7 +19,7 @@ extern "C" {
 /// definitions and encourages clients to stack or statically allocate
 /// where convenient.
 
-/// \defgroup geoarrow-utility Utilities and error Handling
+/// \defgroup geoarrow-utility Utilities and error handling
 ///
 /// The geoarrow C library follows the same error idioms as the nanoarrow C
 /// library: GEOARROW_OK is returned on success, and a GeoArrowError is populated
@@ -35,7 +35,7 @@ GeoArrowErrorCode GeoArrowErrorSet(struct GeoArrowError* error, const char* fmt,
 
 /// @}
 
-/// \defgroup geoarrow-schema Schema creation and inspection
+/// \defgroup geoarrow-schema Data type creation and inspection
 ///
 /// The ArrowSchema is the ABI-stable way to communicate type information using the
 /// Arrow C Data interface. These functions export ArrowSchema objects or parse
@@ -279,7 +279,9 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 /// Whereas it is more performant to write dedicated conversions
 /// between each source and destination type, the number of conversions
 /// required prohibits a compact and maintainable general-purpose
-/// library. Instead, we define the GeoArrowVisitor and provide a means
+/// library.
+///
+/// Instead, we define the GeoArrowVisitor and provide a means
 /// by which to "visit" each feature in an array of geometries for every
 /// supported type. Conversely, we provide a GeoArrowVisitor implementation
 /// to create arrays of each supported type upon visitation of an arbitrary
