@@ -170,7 +170,9 @@ def array(obj, type_=None, *args, validate=True, **kwargs) -> VectorArray:
     if type_ is None:
         arr = pa.array(obj, *args, **kwargs)
 
-        if arr.type == pa.utf8():
+        if isinstance(arr.type, VectorType):
+            return arr
+        elif arr.type == pa.utf8():
             return wkt().wrap_array(arr, validate=validate)
         elif arr.type == pa.large_utf8():
             return large_wkt().wrap_array(arr, validate=validate)
