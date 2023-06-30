@@ -297,7 +297,7 @@ GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
   // Call finish building, which will flush the buffer pointers into the array
   // and validate sizes.
   NANOARROW_RETURN_NOT_OK(
-      ArrowArrayFinishBuilding(&private->array, (struct ArrowError*)error));
+      ArrowArrayFinishBuildingDefault(&private->array, (struct ArrowError*)error));
 
   // If the null_count was incremented, we know what it is; if the first buffer
   // is non-null, we don't know what it is

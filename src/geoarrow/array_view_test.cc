@@ -59,7 +59,7 @@ TEST_P(TypeParameterizedTestFixture, ArrayViewTestInitEmptyArray) {
   ASSERT_EQ(GeoArrowSchemaInit(&schema, type), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
@@ -195,7 +195,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPoint) {
   ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
 
   // Set the array view
   struct GeoArrowArrayView array_view;
@@ -237,7 +237,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidInterleavedPoint) {
   ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
 
   // Set the array view
   struct GeoArrowArrayView array_view;
@@ -284,7 +284,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidLinestring) {
 
   ASSERT_EQ(ArrowArrayAppendNull(&array, 2), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
 
   // Set the array view
   struct GeoArrowArrayView array_view;
@@ -355,7 +355,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPolygon) {
 
   ASSERT_EQ(ArrowArrayAppendNull(&array, 2), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
 
   // Set the array view
   struct GeoArrowArrayView array_view;
@@ -418,7 +418,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultipoint) {
 
   ASSERT_EQ(ArrowArrayAppendNull(&array, 2), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
 
   // Set the array view
   struct GeoArrowArrayView array_view;
@@ -492,7 +492,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultilinestring) {
 
   ASSERT_EQ(ArrowArrayAppendNull(&array, 2), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
 
   // Set the array view
   struct GeoArrowArrayView array_view;
@@ -584,7 +584,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultipolygon) {
 
   ASSERT_EQ(ArrowArrayAppendNull(&array, 2), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
 
   // Set the array view
   struct GeoArrowArrayView array_view;

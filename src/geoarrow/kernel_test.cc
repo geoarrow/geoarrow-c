@@ -91,7 +91,7 @@ TEST(KernelTest, KernelTestVisitVoidAggWKT) {
   ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("POINT (2 3)")), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("POINT (4 5)")), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array_in, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowKernelInit(&kernel, "visit_void_agg", nullptr), GEOARROW_OK);
   EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
@@ -131,7 +131,7 @@ TEST(KernelTest, KernelTestVisitVoidAggWKB) {
   ASSERT_EQ(ArrowArrayStartAppending(&array_in), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendBytes(&array_in, data), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array_in, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowKernelInit(&kernel, "visit_void_agg", nullptr), GEOARROW_OK);
   EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
@@ -167,7 +167,7 @@ TEST(KernelTest, KernelTestVisitVoidAggGeoArow) {
   ASSERT_EQ(ArrowArrayAppendInt(array_in.children[1], 2), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishElement(&array_in), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array_in, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowKernelInit(&kernel, "visit_void_agg", nullptr), GEOARROW_OK);
   EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
@@ -202,7 +202,7 @@ TEST(KernelTest, KernelTestAsWKT) {
   ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("POINT (30 10)")),
             GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array_in, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowKernelInit(&kernel, "as_wkt", nullptr), GEOARROW_OK);
   EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
@@ -259,7 +259,7 @@ TEST(KernelTest, KernelTestFormatWKTFromWKT) {
   ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("POINT (31.1234 11)")),
             GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array_in, nullptr), GEOARROW_OK);
 
   struct ArrowBuffer buffer;
   ASSERT_EQ(ArrowMetadataBuilderInit(&buffer, nullptr), GEOARROW_OK);
@@ -326,7 +326,7 @@ TEST(KernelTest, KernelTestFormatWKTFromWKB) {
   ASSERT_EQ(ArrowArrayStartAppending(&array_in), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendBytes(&array_in, data), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array_in, nullptr), GEOARROW_OK);
 
   struct ArrowBuffer buffer;
   ASSERT_EQ(ArrowMetadataBuilderInit(&buffer, nullptr), GEOARROW_OK);
@@ -390,7 +390,7 @@ TEST(KernelTest, KernelTestFormatWKTFromGeoArrow) {
 
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array_in, nullptr), GEOARROW_OK);
 
   struct ArrowBuffer buffer;
   ASSERT_EQ(ArrowMetadataBuilderInit(&buffer, nullptr), GEOARROW_OK);
@@ -444,7 +444,7 @@ TEST(KernelTest, KernelTestAsWKB) {
   ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("POINT (30 10)")),
             GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array_in, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowKernelInit(&kernel, "as_wkb", nullptr), GEOARROW_OK);
   EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
@@ -504,7 +504,7 @@ TEST(KernelTest, KernelTestAsGeoArrow) {
   ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("POINT (30 10)")),
             GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array_in, nullptr), GEOARROW_OK);
 
   struct ArrowBuffer buffer;
   ASSERT_EQ(ArrowMetadataBuilderInit(&buffer, nullptr), GEOARROW_OK);
@@ -582,7 +582,7 @@ TEST(KernelTest, KernelTestUniqueGeometryTypes) {
             GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array_in, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowKernelInit(&kernel, "unique_geometry_types_agg", nullptr),
             GEOARROW_OK);
@@ -631,7 +631,7 @@ TEST(KernelTest, KernelTestBox) {
   ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("LINESTRING (20 -40, 21 5)")),
             GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array_in, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowKernelInit(&kernel, "box", nullptr), GEOARROW_OK);
   EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
@@ -673,7 +673,6 @@ TEST(KernelTest, KernelTestBox) {
   array_out1.release(&array_out1);
 }
 
-
 TEST(KernelTest, KernelTestBoxAgg) {
   struct GeoArrowKernel kernel;
   struct GeoArrowError error;
@@ -692,7 +691,7 @@ TEST(KernelTest, KernelTestBoxAgg) {
   ASSERT_EQ(ArrowArrayAppendString(&array_in, ArrowCharView("LINESTRING (20 -40, 21 5)")),
             GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayFinishBuilding(&array_in, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array_in, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowKernelInit(&kernel, "box_agg", nullptr), GEOARROW_OK);
   EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);

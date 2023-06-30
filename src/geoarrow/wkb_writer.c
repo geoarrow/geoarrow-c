@@ -234,7 +234,7 @@ GeoArrowErrorCode GeoArrowWKBWriterFinish(struct GeoArrowWKBWriter* writer,
   array->null_count = private->null_count;
   private->length = 0;
   private->null_count = 0;
-  return ArrowArrayFinishBuilding(array, (struct ArrowError*)error);
+  return ArrowArrayFinishBuildingDefault(array, (struct ArrowError*)error);
 }
 
 void GeoArrowWKBWriterReset(struct GeoArrowWKBWriter* writer) {

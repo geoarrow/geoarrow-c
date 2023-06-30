@@ -539,7 +539,7 @@ static int kernel_finish_unique_geometry_types_agg(struct GeoArrowKernel* kernel
     }
   }
 
-  result = ArrowArrayFinishBuilding(&tmp, NULL);
+  result = ArrowArrayFinishBuildingDefault(&tmp, NULL);
   if (result != NANOARROW_OK) {
     tmp.release(&tmp);
     return result;
@@ -618,7 +618,7 @@ static ArrowErrorCode box_finish(struct GeoArrowVisitorKernelPrivate* private_da
     ArrowBitmapReset(&private_data->box2d_private.validity);
   }
 
-  result = ArrowArrayFinishBuilding(&tmp, ((struct ArrowError*)error));
+  result = ArrowArrayFinishBuildingDefault(&tmp, ((struct ArrowError*)error));
   if (result != GEOARROW_OK) {
     tmp.release(&tmp);
     return result;
