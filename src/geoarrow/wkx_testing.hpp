@@ -55,55 +55,47 @@ class WKXTester {
   std::string LastErrorMessage() { return std::string(error_.message); }
 
   std::string AsWKT(const std::string& str) {
-    struct GeoArrowStringView str_view;
-    str_view.data = str.data();
-    str_view.size_bytes = str.size();
-
-    int result = GeoArrowWKTReaderVisit(&wkt_reader_, str_view, WKTVisitor());
-    if (result != GEOARROW_OK) {
-      throw WKXTestException("GeoArrowWKBReaderVisit", result, error_.message);
-    }
-
+    ReadWKT(str, WKTVisitor());
     return WKTValue();
   }
 
   std::string AsWKT(const std::basic_string<uint8_t>& str) {
-    struct GeoArrowBufferView str_view;
-    str_view.data = str.data();
-    str_view.size_bytes = str.size();
-
-    int result = GeoArrowWKBReaderVisit(&wkb_reader_, str_view, WKTVisitor());
-    if (result != GEOARROW_OK) {
-      throw WKXTestException("GeoArrowWKBReaderVisit", result, error_.message);
-    }
-
+    ReadWKB(str, WKTVisitor());
     return WKTValue();
   }
 
   std::basic_string<uint8_t> AsWKB(const std::string& str) {
-    struct GeoArrowStringView str_view;
-    str_view.data = str.data();
-    str_view.size_bytes = str.size();
-
-    int result = GeoArrowWKTReaderVisit(&wkt_reader_, str_view, WKBVisitor());
-    if (result != GEOARROW_OK) {
-      throw WKXTestException("GeoArrowWKTReaderVisit", result, error_.message);
-    }
-
+    ReadWKT(str, WKBVisitor());
     return WKBValue();
   }
 
   std::basic_string<uint8_t> AsWKB(const std::basic_string<uint8_t>& str) {
+    ReadWKB(str, WKBVisitor());
+    return WKBValue();
+  }
+
+  void ReadWKB(const std::basic_string<uint8_t>& str, struct GeoArrowVisitor* v) {
     struct GeoArrowBufferView str_view;
     str_view.data = str.data();
     str_view.size_bytes = str.size();
+    v->error = &error_;
 
-    int result = GeoArrowWKBReaderVisit(&wkb_reader_, str_view, WKBVisitor());
+    int result = GeoArrowWKBReaderVisit(&wkb_reader_, str_view, v);
     if (result != GEOARROW_OK) {
       throw WKXTestException("GeoArrowWKBReaderVisit", result, error_.message);
     }
+  }
 
-    return WKBValue();
+  void ReadWKT(const std::string& str, struct GeoArrowVisitor* v) {
+    struct GeoArrowStringView str_view;
+    str_view.data = str.data();
+    str_view.size_bytes = str.size();
+    v->error = &error_;
+
+    int result = GeoArrowWKTReaderVisit(&wkt_reader_, str_view, v);
+    if (result != GEOARROW_OK) {
+      throw WKXTestException("GeoArrowWKTReaderVisit", result, error_.message);
+    }
   }
 
   struct GeoArrowVisitor* WKTVisitor() {

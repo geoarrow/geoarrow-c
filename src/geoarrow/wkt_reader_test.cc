@@ -43,6 +43,38 @@ TEST(WKTReaderTest, WKTReaderTestPoint) {
   EXPECT_EQ(tester.LastErrorMessage(), "Expected end of input at byte 12");
 }
 
+TEST(WKTReaderTest, WKTReaderTestPointMultipleDims) {
+  struct GeoArrowBuilder builder;
+  struct GeoArrowVisitor v;
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_POINT_ZM), GEOARROW_OK);
+  GeoArrowBuilderInitVisitor(&builder, &v);
+
+  WKXTester tester;
+  tester.ReadWKT("POINT (1 2)", &v);
+  tester.ReadWKT("POINT Z (1 2 3)", &v);
+  tester.ReadWKT("POINT M (1 2 3)", &v);
+  tester.ReadWKT("POINT ZM (1 2 3 4)", &v);
+
+  struct ArrowArray array_out;
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT_ZM),
+            GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+  array_out.release(&array_out);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 4);
+  EXPECT_EQ(values[0], "POINT ZM (1 2 nan nan)");
+  EXPECT_EQ(values[1], "POINT ZM (1 2 3 nan)");
+  EXPECT_EQ(values[2], "POINT ZM (1 2 nan 3)");
+  EXPECT_EQ(values[3], "POINT ZM (1 2 3 4)");
+}
+
 TEST(WKTReaderTest, WKTReaderTestLinestring) {
   WKXTester tester;
   EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING EMPTY");
