@@ -60,7 +60,7 @@ class WKXTester {
   }
 
   std::string AsWKT(const std::basic_string<uint8_t>& str) {
-    ReadWKB(str, WKBVisitor());
+    ReadWKB(str, WKTVisitor());
     return WKTValue();
   }
 
