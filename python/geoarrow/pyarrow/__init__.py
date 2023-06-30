@@ -56,7 +56,7 @@ from ._compute import (
     with_edge_type,
     with_geometry_type,
     rechunk,
-    point_coords
+    point_coords,
 )
 
 register_extension_types()
