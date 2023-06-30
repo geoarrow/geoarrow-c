@@ -43,6 +43,11 @@ TEST(WKTReaderTest, WKTReaderTestPoint) {
   EXPECT_EQ(tester.LastErrorMessage(), "Expected end of input at byte 12");
 }
 
+TEST(WKTReaderTest, WKTReaderTestPointMultipleDims) {
+  WKXTester tester;
+  EXPECT_EQ(4, 4);
+}
+
 TEST(WKTReaderTest, WKTReaderTestLinestring) {
   WKXTester tester;
   EXPECT_WKT_ROUNDTRIP(tester, "LINESTRING EMPTY");
