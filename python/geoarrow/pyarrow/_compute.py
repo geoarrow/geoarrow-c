@@ -554,3 +554,26 @@ def with_geometry_type(obj, geometry_type):
 
     new_type = obj.type.with_geometry_type(geometry_type)
     return as_geoarrow(obj, type=new_type)
+
+
+def point_coords(obj, dimensions=None):
+    """Extract point coordinates into separate arrays or chunked arrays.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> x, y = ga.point_coords(["POINT (0 1)", "POINT (2 3)"])
+    >>> list(x)
+    [<pyarrow.DoubleScalar: 0.0>, <pyarrow.DoubleScalar: 2.0>]
+    >>> list(y)
+    [<pyarrow.DoubleScalar: 1.0>, <pyarrow.DoubleScalar: 3.0>]
+    """
+    if dimensions is None:
+        target_type = _type.point()
+    else:
+        target_type = _type.point().with_dimensions(dimensions)
+
+    obj = as_geoarrow(obj, target_type)
+    if isinstance(obj, pa.ChunkedArray):
+        flattened = [chunk.storage.flatten() for chunk in obj.chunks]
+        return (pa.chunked_array(dim) for dim in zip(*flattened))
+    else:
+        return obj.storage.flatten()
