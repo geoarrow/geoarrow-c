@@ -19,9 +19,9 @@
 #define NANOARROW_BUILD_ID_H_INCLUDED
 
 #define NANOARROW_VERSION_MAJOR 0
-#define NANOARROW_VERSION_MINOR 1
+#define NANOARROW_VERSION_MINOR 2
 #define NANOARROW_VERSION_PATCH 0
-#define NANOARROW_VERSION "0.1.0-SNAPSHOT"
+#define NANOARROW_VERSION "0.2.0-SNAPSHOT"
 
 #define NANOARROW_VERSION_INT                                        \
   (NANOARROW_VERSION_MAJOR * 10000 + NANOARROW_VERSION_MINOR * 100 + \
@@ -52,6 +52,13 @@
 
 #include <stdint.h>
 #include <string.h>
+
+
+
+#if defined(NANOARROW_DEBUG) && !defined(NANOARROW_PRINT_AND_DIE)
+#include <stdio.h>
+#include <stdlib.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -189,6 +196,30 @@ static inline void ArrowArrayStreamMove(struct ArrowArrayStream* src,
 #define _NANOARROW_CHECK_RANGE(x_, min_, max_) \
   NANOARROW_RETURN_NOT_OK((x_ >= min_ && x_ <= max_) ? NANOARROW_OK : EINVAL)
 
+#define _NANOARROW_CHECK_UPPER_LIMIT(x_, max_) \
+  NANOARROW_RETURN_NOT_OK((x_ <= max_) ? NANOARROW_OK : EINVAL)
+
+#if defined(NANOARROW_DEBUG)
+#define _NANOARROW_RETURN_NOT_OK_WITH_ERROR_IMPL(NAME, EXPR, ERROR_PTR_EXPR, EXPR_STR) \
+  do {                                                                                 \
+    const int NAME = (EXPR);                                                           \
+    if (NAME) {                                                                        \
+      ArrowErrorSet((ERROR_PTR_EXPR), "%s failed with errno %d\n* %s:%d", EXPR_STR,    \
+                    NAME, __FILE__, __LINE__);                                         \
+      return NAME;                                                                     \
+    }                                                                                  \
+  } while (0)
+#else
+#define _NANOARROW_RETURN_NOT_OK_WITH_ERROR_IMPL(NAME, EXPR, ERROR_PTR_EXPR, EXPR_STR) \
+  do {                                                                                 \
+    const int NAME = (EXPR);                                                           \
+    if (NAME) {                                                                        \
+      ArrowErrorSet((ERROR_PTR_EXPR), "%s failed with errno %d", EXPR_STR, NAME);      \
+      return NAME;                                                                     \
+    }                                                                                  \
+  } while (0)
+#endif
+
 /// \brief Return code for success.
 /// \ingroup nanoarrow-errors
 #define NANOARROW_OK 0
@@ -201,6 +232,54 @@ typedef int ArrowErrorCode;
 /// \ingroup nanoarrow-errors
 #define NANOARROW_RETURN_NOT_OK(EXPR) \
   _NANOARROW_RETURN_NOT_OK_IMPL(_NANOARROW_MAKE_NAME(errno_status_, __COUNTER__), EXPR)
+
+/// \brief Check the result of an expression and return it if not NANOARROW_OK,
+/// adding an auto-generated message to an ArrowError.
+/// \ingroup nanoarrow-errors
+///
+/// This macro is used to ensure that functions that accept an ArrowError
+/// as input always set its message when returning an error code (e.g., when calling
+/// a nanoarrow function that does *not* accept ArrowError).
+#define NANOARROW_RETURN_NOT_OK_WITH_ERROR(EXPR, ERROR_EXPR) \
+  _NANOARROW_RETURN_NOT_OK_WITH_ERROR_IMPL(                  \
+      _NANOARROW_MAKE_NAME(errno_status_, __COUNTER__), EXPR, ERROR_EXPR, #EXPR)
+
+#if defined(NANOARROW_DEBUG) && !defined(NANOARROW_PRINT_AND_DIE)
+#define NANOARROW_PRINT_AND_DIE(VALUE, EXPR_STR)                                  \
+  do {                                                                            \
+    fprintf(stderr, "%s failed with errno %d\n* %s:%d\n", EXPR_STR, (int)(VALUE), \
+            __FILE__, (int)__LINE__);                                             \
+    abort();                                                                      \
+  } while (0)
+#endif
+
+#if defined(NANOARROW_DEBUG)
+#define _NANOARROW_ASSERT_OK_IMPL(NAME, EXPR, EXPR_STR) \
+  do {                                                  \
+    const int NAME = (EXPR);                            \
+    if (NAME) NANOARROW_PRINT_AND_DIE(NAME, EXPR_STR);  \
+  } while (0)
+
+/// \brief Assert that an expression's value is NANOARROW_OK
+/// \ingroup nanoarrow-errors
+///
+/// If nanoarrow was built in debug mode (i.e., defined(NANOARROW_DEBUG) is true),
+/// print a message to stderr and abort. If nanoarrow was bulit in release mode,
+/// this statement has no effect. You can customize fatal error behaviour
+/// be defining the NANOARROW_PRINT_AND_DIE macro before including nanoarrow.h
+/// This macro is provided as a convenience for users and is not used internally.
+#define NANOARROW_ASSERT_OK(EXPR) \
+  _NANOARROW_ASSERT_OK_IMPL(_NANOARROW_MAKE_NAME(errno_status_, __COUNTER__), EXPR, #EXPR)
+#else
+#define NANOARROW_ASSERT_OK(EXPR) EXPR
+#endif
+
+static char _ArrowIsLittleEndian(void) {
+  uint32_t check = 1;
+  char first_byte;
+  memcpy(&first_byte, &check, sizeof(char));
+  return first_byte;
+}
 
 /// \brief Arrow type enumerator
 /// \ingroup nanoarrow-utils
@@ -254,6 +333,8 @@ enum ArrowType {
 /// \ingroup nanoarrow-utils
 ///
 /// Returns NULL for invalid values for type
+static inline const char* ArrowTypeString(enum ArrowType type);
+
 static inline const char* ArrowTypeString(enum ArrowType type) {
   switch (type) {
     case NANOARROW_TYPE_NA:
@@ -349,10 +430,31 @@ enum ArrowTimeUnit {
   NANOARROW_TIME_UNIT_NANO = 3
 };
 
+/// \brief Validation level enumerator
+/// \ingroup nanoarrow-array
+enum ArrowValidationLevel {
+  /// \brief Do not validate buffer sizes or content.
+  NANOARROW_VALIDATION_LEVEL_NONE = 0,
+
+  /// \brief Validate buffer sizes that depend on array length but do not validate buffer
+  /// sizes that depend on buffer data access.
+  NANOARROW_VALIDATION_LEVEL_MINIMAL = 1,
+
+  /// \brief Validate all buffer sizes, including those that require buffer data access,
+  /// but do not perform any checks that are O(1) along the length of the buffers.
+  NANOARROW_VALIDATION_LEVEL_DEFAULT = 2,
+
+  /// \brief Validate all buffer sizes and all buffer content. This is useful in the
+  /// context of untrusted input or input that may have been corrupted in transit.
+  NANOARROW_VALIDATION_LEVEL_FULL = 3
+};
+
 /// \brief Get a string value of an enum ArrowTimeUnit value
 /// \ingroup nanoarrow-utils
 ///
 /// Returns NULL for invalid values for time_unit
+static inline const char* ArrowTimeUnitString(enum ArrowTimeUnit time_unit);
+
 static inline const char* ArrowTimeUnitString(enum ArrowTimeUnit time_unit) {
   switch (time_unit) {
     case NANOARROW_TIME_UNIT_SECOND:
@@ -395,6 +497,8 @@ struct ArrowStringView {
 
 /// \brief Return a view of a const C string
 /// \ingroup nanoarrow-utils
+static inline struct ArrowStringView ArrowCharView(const char* value);
+
 static inline struct ArrowStringView ArrowCharView(const char* value) {
   struct ArrowStringView out;
 
@@ -408,26 +512,28 @@ static inline struct ArrowStringView ArrowCharView(const char* value) {
   return out;
 }
 
+union ArrowBufferViewData {
+  const void* data;
+  const int8_t* as_int8;
+  const uint8_t* as_uint8;
+  const int16_t* as_int16;
+  const uint16_t* as_uint16;
+  const int32_t* as_int32;
+  const uint32_t* as_uint32;
+  const int64_t* as_int64;
+  const uint64_t* as_uint64;
+  const double* as_double;
+  const float* as_float;
+  const char* as_char;
+};
+
 /// \brief An non-owning view of a buffer
 /// \ingroup nanoarrow-utils
 struct ArrowBufferView {
   /// \brief A pointer to the start of the buffer
   ///
   /// If size_bytes is 0, this value may be NULL.
-  union {
-    const void* data;
-    const int8_t* as_int8;
-    const uint8_t* as_uint8;
-    const int16_t* as_int16;
-    const uint16_t* as_uint16;
-    const int32_t* as_int32;
-    const uint32_t* as_uint32;
-    const int64_t* as_int64;
-    const uint64_t* as_uint64;
-    const double* as_double;
-    const float* as_float;
-    const char* as_char;
-  } data;
+  union ArrowBufferViewData data;
 
   /// \brief The size of the buffer in bytes
   int64_t size_bytes;
@@ -489,6 +595,9 @@ struct ArrowLayout {
   /// \brief The function of each buffer
   enum ArrowBufferType buffer_type[3];
 
+  /// \brief The data type of each buffer
+  enum ArrowType buffer_data_type[3];
+
   /// \brief The size of an element each buffer or 0 if this size is variable or unknown
   int64_t element_size_bits[3];
 
@@ -503,11 +612,22 @@ struct ArrowLayout {
 /// This data structure provides access to the values contained within
 /// an ArrowArray with fields provided in a more readily-extractible
 /// form. You can re-use an ArrowArrayView for multiple ArrowArrays
-/// with the same storage type, or use it to represent a hypothetical
-/// ArrowArray that does not exist yet.
+/// with the same storage type, use it to represent a hypothetical
+/// ArrowArray that does not exist yet, or use it to validate the buffers
+/// of a future ArrowArray.
 struct ArrowArrayView {
-  /// \brief The underlying ArrowArray or NULL if it has not been set
+  /// \brief The underlying ArrowArray or NULL if it has not been set or
+  /// if the buffers in this ArrowArrayView are not backed by an ArrowArray.
   struct ArrowArray* array;
+
+  /// \brief The number of elements from the physical start of the buffers.
+  int64_t offset;
+
+  /// \brief The number of elements in this view.
+  int64_t length;
+
+  /// \brief A cached null count or -1 to indicate that this value is unknown.
+  int64_t null_count;
 
   /// \brief The type used to store values in this array
   ///
@@ -529,11 +649,15 @@ struct ArrowArrayView {
   /// \brief Pointers to views of this array's children
   struct ArrowArrayView** children;
 
+  /// \brief Pointer to a view of this array's dictionary
+  struct ArrowArrayView* dictionary;
+
   /// \brief Union type id to child index mapping
   ///
   /// If storage_type is a union type, a 256-byte ArrowMalloc()ed buffer
   /// such that child_index == union_type_id_map[type_id] and
-  /// type_id == union_type_id_map[128 + child_index]
+  /// type_id == union_type_id_map[128 + child_index]. This value may be
+  /// NULL in the case where child_id == type_id.
   int8_t* union_type_id_map;
 };
 
@@ -564,6 +688,90 @@ struct ArrowArrayPrivateData {
   int8_t union_type_id_is_child_index;
 };
 
+/// \brief A representation of a fixed-precision decimal number
+/// \ingroup nanoarrow-utils
+///
+/// This structure should be initialized with ArrowDecimalInit() once and
+/// values set using ArrowDecimalSetInt(), ArrowDecimalSetBytes128(),
+/// or ArrowDecimalSetBytes256().
+struct ArrowDecimal {
+  /// \brief An array of 64-bit integers of n_words length defined in native-endian order
+  uint64_t words[4];
+
+  /// \brief The number of significant digits this decimal number can represent
+  int32_t precision;
+
+  /// \brief The number of digits after the decimal point. This can be negative.
+  int32_t scale;
+
+  /// \brief The number of words in the words array
+  int n_words;
+
+  /// \brief Cached value used by the implementation
+  int high_word_index;
+
+  /// \brief Cached value used by the implementation
+  int low_word_index;
+};
+
+/// \brief Initialize a decimal with a given set of type parameters
+/// \ingroup nanoarrow-utils
+static inline void ArrowDecimalInit(struct ArrowDecimal* decimal, int32_t bitwidth,
+                                    int32_t precision, int32_t scale) {
+  memset(decimal->words, 0, sizeof(decimal->words));
+  decimal->precision = precision;
+  decimal->scale = scale;
+  decimal->n_words = bitwidth / 8 / sizeof(uint64_t);
+
+  if (_ArrowIsLittleEndian()) {
+    decimal->low_word_index = 0;
+    decimal->high_word_index = decimal->n_words - 1;
+  } else {
+    decimal->low_word_index = decimal->n_words - 1;
+    decimal->high_word_index = 0;
+  }
+}
+
+/// \brief Get a signed integer value of a sufficiently small ArrowDecimal
+///
+/// This does not check if the decimal's precision sufficiently small to fit
+/// within the signed 64-bit integer range (A precision less than or equal
+/// to 18 is sufficiently small).
+static inline int64_t ArrowDecimalGetIntUnsafe(struct ArrowDecimal* decimal) {
+  return (int64_t)decimal->words[decimal->low_word_index];
+}
+
+/// \brief Copy the bytes of this decimal into a sufficiently large buffer
+/// \ingroup nanoarrow-utils
+static inline void ArrowDecimalGetBytes(struct ArrowDecimal* decimal, uint8_t* out) {
+  memcpy(out, decimal->words, decimal->n_words * sizeof(uint64_t));
+}
+
+/// \brief Returns 1 if the value represented by decimal is >= 0 or -1 otherwise
+/// \ingroup nanoarrow-utils
+static inline int64_t ArrowDecimalSign(struct ArrowDecimal* decimal) {
+  return 1 | ((int64_t)(decimal->words[decimal->high_word_index]) >> 63);
+}
+
+/// \brief Sets the integer value of this decimal
+/// \ingroup nanoarrow-utils
+static inline void ArrowDecimalSetInt(struct ArrowDecimal* decimal, int64_t value) {
+  if (value < 0) {
+    memset(decimal->words, 0xff, decimal->n_words * sizeof(uint64_t));
+  } else {
+    memset(decimal->words, 0, decimal->n_words * sizeof(uint64_t));
+  }
+
+  decimal->words[decimal->low_word_index] = value;
+}
+
+/// \brief Copy bytes from a buffer into this decimal
+/// \ingroup nanoarrow-utils
+static inline void ArrowDecimalSetBytes(struct ArrowDecimal* decimal,
+                                        const uint8_t* value) {
+  memcpy(decimal->words, value, decimal->n_words * sizeof(uint64_t));
+}
+
 #ifdef __cplusplus
 }
 #endif
@@ -592,6 +800,8 @@ struct ArrowArrayPrivateData {
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+
 
 // If using CMake, optionally pass -DNANOARROW_NAMESPACE=MyNamespace which will set this
 // define in nanoarrow_config.h. If not, you can optionally #define NANOARROW_NAMESPACE
@@ -661,6 +871,8 @@ struct ArrowArrayPrivateData {
   NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayInitFromType)
 #define ArrowArrayInitFromSchema \
   NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayInitFromSchema)
+#define ArrowArrayInitFromArrayView \
+  NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayInitFromArrayView)
 #define ArrowArrayAllocateChildren \
   NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayAllocateChildren)
 #define ArrowArrayAllocateDictionary \
@@ -671,16 +883,22 @@ struct ArrowArrayPrivateData {
 #define ArrowArrayReserve NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayReserve)
 #define ArrowArrayFinishBuilding \
   NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayFinishBuilding)
+#define ArrowArrayFinishBuildingDefault \
+  NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayFinishBuildingDefault)
 #define ArrowArrayViewInitFromType \
   NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayViewInitFromType)
 #define ArrowArrayViewInitFromSchema \
   NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayViewInitFromSchema)
 #define ArrowArrayViewAllocateChildren \
   NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayViewAllocateChildren)
+#define ArrowArrayViewAllocateDictionary \
+  NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayViewAllocateDictionary)
 #define ArrowArrayViewSetLength \
   NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayViewSetLength)
 #define ArrowArrayViewSetArray \
   NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayViewSetArray)
+#define ArrowArrayViewValidate \
+  NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayViewValidate)
 #define ArrowArrayViewReset NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowArrayViewReset)
 #define ArrowBasicArrayStreamInit \
   NANOARROW_SYMBOL(NANOARROW_NAMESPACE, ArrowBasicArrayStreamInit)
@@ -747,7 +965,16 @@ struct ArrowBufferAllocator ArrowBufferDeallocator(
 /// need to communicate more verbose error information accept a pointer
 /// to an ArrowError. This can be stack or statically allocated. The
 /// content of the message is undefined unless an error code has been
-/// returned.
+/// returned. If a nanoarrow function is passed a non-null ArrowError pointer, the
+/// ArrowError pointed to by the argument will be propagated with a
+/// null-terminated error message. It is safe to pass a NULL ArrowError anywhere
+/// in the nanoarrow API.
+///
+/// Except where documented, it is generally not safe to continue after a
+/// function has returned a non-zero ArrowErrorCode. The NANOARROW_RETURN_NOT_OK and
+/// NANOARROW_ASSERT_OK macros are provided to help propagate errors. C++ clients can use
+/// the helpers provided in the nanoarrow.hpp header to facilitate using C++ idioms
+/// for memory management and error propgagtion.
 ///
 /// @{
 
@@ -757,10 +984,24 @@ struct ArrowError {
   char message[1024];
 };
 
-/// \brief Set the contents of an error using printf syntax
+/// \brief Ensure an ArrowError is null-terminated by zeroing the first character.
+///
+/// If error is NULL, this function does nothing.
+static inline void ArrowErrorInit(struct ArrowError* error) {
+  if (error) {
+    error->message[0] = '\0';
+  }
+}
+
+/// \brief Set the contents of an error using printf syntax.
+///
+/// If error is NULL, this function does nothing and returns NANOARROW_OK.
 ArrowErrorCode ArrowErrorSet(struct ArrowError* error, const char* fmt, ...);
 
 /// \brief Get the contents of an error
+///
+/// If error is NULL, returns "", or returns the contents of the error message
+/// otherwise.
 const char* ArrowErrorMessage(struct ArrowError* error);
 
 /// @}
@@ -1271,7 +1512,10 @@ static inline void ArrowBitmapReset(struct ArrowBitmap* bitmap);
 
 /// \defgroup nanoarrow-array Creating arrays
 ///
-/// These functions allocate, copy, and destroy ArrowArray structures
+/// These functions allocate, copy, and destroy ArrowArray structures.
+/// Once an ArrowArray has been initialized via ArrowArrayInitFromType()
+/// or ArrowArrayInitFromSchema(), the caller is responsible for releasing
+/// it using the embedded release callback.
 ///
 /// @{
 
@@ -1290,6 +1534,14 @@ ArrowErrorCode ArrowArrayInitFromType(struct ArrowArray* array,
 ArrowErrorCode ArrowArrayInitFromSchema(struct ArrowArray* array,
                                         struct ArrowSchema* schema,
                                         struct ArrowError* error);
+
+/// \brief Initialize the contents of an ArrowArray from an ArrowArrayView
+///
+/// Caller is responsible for calling the array->release callback if
+/// NANOARROW_OK is returned.
+ArrowErrorCode ArrowArrayInitFromArrayView(struct ArrowArray* array,
+                                           struct ArrowArrayView* array_view,
+                                           struct ArrowError* error);
 
 /// \brief Allocate the array->children array
 ///
@@ -1386,11 +1638,19 @@ static inline ArrowErrorCode ArrowArrayAppendBytes(struct ArrowArray* array,
                                                    struct ArrowBufferView value);
 
 /// \brief Append a string value to an array
+///
 /// Returns NANOARROW_OK if value can be exactly represented by
 /// the underlying storage type or EINVAL otherwise (e.g.,
 /// the underlying array is not a string or large string array).
 static inline ArrowErrorCode ArrowArrayAppendString(struct ArrowArray* array,
                                                     struct ArrowStringView value);
+
+/// \brief Append a decimal value to an array
+///
+/// Returns NANOARROW_OK if array is a decimal array with the appropriate
+/// bitwidth or EINVAL otherwise.
+static inline ArrowErrorCode ArrowArrayAppendDecimal(struct ArrowArray* array,
+                                                     struct ArrowDecimal* value);
 
 /// \brief Finish a nested array element
 ///
@@ -1419,17 +1679,28 @@ static inline ArrowErrorCode ArrowArrayShrinkToFit(struct ArrowArray* array);
 /// \brief Finish building an ArrowArray
 ///
 /// Flushes any pointers from internal buffers that may have been reallocated
-/// into the array->buffers array and checks the actual size of the buffers
+/// into array->buffers and checks the actual size of the buffers
 /// against the expected size based on the final length.
 /// array must have been allocated using ArrowArrayInitFromType()
+ArrowErrorCode ArrowArrayFinishBuildingDefault(struct ArrowArray* array,
+                                               struct ArrowError* error);
+
+/// \brief Finish building an ArrowArray with explicit validation
+///
+/// Finish building with an explicit validation level. This could perform less validation
+/// (i.e. NANOARROW_VALIDATION_LEVEL_NONE or NANOARROW_VALIDATION_LEVEL_MINIMAL) if CPU
+/// buffer data access is not possible or more validation (i.e.,
+/// NANOARROW_VALIDATION_LEVEL_FULL) if buffer content was obtained from an untrusted or
+/// corruptable source.
 ArrowErrorCode ArrowArrayFinishBuilding(struct ArrowArray* array,
+                                        enum ArrowValidationLevel validation_level,
                                         struct ArrowError* error);
 
 /// @}
 
 /// \defgroup nanoarrow-array-view Reading arrays
 ///
-/// These functions read and validate the contents ArrowArray structures
+/// These functions read and validate the contents ArrowArray structures.
 ///
 /// @{
 
@@ -1449,11 +1720,14 @@ ArrowErrorCode ArrowArrayViewInitFromSchema(struct ArrowArrayView* array_view,
                                             struct ArrowSchema* schema,
                                             struct ArrowError* error);
 
-/// \brief Allocate the schema_view->children array
+/// \brief Allocate the array_view->children array
 ///
 /// Includes the memory for each child struct ArrowArrayView
 ArrowErrorCode ArrowArrayViewAllocateChildren(struct ArrowArrayView* array_view,
                                               int64_t n_children);
+
+/// \brief Allocate array_view->dictionary
+ArrowErrorCode ArrowArrayViewAllocateDictionary(struct ArrowArrayView* array_view);
 
 /// \brief Set data-independent buffer sizes from length
 void ArrowArrayViewSetLength(struct ArrowArrayView* array_view, int64_t length);
@@ -1461,6 +1735,18 @@ void ArrowArrayViewSetLength(struct ArrowArrayView* array_view, int64_t length);
 /// \brief Set buffer sizes and data pointers from an ArrowArray
 ArrowErrorCode ArrowArrayViewSetArray(struct ArrowArrayView* array_view,
                                       struct ArrowArray* array, struct ArrowError* error);
+
+/// \brief Performs checks on the content of an ArrowArrayView
+///
+/// If using ArrowArrayViewSetArray() to back array_view with an ArrowArray,
+/// the buffer sizes and some content (fist and last offset) have already
+/// been validated at the "default" level. If setting the buffer pointers
+/// and sizes otherwise, you may wish to perform checks at a different level. See
+/// documentation for ArrowValidationLevel for the details of checks performed
+/// at each level.
+ArrowErrorCode ArrowArrayViewValidate(struct ArrowArrayView* array_view,
+                                      enum ArrowValidationLevel validation_level,
+                                      struct ArrowError* error);
 
 /// \brief Reset the contents of an ArrowArrayView and frees resources
 void ArrowArrayViewReset(struct ArrowArrayView* array_view);
@@ -1513,6 +1799,14 @@ static inline struct ArrowStringView ArrowArrayViewGetStringUnsafe(
 static inline struct ArrowBufferView ArrowArrayViewGetBytesUnsafe(
     struct ArrowArrayView* array_view, int64_t i);
 
+/// \brief Get an element in an ArrowArrayView as an ArrowDecimal
+///
+/// This function does not check for null values. The out parameter must
+/// be initialized with ArrowDecimalInit() with the proper parameters for this
+/// type before calling this for the first time.
+static inline void ArrowArrayViewGetDecimalUnsafe(struct ArrowArrayView* array_view,
+                                                  int64_t i, struct ArrowDecimal* out);
+
 /// @}
 
 /// \defgroup nanoarrow-basic-array-stream Basic ArrowArrayStream implementation
@@ -1554,6 +1848,8 @@ ArrowErrorCode ArrowBasicArrayStreamValidate(struct ArrowArrayStream* array_stre
 
 // Inline function definitions
 
+
+
 #ifdef __cplusplus
 }
 #endif
@@ -1582,6 +1878,8 @@ ArrowErrorCode ArrowBasicArrayStreamValidate(struct ArrowArrayStream* array_stre
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
+
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -1855,36 +2153,37 @@ static inline int64_t ArrowBitCountSet(const uint8_t* bits, int64_t start_offset
 
   const int64_t i_begin = start_offset;
   const int64_t i_end = start_offset + length;
+  const int64_t i_last_valid = i_end - 1;
 
   const int64_t bytes_begin = i_begin / 8;
-  const int64_t bytes_end = i_end / 8 + 1;
+  const int64_t bytes_last_valid = i_last_valid / 8;
 
-  if (bytes_end == bytes_begin + 1) {
+  if (bytes_begin == bytes_last_valid) {
     // count bits within a single byte
     const uint8_t first_byte_mask = _ArrowkPrecedingBitmask[i_end % 8];
     const uint8_t last_byte_mask = _ArrowkTrailingBitmask[i_begin % 8];
 
     const uint8_t only_byte_mask =
-        i_end % 8 == 0 ? first_byte_mask : (uint8_t)(first_byte_mask & last_byte_mask);
+        i_end % 8 == 0 ? last_byte_mask : (uint8_t)(first_byte_mask & last_byte_mask);
 
     const uint8_t byte_masked = bits[bytes_begin] & only_byte_mask;
     return _ArrowkBytePopcount[byte_masked];
   }
 
   const uint8_t first_byte_mask = _ArrowkPrecedingBitmask[i_begin % 8];
-  const uint8_t last_byte_mask = _ArrowkTrailingBitmask[i_end % 8];
+  const uint8_t last_byte_mask = i_end % 8 == 0 ? 0 : _ArrowkTrailingBitmask[i_end % 8];
   int64_t count = 0;
 
   // first byte
   count += _ArrowkBytePopcount[bits[bytes_begin] & ~first_byte_mask];
 
   // middle bytes
-  for (int64_t i = bytes_begin + 1; i < (bytes_end - 1); i++) {
+  for (int64_t i = bytes_begin + 1; i < bytes_last_valid; i++) {
     count += _ArrowkBytePopcount[bits[i]];
   }
 
   // last byte
-  count += _ArrowkBytePopcount[bits[bytes_end - 1] & ~last_byte_mask];
+  count += _ArrowkBytePopcount[bits[bytes_last_valid] & ~last_byte_mask];
 
   return count;
 }
@@ -2077,6 +2376,9 @@ static inline void ArrowBitmapReset(struct ArrowBitmap* bitmap) {
 #include <stdint.h>
 #include <string.h>
 
+
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -2126,7 +2428,7 @@ static inline int8_t _ArrowParseUnionTypeIds(const char* type_ids, int8_t* out) 
     }
 
     if (out != NULL) {
-      out[i] = type_id;
+      out[i] = (int8_t)type_id;
     }
 
     i++;
@@ -2144,10 +2446,9 @@ static inline int8_t _ArrowParseUnionTypeIds(const char* type_ids, int8_t* out) 
   return -1;
 }
 
-static inline int8_t _ArrowUnionTypeIdsWillEqualChildIndices(const char* type_id_str,
-                                                             int64_t n_children) {
-  int8_t type_ids[128];
-  int8_t n_type_ids = _ArrowParseUnionTypeIds(type_id_str, type_ids);
+static inline int8_t _ArrowParsedUnionTypeIdsWillEqualChildIndices(const int8_t* type_ids,
+                                                                   int64_t n_type_ids,
+                                                                   int64_t n_children) {
   if (n_type_ids != n_children) {
     return 0;
   }
@@ -2159,6 +2460,13 @@ static inline int8_t _ArrowUnionTypeIdsWillEqualChildIndices(const char* type_id
   }
 
   return 1;
+}
+
+static inline int8_t _ArrowUnionTypeIdsWillEqualChildIndices(const char* type_id_str,
+                                                             int64_t n_children) {
+  int8_t type_ids[128];
+  int8_t n_type_ids = _ArrowParseUnionTypeIds(type_id_str, type_ids);
+  return _ArrowParsedUnionTypeIdsWillEqualChildIndices(type_ids, n_type_ids, n_children);
 }
 
 static inline ArrowErrorCode ArrowArrayStartAppending(struct ArrowArray* array) {
@@ -2194,9 +2502,13 @@ static inline ArrowErrorCode ArrowArrayStartAppending(struct ArrowArray* array) 
     }
   }
 
-  // Start building any child arrays
+  // Start building any child arrays or dictionaries
   for (int64_t i = 0; i < array->n_children; i++) {
     NANOARROW_RETURN_NOT_OK(ArrowArrayStartAppending(array->children[i]));
+  }
+
+  if (array->dictionary != NULL) {
+    NANOARROW_RETURN_NOT_OK(ArrowArrayStartAppending(array->dictionary));
   }
 
   return NANOARROW_OK;
@@ -2210,6 +2522,10 @@ static inline ArrowErrorCode ArrowArrayShrinkToFit(struct ArrowArray* array) {
 
   for (int64_t i = 0; i < array->n_children; i++) {
     NANOARROW_RETURN_NOT_OK(ArrowArrayShrinkToFit(array->children[i]));
+  }
+
+  if (array->dictionary != NULL) {
+    NANOARROW_RETURN_NOT_OK(ArrowArrayShrinkToFit(array->dictionary));
   }
 
   return NANOARROW_OK;
@@ -2393,10 +2709,10 @@ static inline ArrowErrorCode ArrowArrayAppendInt(struct ArrowArray* array,
       _NANOARROW_CHECK_RANGE(value, 0, INT64_MAX);
       return ArrowArrayAppendUInt(array, value);
     case NANOARROW_TYPE_DOUBLE:
-      NANOARROW_RETURN_NOT_OK(ArrowBufferAppendDouble(data_buffer, value));
+      NANOARROW_RETURN_NOT_OK(ArrowBufferAppendDouble(data_buffer, (double)value));
       break;
     case NANOARROW_TYPE_FLOAT:
-      NANOARROW_RETURN_NOT_OK(ArrowBufferAppendFloat(data_buffer, value));
+      NANOARROW_RETURN_NOT_OK(ArrowBufferAppendFloat(data_buffer, (float)value));
       break;
     case NANOARROW_TYPE_BOOL:
       NANOARROW_RETURN_NOT_OK(_ArrowArrayAppendBits(array, 1, value != 0, 1));
@@ -2425,28 +2741,28 @@ static inline ArrowErrorCode ArrowArrayAppendUInt(struct ArrowArray* array,
       NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(data_buffer, &value, sizeof(uint64_t)));
       break;
     case NANOARROW_TYPE_UINT32:
-      _NANOARROW_CHECK_RANGE(value, 0, UINT32_MAX);
+      _NANOARROW_CHECK_UPPER_LIMIT(value, UINT32_MAX);
       NANOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(data_buffer, (uint32_t)value));
       break;
     case NANOARROW_TYPE_UINT16:
-      _NANOARROW_CHECK_RANGE(value, 0, UINT16_MAX);
+      _NANOARROW_CHECK_UPPER_LIMIT(value, UINT16_MAX);
       NANOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt16(data_buffer, (uint16_t)value));
       break;
     case NANOARROW_TYPE_UINT8:
-      _NANOARROW_CHECK_RANGE(value, 0, UINT8_MAX);
+      _NANOARROW_CHECK_UPPER_LIMIT(value, UINT8_MAX);
       NANOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt8(data_buffer, (uint8_t)value));
       break;
     case NANOARROW_TYPE_INT64:
     case NANOARROW_TYPE_INT32:
     case NANOARROW_TYPE_INT16:
     case NANOARROW_TYPE_INT8:
-      _NANOARROW_CHECK_RANGE(value, 0, INT64_MAX);
+      _NANOARROW_CHECK_UPPER_LIMIT(value, INT64_MAX);
       return ArrowArrayAppendInt(array, value);
     case NANOARROW_TYPE_DOUBLE:
-      NANOARROW_RETURN_NOT_OK(ArrowBufferAppendDouble(data_buffer, value));
+      NANOARROW_RETURN_NOT_OK(ArrowBufferAppendDouble(data_buffer, (double)value));
       break;
     case NANOARROW_TYPE_FLOAT:
-      NANOARROW_RETURN_NOT_OK(ArrowBufferAppendFloat(data_buffer, value));
+      NANOARROW_RETURN_NOT_OK(ArrowBufferAppendFloat(data_buffer, (float)value));
       break;
     case NANOARROW_TYPE_BOOL:
       NANOARROW_RETURN_NOT_OK(_ArrowArrayAppendBits(array, 1, value != 0, 1));
@@ -2509,7 +2825,7 @@ static inline ArrowErrorCode ArrowArrayAppendBytes(struct ArrowArray* array,
         return EINVAL;
       }
 
-      offset += value.size_bytes;
+      offset += (int32_t)value.size_bytes;
       NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(offset_buffer, &offset, sizeof(int32_t)));
       NANOARROW_RETURN_NOT_OK(
           ArrowBufferAppend(data_buffer, value.data.data, value.size_bytes));
@@ -2561,6 +2877,41 @@ static inline ArrowErrorCode ArrowArrayAppendString(struct ArrowArray* array,
     default:
       return EINVAL;
   }
+}
+
+static inline ArrowErrorCode ArrowArrayAppendDecimal(struct ArrowArray* array,
+                                                     struct ArrowDecimal* value) {
+  struct ArrowArrayPrivateData* private_data =
+      (struct ArrowArrayPrivateData*)array->private_data;
+  struct ArrowBuffer* data_buffer = ArrowArrayBuffer(array, 1);
+
+  switch (private_data->storage_type) {
+    case NANOARROW_TYPE_DECIMAL128:
+      if (value->n_words != 2) {
+        return EINVAL;
+      } else {
+        NANOARROW_RETURN_NOT_OK(
+            ArrowBufferAppend(data_buffer, value->words, 2 * sizeof(uint64_t)));
+        break;
+      }
+    case NANOARROW_TYPE_DECIMAL256:
+      if (value->n_words != 4) {
+        return EINVAL;
+      } else {
+        NANOARROW_RETURN_NOT_OK(
+            ArrowBufferAppend(data_buffer, value->words, 4 * sizeof(uint64_t)));
+        break;
+      }
+    default:
+      return EINVAL;
+  }
+
+  if (private_data->bitmap.buffer.data != NULL) {
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(ArrowArrayValidityBitmap(array), 1, 1));
+  }
+
+  array->length++;
+  return NANOARROW_OK;
 }
 
 static inline ArrowErrorCode ArrowArrayFinishElement(struct ArrowArray* array) {
@@ -2663,7 +3014,7 @@ static inline void ArrowArrayViewMove(struct ArrowArrayView* src,
 
 static inline int8_t ArrowArrayViewIsNull(struct ArrowArrayView* array_view, int64_t i) {
   const uint8_t* validity_buffer = array_view->buffer_views[0].data.as_uint8;
-  i += array_view->array->offset;
+  i += array_view->offset;
   switch (array_view->storage_type) {
     case NANOARROW_TYPE_NA:
       return 0x01;
@@ -2709,10 +3060,22 @@ static inline int64_t ArrowArrayViewUnionChildOffset(struct ArrowArrayView* arra
   }
 }
 
+static inline int64_t ArrowArrayViewListChildOffset(struct ArrowArrayView* array_view,
+                                                    int64_t i) {
+  switch (array_view->storage_type) {
+    case NANOARROW_TYPE_LIST:
+      return array_view->buffer_views[1].data.as_int32[i];
+    case NANOARROW_TYPE_LARGE_LIST:
+      return array_view->buffer_views[1].data.as_int64[i];
+    default:
+      return -1;
+  }
+}
+
 static inline int64_t ArrowArrayViewGetIntUnsafe(struct ArrowArrayView* array_view,
                                                  int64_t i) {
   struct ArrowBufferView* data_view = &array_view->buffer_views[1];
-  i += array_view->array->offset;
+  i += array_view->offset;
   switch (array_view->storage_type) {
     case NANOARROW_TYPE_INT64:
       return data_view->data.as_int64[i];
@@ -2731,9 +3094,9 @@ static inline int64_t ArrowArrayViewGetIntUnsafe(struct ArrowArrayView* array_vi
     case NANOARROW_TYPE_UINT8:
       return data_view->data.as_uint8[i];
     case NANOARROW_TYPE_DOUBLE:
-      return data_view->data.as_double[i];
+      return (int64_t)data_view->data.as_double[i];
     case NANOARROW_TYPE_FLOAT:
-      return data_view->data.as_float[i];
+      return (int64_t)data_view->data.as_float[i];
     case NANOARROW_TYPE_BOOL:
       return ArrowBitGet(data_view->data.as_uint8, i);
     default:
@@ -2743,7 +3106,7 @@ static inline int64_t ArrowArrayViewGetIntUnsafe(struct ArrowArrayView* array_vi
 
 static inline uint64_t ArrowArrayViewGetUIntUnsafe(struct ArrowArrayView* array_view,
                                                    int64_t i) {
-  i += array_view->array->offset;
+  i += array_view->offset;
   struct ArrowBufferView* data_view = &array_view->buffer_views[1];
   switch (array_view->storage_type) {
     case NANOARROW_TYPE_INT64:
@@ -2763,9 +3126,9 @@ static inline uint64_t ArrowArrayViewGetUIntUnsafe(struct ArrowArrayView* array_
     case NANOARROW_TYPE_UINT8:
       return data_view->data.as_uint8[i];
     case NANOARROW_TYPE_DOUBLE:
-      return data_view->data.as_double[i];
+      return (uint64_t)data_view->data.as_double[i];
     case NANOARROW_TYPE_FLOAT:
-      return data_view->data.as_float[i];
+      return (uint64_t)data_view->data.as_float[i];
     case NANOARROW_TYPE_BOOL:
       return ArrowBitGet(data_view->data.as_uint8, i);
     default:
@@ -2775,13 +3138,13 @@ static inline uint64_t ArrowArrayViewGetUIntUnsafe(struct ArrowArrayView* array_
 
 static inline double ArrowArrayViewGetDoubleUnsafe(struct ArrowArrayView* array_view,
                                                    int64_t i) {
-  i += array_view->array->offset;
+  i += array_view->offset;
   struct ArrowBufferView* data_view = &array_view->buffer_views[1];
   switch (array_view->storage_type) {
     case NANOARROW_TYPE_INT64:
-      return data_view->data.as_int64[i];
+      return (double)data_view->data.as_int64[i];
     case NANOARROW_TYPE_UINT64:
-      return data_view->data.as_uint64[i];
+      return (double)data_view->data.as_uint64[i];
     case NANOARROW_TYPE_INT32:
       return data_view->data.as_int32[i];
     case NANOARROW_TYPE_UINT32:
@@ -2807,7 +3170,7 @@ static inline double ArrowArrayViewGetDoubleUnsafe(struct ArrowArrayView* array_
 
 static inline struct ArrowStringView ArrowArrayViewGetStringUnsafe(
     struct ArrowArrayView* array_view, int64_t i) {
-  i += array_view->array->offset;
+  i += array_view->offset;
   struct ArrowBufferView* offsets_view = &array_view->buffer_views[1];
   const char* data_view = array_view->buffer_views[2].data.as_char;
 
@@ -2840,7 +3203,7 @@ static inline struct ArrowStringView ArrowArrayViewGetStringUnsafe(
 
 static inline struct ArrowBufferView ArrowArrayViewGetBytesUnsafe(
     struct ArrowArrayView* array_view, int64_t i) {
-  i += array_view->array->offset;
+  i += array_view->offset;
   struct ArrowBufferView* offsets_view = &array_view->buffer_views[1];
   const uint8_t* data_view = array_view->buffer_views[2].data.as_uint8;
 
@@ -2870,6 +3233,23 @@ static inline struct ArrowBufferView ArrowArrayViewGetBytesUnsafe(
   }
 
   return view;
+}
+
+static inline void ArrowArrayViewGetDecimalUnsafe(struct ArrowArrayView* array_view,
+                                                  int64_t i, struct ArrowDecimal* out) {
+  i += array_view->offset;
+  const uint8_t* data_view = array_view->buffer_views[1].data.as_uint8;
+  switch (array_view->storage_type) {
+    case NANOARROW_TYPE_DECIMAL128:
+      ArrowDecimalSetBytes(out, data_view + (i * 16));
+      break;
+    case NANOARROW_TYPE_DECIMAL256:
+      ArrowDecimalSetBytes(out, data_view + (i * 32));
+      break;
+    default:
+      memset(out->words, 0, sizeof(out->words));
+      break;
+  }
 }
 
 #ifdef __cplusplus
