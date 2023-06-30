@@ -1,3 +1,5 @@
+import math
+
 import pyarrow as pa
 import pytest
 
@@ -315,3 +317,19 @@ def test_with_geometry_type():
 
     point2 = _compute.with_geometry_type(multipoint2, ga.GeometryType.POINT)
     assert point2 == point
+
+
+def test_point_coords():
+    x, y = _compute.point_coords(["POINT (0 1)", "POINT (2 3)"])
+    assert x == pa.array([0.0, 2.0])
+    assert y == pa.array([1.0, 3.0])
+
+    x, y, z = _compute.point_coords(["POINT (0 1)", "POINT (2 3)"], ga.Dimensions.XYZ)
+    assert x == pa.array([0.0, 2.0])
+    assert y == pa.array([1.0, 3.0])
+    assert all(math.isnan(el.as_py()) for el in z)
+
+    chunked = pa.chunked_array([ga.as_wkt(["POINT (0 1)", "POINT (2 3)"])])
+    x, y = _compute.point_coords(chunked)
+    assert x == pa.chunked_array([pa.array([0.0, 2.0])])
+    assert y == pa.chunked_array([pa.array([1.0, 3.0])])
