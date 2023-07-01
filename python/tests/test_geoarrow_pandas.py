@@ -67,3 +67,26 @@ def test_total_bounds():
     assert df.ymin[0] == 1
     assert df.xmax[0] == 0
     assert df.ymax[0] == 1
+
+
+def test_point_coords():
+    pass
+
+def test_with_coord_type():
+    ga_series = pd.Series(["POINT (0 1)"]).geoarrow.with_coord_type(ga.CoordType.INTERLEAVED)
+    assert ga_series.dtype.pyarrow_dtype.coord_type == ga.CoordType.INTERLEAVED
+
+
+def test_with_edge_type():
+    ga_series = pd.Series(["POINT (0 1)"]).geoarrow.with_edge_type(ga.EdgeType.SPHERICAL)
+    assert ga_series.dtype.pyarrow_dtype.edge_type == ga.EdgeType.SPHERICAL
+
+
+def test_with_crs():
+    ga_series = pd.Series(["POINT (0 1)"]).geoarrow.with_crs("EPSG:1234")
+    assert ga_series.dtype.pyarrow_dtype.crs == "EPSG:1234"
+
+
+def test_with_dimensions():
+    ga_series = pd.Series(["POINT (0 1)"]).geoarrow.with_dimensions(ga.Dimensions.XYZ)
+    assert ga_series.dtype.pyarrow_dtype.dimensions == ga.Dimensions.XYZ

@@ -90,7 +90,7 @@ class GeoArrowAccessor:
         return self._wrap_series(_ga.with_crs(self._obj, crs=crs, crs_type=crs_type))
 
     def with_dimensions(self, dimensions):
-        return self.with_dimensions(_ga.with_coord_type(self._obj, dimensions))
+        return self._wrap_series(_ga.with_dimensions(self._obj, dimensions))
 
     def with_geometry_type(self, geometry_type):
         return self.with_geometry_type(_ga.with_coord_type(self._obj, geometry_type))
