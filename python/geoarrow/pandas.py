@@ -4,6 +4,30 @@ from . import lib
 from . import pyarrow as _ga
 
 
+class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
+    def __getitem__(self, item):
+        raise NotImplementedError()
+
+    def __len__(self):
+        raise NotImplementedError()
+
+    def __contains__(self, item):
+        raise NotImplementedError()
+
+    def __eq__(self, other):
+        raise NotImplementedError()
+
+    def to_numpy(self, dtype, copy=False, na_value=None):
+        raise NotImplementedError()
+
+    @property
+    def dtype(self):
+        raise NotImplementedError()
+
+    def isna(self):
+        raise NotImplementedError()
+
+
 class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
     def __init__(self, parent):
         if isinstance(parent, _ga.VectorType):
@@ -16,6 +40,10 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
             raise TypeError(
                 "`geoarrow_type` must inherit from geoarrow.pyarrow.VectorType"
             )
+
+    @property
+    def type(self):
+        raise NotImplementedError()
 
     @classmethod
     def construct_array_type(cls):
