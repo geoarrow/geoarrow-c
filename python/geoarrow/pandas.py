@@ -1,6 +1,50 @@
 import pandas as _pd
 import pyarrow as _pa
+from . import lib
 from . import pyarrow as _ga
+
+
+class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
+    def __init__(self, parent):
+        if isinstance(parent, _ga.VectorType):
+            self._parent = parent._type
+        elif isinstance(parent, lib.CVectorType):
+            self._parent = parent
+        elif isinstance(parent, GeoArrowExtensionDtype):
+            self._parent = parent._parent
+        else:
+            raise TypeError(
+                "`geoarrow_type` must inherit from geoarrow.pyarrow.VectorType"
+            )
+
+    @classmethod
+    def construct_array_type(cls):
+        pass
+
+    @classmethod
+    def construct_from_string(cls, string):
+        raise NotImplementedError()
+
+    def __repr__(self):
+        return f"{type(self).__name__}({repr(self._parent)})"
+
+    def __str__(self):
+        ext_name = self._parent.extension_name
+        ext_meta = self._parent.extension_metadata.decode("UTF-8")
+        if ext_meta == "{}":
+            return f"{ext_name}"
+        else:
+            return f"{ext_name}[{ext_meta}]"
+
+    def __hash__(self):
+        return hash(str(self))
+
+    @property
+    def name(self):
+        return str(self)
+
+    def __from_arrow__(self, array):
+        raise NotImplementedError()
 
 
 @_pd.api.extensions.register_series_accessor("geoarrow")

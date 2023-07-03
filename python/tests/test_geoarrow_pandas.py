@@ -2,28 +2,50 @@ import pytest
 
 import pandas as pd
 import pyarrow as pa
-import geoarrow.pandas
+import geoarrow.pandas as gapd
 import geoarrow.pyarrow as ga
 
 
-def test_parse_all():
+def test_type_constructor():
+    from_pyarrow = gapd.GeoArrowExtensionDtype(ga.point())
+    assert from_pyarrow.name == "geoarrow.point"
+
+    from_ctype = gapd.GeoArrowExtensionDtype(ga.point()._type)
+    assert from_ctype.name == "geoarrow.point"
+
+    from_dtype = gapd.GeoArrowExtensionDtype(from_ctype)
+    assert from_dtype.name == "geoarrow.point"
+
+    with pytest.raises(TypeError):
+        gapd.GeoArrowExtensionDtype(b"1234")
+
+
+def test_type_strings():
+    dtype = gapd.GeoArrowExtensionDtype(ga.point())
+    assert str(dtype) == "geoarrow.point"
+
+    dtype = gapd.GeoArrowExtensionDtype(ga.point().with_crs("EPSG:1234"))
+    assert str(dtype) == 'geoarrow.point[{"crs":"EPSG:1234"}]'
+
+
+def test_accessor_parse_all():
     series = pd.Series(["POINT (0 1)"])
     assert series.geoarrow.parse_all() is series
     with pytest.raises(ValueError):
         pd.Series(["NOT WKT"]).geoarrow.parse_all()
 
 
-def test_as_wkt():
+def test_accessor_as_wkt():
     ga_series = pd.Series(["POINT (0 1)"]).geoarrow.as_wkt()
     assert isinstance(ga_series.dtype.pyarrow_dtype, ga.WktType)
 
 
-def test_as_wkb():
+def test_accessor_as_wkb():
     ga_series = pd.Series(["POINT (0 1)"]).geoarrow.as_wkb()
     assert isinstance(ga_series.dtype.pyarrow_dtype, ga.WkbType)
 
 
-def test_format_wkt():
+def test_accessor_format_wkt():
     with pytest.raises(TypeError):
         pd.Series(["POINT (0 1)"]).geoarrow.format_wkt()
 
@@ -31,7 +53,7 @@ def test_format_wkt():
     assert ga_series.dtype.pyarrow_dtype == pa.utf8()
 
 
-def test_format_wkb():
+def test_accessor_format_wkb():
     with pytest.raises(TypeError):
         pd.Series(["POINT (0 1)"]).geoarrow.format_wkb()
 
@@ -46,12 +68,12 @@ def test_format_wkb():
     assert ga_series.dtype.pyarrow_dtype == pa.binary()
 
 
-def test_as_geoarrow():
+def test_accessor_as_geoarrow():
     ga_series = pd.Series(["POINT (0 1)"]).geoarrow.as_geoarrow()
     assert isinstance(ga_series.dtype.pyarrow_dtype, ga.PointType)
 
 
-def test_bounds():
+def test_accessor_bounds():
     df = pd.Series(["POINT (0 1)"]).geoarrow.bounds()
     assert isinstance(df, pd.DataFrame)
     assert df.xmin[0] == 0
@@ -60,7 +82,7 @@ def test_bounds():
     assert df.ymax[0] == 1
 
 
-def test_total_bounds():
+def test_accessor_total_bounds():
     df = pd.Series(["POINT (0 1)"]).geoarrow.total_bounds()
     assert isinstance(df, pd.DataFrame)
     assert df.xmin[0] == 0
@@ -69,24 +91,29 @@ def test_total_bounds():
     assert df.ymax[0] == 1
 
 
-def test_point_coords():
+def test_accessor_point_coords():
     pass
 
-def test_with_coord_type():
-    ga_series = pd.Series(["POINT (0 1)"]).geoarrow.with_coord_type(ga.CoordType.INTERLEAVED)
+
+def test_accessor_with_coord_type():
+    ga_series = pd.Series(["POINT (0 1)"]).geoarrow.with_coord_type(
+        ga.CoordType.INTERLEAVED
+    )
     assert ga_series.dtype.pyarrow_dtype.coord_type == ga.CoordType.INTERLEAVED
 
 
-def test_with_edge_type():
-    ga_series = pd.Series(["POINT (0 1)"]).geoarrow.with_edge_type(ga.EdgeType.SPHERICAL)
+def test_accessor_with_edge_type():
+    ga_series = pd.Series(["POINT (0 1)"]).geoarrow.with_edge_type(
+        ga.EdgeType.SPHERICAL
+    )
     assert ga_series.dtype.pyarrow_dtype.edge_type == ga.EdgeType.SPHERICAL
 
 
-def test_with_crs():
+def test_accessor_with_crs():
     ga_series = pd.Series(["POINT (0 1)"]).geoarrow.with_crs("EPSG:1234")
     assert ga_series.dtype.pyarrow_dtype.crs == "EPSG:1234"
 
 
-def test_with_dimensions():
+def test_accessor_with_dimensions():
     ga_series = pd.Series(["POINT (0 1)"]).geoarrow.with_dimensions(ga.Dimensions.XYZ)
     assert ga_series.dtype.pyarrow_dtype.dimensions == ga.Dimensions.XYZ
