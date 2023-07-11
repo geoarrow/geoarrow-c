@@ -6,7 +6,7 @@ import geoarrow.pandas as gapd
 import geoarrow.pyarrow as ga
 
 
-def test_type_constructor():
+def test_dtype_constructor():
     from_pyarrow = gapd.GeoArrowExtensionDtype(ga.point())
     assert from_pyarrow.name == "geoarrow.point"
 
@@ -20,13 +20,22 @@ def test_type_constructor():
         gapd.GeoArrowExtensionDtype(b"1234")
 
 
-def test_type_strings():
+def test_dtype_strings():
     dtype = gapd.GeoArrowExtensionDtype(ga.point())
     assert str(dtype) == "geoarrow.point"
 
     dtype = gapd.GeoArrowExtensionDtype(ga.point().with_crs("EPSG:1234"))
     assert str(dtype) == 'geoarrow.point[{"crs":"EPSG:1234"}]'
 
+
+def test_array_init_without_type():
+    array = gapd.GeoArrowExtensionArray(["POINT (0 1)"])
+    assert array._parent == ga.array(["POINT (0 1)"])
+    assert array._dtype._parent.extension_name == "geoarrow.wkt"
+
+    array = gapd.GeoArrowExtensionArray(["POINT (0 1)"], ga.wkt())
+    assert array._parent == ga.array(["POINT (0 1)"], ga.wkt())
+    assert array._dtype._parent.extension_name == "geoarrow.wkt"
 
 def test_accessor_parse_all():
     series = pd.Series(["POINT (0 1)"])

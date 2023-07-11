@@ -5,27 +5,62 @@ from . import pyarrow as _ga
 
 
 class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
+    def __init__(self, obj, type=None):
+        if type is not None:
+            self._dtype = GeoArrowExtensionDtype(type)
+            self._parent = _ga.array(obj, _ga.VectorType(self._dtype._parent))
+        else:
+            self._parent = _ga.array(obj)
+            self._dtype = GeoArrowExtensionDtype(self._parent.type)
+
     def __getitem__(self, item):
-        raise NotImplementedError()
+        if isinstance(item, int):
+            return self._parent[item]
+        elif isinstance(item, slice):
+            return GeoArrowExtensionArray(self._parent[slice])
+        elif isinstance(item, list):
+            return GeoArrowExtensionArray(self._parent[_pa.array(item)])
+        else:
+            return GeoArrowExtensionArray(self._parent.filter(item))
 
     def __len__(self):
-        raise NotImplementedError()
+        return len(self._parent)
 
     def __contains__(self, item):
-        raise NotImplementedError()
+        return item in self._parent
 
     def __eq__(self, other):
-        raise NotImplementedError()
+        return self._parent == _ga.array(other)
 
-    def to_numpy(self, dtype, copy=False, na_value=None):
-        raise NotImplementedError()
+    def __arrow_array__(self, type=None):
+        if type is None or type == self._parent.type:
+            return self._parent
+
+        raise ValueError(
+            f"Can't export GeoArrowExtensionArray with type {str(self.dtype)} as {str(type)}"
+        )
+
+    def to_numpy(self, dtype=None, copy=False, na_value=None):
+        if dtype is None:
+            raise TypeError("to_numpy() with dtype != None not supported")
+        if dtype is not None:
+            raise TypeError("to_numpy() with na_value != None not supported")
+
+        if isinstance(self._parent, _pa.ChunkedArray):
+            return self._parent.to_numpy()
+        else:
+            return self._parent.to_numpy(zero_copy_only=False, writable=copy)
 
     @property
     def dtype(self):
-        raise NotImplementedError()
+        return self._dtype
 
     def isna(self):
-        raise NotImplementedError()
+        out = self._parent.is_null()
+        if isinstance(out, _pa.ChunkedArray):
+            return out.to_numpy()
+        else:
+            return out.to_numpy(zero_copy_only=False)
 
 
 class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
@@ -38,16 +73,17 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
             self._parent = parent._parent
         else:
             raise TypeError(
-                "`geoarrow_type` must inherit from geoarrow.pyarrow.VectorType"
+                "`geoarrow_type` must inherit from geoarrow.pyarrow.VectorType, "
+                "geoarrow.CVectorType, or geoarrow.pandas.GeoArrowExtensionDtype"
             )
 
     @property
     def type(self):
-        raise NotImplementedError()
+        return _ga.VectorType(self._parent).__arrow_ext_scalar_class__()
 
     @classmethod
     def construct_array_type(cls):
-        pass
+        return GeoArrowExtensionArray
 
     @classmethod
     def construct_from_string(cls, string):
@@ -72,7 +108,7 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
         return str(self)
 
     def __from_arrow__(self, array):
-        raise NotImplementedError()
+        return GeoArrowExtensionArray(array)
 
 
 @_pd.api.extensions.register_series_accessor("geoarrow")
