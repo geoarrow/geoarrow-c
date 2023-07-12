@@ -4,6 +4,7 @@ import pandas as pd
 import pyarrow as pa
 import geoarrow.pandas as gapd
 import geoarrow.pyarrow as ga
+import numpy as np
 
 
 def test_dtype_constructor():
@@ -66,6 +67,7 @@ def test_array_basic_methods():
     array = gapd.GeoArrowExtensionArray(pa_array)
 
     assert len(array) == 3
+    assert all(array[:2] == array[:2])
 
 
 def test_accessor_parse_all():

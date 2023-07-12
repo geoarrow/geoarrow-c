@@ -73,9 +73,9 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
 
     def __getitem__(self, item):
         if isinstance(item, int):
-            return GeoArrowExtensionScalar(self._parent, item)
+            return GeoArrowExtensionScalar(self._data, item)
         elif isinstance(item, slice):
-            return GeoArrowExtensionArray(self._data[slice])
+            return GeoArrowExtensionArray(self._data[item])
         elif isinstance(item, list):
             return GeoArrowExtensionArray(self._data[_pa.array(item)])
         else:
@@ -85,7 +85,11 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
         return len(self._data)
 
     def __eq__(self, other):
-        array = _pa.array(item == other_item for item, other_item in zip(self, other))
+        if isinstance(other, GeoArrowExtensionScalar):
+            array = _pa.array(item == other for item in self)
+        else:
+            array = _pa.array(item == other_item for item, other_item in zip(self, other))
+
         return array.to_numpy(zero_copy_only=False)
 
     @property
