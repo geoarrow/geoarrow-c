@@ -28,6 +28,27 @@ def test_dtype_strings():
     assert str(dtype) == 'geoarrow.point[{"crs":"EPSG:1234"}]'
 
 
+def test_scalar():
+    scalar_from_wkt = gapd.GeoArrowExtensionScalar("POINT (0 1)")
+    assert scalar_from_wkt.wkt == "POINT (0 1)"
+    assert isinstance(scalar_from_wkt.wkb, bytes)
+    assert str(scalar_from_wkt) == "POINT (0 1)"
+    assert repr(scalar_from_wkt) == 'GeoArrowExtensionScalar("POINT (0 1)")'
+
+    scalar_from_wkb = gapd.GeoArrowExtensionScalar(scalar_from_wkt.wkb)
+    assert scalar_from_wkb == scalar_from_wkt
+
+    scalar_from_scalar = gapd.GeoArrowExtensionScalar(scalar_from_wkt)
+    assert scalar_from_scalar == scalar_from_wkt
+
+    array = ga.as_geoarrow(["POINT (0 1)", "POINT (1 2)"])
+    scalar_from_array0 = gapd.GeoArrowExtensionScalar(array, 0)
+    assert scalar_from_array0 == scalar_from_wkt
+
+    scalar_from_array1 = gapd.GeoArrowExtensionScalar(array, 1)
+    assert scalar_from_array1 == gapd.GeoArrowExtensionScalar("POINT (1 2)")
+
+
 def test_array_init_without_type():
     array = gapd.GeoArrowExtensionArray(["POINT (0 1)"])
     assert array._data == ga.array(["POINT (0 1)"])
@@ -45,6 +66,7 @@ def test_array_basic_methods():
     array = gapd.GeoArrowExtensionArray(pa_array)
 
     assert len(array) == 3
+
 
 def test_accessor_parse_all():
     series = pd.Series(["POINT (0 1)"])

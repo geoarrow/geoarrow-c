@@ -5,6 +5,54 @@ from . import lib
 from . import pyarrow as _ga
 
 
+class GeoArrowExtensionScalar(bytes):
+    """Scalar type for GeoArrowExtensionArray
+
+    This is a generic Scalar implementation for a "Geometry". It is currently implemented
+    as an immutable subclass of bytes whose value is the well-known binary representation
+    of the geometry.
+    """
+
+    def __new__(cls, obj, index=None):
+        if isinstance(obj, GeoArrowExtensionScalar):
+            bytes_value = bytes(obj)
+        elif isinstance(obj, bytes):
+            bytes_value = obj
+        elif isinstance(obj, str):
+            wkb_array = _ga.as_wkb([obj])
+            bytes_value = wkb_array[0].as_py()
+        else:
+            wkb_array = _ga.as_wkb(obj[index : (index + 1)])
+            bytes_value = wkb_array[0].as_py()
+
+        return super().__new__(cls, bytes_value)
+
+    def __str__(self):
+        return self.wkt
+
+    def __repr__(self):
+        wkt_array = _ga.format_wkt(
+            _ga.array([self]), significant_digits=7, max_element_size_bytes=1024
+        )
+        return f'GeoArrowExtensionScalar("{wkt_array[0].as_py()}")'
+
+    @property
+    def wkt(self):
+        """The well-known text representation of this feature."""
+        wkt_array = _ga.format_wkt(_ga.array([self]))
+        return wkt_array[0].as_py()
+
+    @property
+    def wkb(self):
+        """The well-known binary representation of this feature."""
+        return bytes(self)
+
+    def __eq__(self, other):
+        return isinstance(other, GeoArrowExtensionScalar) and bytes(other) == bytes(
+            self
+        )
+
+
 class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
     def __init__(self, obj, type=None):
         if type is not None:
