@@ -65,15 +65,15 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
 
     @classmethod
     def _from_sequence(cls, scalars, *, dtype=None, copy=False):
-        raise NotImplementedError()
+        return GeoArrowExtensionArray(scalars, type=dtype)
 
     @classmethod
     def _from_sequence_of_strings(cls, strings, *, dtype=None, copy=False):
-        raise NotImplementedError()
+        return GeoArrowExtensionArray(strings, dtype)
 
     def __getitem__(self, item):
         if isinstance(item, int):
-            return self._data[item]
+            return GeoArrowExtensionScalar(self._parent, item)
         elif isinstance(item, slice):
             return GeoArrowExtensionArray(self._data[slice])
         elif isinstance(item, list):
@@ -85,17 +85,18 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
         return len(self._data)
 
     def __eq__(self, other):
-        raise NotImplementedError()
+        array = _pa.array(item == other_item for item, other_item in zip(self, other))
+        return array.to_numpy(zero_copy_only=False)
 
     @property
     def dtype(self):
         return self._dtype
 
     def nbytes(self):
-        raise NotImplementedError()
+        return self._data.nbytes
 
     def take(self, i):
-        raise NotImplementedError()
+        return GeoArrowExtensionArray(self._data.take(i), self._dtype)
 
     def isna(self):
         out = self._data.is_null()
@@ -105,10 +106,33 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
             return out.to_numpy(zero_copy_only=False)
 
     def copy(self):
-        raise NotImplementedError()
+        return GeoArrowExtensionArray._from_sequence(self, dtype=self._dtype)
 
-    def _concat_same_type(self):
-        raise NotImplementedError()
+    @classmethod
+    def _concat_same_type(cls, to_concat):
+        items = list(to_concat)
+        if len(items) == 0:
+            return GeoArrowExtensionArray([], _ga.wkb())
+        if len(items) == 1:
+            return items[0]
+
+        types = [item.type for item in to_concat]
+        common_type = _ga.vector_type_common(types)
+
+        chunks = []
+        for item in to_concat:
+            data = item._data
+            if isinstance(data, _pa.ChunkedArray):
+                for chunk in data.chunks:
+                    chunks.append(chunk)
+            else:
+                chunks.append(item)
+
+        if all(type == common_type for type in types):
+            return GeoArrowExtensionArray(_pa.chunked_array(chunks, common_type))
+        else:
+            chunks = [_ga.as_geoarrow(chunk, type=common_type) for chunk in chunks]
+            return GeoArrowExtensionArray(_pa.chunked_array(chunks, common_type))
 
     def __arrow_array__(self, type=None):
         if type is None or type == self._data.type:
@@ -146,7 +170,7 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
 
     @property
     def type(self):
-        return _ga.VectorType(self._parent).__arrow_ext_scalar_class__()
+        return GeoArrowExtensionScalar
 
     @classmethod
     def construct_array_type(cls):
@@ -154,6 +178,8 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
 
     @classmethod
     def construct_from_string(cls, string):
+        # TODO: The current string output is not quite sufficient since it does
+        # not communicate geometry type or dimensions
         raise NotImplementedError()
 
     def __repr__(self):
