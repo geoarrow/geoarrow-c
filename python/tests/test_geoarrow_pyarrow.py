@@ -82,6 +82,13 @@ def test_constructors():
     assert generic.crs_type == ga.CrsType.UNKNOWN
 
 
+def test_type_common():
+    assert ga.vector_type_common([]) == ga.wkb()
+    assert ga.vector_type_common([ga.wkt()]) == ga.wkt()
+    assert ga.vector_type_common([ga.point(), ga.point()]) == ga.point()
+    assert ga.vector_type_common([ga.point(), ga.linestring()]) == ga.wkb()
+
+
 def test_register_extension_types():
     # Unregistering once is ok
     ga.unregister_extension_types(lazy=False)

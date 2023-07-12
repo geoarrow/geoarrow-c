@@ -65,7 +65,9 @@ class VectorType(pa.ExtensionType):
         cls = type_cls_from_name(c_vector_type.extension_name)
         schema = c_vector_type.to_schema()
         storage_type = pa.DataType._import_from_c(schema._addr())
-        return cls.__arrow_ext_deserialize__(storage_type, c_vector_type.extension_metadata)
+        return cls.__arrow_ext_deserialize__(
+            storage_type, c_vector_type.extension_metadata
+        )
 
     def wrap_array(self, obj, validate=False):
         out = super().wrap_array(obj)
@@ -198,8 +200,6 @@ class VectorType(pa.ExtensionType):
             metadata = metadata.encode("UTF-8")
         return type(self).__arrow_ext_deserialize__(self.storage_type, metadata)
 
-
-
     def with_geometry_type(self, geometry_type):
         """Returns a new type with the specified :class:`geoarrow.GeometryType`.
 
@@ -268,6 +268,7 @@ class WkbType(VectorType):
     well-known binary. Even though the draft specification currently mandates
     ISO well-known binary, EWKB is supported by the parser.
     """
+
     _extension_name = "geoarrow.wkb"
 
     def wrap_array(self, obj, validate=True):
@@ -278,6 +279,7 @@ class WktType(VectorType):
     """Extension type whose storage is a utf8 or large utf8 array of
     well-known text.
     """
+
     _extension_name = "geoarrow.wkt"
 
     def wrap_array(self, obj, validate=True):
@@ -289,6 +291,7 @@ class PointType(VectorType):
     as either a struct with one child per dimension or a fixed-size
     list whose single child is composed of interleaved ordinate values.
     """
+
     _extension_name = "geoarrow.point"
 
     def from_geobuffers(self, validity, x, y=None, z_or_m=None, m=None):
@@ -307,6 +310,7 @@ class LinestringType(VectorType):
     """Extension type whose storage is an array of linestrings stored
     as a list of points as described in :class:`PointType`.
     """
+
     _extension_name = "geoarrow.linestring"
 
     def from_geobuffers(self, validity, coord_offsets, x, y=None, z_or_m=None, m=None):
@@ -326,6 +330,7 @@ class PolygonType(VectorType):
     """Extension type whose storage is an array of polygons stored
     as a list of a list of points as described in :class:`PointType`.
     """
+
     _extension_name = "geoarrow.polygon"
 
     def from_geobuffers(
@@ -348,6 +353,7 @@ class MultiPointType(VectorType):
     """Extension type whose storage is an array of polygons stored
     as a list of points as described in :class:`PointType`.
     """
+
     _extension_name = "geoarrow.multipoint"
 
     def from_geobuffers(self, validity, coord_offsets, x, y=None, z_or_m=None, m=None):
@@ -367,6 +373,7 @@ class MultiLinestringType(VectorType):
     """Extension type whose storage is an array of multilinestrings stored
     as a list of a list of points as described in :class:`PointType`.
     """
+
     _extension_name = "geoarrow.multilinestring"
 
     def from_geobuffers(
@@ -396,6 +403,7 @@ class MultiPolygonType(VectorType):
     """Extension type whose storage is an array of multilinestrings stored
     as a list of a list of a list of points as described in :class:`PointType`.
     """
+
     _extension_name = "geoarrow.multipolygon"
 
     def from_geobuffers(
@@ -595,6 +603,54 @@ def vector_type(
     return cls(ctype).with_edge_type(edge_type).with_crs(crs, crs_type)
 
 
+def _vector_type_common2(a, b):
+    if not isinstance(a, VectorType) or not isinstance(b, VectorType):
+        raise ValueError(
+            f"Can't compute common type between '{a}' and '{b}': non-geometry type"
+        )
+
+    if a == b:
+        return a
+
+    # This computation doesn't handle non-equal metadata (crs, edge type)
+    metadata_a = a._type.extension_metadata
+    metadata_b = b._type.extension_metadata
+    if metadata_a != metadata_b:
+        raise ValueError(
+            f"Can't compute common type between '{a}' and '{b}': metadata not equal"
+        )
+
+    # TODO: There are a number of other things we can try (e.g., promote multi)
+    # For now, just use wkb() if the types aren't exactly the same
+    return wkb().with_metadata(metadata_a)
+
+
+def vector_type_common(types):
+    """Compute common type
+
+    From a sequence of GeoArrow types, return a type to which all can be cast
+    or error if this cannot occur.
+
+    >>> import geoarrow.pyarrow as ga
+    >>> ga.vector_type_common([ga.wkb(), ga.point()])
+    WkbType(geoarrow.wkb)
+    >>> ga.vector_type_common([ga.point(), ga.point()])
+    PointType(geoarrow.point)
+    """
+    types = list(types)
+
+    if len(types) == 0:
+        # Would be nice to have an empty type option here
+        return wkb()
+    elif len(types) == 1:
+        return types[0]
+
+    for i in reversed(range(len(types) - 1)):
+        types[i] = _vector_type_common2(types[i], types[i + 1])
+
+    return types[0]
+
+
 _extension_types_registered = False
 
 
@@ -636,8 +692,7 @@ def register_extension_types(lazy=True):
 
 
 def unregister_extension_types(lazy=True):
-    """Unregister extension types in the geoarrow namespace.
-    """
+    """Unregister extension types in the geoarrow namespace."""
     global _extension_types_registered
 
     if lazy and _extension_types_registered is False:

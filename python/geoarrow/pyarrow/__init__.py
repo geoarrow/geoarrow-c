@@ -30,6 +30,7 @@ from ._type import (
     multilinestring,
     multipolygon,
     vector_type,
+    vector_type_common,
     register_extension_types,
     unregister_extension_types,
 )
