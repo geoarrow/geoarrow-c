@@ -60,6 +60,13 @@ class VectorType(pa.ExtensionType):
 
         return cls(c_vector_type)
 
+    @staticmethod
+    def _from_ctype(c_vector_type):
+        cls = type_cls_from_name(c_vector_type.extension_name)
+        schema = c_vector_type.to_schema()
+        storage_type = pa.DataType._import_from_c(schema._addr())
+        return cls.__arrow_ext_deserialize__(storage_type, c_vector_type.extension_metadata)
+
     def wrap_array(self, obj, validate=False):
         out = super().wrap_array(obj)
         if validate:

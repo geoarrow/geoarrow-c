@@ -8,7 +8,8 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
     def __init__(self, obj, type=None):
         if type is not None:
             self._dtype = GeoArrowExtensionDtype(type)
-            self._parent = _ga.array(obj, _ga.VectorType(self._dtype._parent))
+            arrow_type = _ga.VectorType._from_ctype(self._dtype._parent)
+            self._parent = _ga.array(obj, arrow_type)
         else:
             self._parent = _ga.array(obj)
             self._dtype = GeoArrowExtensionDtype(self._parent.type)
@@ -61,6 +62,9 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
             return out.to_numpy()
         else:
             return out.to_numpy(zero_copy_only=False)
+
+    def __repr__(self):
+        return repr(self._parent)
 
 
 class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
