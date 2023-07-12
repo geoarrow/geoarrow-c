@@ -187,6 +187,19 @@ class VectorType(pa.ExtensionType):
         """
         return self._type.crs.decode("UTF-8")
 
+    def with_metadata(self, metadata):
+        """This type with the extension metadata (e.g., copied from some other type)
+
+        >>> import geoarrow.pyarrow as ga
+        >>> ga.point().with_metadata('{"crs": "EPSG:1234"}').crs
+        'EPSG:1234'
+        """
+        if isinstance(metadata, str):
+            metadata = metadata.encode("UTF-8")
+        return type(self).__arrow_ext_deserialize__(self.storage_type, metadata)
+
+
+
     def with_geometry_type(self, geometry_type):
         """Returns a new type with the specified :class:`geoarrow.GeometryType`.
 

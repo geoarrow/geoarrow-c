@@ -30,12 +30,21 @@ def test_dtype_strings():
 
 def test_array_init_without_type():
     array = gapd.GeoArrowExtensionArray(["POINT (0 1)"])
-    assert array._parent == ga.array(["POINT (0 1)"])
+    assert array._data == ga.array(["POINT (0 1)"])
     assert array._dtype._parent.extension_name == "geoarrow.wkt"
 
+
+def test_array_init_with_type():
     array = gapd.GeoArrowExtensionArray(["POINT (0 1)"], ga.wkt())
-    assert array._parent == ga.array(["POINT (0 1)"], ga.wkt())
+    assert array._data == ga.array(["POINT (0 1)"], ga.wkt())
     assert array._dtype._parent.extension_name == "geoarrow.wkt"
+
+
+def test_array_basic_methods():
+    pa_array = ga.array(["POINT (0 1)", "POINT (1 2)", None])
+    array = gapd.GeoArrowExtensionArray(pa_array)
+
+    assert len(array) == 3
 
 def test_accessor_parse_all():
     series = pd.Series(["POINT (0 1)"])

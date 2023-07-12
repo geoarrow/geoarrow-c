@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as _pd
 import pyarrow as _pa
 from . import lib
@@ -9,33 +10,61 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
         if type is not None:
             self._dtype = GeoArrowExtensionDtype(type)
             arrow_type = _ga.VectorType._from_ctype(self._dtype._parent)
-            self._parent = _ga.array(obj, arrow_type)
+            self._data = _ga.array(obj, arrow_type)
         else:
-            self._parent = _ga.array(obj)
-            self._dtype = GeoArrowExtensionDtype(self._parent.type)
+            self._data = _ga.array(obj)
+            self._dtype = GeoArrowExtensionDtype(self._data.type)
+
+    @classmethod
+    def _from_sequence(cls, scalars, *, dtype=None, copy=False):
+        raise NotImplementedError()
+
+    @classmethod
+    def _from_sequence_of_strings(cls, strings, *, dtype=None, copy=False):
+        raise NotImplementedError()
 
     def __getitem__(self, item):
         if isinstance(item, int):
-            return self._parent[item]
+            return self._data[item]
         elif isinstance(item, slice):
-            return GeoArrowExtensionArray(self._parent[slice])
+            return GeoArrowExtensionArray(self._data[slice])
         elif isinstance(item, list):
-            return GeoArrowExtensionArray(self._parent[_pa.array(item)])
+            return GeoArrowExtensionArray(self._data[_pa.array(item)])
         else:
-            return GeoArrowExtensionArray(self._parent.filter(item))
+            return GeoArrowExtensionArray(self._data.filter(item))
 
     def __len__(self):
-        return len(self._parent)
-
-    def __contains__(self, item):
-        return item in self._parent
+        return len(self._data)
 
     def __eq__(self, other):
-        return self._parent == _ga.array(other)
+        raise NotImplementedError()
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    def nbytes(self):
+        raise NotImplementedError()
+
+    def take(self, i):
+        raise NotImplementedError()
+
+    def isna(self):
+        out = self._data.is_null()
+        if isinstance(out, _pa.ChunkedArray):
+            return out.to_numpy()
+        else:
+            return out.to_numpy(zero_copy_only=False)
+
+    def copy(self):
+        raise NotImplementedError()
+
+    def _concat_same_type(self):
+        raise NotImplementedError()
 
     def __arrow_array__(self, type=None):
-        if type is None or type == self._parent.type:
-            return self._parent
+        if type is None or type == self._data.type:
+            return self._data
 
         raise ValueError(
             f"Can't export GeoArrowExtensionArray with type {str(self.dtype)} as {str(type)}"
@@ -47,24 +76,10 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
         if dtype is not None:
             raise TypeError("to_numpy() with na_value != None not supported")
 
-        if isinstance(self._parent, _pa.ChunkedArray):
-            return self._parent.to_numpy()
+        if isinstance(self._data, _pa.ChunkedArray):
+            return self._data.to_numpy()
         else:
-            return self._parent.to_numpy(zero_copy_only=False, writable=copy)
-
-    @property
-    def dtype(self):
-        return self._dtype
-
-    def isna(self):
-        out = self._parent.is_null()
-        if isinstance(out, _pa.ChunkedArray):
-            return out.to_numpy()
-        else:
-            return out.to_numpy(zero_copy_only=False)
-
-    def __repr__(self):
-        return repr(self._parent)
+            return self._data.to_numpy(zero_copy_only=False, writable=copy)
 
 
 class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
