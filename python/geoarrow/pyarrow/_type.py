@@ -84,6 +84,11 @@ class VectorType(pa.ExtensionType):
     def __arrow_ext_scalar_class__(self):
         return VectorType._scalar_cls_from_name(self.extension_name)
 
+    def to_pandas_dtype(self):
+        from .. import pandas as gapd
+
+        return gapd.GeoArrowExtensionDtype(self)
+
     def from_geobuffers(self, *args, **kwargs):
         """Create an array from the appropriate number of buffers
         for this type.

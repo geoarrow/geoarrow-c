@@ -70,6 +70,13 @@ def test_array_basic_methods():
     assert all(array[:2] == array[:2])
 
 
+def test_pyarrow_integration():
+    pa_array = ga.array(["POINT (0 1)", "POINT (1 2)", None])
+    series = pa_array.to_pandas()
+    assert series.dtype == gapd.GeoArrowExtensionDtype(ga.wkt())
+    assert series[0] == gapd.GeoArrowExtensionScalar("POINT (0 1)")
+
+
 def test_accessor_parse_all():
     series = pd.Series(["POINT (0 1)"])
     assert series.geoarrow.parse_all() is series

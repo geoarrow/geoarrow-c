@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as _pd
 import pyarrow as _pa
 from . import lib
