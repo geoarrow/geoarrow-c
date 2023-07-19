@@ -97,6 +97,33 @@ def test_array_basic_methods():
     )
 
 
+def test_array_concat():
+    pa_array_wkt = ga.array(["POINT (0 1)", "POINT (1 2)", None])
+    array_wkt = gapd.GeoArrowExtensionArray(pa_array_wkt)
+    array_wkt_chunkned = gapd.GeoArrowExtensionArray(pa.chunked_array([array_wkt]))
+    pa_array_geoarrow = ga.as_geoarrow(pa_array_wkt)
+    array_geoarrow = gapd.GeoArrowExtensionArray(pa_array_geoarrow)
+
+    concatenated0 = gapd.GeoArrowExtensionArray._concat_same_type([])
+    assert concatenated0.dtype == gapd.GeoArrowExtensionDtype(ga.wkb())
+    assert len(concatenated0) == 0
+
+    concatenated1 = gapd.GeoArrowExtensionArray._concat_same_type([array_wkt])
+    assert concatenated1 is array_wkt
+
+    concatenated_same_type = gapd.GeoArrowExtensionArray._concat_same_type(
+        [array_wkt, array_wkt_chunkned]
+    )
+    assert concatenated_same_type.dtype == array_wkt.dtype
+    assert len(concatenated_same_type) == 6
+
+    concatenated_diff_type = gapd.GeoArrowExtensionArray._concat_same_type(
+        [array_wkt, array_geoarrow]
+    )
+    assert concatenated_diff_type.dtype == gapd.GeoArrowExtensionDtype(ga.wkb())
+    assert len(concatenated_diff_type) == 6
+
+
 def test_pyarrow_integration():
     pa_array = ga.array(["POINT (0 1)", "POINT (1 2)", None])
     series = pa_array.to_pandas()

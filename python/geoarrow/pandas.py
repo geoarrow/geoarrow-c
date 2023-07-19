@@ -129,7 +129,7 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
         if len(items) == 1:
             return items[0]
 
-        types = [item.type for item in to_concat]
+        types = [item._data.type for item in to_concat]
         common_type = _ga.vector_type_common(types)
 
         chunks = []
