@@ -66,13 +66,45 @@ def test_array_basic_methods():
     pa_array = ga.array(["POINT (0 1)", "POINT (1 2)", None])
     array = gapd.GeoArrowExtensionArray(pa_array)
 
+    assert array[0] == gapd.GeoArrowExtensionScalar("POINT (0 1)")
+    assert array[2] is None
+    assert isinstance(array[1:2], gapd.GeoArrowExtensionArray)
+    assert len(array[1:2]) == 1
+    assert array[1:2][0] == gapd.GeoArrowExtensionScalar("POINT (1 2)")
+    assert isinstance(array[[1]], gapd.GeoArrowExtensionArray)
+    assert array[[1]][0] == gapd.GeoArrowExtensionScalar("POINT (1 2)")
+
     assert len(array) == 3
     assert all(array[:2] == array[:2])
+    assert array.dtype == gapd.GeoArrowExtensionDtype(ga.wkt())
+    assert array.nbytes() == pa_array.nbytes
+    assert isinstance(array.take([1]), gapd.GeoArrowExtensionArray)
+    assert array.take([1])[0] == gapd.GeoArrowExtensionScalar("POINT (1 2)")
+    np.testing.assert_array_equal(array.isna(), np.array([False, False, True]))
+
+    assert isinstance(array.copy(), gapd.GeoArrowExtensionArray)
+    assert array.copy()[0] == gapd.GeoArrowExtensionScalar("POINT (0 1)")
+
+    np.testing.assert_array_equal(
+        array.to_numpy(),
+        np.array(
+            [
+                gapd.GeoArrowExtensionScalar("POINT (0 1)"),
+                gapd.GeoArrowExtensionScalar("POINT (1 2)"),
+                None,
+            ]
+        ),
+    )
 
 
 def test_pyarrow_integration():
     pa_array = ga.array(["POINT (0 1)", "POINT (1 2)", None])
     series = pa_array.to_pandas()
+    assert series.dtype == gapd.GeoArrowExtensionDtype(ga.wkt())
+    assert series[0] == gapd.GeoArrowExtensionScalar("POINT (0 1)")
+
+    pa_chunked_array = pa.chunked_array([pa_array])
+    series = pa_chunked_array.to_pandas()
     assert series.dtype == gapd.GeoArrowExtensionDtype(ga.wkt())
     assert series[0] == gapd.GeoArrowExtensionScalar("POINT (0 1)")
 

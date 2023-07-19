@@ -1,5 +1,6 @@
 import pandas as _pd
 import pyarrow as _pa
+import numpy as _np
 from . import lib
 from . import pyarrow as _ga
 
@@ -24,7 +25,11 @@ class GeoArrowExtensionScalar(bytes):
             wkb_array = _ga.as_wkb(obj[index : (index + 1)])
             bytes_value = wkb_array[0].as_py()
 
-        return super().__new__(cls, bytes_value)
+        # A tiny bit of a hack that should probably be moved outside of here
+        if bytes_value is None:
+            return None
+        else:
+            return super().__new__(cls, bytes_value)
 
     def __str__(self):
         return self.wkt
@@ -72,11 +77,14 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
 
     def __getitem__(self, item):
         if isinstance(item, int):
-            return GeoArrowExtensionScalar(self._data, item)
+            if self._data.is_valid()[item]:
+                return GeoArrowExtensionScalar(self._data, item)
+            else:
+                return None
         elif isinstance(item, slice):
             return GeoArrowExtensionArray(self._data[item])
         elif isinstance(item, list):
-            return GeoArrowExtensionArray(self._data[_pa.array(item)])
+            return self.take(item)
         else:
             return GeoArrowExtensionArray(self._data.filter(item))
 
@@ -87,7 +95,9 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
         if isinstance(other, GeoArrowExtensionScalar):
             array = _pa.array(item == other for item in self)
         else:
-            array = _pa.array(item == other_item for item, other_item in zip(self, other))
+            array = _pa.array(
+                item == other_item for item, other_item in zip(self, other)
+            )
 
         return array.to_numpy(zero_copy_only=False)
 
@@ -146,15 +156,12 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
         )
 
     def to_numpy(self, dtype=None, copy=False, na_value=None):
-        if dtype is None:
-            raise TypeError("to_numpy() with dtype != None not supported")
         if dtype is not None:
+            raise TypeError("to_numpy() with dtype != None not supported")
+        if na_value is not None:
             raise TypeError("to_numpy() with na_value != None not supported")
 
-        if isinstance(self._data, _pa.ChunkedArray):
-            return self._data.to_numpy()
-        else:
-            return self._data.to_numpy(zero_copy_only=False, writable=copy)
+        return _np.array(self, dtype=object)
 
 
 class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
