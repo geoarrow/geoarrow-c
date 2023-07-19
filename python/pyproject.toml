@@ -25,7 +25,7 @@ license = {text = "Apache-2.0"}
 requires-python = ">=3.8"
 
 [project.optional-dependencies]
-test = ["pyarrow", "pytest", "pandas"]
+test = ["pyarrow", "pytest", "pandas", "numpy"]
 
 [project.urls]
 homepage = "https://arrow.apache.org"
