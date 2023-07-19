@@ -129,6 +129,7 @@ def test_pyarrow_integration():
     series = pa_array.to_pandas()
     assert series.dtype == gapd.GeoArrowExtensionDtype(ga.wkt())
     assert series[0] == gapd.GeoArrowExtensionScalar("POINT (0 1)")
+    assert pa.array(series) is pa_array
 
     pa_chunked_array = pa.chunked_array([pa_array])
     series = pa_chunked_array.to_pandas()
