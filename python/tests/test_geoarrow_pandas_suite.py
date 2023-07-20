@@ -215,3 +215,7 @@ class TestGeoArrowDtype(base.BaseDtypeTests):
 
 class TestGeoArrowConstructors(base.BaseConstructorsTests):
     pass
+
+
+class TestGeoArrowGetItem(base.BaseGetitemTests):
+    pass

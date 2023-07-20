@@ -22,6 +22,10 @@ class GeoArrowExtensionScalar(bytes):
         elif isinstance(obj, str):
             wkb_array = _ga.as_wkb([obj])
             bytes_value = wkb_array[0].as_py()
+        elif index < 0:
+            index = len(obj) + index
+            wkb_array = _ga.as_wkb(obj[index : (index + 1)])
+            bytes_value = wkb_array[0].as_py()
         else:
             wkb_array = _ga.as_wkb(obj[index : (index + 1)])
             bytes_value = wkb_array[0].as_py()
@@ -88,9 +92,25 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
         elif isinstance(item, slice):
             return GeoArrowExtensionArray(self._data[item])
         elif isinstance(item, list):
-            return self.take(_np.array(item, dtype=int))
+            return self.take(item)
+        elif hasattr(item, "dtype") and item.dtype.kind == "i":
+            return self.take(item)
+        elif hasattr(item, "dtype") and item.dtype.kind == "b":
+            if len(item) != len(self):
+                raise IndexError(
+                    f"Boolean index has wrong length: {len(item)} instead of {len(self)}"
+                )
+            return GeoArrowExtensionArray(
+                self._data.filter(_pa.array(item, _pa.bool_()))
+            )
+        elif isinstance(item, tuple) and item[0] is Ellipsis:
+            return self[item[1]]
+        elif isinstance(item, tuple) and item[1] is Ellipsis:
+            return self[item[0]]
         else:
-            return GeoArrowExtensionArray(self._data.filter(_pa.array(item)))
+            raise IndexError(
+                "only integers, slices (`:`), ellipsis (`...`), numpy.newaxis (`None`) and integer or boolean arrays are valid indices"
+            )
 
     def __len__(self):
         return len(self._data)
@@ -113,7 +133,7 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
         return self._data.nbytes
 
     def take(self, indices, allow_fill=False, fill_value=None):
-        if allow_fill:
+        if allow_fill or fill_value is not None:
             objecified = _np.array(list(self), dtype=object)
             # fill_value=None results in nans instead of Nones
             result = _pd.api.extensions.take(
@@ -121,12 +141,23 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
             )
             result = [item if item is not False else fill_value for item in result]
             return GeoArrowExtensionArray._from_sequence(result, dtype=self.dtype)
-        elif _np.all(indices >= 0):
-            return GeoArrowExtensionArray(self._data.take(indices), self._dtype)
-        else:
+
+        if len(self) == 0 and len(indices) != 0:
+            raise IndexError("cannot do a non-empty take from an empty axes")
+
+        if isinstance(indices, list):
+            indices = _pd.array(indices, dtype=_pd.Int32Dtype())
+
+        if _np.any(indices < 0):
             indices = indices.copy()
-            indices[indices < 0] = len(self) - indices[indices < 0]
-            return GeoArrowExtensionArray(self._data.take(indices), self._dtype)
+            indices[indices < 0] = len(self) + indices[indices < 0]
+
+        indices = _pa.array(indices)
+        if indices.null_count > 0:
+            raise ValueError(
+                "Cannot index with an integer indexer containing NA values"
+            )
+        return GeoArrowExtensionArray(self._data.take(indices), self._dtype)
 
     def isna(self):
         out = self._data.is_null()
