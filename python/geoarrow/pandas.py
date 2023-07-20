@@ -70,7 +70,10 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
 
     @classmethod
     def _from_sequence(cls, scalars, *, dtype=None, copy=False):
-        return GeoArrowExtensionArray(scalars, type=dtype)
+        wkb_array = _pa.array(iter(scalars), type=_pa.binary())
+        arrow_type = dtype.pyarrow_dtype if dtype is not None else None
+        pa_array = _ga.as_geoarrow(wkb_array, arrow_type)
+        return GeoArrowExtensionArray(pa_array, type=dtype)
 
     @classmethod
     def _from_sequence_of_strings(cls, strings, *, dtype=None, copy=False):
@@ -85,9 +88,9 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
         elif isinstance(item, slice):
             return GeoArrowExtensionArray(self._data[item])
         elif isinstance(item, list):
-            return self.take(item)
+            return self.take(_np.array(item, dtype=int))
         else:
-            return GeoArrowExtensionArray(self._data.filter(item))
+            return GeoArrowExtensionArray(self._data.filter(_pa.array(item)))
 
     def __len__(self):
         return len(self._data)
@@ -109,8 +112,21 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
     def nbytes(self):
         return self._data.nbytes
 
-    def take(self, i):
-        return GeoArrowExtensionArray(self._data.take(i), self._dtype)
+    def take(self, indices, allow_fill=False, fill_value=None):
+        if allow_fill:
+            objecified = _np.array(list(self), dtype=object)
+            # fill_value=None results in nans instead of Nones
+            result = _pd.api.extensions.take(
+                objecified, indices, allow_fill=allow_fill, fill_value=False
+            )
+            result = [item if item is not False else fill_value for item in result]
+            return GeoArrowExtensionArray._from_sequence(result, dtype=self.dtype)
+        elif _np.all(indices >= 0):
+            return GeoArrowExtensionArray(self._data.take(indices), self._dtype)
+        else:
+            indices = indices.copy()
+            indices[indices < 0] = len(self) - indices[indices < 0]
+            return GeoArrowExtensionArray(self._data.take(indices), self._dtype)
 
     def isna(self):
         out = self._data.is_null()
@@ -157,7 +173,7 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
         )
 
     def to_numpy(self, dtype=None, copy=False, na_value=None):
-        if dtype is not None:
+        if dtype is not None and dtype is not object:
             raise TypeError("to_numpy() with dtype != None not supported")
         if na_value is not None:
             raise TypeError("to_numpy() with na_value != None not supported")
@@ -165,7 +181,16 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
         return _np.array(self, dtype=object)
 
 
+@_pd.api.extensions.register_extension_dtype
 class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
+    _match = re.compile(
+        r"^geoarrow."
+        r"(?P<type>wkt|wkb|point|linestring|polygon|multipoint|multilinestring|multipolygon)"
+        r"(?P<dims>\[Z\]|\[M\]|\[ZM\])?"
+        r"(?P<coord_type>\[interleaved\])?"
+        r"(?P<metadata>.*)$"
+    )
+
     def __init__(self, parent):
         if isinstance(parent, _ga.VectorType):
             self._parent = parent._type
@@ -198,15 +223,7 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
                 f"'construct_from_string' expects a string, got {type(string)}"
             )
 
-        str_re = re.compile(
-            r"^geoarrow."
-            r"(?P<type>wkt|wkb|point|linestring|polygon|multipoint|multilinestring|multipolygon)"
-            r"(?P<dims>\[Z\]|\[M\]|\[ZM\])?"
-            r"(?P<coord_type>\[interleaved\])?"
-            r"(?P<metadata>.*)$"
-        )
-
-        matched = str_re.match(string)
+        matched = cls._match.match(string)
         if not matched:
             raise TypeError(
                 f"Cannot construct a 'GeoArrowExtensionDtype' from '{string}'"
@@ -302,6 +319,10 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
     @property
     def name(self):
         return str(self)
+
+    @property
+    def na_value(self):
+        return None
 
     def __from_arrow__(self, array):
         return GeoArrowExtensionArray(array)

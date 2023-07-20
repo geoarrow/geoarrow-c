@@ -211,3 +211,7 @@ def using_copy_on_write() -> bool:
 
 class TestGeoArrowDtype(base.BaseDtypeTests):
     pass
+
+
+class TestGeoArrowConstructors(base.BaseConstructorsTests):
+    pass

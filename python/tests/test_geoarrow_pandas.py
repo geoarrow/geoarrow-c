@@ -94,8 +94,8 @@ def test_array_basic_methods():
     assert all(array[:2] == array[:2])
     assert array.dtype == gapd.GeoArrowExtensionDtype(ga.wkt())
     assert array.nbytes() == pa_array.nbytes
-    assert isinstance(array.take([1]), gapd.GeoArrowExtensionArray)
-    assert array.take([1])[0] == gapd.GeoArrowExtensionScalar("POINT (1 2)")
+    assert isinstance(array.take(np.array([1])), gapd.GeoArrowExtensionArray)
+    assert array.take(np.array([1]))[0] == gapd.GeoArrowExtensionScalar("POINT (1 2)")
     np.testing.assert_array_equal(array.isna(), np.array([False, False, True]))
 
     assert isinstance(array.copy(), gapd.GeoArrowExtensionArray)
