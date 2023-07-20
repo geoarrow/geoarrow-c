@@ -1,3 +1,4 @@
+import re
 import pandas as _pd
 import pyarrow as _pa
 import numpy as _np
@@ -179,6 +180,10 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
             )
 
     @property
+    def pyarrow_dtype(self):
+        return _ga.VectorType._from_ctype(self._parent)
+
+    @property
     def type(self):
         return GeoArrowExtensionScalar
 
@@ -188,9 +193,78 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
 
     @classmethod
     def construct_from_string(cls, string):
-        # TODO: The current string output is not quite sufficient since it does
-        # not communicate geometry type or dimensions
-        raise NotImplementedError()
+        if not isinstance(string, str):
+            raise TypeError(
+                f"'construct_from_string' expects a string, got {type(string)}"
+            )
+
+        str_re = re.compile(
+            r"^geoarrow."
+            r"(?P<type>wkt|wkb|point|linestring|polygon|multipoint|multilinestring|multipolygon)"
+            r"(?P<dims>\[Z\]|\[M\]|\[ZM\])?"
+            r"(?P<coord_type>\[interleaved\])?"
+            r"(?P<metadata>.*)$"
+        )
+
+        matched = str_re.match(string)
+        if not matched:
+            raise TypeError(
+                f"Cannot construct a 'GeoArrowExtensionDtype' from '{string}'"
+            )
+
+        params = matched.groupdict()
+
+        if params["dims"] == "[Z]":
+            dims = _ga.Dimensions.XYZ
+        elif params["dims"] == "[M]":
+            dims = _ga.Dimensions.XYM
+        elif params["dims"] == "[ZM]":
+            dims = _ga.Dimensions.XYZM
+        elif params["type"] in ("wkt", "wkb"):
+            dims = _ga.Dimensions.UNKNOWN
+        else:
+            dims = _ga.Dimensions.XY
+
+        if params["coord_type"] == "[interleaved]":
+            coord_type = _ga.CoordType.INTERLEAVED
+        elif params["type"] in ("wkt", "wkb"):
+            coord_type = _ga.CoordType.UNKNOWN
+        else:
+            coord_type = _ga.CoordType.SEPARATE
+
+        if params["type"] == "point":
+            geometry_type = _ga.GeometryType.POINT
+        elif params["type"] == "linestring":
+            geometry_type = _ga.GeometryType.LINESTRING
+        elif params["type"] == "polygon":
+            geometry_type = _ga.GeometryType.POLYGON
+        elif params["type"] == "multipoint":
+            geometry_type = _ga.GeometryType.MULTIPOINT
+        elif params["type"] == "multilinestring":
+            geometry_type = _ga.GeometryType.MULTILINESTRING
+        elif params["type"] == "multipolygon":
+            geometry_type = _ga.GeometryType.MULTIPOLYGON
+        else:
+            geometry_type = _ga.GeometryType.GEOMETRY
+
+        if params["type"] == "wkb":
+            base_type = _ga.wkb()
+        elif params["type"] == "wkt":
+            base_type = _ga.wkt()
+        else:
+            base_type = _ga.vector_type(geometry_type, dims, coord_type)
+
+        try:
+            if params["metadata"]:
+                return GeoArrowExtensionDtype(
+                    base_type.with_metadata(params["metadata"])
+                )
+            else:
+                return GeoArrowExtensionDtype(base_type)
+        except Exception as e:
+            raise TypeError(
+                f"Cannot construct a 'GeoArrowExtensionDtype' from '{string}'"
+            ) from e
 
     def __repr__(self):
         return f"{type(self).__name__}({repr(self._parent)})"
@@ -218,8 +292,7 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
         if ext_meta == "{}":
             meta_str = ""
         else:
-            meta_str = f"[{ext_meta}]"
-
+            meta_str = ext_meta
 
         return f"{ext_name}{dims_str}{coord_str}{meta_str}"
 

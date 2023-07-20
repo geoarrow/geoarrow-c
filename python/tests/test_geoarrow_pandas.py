@@ -24,17 +24,25 @@ def test_dtype_constructor():
 def test_dtype_strings():
     dtype = gapd.GeoArrowExtensionDtype(ga.point())
     assert str(dtype) == "geoarrow.point"
+    dtype2 = gapd.GeoArrowExtensionDtype.construct_from_string(str(dtype))
+    assert dtype2 == dtype
 
     dtype = gapd.GeoArrowExtensionDtype(ga.point().with_crs("EPSG:1234"))
-    assert str(dtype) == 'geoarrow.point[{"crs":"EPSG:1234"}]'
+    assert str(dtype) == 'geoarrow.point{"crs":"EPSG:1234"}'
+    dtype2 = gapd.GeoArrowExtensionDtype.construct_from_string(str(dtype))
+    assert dtype2 == dtype
 
     dtype = gapd.GeoArrowExtensionDtype(
         ga.point().with_coord_type(ga.CoordType.INTERLEAVED)
     )
     assert str(dtype) == "geoarrow.point[interleaved]"
+    dtype2 = gapd.GeoArrowExtensionDtype.construct_from_string(str(dtype))
+    assert dtype2 == dtype
 
     dtype = gapd.GeoArrowExtensionDtype(ga.point().with_dimensions(ga.Dimensions.XYZ))
     assert str(dtype) == "geoarrow.point[Z]"
+    dtype2 = gapd.GeoArrowExtensionDtype.construct_from_string(str(dtype))
+    assert dtype2 == dtype
 
 
 def test_scalar():
