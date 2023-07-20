@@ -53,7 +53,7 @@ jobs:
         run: |
           sudo apt-get install -y lcov
           pip uninstall --yes geoarrow
-          pip install pytest-cov Cython
+          pip install pytest-cov "Cython <= 0.29.36"
           pushd python
 
           # Build with Cython + gcc coverage options
