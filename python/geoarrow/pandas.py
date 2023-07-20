@@ -197,11 +197,31 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
 
     def __str__(self):
         ext_name = self._parent.extension_name
+        ext_dims = self._parent.dimensions
+        ext_coord = self._parent.coord_type
         ext_meta = self._parent.extension_metadata.decode("UTF-8")
-        if ext_meta == "{}":
-            return f"{ext_name}"
+
+        if ext_dims == _ga.Dimensions.XYZ:
+            dims_str = "[Z]"
+        elif ext_dims == _ga.Dimensions.XYM:
+            dims_str = "[M]"
+        elif ext_dims == _ga.Dimensions.XYZM:
+            dims_str = "[ZM]"
         else:
-            return f"{ext_name}[{ext_meta}]"
+            dims_str = ""
+
+        if ext_coord == _ga.CoordType.INTERLEAVED:
+            coord_str = "[interleaved]"
+        else:
+            coord_str = ""
+
+        if ext_meta == "{}":
+            meta_str = ""
+        else:
+            meta_str = f"[{ext_meta}]"
+
+
+        return f"{ext_name}{dims_str}{coord_str}{meta_str}"
 
     def __hash__(self):
         return hash(str(self))
