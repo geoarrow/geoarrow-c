@@ -219,3 +219,14 @@ class TestGeoArrowConstructors(base.BaseConstructorsTests):
 
 class TestGeoArrowGetItem(base.BaseGetitemTests):
     pass
+
+
+class TestGeoArrowMissing(base.BaseMissingTests):
+    def test_fillna_scalar(self, data_missing):
+        pytest.skip()
+
+    def test_fillna_frame(self, data_missing):
+        pytest.skip()
+
+    def test_fillna_series(self, data_missing):
+        pytest.skip()
