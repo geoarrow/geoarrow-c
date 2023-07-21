@@ -475,3 +475,7 @@ class GeoArrowAccessor:
     def point_coords(self, dimensions=None):
         point_coords = _ga.point_coords(_ga.with_coord_type(self._obj, dimensions))
         return tuple(_pd.Series(dim, index=self._obj.index) for dim in point_coords)
+
+    def to_geopandas(self):
+        import geopandas
+        return geopandas.GeoSeries.from_wkb(self.as_wkb().geoarrow.format_wkb())
