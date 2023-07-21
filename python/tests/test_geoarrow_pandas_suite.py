@@ -233,7 +233,7 @@ class TestGeoArrowMissing(base.BaseMissingTests):
 
 
 class TestGeoArrowMethods(base.BaseMethodsTests):
-    def test_value_counts(self, all_data, dropna):
+    def test_value_counts(self, all_data):
         pytest.skip()
 
     def test_value_counts_with_normalize(self, data):
