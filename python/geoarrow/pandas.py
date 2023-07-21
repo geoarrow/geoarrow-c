@@ -473,4 +473,5 @@ class GeoArrowAccessor:
         return self.with_geometry_type(_ga.with_coord_type(self._obj, geometry_type))
 
     def point_coords(self, dimensions=None):
-        return self.point_coords(_ga.with_coord_type(self._obj, dimensions))
+        point_coords = _ga.point_coords(_ga.with_coord_type(self._obj, dimensions))
+        return tuple(_pd.Series(dim, index=self._obj.index) for dim in point_coords)

@@ -215,7 +215,10 @@ def test_accessor_total_bounds():
 
 
 def test_accessor_point_coords():
-    pass
+    series = pd.Series(["POINT (0 1)", "POINT (1 2)"])
+    x, y = series.geoarrow.point_coords()
+    np.testing.assert_array_equal(np.array(x), np.array([0.0, 1.0]))
+    np.testing.assert_array_equal(np.array(y), np.array([1.0, 2.0]))
 
 
 def test_accessor_with_coord_type():
