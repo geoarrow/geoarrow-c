@@ -187,9 +187,7 @@ def test_accessor_format_wkb():
 
     # Currently handles ChunkedArray explicitly
     chunked = pa.chunked_array([ga.array(["POINT (0 1)"])])
-    ga_series = pd.Series(
-        chunked, dtype=pd.ArrowDtype(chunked.type)
-    ).geoarrow.format_wkb()
+    ga_series = chunked.to_pandas().geoarrow.format_wkb()
     assert ga_series.dtype.pyarrow_dtype == pa.binary()
 
 

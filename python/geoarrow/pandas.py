@@ -380,15 +380,11 @@ class GeoArrowAccessor:
 
     def _wrap_series(self, array_or_chunked):
         return _pd.Series(
-            array_or_chunked,
-            index=self._obj.index,
-            dtype=_pd.ArrowDtype(array_or_chunked.type),
+            GeoArrowExtensionArray(array_or_chunked), index=self._obj.index
         )
 
     def _obj_is_geoarrow(self):
-        return isinstance(self._obj.dtype, _pd.ArrowDtype) and isinstance(
-            self._obj.dtype.pyarrow_dtype, _ga.VectorType
-        )
+        return isinstance(self._obj.dtype, GeoArrowExtensionDtype)
 
     def parse_all(self):
         _ga.parse_all(self._obj)
@@ -409,18 +405,29 @@ class GeoArrowAccessor:
             significant_digits=significant_digits,
             max_element_size_bytes=max_element_size_bytes,
         )
-        return self._wrap_series(array_or_chunked)
+        return _pd.Series(
+            array_or_chunked,
+            index=self._obj.index,
+            dtype=_pd.ArrowDtype(array_or_chunked.type),
+        )
 
     def format_wkb(self):
         if not self._obj_is_geoarrow():
             raise TypeError("Can't format_wkb() a non-geoarrow Series")
 
         array_or_chunked = _ga.as_wkb(_pa.array(self._obj))
+
         if isinstance(array_or_chunked, _pa.ChunkedArray):
             storage = [chunk.storage for chunk in array_or_chunked.chunks]
-            return self._wrap_series(_pa.chunked_array(storage, _pa.binary()))
+            array_or_chunked = _pa.chunked_array(storage, _pa.binary())
         else:
-            return self._wrap_series(array_or_chunked.storage)
+            array_or_chunked = array_or_chunked.storage
+
+        return _pd.Series(
+            array_or_chunked,
+            index=self._obj.index,
+            dtype=_pd.ArrowDtype(array_or_chunked.type),
+        )
 
     def as_geoarrow(self, type=None, coord_type=None):
         array_or_chunked = _ga.as_geoarrow(self._obj, type=type, coord_type=coord_type)
