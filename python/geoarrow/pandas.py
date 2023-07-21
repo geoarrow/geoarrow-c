@@ -1,4 +1,4 @@
-import re
+import re as _re
 import pandas as _pd
 import pyarrow as _pa
 import numpy as _np
@@ -228,10 +228,10 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
 
 @_pd.api.extensions.register_extension_dtype
 class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
-    _match = re.compile(
+    _match = _re.compile(
         r"^geoarrow."
         r"(?P<type>wkt|wkb|point|linestring|polygon|multipoint|multilinestring|multipolygon)"
-        r"(?P<dims>\[Z\]|\[M\]|\[ZM\])?"
+        r"(?P<dims>\[z\]|\[m\]|\[zm\])?"
         r"(?P<coord_type>\[interleaved\])?"
         r"(?P<metadata>.*)$"
     )
@@ -276,11 +276,11 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
 
         params = matched.groupdict()
 
-        if params["dims"] == "[Z]":
+        if params["dims"] == "[z]":
             dims = _ga.Dimensions.XYZ
-        elif params["dims"] == "[M]":
+        elif params["dims"] == "[m]":
             dims = _ga.Dimensions.XYM
-        elif params["dims"] == "[ZM]":
+        elif params["dims"] == "[zm]":
             dims = _ga.Dimensions.XYZM
         elif params["type"] in ("wkt", "wkb"):
             dims = _ga.Dimensions.UNKNOWN
@@ -338,11 +338,11 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
         ext_meta = self._parent.extension_metadata.decode("UTF-8")
 
         if ext_dims == _ga.Dimensions.XYZ:
-            dims_str = "[Z]"
+            dims_str = "[z]"
         elif ext_dims == _ga.Dimensions.XYM:
-            dims_str = "[M]"
+            dims_str = "[m]"
         elif ext_dims == _ga.Dimensions.XYZM:
-            dims_str = "[ZM]"
+            dims_str = "[zm]"
         else:
             dims_str = ""
 

@@ -40,7 +40,7 @@ def test_dtype_strings():
     assert dtype2 == dtype
 
     dtype = gapd.GeoArrowExtensionDtype(ga.point().with_dimensions(ga.Dimensions.XYZ))
-    assert str(dtype) == "geoarrow.point[Z]"
+    assert str(dtype) == "geoarrow.point[z]"
     dtype2 = gapd.GeoArrowExtensionDtype.construct_from_string(str(dtype))
     assert dtype2 == dtype
 
@@ -76,9 +76,9 @@ def test_array_init_with_type():
     array = gapd.GeoArrowExtensionArray(["POINT (0 1)"], ga.wkt())
     assert array._data == ga.array(["POINT (0 1)"], ga.wkt())
     assert array._dtype._parent.extension_name == "geoarrow.wkt"
+
+
 def test_array_basic_methods():
-
-
     pa_array = ga.array(["POINT (0 1)", "POINT (1 2)", None])
     array = gapd.GeoArrowExtensionArray(pa_array)
 
@@ -93,7 +93,7 @@ def test_array_basic_methods():
     assert len(array) == 3
     assert all(array[:2] == array[:2])
     assert array.dtype == gapd.GeoArrowExtensionDtype(ga.wkt())
-    assert array.nbytes() == pa_array.nbytes
+    assert array.nbytes == pa_array.nbytes
     assert isinstance(array.take(np.array([1])), gapd.GeoArrowExtensionArray)
     assert array.take(np.array([1]))[0] == gapd.GeoArrowExtensionScalar("POINT (1 2)")
     np.testing.assert_array_equal(array.isna(), np.array([False, False, True]))
