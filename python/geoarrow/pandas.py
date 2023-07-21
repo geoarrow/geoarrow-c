@@ -1,5 +1,4 @@
 import re
-import numpy as np
 import pandas as _pd
 import pyarrow as _pa
 import numpy as _np
