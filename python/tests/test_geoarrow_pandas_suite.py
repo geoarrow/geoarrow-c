@@ -261,10 +261,14 @@ class TestGeoArrowMethods(base.BaseMethodsTests):
 class TestGeoArrowIndex(base.BaseIndexTests):
     pass
 
-class TestGeoArrowInterface(base.BaseInterfaceTests):
 
+class TestGeoArrowInterface(base.BaseInterfaceTests):
     def test_copy(self, data):
         pytest.skip()
 
     def test_view(self, data):
         pytest.skip()
+
+
+class TestGeoArrowParsing(base.BaseParsingTests):
+    pass
