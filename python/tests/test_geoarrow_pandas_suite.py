@@ -230,3 +230,31 @@ class TestGeoArrowMissing(base.BaseMissingTests):
 
     def test_fillna_series(self, data_missing):
         pytest.skip()
+
+class TestGeoArrowMethods(base.BaseMethodsTests):
+
+    def test_value_counts(self, all_data, dropna):
+        pytest.skip()
+
+    def test_value_counts_with_normalize(self, data):
+        pytest.skip()
+
+    def test_factorize_empty(self, data):
+        pytest.skip()
+
+    def test_fillna_copy_frame(self, data_missing):
+        pytest.skip()
+
+    def test_fillna_copy_series(self, data_missing):
+        pytest.skip()
+
+    def test_combine_first(self, data):
+        pytest.skip()
+
+    def test_shift_0_periods(self, data):
+        pytest.skip()
+
+    def test_where_series(self, data, na_value, as_frame):
+        pytest.skip()
+
+
