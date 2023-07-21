@@ -157,6 +157,7 @@ def array(obj, type_=None, *args, validate=True, **kwargs) -> VectorArray:
     PointArray:PointType(geoarrow.point)[1]
     <POINT (0 1)>
     """
+    # Convert GeoPandas to WKB
     if type(obj).__name__ == "GeoSeries":
         if obj.crs:
             try:
@@ -167,10 +168,17 @@ def array(obj, type_=None, *args, validate=True, **kwargs) -> VectorArray:
             type_ = wkb()
         obj = obj.to_wkb()
 
-    if type_ is None:
+    # Convert obj to array if it isn't already one
+    if isinstance(obj, pa.Array) or isinstance(obj, pa.ChunkedArray):
+        arr = obj
+    else:
         arr = pa.array(obj, *args, **kwargs)
 
-        if arr.type == pa.utf8():
+    # Handle the case where we get to pick the type
+    if type_ is None:
+        if isinstance(arr.type, VectorType):
+            return arr
+        elif arr.type == pa.utf8():
             return wkt().wrap_array(arr, validate=validate)
         elif arr.type == pa.large_utf8():
             return large_wkt().wrap_array(arr, validate=validate)
@@ -183,11 +191,15 @@ def array(obj, type_=None, *args, validate=True, **kwargs) -> VectorArray:
                 f"Can't create geoarrow.array from Arrow array of type {type_}"
             )
 
+    # Handle the case where the type requested is already the correct type
+    if type_ == arr.type:
+        return arr
+
     type_is_geoarrow = isinstance(type_, VectorType)
     type_is_wkb_or_wkt = type_.extension_name in ("geoarrow.wkt", "geoarrow.wkb")
 
     if type_is_geoarrow and type_is_wkb_or_wkt:
-        arr = pa.array(obj, type_.storage_type, *args, **kwargs)
+        arr = arr.cast(type_.storage_type)
         return type_.wrap_array(arr, validate=validate)
 
     # Eventually we will be able to handle more types (e.g., parse wkt or wkb
