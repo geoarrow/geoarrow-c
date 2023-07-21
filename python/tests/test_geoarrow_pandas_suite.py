@@ -272,3 +272,7 @@ class TestGeoArrowInterface(base.BaseInterfaceTests):
 
 class TestGeoArrowParsing(base.BaseParsingTests):
     pass
+
+
+class TestGeoArrowPrinting(base.BasePrintingTests):
+    pass

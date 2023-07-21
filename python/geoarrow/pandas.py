@@ -140,6 +140,7 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
     def dtype(self):
         return self._dtype
 
+    @property
     def nbytes(self):
         return self._data.nbytes
 
