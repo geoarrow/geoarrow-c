@@ -37,6 +37,9 @@ class GeoArrowExtensionScalar(bytes):
         else:
             return super().__new__(cls, bytes_value)
 
+    def __hash__(self) -> int:
+        return super().__hash__()
+
     def __str__(self):
         return self.wkt
 
@@ -112,6 +115,13 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
             raise IndexError(
                 "only integers, slices (`:`), ellipsis (`...`), numpy.newaxis (`None`) and integer or boolean arrays are valid indices"
             )
+
+    def __contains__(self, item: object):
+        for scalar in self:
+            if scalar == item:
+                return True
+
+        return False
 
     def __len__(self):
         return len(self._data)
@@ -205,12 +215,15 @@ class GeoArrowExtensionArray(_pd.api.extensions.ExtensionArray):
         )
 
     def to_numpy(self, dtype=None, copy=False, na_value=None):
-        if dtype is not None and dtype is not object:
+        if dtype is not None and dtype is not object and dtype != "O":
             raise TypeError("to_numpy() with dtype != None not supported")
         if na_value is not None:
             raise TypeError("to_numpy() with na_value != None not supported")
 
-        return _np.array(self, dtype=object)
+        return _np.array(list(self), dtype=object)
+
+    def __array__(self, dtype=None):
+        return self.to_numpy(dtype=dtype)
 
 
 @_pd.api.extensions.register_extension_dtype
