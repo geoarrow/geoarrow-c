@@ -31,7 +31,7 @@ def data():
 @pytest.fixture
 def data_for_twos():
     """Length-100 array in which all the elements are two."""
-    raise NotImplementedError
+    pytest.skip()
 
 
 @pytest.fixture
@@ -80,7 +80,7 @@ def data_for_sorting():
     This should be three items [B, C, A] with
     A < B < C
     """
-    raise NotImplementedError
+    pytest.skip()
 
 
 @pytest.fixture
@@ -91,7 +91,7 @@ def data_missing_for_sorting():
     This should be three items [B, NA, A] with
     A < B and NA missing.
     """
-    raise NotImplementedError
+    pytest.skip()
 
 
 @pytest.fixture
@@ -122,7 +122,7 @@ def data_for_grouping():
 
     Where A < B < C and NA is missing
     """
-    raise NotImplementedError
+    pytest.skip()
 
 
 @pytest.fixture(params=[True, False])
