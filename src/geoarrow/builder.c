@@ -54,6 +54,16 @@ static ArrowErrorCode GeoArrowBuilderInitArrayAndCachePointers(
     }
 
     private->buffers[i] = ArrowArrayBuffer(res.array, res.i);
+    builder->view.buffers[i].data.as_uint8 = NULL;
+    builder->view.buffers[i].size_bytes = 0;
+    builder->view.buffers[i].capacity_bytes = 0;
+  }
+
+  // Reset the coordinate counts and values
+  builder->view.coords.size_coords = 0;
+  builder->view.coords.capacity_coords = 0;
+  for (int i = 0; i < 4; i++) {
+    builder->view.coords.values[i] = NULL;
   }
 
   // Set the null_count to zero
