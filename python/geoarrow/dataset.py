@@ -68,7 +68,26 @@ class GeoDataset:
         self._index = None
         self._geometry_columns = geometry_columns
         self._fragments = None
-        self._parent = _ds.dataset(parent, *args, **kwargs)
+
+        if isinstance(parent, _ds.Dataset):
+            self._parent = parent
+        else:
+            self._parent = _ds.dataset(parent, *args, **kwargs)
+
+    def use_row_groups(self):
+        if isinstance(self._parent, _ds.FileSystemDataset) and isinstance(
+            self._parent.format, _ds.ParquetFileFormat
+        ):
+            row_group_fragments = []
+            for file_fragment in self._parent.get_fragments():
+                for row_group_fragment in file_fragment.split_by_row_group():
+                    row_group_fragments.append(row_group_fragment)
+
+            return GeoDataset(
+                _ds.FileSystemDataset(
+                    row_group_fragments, self._parent.schema, self._parent.format
+                )
+            )
 
     @property
     def schema(self):
@@ -113,9 +132,7 @@ class GeoDataset:
 
         if isinstance(self._parent, _ds.FileSystemDataset):
             return _ds.FileSystemDataset(
-                fragments_filtered,
-                self.schema,
-                self._parent.format
+                fragments_filtered, self.schema, self._parent.format
             )
         else:
             tables = [fragment.to_table() for fragment in fragments_filtered]
