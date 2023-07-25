@@ -16,7 +16,7 @@ def _index_fragment(fragment, column):
     return kernel.finish()
 
 
-def _index_fragments(ds, columns, num_threads=None):
+def _index_fragments(fragments, columns, num_threads=None):
     columns = list(columns)
     if num_threads is None:
         num_threads = _pa.cpu_count()
@@ -24,7 +24,7 @@ def _index_fragments(ds, columns, num_threads=None):
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = []
         for column in columns:
-            for fragment in ds.get_fragments():
+            for fragment in fragments:
                 future = executor.submit(_index_fragment, fragment, column)
                 futures.append(future)
 
@@ -47,10 +47,10 @@ def _index_box_intersects(index, box, columns):
     expressions = []
     for col in columns:
         expr = (
-            (_compute.field(col, "xmin") >= xmax)
-            & (_compute.field(col, "xmax") <= xmin)
-            & (_compute.field(col, "ymin") >= ymax)
-            & (_compute.field(col, "ymax") <= ymin)
+            (_compute.field(col, "xmin") <= xmax)
+            & (_compute.field(col, "xmax") >= xmin)
+            & (_compute.field(col, "ymin") <= ymax)
+            & (_compute.field(col, "ymax") >= ymin)
         )
         expressions.append(expr)
 
@@ -67,27 +67,37 @@ class GeoDataset:
         self._parent = None
         self._index = None
         self._geometry_columns = geometry_columns
+        self._fragments = None
         self._parent = _ds.dataset(parent, *args, **kwargs)
 
     @property
     def schema(self):
         return self._parent.schema
 
+    def get_fragments(self):
+        if self._fragments is None:
+            self._fragments = tuple(self._parent.get_fragments())
+
+        return self._fragments
+
     @property
     def geometry_columns(self):
         if self._geometry_columns is None:
             schema = self.schema
-            self._geometry_columns = []
+            geometry_columns = []
             for name, type in zip(schema.names, schema.types):
                 if isinstance(type, _ga.VectorType):
-                    self._geometry_columns.append(name)
-        return list(self._geometry_columns)
+                    geometry_columns.append(name)
+            self._geometry_columns = tuple(geometry_columns)
+
+        return self._geometry_columns
 
     def index_fragments(self, num_threads=None):
         if self._index is None:
             self._index = _index_fragments(
-                self._parent, self.geometry_columns, num_threads=num_threads
+                self.get_fragments(), self.geometry_columns, num_threads=num_threads
             )
+
         return self._index
 
     def filter_fragments(self, target):
@@ -97,6 +107,16 @@ class GeoDataset:
         maybe_intersects = _index_box_intersects(
             self.index_fragments(), target_box, self.geometry_columns
         )
-        fragment_indices = _pa.scalar([scalar.as_py() for scalar in maybe_intersects])
-        expr = _compute.is_in(_compute.field("__fragment_index"), fragment_indices)
-        return self._parent.filter(expr)
+        fragment_indices = [scalar.as_py() for scalar in maybe_intersects]
+        fragments = list(self.get_fragments())
+        fragments_filtered = [fragments[i] for i in fragment_indices]
+
+        if isinstance(self._parent, _ds.FileSystemDataset):
+            return _ds.FileSystemDataset(
+                fragments_filtered,
+                self.schema,
+                self._parent.format
+            )
+        else:
+            tables = [fragment.to_table() for fragment in fragments_filtered]
+            return _ds.InMemoryDataset(tables)
