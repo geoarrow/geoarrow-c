@@ -20,6 +20,9 @@ def test_geodataset_in_memory():
     filtered1 = geods.filter_fragments("POLYGON ((0 1, 1 1, 1 2, 0 2, 0 1))").to_table()
     assert filtered1.num_rows == 1
 
+    with pytest.raises(TypeError):
+        geods.use_row_groups()
+
 
 def test_geodataset_parquet():
     table1 = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])

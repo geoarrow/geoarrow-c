@@ -88,6 +88,8 @@ class GeoDataset:
                     row_group_fragments, self._parent.schema, self._parent.format
                 )
             )
+        else:
+            raise TypeError("use_row_groups() is only suppoted for Parquet datasets")
 
     @property
     def schema(self):
