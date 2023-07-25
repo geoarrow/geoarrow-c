@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, wait
 import pyarrow as _pa
 import pyarrow.dataset as _ds
 import pyarrow.compute as _compute
+import pyarrow.parquet as _pq
 from . import pyarrow as _ga
 from .pyarrow._kernel import Kernel
 
@@ -78,16 +79,7 @@ class GeoDataset:
         if isinstance(self._parent, _ds.FileSystemDataset) and isinstance(
             self._parent.format, _ds.ParquetFileFormat
         ):
-            row_group_fragments = []
-            for file_fragment in self._parent.get_fragments():
-                for row_group_fragment in file_fragment.split_by_row_group():
-                    row_group_fragments.append(row_group_fragment)
-
-            return GeoDataset(
-                _ds.FileSystemDataset(
-                    row_group_fragments, self._parent.schema, self._parent.format
-                )
-            )
+            return ParquetRowGroupGeoDataset(self._parent)
         else:
             raise TypeError("use_row_groups() is only suppoted for Parquet datasets")
 
@@ -139,3 +131,16 @@ class GeoDataset:
         else:
             tables = [fragment.to_table() for fragment in fragments_filtered]
             return _ds.InMemoryDataset(tables)
+
+
+class ParquetRowGroupGeoDataset(GeoDataset):
+    def __init__(self, parent) -> None:
+        row_group_fragments = []
+        for file_fragment in parent.get_fragments():
+            for row_group_fragment in file_fragment.split_by_row_group():
+                row_group_fragments.append(row_group_fragment)
+
+        super().__init__(
+            _ds.FileSystemDataset(row_group_fragments, parent.schema, parent.format)
+        )
+        self._fragments = row_group_fragments
