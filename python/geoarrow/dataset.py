@@ -11,10 +11,11 @@ from .pyarrow._kernel import Kernel
 def dataset(*args, geometry_columns=None, use_row_groups=None, **kwargs):
     parent = _ds.dataset(*args, **kwargs)
 
-    is_parquet_dataset = isinstance(parent, _ds.FileSystemDataset) and isinstance(
-        parent.format, _ds.ParquetFileFormat
-    )
-    if is_parquet_dataset and use_row_groups is not False:
+    if use_row_groups is None:
+        use_row_groups = isinstance(parent, _ds.FileSystemDataset) and isinstance(
+            parent.format, _ds.ParquetFileFormat
+        )
+    if use_row_groups:
         return ParquetRowGroupGeoDataset(parent, geometry_columns=geometry_columns)
     else:
         return GeoDataset(parent, geometry_columns=geometry_columns)
@@ -54,11 +55,14 @@ class GeoDataset:
 
     def index_fragments(self, num_threads=None):
         if self._index is None:
-            self._index = GeoDataset._index_fragments(
-                self.get_fragments(), self.geometry_columns, num_threads=num_threads
-            )
+            self._index = self._build_index(self.geometry_columns, num_threads)
 
         return self._index
+
+    def _build_index(self, geometry_columns, num_threads=None):
+        return GeoDataset._index_fragments(
+            self.get_fragments(), geometry_columns, num_threads=num_threads
+        )
 
     def filter_fragments(self, target):
         if isinstance(target, str):
@@ -167,3 +171,8 @@ class ParquetRowGroupGeoDataset(GeoDataset):
         )
         self._fragments = row_group_fragments
         self._row_group_ids = row_group_ids
+
+    def _build_index(self, geometry_columns, num_threads=None):
+        # TODO: Use ParquetFile + row group metadata for geometry_columns
+        # whose type allows
+        return super()._build_index(geometry_columns, num_threads)

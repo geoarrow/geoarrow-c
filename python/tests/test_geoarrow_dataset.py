@@ -21,7 +21,7 @@ def test_geodataset_in_memory():
     assert filtered1.num_rows == 1
 
     with pytest.raises(TypeError):
-        geods.use_row_groups()
+        gads.dataset([table1], use_row_groups=True)
 
 
 def test_geodataset_parquet():
@@ -45,7 +45,7 @@ def test_geodataset_parquet_rowgroups():
     with TemporaryDirectory() as td:
         pq.write_table(table, f"{td}/table.parquet", row_group_size=1)
 
-        geods = gads.dataset(f"{td}/table.parquet").use_row_groups()
+        geods = gads.dataset(f"{td}/table.parquet")
         assert len(geods.get_fragments()) == 2
 
         filtered1 = geods.filter_fragments(
