@@ -136,11 +136,17 @@ class GeoDataset:
 class ParquetRowGroupGeoDataset(GeoDataset):
     def __init__(self, parent) -> None:
         row_group_fragments = []
+        row_group_ids = []
+
         for file_fragment in parent.get_fragments():
-            for row_group_fragment in file_fragment.split_by_row_group():
+            for i, row_group_fragment in enumerate(file_fragment.split_by_row_group()):
                 row_group_fragments.append(row_group_fragment)
+                # Keep track of the row group IDs so we can possibly accellerate
+                # building an index later where column statistics are supported
+                row_group_ids.append(i)
 
         super().__init__(
             _ds.FileSystemDataset(row_group_fragments, parent.schema, parent.format)
         )
         self._fragments = row_group_fragments
+        self._row_group_ids = row_group_ids
