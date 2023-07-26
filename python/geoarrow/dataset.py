@@ -8,25 +8,27 @@ from . import pyarrow as _ga
 from .pyarrow._kernel import Kernel
 
 
+def dataset(*args, geometry_columns=None, use_row_groups=None, **kwargs):
+    parent = _ds.dataset(*args, **kwargs)
+
+    is_parquet_dataset = isinstance(parent, _ds.FileSystemDataset) and isinstance(
+        parent.format, _ds.ParquetFileFormat
+    )
+    if is_parquet_dataset and use_row_groups is not False:
+        return ParquetRowGroupGeoDataset(parent, geometry_columns=geometry_columns)
+    else:
+        return GeoDataset(parent, geometry_columns=geometry_columns)
+
+
 class GeoDataset:
-    def __init__(self, parent, *args, geometry_columns=None, **kwargs) -> None:
-        self._parent = None
+    def __init__(self, parent, geometry_columns=None):
         self._index = None
         self._geometry_columns = geometry_columns
         self._fragments = None
 
-        if isinstance(parent, _ds.Dataset):
-            self._parent = parent
-        else:
-            self._parent = _ds.dataset(parent, *args, **kwargs)
-
-    def use_row_groups(self):
-        if isinstance(self._parent, _ds.FileSystemDataset) and isinstance(
-            self._parent.format, _ds.ParquetFileFormat
-        ):
-            return ParquetRowGroupGeoDataset(self._parent)
-        else:
-            raise TypeError("use_row_groups() is only suppoted for Parquet datasets")
+        if not isinstance(parent, _ds.Dataset):
+            raise TypeError("parent must be a pyarrow.dataset.Dataset")
+        self._parent = parent
 
     @property
     def schema(self):
@@ -141,7 +143,14 @@ class GeoDataset:
 
 
 class ParquetRowGroupGeoDataset(GeoDataset):
-    def __init__(self, parent) -> None:
+    def __init__(self, parent, geometry_columns=None):
+        if not isinstance(parent, _ds.FileSystemDataset) or not isinstance(
+            parent.format, _ds.ParquetFileFormat
+        ):
+            raise TypeError(
+                "ParquetRowGroupGeoDataset() is only supported for Parquet datasets"
+            )
+
         row_group_fragments = []
         row_group_ids = []
 
@@ -153,7 +162,8 @@ class ParquetRowGroupGeoDataset(GeoDataset):
                 row_group_ids.append(i)
 
         super().__init__(
-            _ds.FileSystemDataset(row_group_fragments, parent.schema, parent.format)
+            _ds.FileSystemDataset(row_group_fragments, parent.schema, parent.format),
+            geometry_columns=geometry_columns,
         )
         self._fragments = row_group_fragments
         self._row_group_ids = row_group_ids
