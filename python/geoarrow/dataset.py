@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor, wait
 
 import pyarrow as _pa
+import pyarrow.types as _types
 import pyarrow.dataset as _ds
 import pyarrow.compute as _compute
 import pyarrow.parquet as _pq
@@ -25,6 +26,7 @@ class GeoDataset:
     def __init__(self, parent, geometry_columns=None):
         self._index = None
         self._geometry_columns = geometry_columns
+        self._geometry_types = None
         self._fragments = None
 
         if not isinstance(parent, _ds.Dataset):
@@ -52,6 +54,25 @@ class GeoDataset:
             self._geometry_columns = tuple(geometry_columns)
 
         return self._geometry_columns
+
+    @property
+    def geometry_types(self):
+        if self._geometry_types is None:
+            geometry_types = []
+            for col in self.geometry_columns:
+                type = self.schema.field(col).type
+                if isinstance(type, _ga.VectorType):
+                    geometry_types.append(type)
+                elif _types.is_binary(type):
+                    geometry_types.append(_ga.wkb())
+                elif _types.is_string(type):
+                    geometry_types.append(_ga.wkt())
+                else:
+                    raise TypeError(f"Unsupported type for geometry column: {type}")
+
+            self._geometry_types = tuple(geometry_types)
+
+        return self._geometry_types
 
     def index_fragments(self, num_threads=None):
         if self._index is None:
@@ -173,6 +194,68 @@ class ParquetRowGroupGeoDataset(GeoDataset):
         self._row_group_ids = row_group_ids
 
     def _build_index(self, geometry_columns, num_threads=None):
+        can_use_statistics = [
+            type.coord_type == _ga.CoordType.SEPARATE for type in self.geometry_types
+        ]
+
         # TODO: Use ParquetFile + row group metadata for geometry_columns
         # whose type allows
         return super()._build_index(geometry_columns, num_threads)
+
+    def _build_index_using_stats(self, geometry_columns):
+        parquet_fields_before = ParquetRowGroupGeoDataset._count_fields_before(
+            self.schema
+        )
+        parquet_fields_before = {k: v for k, v in parquet_fields_before}
+        parquet_fields_before = [parquet_fields_before[col] for col in geometry_columns]
+
+    def _parquet_field_boxes(self, parquet_indices):
+        boxes = []
+        pq_file = None
+        last_row_group = None
+        for row_group, fragment in zip(self._row_group_ids, self.get_fragments()):
+            if pq_file is None or row_group < last_row_group:
+                pq_file = _pq.ParquetFile(
+                    fragment.path, filesystem=self._parent.filesystem
+                )
+
+            metadata = pq_file.metadata.row_group(row_group)
+            for parquet_index in parquet_indices:
+                stats_x = metadata.column(parquet_index).statistics
+                stats_y = metadata.column(parquet_index + 1).statistics
+                # TODO: Check that these exist and return None if stats are missing
+                boxes.append(
+                    {
+                        "xmin": stats_x.min,
+                        "xmax": stats_x.max,
+                        "ymin": stats_y.min,
+                        "ymax": stats_y.max,
+                    }
+                )
+
+            last_row_group = row_group
+
+        # TODO: Transform into struct array
+
+    @staticmethod
+    def _count_fields_before(field, fields_before=None, path=(), count=0):
+        """Helper to find the parquet column index of a given field path"""
+
+        if isinstance(field, _pa.Schema):
+            fields_before = []
+            for i in range(len(field.types)):
+                count = ParquetRowGroupGeoDataset._count_fields_before(
+                    field.field(i), fields_before, path, count
+                )
+            return fields_before
+        elif _types.is_nested(field.type):
+            path = path + (field.name,)
+            fields_before.append((path, count))
+            for i in range(field.type.num_fields):
+                count = ParquetRowGroupGeoDataset._count_fields_before(
+                    field.type.field(i), fields_before, path, count
+                )
+            return count
+        else:
+            fields_before.append((path + (field.name,), count))
+            return count + 1
