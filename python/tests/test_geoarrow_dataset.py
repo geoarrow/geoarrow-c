@@ -52,3 +52,19 @@ def test_geodataset_parquet_rowgroups():
             "POLYGON ((0 1, 1 1, 1 2, 0 2, 0 1))"
         ).to_table()
         assert filtered1.num_rows == 1
+
+def test_geodataset_parquet_rowgroups_with_stats():
+    arr = ga.as_geoarrow(["POINT (0.5 1.5)", "POINT (2.5 3.5)"])
+    table = pa.table([arr], ["geometry"])
+    with TemporaryDirectory() as td:
+        pq.write_table(table, f"{td}/table.parquet", row_group_size=1)
+
+        geods = gads.dataset(f"{td}/table.parquet")
+        assert len(geods.get_fragments()) == 2
+
+        geods._build_index_using_stats(["geometry"])
+
+        filtered1 = geods.filter_fragments(
+            "POLYGON ((0 1, 1 1, 1 2, 0 2, 0 1))"
+        ).to_table()
+        assert filtered1.num_rows == 1

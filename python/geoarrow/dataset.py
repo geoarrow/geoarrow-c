@@ -119,6 +119,11 @@ class GeoDataset:
         if num_threads is None:
             num_threads = _pa.cpu_count()
 
+        num_fragments = len(fragments)
+        metadata = [_pa.array(range(num_fragments))]
+        if not columns:
+            return _pa.table(metadata, names=["_fragment_index"])
+
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             futures = []
             for column in columns:
@@ -130,7 +135,6 @@ class GeoDataset:
 
             wait(futures)
 
-            num_fragments = len(futures) // len(columns)
             results = []
             for i, column in enumerate(columns):
                 results.append(
@@ -140,7 +144,6 @@ class GeoDataset:
                     ]
                 )
 
-            metadata = [_pa.array(range(num_fragments))]
             result_arrays = [_pa.concat_arrays(result) for result in results]
             return _pa.table(
                 metadata + result_arrays, names=["_fragment_index"] + columns
@@ -168,7 +171,7 @@ class GeoDataset:
 
 
 class ParquetRowGroupGeoDataset(GeoDataset):
-    def __init__(self, parent, geometry_columns=None):
+    def __init__(self, parent, geometry_columns=None, use_column_statistics=True):
         if not isinstance(parent, _ds.FileSystemDataset) or not isinstance(
             parent.format, _ds.ParquetFileFormat
         ):
@@ -192,25 +195,55 @@ class ParquetRowGroupGeoDataset(GeoDataset):
         )
         self._fragments = row_group_fragments
         self._row_group_ids = row_group_ids
+        self._use_column_statistics = use_column_statistics
 
     def _build_index(self, geometry_columns, num_threads=None):
         can_use_statistics = [
             type.coord_type == _ga.CoordType.SEPARATE for type in self.geometry_types
         ]
 
-        # TODO: Use ParquetFile + row group metadata for geometry_columns
-        # whose type allows
-        return super()._build_index(geometry_columns, num_threads)
+        normal_stats_cols = list(geometry_columns)
+
+        if self._use_column_statistics and any(can_use_statistics):
+            bbox_stats_cols = []
+            for col, use_stats in zip(geometry_columns, can_use_statistics):
+                if use_stats:
+                    bbox_stats_cols.append(col)
+                    normal_stats_cols.remove(col)
+
+            bbox_stats = self._build_index_using_stats(bbox_stats_cols)
+            normal_stats = super()._build_index(normal_stats_cols, num_threads)
+
+            stats_by_name = {}
+            for col, stat in zip(bbox_stats_cols, bbox_stats):
+                stats_by_name[col] = stat
+            for col in normal_stats_cols:
+                stats_by_name[col] = normal_stats.column(col)
+
+            stat_cols = [stats_by_name[col] for col in geometry_columns]
+            return _pa.table(
+                [normal_stats.column(0)] + stat_cols,
+                names=["_fragment_index"] + list(geometry_columns),
+            )
+        else:
+            return super()._build_index(geometry_columns, num_threads)
 
     def _build_index_using_stats(self, geometry_columns):
+        column_types = [self.schema.field(col).type for col in geometry_columns]
         parquet_fields_before = ParquetRowGroupGeoDataset._count_fields_before(
             self.schema
         )
-        parquet_fields_before = {k: v for k, v in parquet_fields_before}
+        parquet_fields_before = {k[0]: v for k, v in parquet_fields_before}
         parquet_fields_before = [parquet_fields_before[col] for col in geometry_columns]
+        coord_depth = [type.n_offsets for type in column_types]
+        parquet_indices = [
+            fields_before + depth
+            for fields_before, depth in zip(parquet_fields_before, coord_depth)
+        ]
+        return self._parquet_field_boxes(parquet_indices)
 
     def _parquet_field_boxes(self, parquet_indices):
-        boxes = []
+        boxes = [[] for item in parquet_indices]
         pq_file = None
         last_row_group = None
         for row_group, fragment in zip(self._row_group_ids, self.get_fragments()):
@@ -220,11 +253,15 @@ class ParquetRowGroupGeoDataset(GeoDataset):
                 )
 
             metadata = pq_file.metadata.row_group(row_group)
-            for parquet_index in parquet_indices:
+            for i, parquet_index in enumerate(parquet_indices):
+                if parquet_index is None:
+                    boxes[i].append(None)
+                    continue
+
                 stats_x = metadata.column(parquet_index).statistics
                 stats_y = metadata.column(parquet_index + 1).statistics
                 # TODO: Check that these exist and return None if stats are missing
-                boxes.append(
+                boxes[i].append(
                     {
                         "xmin": stats_x.min,
                         "xmax": stats_x.max,
@@ -235,7 +272,10 @@ class ParquetRowGroupGeoDataset(GeoDataset):
 
             last_row_group = row_group
 
-        # TODO: Transform into struct array
+        type_field_names = ["xmin", "xmax", "ymin", "ymax"]
+        type_fields = [_pa.field(name, _pa.float64()) for name in type_field_names]
+        type = _pa.struct(type_fields)
+        return [_pa.array(box, type=type) for box in boxes]
 
     @staticmethod
     def _count_fields_before(field, fields_before=None, path=(), count=0):
