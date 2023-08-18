@@ -10,6 +10,16 @@ from .pyarrow._kernel import Kernel
 
 
 def dataset(*args, geometry_columns=None, use_row_groups=None, **kwargs):
+    """Construct a GeoDataset
+
+    This constructor is intended to mirror `pyarrow.dataset()`, adding
+    geo-specific arguments.
+
+    >>> import geoarrow.dataset as gads
+    >>> import pyarrow as pa
+    >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
+    >>> dataset = gads.dataset(table)
+    """
     parent = _ds.dataset(*args, **kwargs)
 
     if use_row_groups is None:
@@ -23,6 +33,29 @@ def dataset(*args, geometry_columns=None, use_row_groups=None, **kwargs):
 
 
 class GeoDataset:
+    """Geospatial-augmented Dataset
+
+    The GeoDataset wraps a pyarrow.Dataset containing one or more geometry columns
+    and provides indexing and IO capability. If `geometry_columns` is `None`,
+    it will include all columns that inherit from `geoarrow.pyarrow.VectorType`.
+    The `geometry_columns` are not required to be geoarrow extension type columns:
+    text columns will be parsed as WKT; binary columns will be parsed as WKB
+    (but are not detected automatically).
+
+    >>> import geoarrow.dataset as gads
+    >>> import pyarrow as pa
+    >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
+    >>> dataset = pa.dataset(table)
+    >>> geo_dataset = gads.GeoDataset(dataset)
+    >>> geo_dataset.geometry_columns
+    ('geometry',)
+    >>> geo_dataset.geometry_types
+    (WktType(geoarrow.wkt),)
+    >>> geo_dataset.index_fragments().to_pylist()
+    [{'_fragment_index': 0, 'geometry': {'xmin': 0.5, 'xmax': 0.5, 'ymin': 1.5, 'ymax': 1.5}}]
+    >>> geo_dataset.filter_fragments("POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))")
+    """
+
     def __init__(self, parent, geometry_columns=None):
         self._index = None
         self._geometry_columns = geometry_columns
@@ -35,9 +68,24 @@ class GeoDataset:
 
     @property
     def schema(self):
+        """Get the dataset schema
+
+        The schema of a GeoDataset is identical to that of its parent.
+
+        >>> import geoarrow.dataset as gads
+        >>> import geoarrow.pyarrow as ga
+        >>> import pyarrow as pa
+        >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
+        >>> dataset = gads.dataset(table)
+        >>> dataset.schema
+        geometry: extension<geoarrow.wkt<WktType>>
+        """
         return self._parent.schema
 
     def get_fragments(self):
+        """Resolve the list of fragments in the dataset
+
+        This is identical to the list of fragments of its parent."""
         if self._fragments is None:
             self._fragments = tuple(self._parent.get_fragments())
 
@@ -45,6 +93,16 @@ class GeoDataset:
 
     @property
     def geometry_columns(self):
+        """Get a tuple of geometry column names
+
+        >>> import geoarrow.dataset as gads
+        >>> import geoarrow.pyarrow as ga
+        >>> import pyarrow as pa
+        >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
+        >>> dataset = gads.dataset(table)
+        >>> dataset.geometry_columns
+        ('geometry',)
+        """
         if self._geometry_columns is None:
             schema = self.schema
             geometry_columns = []
@@ -57,6 +115,21 @@ class GeoDataset:
 
     @property
     def geometry_types(self):
+        """Resolve a tuple of geometry column types
+
+        This will convert any primitive types to the corresponding
+        geo-enabled type (e.g., binary to wkb) and check that geometry
+        columns actually refer a field that can be interpreted as
+        geometry.
+
+        >>> import geoarrow.dataset as gads
+        >>> import geoarrow.pyarrow as ga
+        >>> import pyarrow as pa
+        >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
+        >>> dataset = gads.dataset(table)
+        >>> dataset.geometry_columns
+        (WktType(geoarrow.wkt),)
+        """
         if self._geometry_types is None:
             geometry_types = []
             for col in self.geometry_columns:
@@ -75,6 +148,23 @@ class GeoDataset:
         return self._geometry_types
 
     def index_fragments(self, num_threads=None):
+        """Resolve a simplified geometry for each fragment
+
+        Currently the simplified geometry is a box in the form of a
+        struct array with fields xmin, xmax, ymin, and ymax. The
+        fragment index is curently a table whose first column is the fragment
+        index and whose subsequent columns are named with the geometry column
+        name. A future implementation may handle spherical edges using a type
+        of simplified geometry more suitable to a spherical comparison.
+
+        >>> import geoarrow.dataset as gads
+        >>> import geoarrow.pyarrow as ga
+        >>> import pyarrow as pa
+        >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
+        >>> dataset = gads.dataset(table)
+        >>> dataset.index_fragments().to_pylist()
+        [{'_fragment_index': 0, 'geometry': {'xmin': 0.5, 'xmax': 0.5, 'ymin': 1.5, 'ymax': 1.5}}]
+        """
         if self._index is None:
             self._index = self._build_index(self.geometry_columns, num_threads)
 
@@ -86,6 +176,30 @@ class GeoDataset:
         )
 
     def filter_fragments(self, target):
+        """Push down a spatial query into a GeoDataset
+
+        Returns a potentially simplified dataset based on the geometry of
+        target. Currently this uses `geoarrow.pyarrow.box_agg()` on `target`
+        and performs a simple envelope comparison with each fragment. A future
+        implementation may handle spherical edges using a type of simplified
+        geometry more suitable to a spherical comparison.
+
+        >>> import geoarrow.dataset as gads
+        >>> import geoarrow.pyarrow as ga
+        >>> import pyarrow as pa
+        >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
+        >>> dataset = gads.dataset(table)
+        >>> dataset.filter_fragments("POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))").to_table()
+        pyarrow.Table
+        geometry: extension<geoarrow.wkt<WktType>>
+        ----
+        geometry: []
+        >>> dataset.filter_fragments("POLYGON ((0 1, 0 2, 1 2, 1 1, 0 1))").to_table()
+        pyarrow.Table
+        geometry: extension<geoarrow.wkt<WktType>>
+        ----
+        geometry: [["POINT (0.5 1.5)"]]
+        """
         if isinstance(target, str):
             target = [target]
         target_box = _ga.box_agg(target)
@@ -102,7 +216,7 @@ class GeoDataset:
             )
         else:
             tables = [fragment.to_table() for fragment in fragments_filtered]
-            return _ds.InMemoryDataset(tables)
+            return _ds.InMemoryDataset(tables, schema=self.schema)
 
     @staticmethod
     def _index_fragment(fragment, column):
@@ -171,6 +285,16 @@ class GeoDataset:
 
 
 class ParquetRowGroupGeoDataset(GeoDataset):
+    """Geospatial-augmented Parquet dataset using row groups
+
+    An implementation of the GeoDataset that can leverage potentially
+    more efficient indexing and more specific filtering. Notably, this
+    implementation can (1) split a Parquet dataset into potentially more
+    smaller fragments and (2) use column statistics added by most Parquet
+    writers to more efficiently build the fragment index for types that support
+    this capability.
+    """
+
     def __init__(self, parent, geometry_columns=None, use_column_statistics=True):
         if not isinstance(parent, _ds.FileSystemDataset) or not isinstance(
             parent.format, _ds.ParquetFileFormat
