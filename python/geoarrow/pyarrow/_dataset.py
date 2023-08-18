@@ -19,19 +19,6 @@ class GeoDataset:
     The `geometry_columns` are not required to be geoarrow extension type columns:
     text columns will be parsed as WKT; binary columns will be parsed as WKB
     (but are not detected automatically).
-
-    >>> import geoarrow.dataset as gads
-    >>> import pyarrow as pa
-    >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
-    >>> dataset = pa.dataset(table)
-    >>> geo_dataset = gads.GeoDataset(dataset)
-    >>> geo_dataset.geometry_columns
-    ('geometry',)
-    >>> geo_dataset.geometry_types
-    (WktType(geoarrow.wkt),)
-    >>> geo_dataset.index_fragments().to_pylist()
-    [{'_fragment_index': 0, 'geometry': {'xmin': 0.5, 'xmax': 0.5, 'ymin': 1.5, 'ymax': 1.5}}]
-    >>> geo_dataset.filter_fragments("POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))")
     """
 
     def __init__(self, parent, geometry_columns=None):
@@ -50,11 +37,10 @@ class GeoDataset:
 
         The schema of a GeoDataset is identical to that of its parent.
 
-        >>> import geoarrow.dataset as gads
         >>> import geoarrow.pyarrow as ga
         >>> import pyarrow as pa
         >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
-        >>> dataset = gads.dataset(table)
+        >>> dataset = ga.dataset(table)
         >>> dataset.schema
         geometry: extension<geoarrow.wkt<WktType>>
         """
@@ -73,11 +59,10 @@ class GeoDataset:
     def geometry_columns(self):
         """Get a tuple of geometry column names
 
-        >>> import geoarrow.dataset as gads
         >>> import geoarrow.pyarrow as ga
         >>> import pyarrow as pa
         >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
-        >>> dataset = gads.dataset(table)
+        >>> dataset = ga.dataset(table)
         >>> dataset.geometry_columns
         ('geometry',)
         """
@@ -100,11 +85,10 @@ class GeoDataset:
         columns actually refer a field that can be interpreted as
         geometry.
 
-        >>> import geoarrow.dataset as gads
         >>> import geoarrow.pyarrow as ga
         >>> import pyarrow as pa
         >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
-        >>> dataset = gads.dataset(table)
+        >>> dataset = ga.dataset(table)
         >>> dataset.geometry_columns
         (WktType(geoarrow.wkt),)
         """
@@ -135,11 +119,10 @@ class GeoDataset:
         name. A future implementation may handle spherical edges using a type
         of simplified geometry more suitable to a spherical comparison.
 
-        >>> import geoarrow.dataset as gads
         >>> import geoarrow.pyarrow as ga
         >>> import pyarrow as pa
         >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
-        >>> dataset = gads.dataset(table)
+        >>> dataset = ga.dataset(table)
         >>> dataset.index_fragments().to_pylist()
         [{'_fragment_index': 0, 'geometry': {'xmin': 0.5, 'xmax': 0.5, 'ymin': 1.5, 'ymax': 1.5}}]
         """
@@ -162,11 +145,10 @@ class GeoDataset:
         implementation may handle spherical edges using a type of simplified
         geometry more suitable to a spherical comparison.
 
-        >>> import geoarrow.dataset as gads
         >>> import geoarrow.pyarrow as ga
         >>> import pyarrow as pa
         >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
-        >>> dataset = gads.dataset(table)
+        >>> dataset = ga.dataset(table)
         >>> dataset.filter_fragments("POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))").to_table()
         pyarrow.Table
         geometry: extension<geoarrow.wkt<WktType>>
