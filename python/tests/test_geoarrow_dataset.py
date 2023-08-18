@@ -6,14 +6,13 @@ import pyarrow.parquet as pq
 import pytest
 
 import geoarrow.pyarrow as ga
-import geoarrow.dataset as gads
 
 
 def test_geodataset_in_memory():
     table1 = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
     table2 = pa.table([ga.array(["POINT (2.5 3.5)"])], ["geometry"])
 
-    geods = gads.dataset([table1, table2])
+    geods = ga.dataset([table1, table2])
     assert isinstance(geods._parent, ds.InMemoryDataset)
     assert len(list(geods._parent.get_fragments())) == 2
 
@@ -21,7 +20,7 @@ def test_geodataset_in_memory():
     assert filtered1.num_rows == 1
 
     with pytest.raises(TypeError):
-        gads.dataset([table1], use_row_groups=True)
+        ga.dataset([table1], use_row_groups=True)
 
 
 def test_geodataset_parquet():
@@ -30,7 +29,7 @@ def test_geodataset_parquet():
     with TemporaryDirectory() as td:
         pq.write_table(table1, f"{td}/table1.parquet")
         pq.write_table(table2, f"{td}/table2.parquet")
-        geods = gads.dataset(
+        geods = ga.dataset(
             [f"{td}/table1.parquet", f"{td}/table2.parquet"], use_row_groups=False
         )
 
@@ -45,7 +44,7 @@ def test_geodataset_parquet_rowgroups():
     with TemporaryDirectory() as td:
         pq.write_table(table, f"{td}/table.parquet", row_group_size=1)
 
-        geods = gads.dataset(f"{td}/table.parquet")
+        geods = ga.dataset(f"{td}/table.parquet")
         assert len(geods.get_fragments()) == 2
 
         filtered1 = geods.filter_fragments(
@@ -79,10 +78,10 @@ def test_geodataset_parquet_index_rowgroups():
         )
         pq.write_table(table_both, f"{td}/table_both.parquet", row_group_size=1)
 
-        ds_wkt = gads.dataset(f"{td}/table_wkt.parquet")
-        ds_geoarrow = gads.dataset(f"{td}/table_geoarrow.parquet")
-        ds_geoarrow_nostats = gads.dataset(f"{td}/table_geoarrow_nostats.parquet")
-        ds_both = gads.dataset(f"{td}/table_both.parquet")
+        ds_wkt = ga.dataset(f"{td}/table_wkt.parquet")
+        ds_geoarrow = ga.dataset(f"{td}/table_geoarrow.parquet")
+        ds_geoarrow_nostats = ga.dataset(f"{td}/table_geoarrow_nostats.parquet")
+        ds_both = ga.dataset(f"{td}/table_both.parquet")
 
         index_wkt = ds_wkt.index_fragments()
         index_geoarrow = ds_geoarrow.index_fragments()
@@ -112,7 +111,7 @@ def test_geodataset_parquet_filter_rowgroups_with_stats():
     with TemporaryDirectory() as td:
         pq.write_table(table, f"{td}/table.parquet", row_group_size=1)
 
-        geods = gads.dataset(f"{td}/table.parquet")
+        geods = ga.dataset(f"{td}/table.parquet")
         assert len(geods.get_fragments()) == 2
 
         geods._build_index_using_stats(["geometry"])

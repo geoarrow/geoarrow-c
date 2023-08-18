@@ -5,31 +5,9 @@ import pyarrow.types as _types
 import pyarrow.dataset as _ds
 import pyarrow.compute as _compute
 import pyarrow.parquet as _pq
-from . import pyarrow as _ga
-from .pyarrow._kernel import Kernel
-
-
-def dataset(*args, geometry_columns=None, use_row_groups=None, **kwargs):
-    """Construct a GeoDataset
-
-    This constructor is intended to mirror `pyarrow.dataset()`, adding
-    geo-specific arguments.
-
-    >>> import geoarrow.dataset as gads
-    >>> import pyarrow as pa
-    >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
-    >>> dataset = gads.dataset(table)
-    """
-    parent = _ds.dataset(*args, **kwargs)
-
-    if use_row_groups is None:
-        use_row_groups = isinstance(parent, _ds.FileSystemDataset) and isinstance(
-            parent.format, _ds.ParquetFileFormat
-        )
-    if use_row_groups:
-        return ParquetRowGroupGeoDataset(parent, geometry_columns=geometry_columns)
-    else:
-        return GeoDataset(parent, geometry_columns=geometry_columns)
+from ..lib import CoordType
+from ._type import wkt, wkb, VectorType
+from ._kernel import Kernel
 
 
 class GeoDataset:
@@ -107,7 +85,7 @@ class GeoDataset:
             schema = self.schema
             geometry_columns = []
             for name, type in zip(schema.names, schema.types):
-                if isinstance(type, _ga.VectorType):
+                if isinstance(type, VectorType):
                     geometry_columns.append(name)
             self._geometry_columns = tuple(geometry_columns)
 
@@ -134,12 +112,12 @@ class GeoDataset:
             geometry_types = []
             for col in self.geometry_columns:
                 type = self.schema.field(col).type
-                if isinstance(type, _ga.VectorType):
+                if isinstance(type, VectorType):
                     geometry_types.append(type)
                 elif _types.is_binary(type):
-                    geometry_types.append(_ga.wkb())
+                    geometry_types.append(wkb())
                 elif _types.is_string(type):
-                    geometry_types.append(_ga.wkt())
+                    geometry_types.append(wkt())
                 else:
                     raise TypeError(f"Unsupported type for geometry column: {type}")
 
@@ -200,9 +178,11 @@ class GeoDataset:
         ----
         geometry: [["POINT (0.5 1.5)"]]
         """
+        from ._compute import box_agg
+
         if isinstance(target, str):
             target = [target]
-        target_box = _ga.box_agg(target)
+        target_box = box_agg(target)
         maybe_intersects = GeoDataset._index_box_intersects(
             self.index_fragments(), target_box, self.geometry_columns
         )
@@ -323,7 +303,7 @@ class ParquetRowGroupGeoDataset(GeoDataset):
 
     def _build_index(self, geometry_columns, num_threads=None):
         can_use_statistics = [
-            type.coord_type == _ga.CoordType.SEPARATE for type in self.geometry_types
+            type.coord_type == CoordType.SEPARATE for type in self.geometry_types
         ]
 
         if not self._use_column_statistics or not any(can_use_statistics):
