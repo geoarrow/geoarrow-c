@@ -89,7 +89,7 @@ class GeoDataset:
         >>> import pyarrow as pa
         >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
         >>> dataset = ga.dataset(table)
-        >>> dataset.geometry_columns
+        >>> dataset.geometry_types
         (WktType(geoarrow.wkt),)
         """
         if self._geometry_types is None:
