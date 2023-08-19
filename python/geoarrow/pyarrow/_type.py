@@ -299,10 +299,6 @@ class PointType(VectorType):
 
     _extension_name = "geoarrow.point"
 
-    @property
-    def n_offsets(self):
-        return 0
-
     def from_geobuffers(self, validity, x, y=None, z_or_m=None, m=None):
         buffers = [
             (0, "uint8", validity),
@@ -321,10 +317,6 @@ class LinestringType(VectorType):
     """
 
     _extension_name = "geoarrow.linestring"
-
-    @property
-    def n_offsets(self):
-        return 1
 
     def from_geobuffers(self, validity, coord_offsets, x, y=None, z_or_m=None, m=None):
         buffers = [
@@ -345,10 +337,6 @@ class PolygonType(VectorType):
     """
 
     _extension_name = "geoarrow.polygon"
-
-    @property
-    def n_offsets(self):
-        return 2
 
     def from_geobuffers(
         self, validity, ring_offsets, coord_offsets, x, y=None, z_or_m=None, m=None
@@ -373,10 +361,6 @@ class MultiPointType(VectorType):
 
     _extension_name = "geoarrow.multipoint"
 
-    @property
-    def n_offsets(self):
-        return 1
-
     def from_geobuffers(self, validity, coord_offsets, x, y=None, z_or_m=None, m=None):
         buffers = [
             (0, "uint8", validity),
@@ -396,10 +380,6 @@ class MultiLinestringType(VectorType):
     """
 
     _extension_name = "geoarrow.multilinestring"
-
-    @property
-    def n_offsets(self):
-        return 2
 
     def from_geobuffers(
         self,
@@ -430,10 +410,6 @@ class MultiPolygonType(VectorType):
     """
 
     _extension_name = "geoarrow.multipolygon"
-
-    @property
-    def n_offsets(self):
-        return 3
 
     def from_geobuffers(
         self,

@@ -324,7 +324,9 @@ class ParquetRowGroupGeoDataset(GeoDataset):
             self.schema
         )
         parquet_fields_before = {k: v for k, v in parquet_fields_before}
-        parquet_fields_before = [parquet_fields_before[(col,)] for col in geometry_columns]
+        parquet_fields_before = [
+            parquet_fields_before[(col,)] for col in geometry_columns
+        ]
         return self._parquet_field_boxes(parquet_fields_before)
 
     def _parquet_field_boxes(self, parquet_indices):
