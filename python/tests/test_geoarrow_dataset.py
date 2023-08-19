@@ -6,6 +6,7 @@ import pyarrow.parquet as pq
 import pytest
 
 import geoarrow.pyarrow as ga
+from geoarrow.pyarrow._dataset import ParquetRowGroupGeoDataset
 
 
 def test_geodataset_in_memory():
@@ -120,3 +121,27 @@ def test_geodataset_parquet_filter_rowgroups_with_stats():
             "POLYGON ((0 1, 1 1, 1 2, 0 2, 0 1))"
         ).to_table()
         assert filtered1.num_rows == 1
+
+
+def test_parquet_fields_before():
+    schema = pa.schema([pa.field("col1", pa.int32()), pa.field("col2", pa.int32())])
+    fields_before = ParquetRowGroupGeoDataset._count_fields_before(schema)
+    assert fields_before == [(("col1",), 0), (("col2",), 1)]
+
+    schema = pa.schema(
+        [pa.field("col1", pa.list_(pa.int32())), pa.field("col2", pa.int32())]
+    )
+    fields_before = ParquetRowGroupGeoDataset._count_fields_before(schema)
+    assert fields_before == [(("col1",), 0), (("col1", "item"), 0), (("col2",), 1)]
+
+    schema = pa.schema(
+        [pa.field("col1", ga.linestring()), pa.field("col2", pa.int32())]
+    )
+    fields_before = ParquetRowGroupGeoDataset._count_fields_before(schema)
+    assert fields_before == [
+        (("col1",), 0),
+        (("col1", "vertices"), 0),
+        (("col1", "vertices", "x"), 0),
+        (("col1", "vertices", "y"), 1),
+        (("col2",), 2),
+    ]

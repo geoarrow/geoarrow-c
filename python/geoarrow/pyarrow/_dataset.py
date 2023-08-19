@@ -323,8 +323,8 @@ class ParquetRowGroupGeoDataset(GeoDataset):
         parquet_fields_before = ParquetRowGroupGeoDataset._count_fields_before(
             self.schema
         )
-        parquet_fields_before = {k[0]: v for k, v in parquet_fields_before}
-        parquet_fields_before = [parquet_fields_before[col] for col in geometry_columns]
+        parquet_fields_before = {k: v for k, v in parquet_fields_before}
+        parquet_fields_before = [parquet_fields_before[(col,)] for col in geometry_columns]
         return self._parquet_field_boxes(parquet_fields_before)
 
     def _parquet_field_boxes(self, parquet_indices):
@@ -341,10 +341,6 @@ class ParquetRowGroupGeoDataset(GeoDataset):
 
             metadata = pq_file.metadata.row_group(row_group)
             for i, parquet_index in enumerate(parquet_indices):
-                if parquet_index is None:
-                    boxes[i].append(None)
-                    continue
-
                 stats_x = metadata.column(parquet_index).statistics
                 stats_y = metadata.column(parquet_index + 1).statistics
 
@@ -380,11 +376,9 @@ class ParquetRowGroupGeoDataset(GeoDataset):
             return fields_before
 
         if isinstance(field.type, _pa.ExtensionType):
-            is_nested = _types.is_nested(field.type.storage_type)
-        else:
-            is_nested = _types.is_nested(field.type)
+            field = _pa.field(field.name, field.type.storage_type)
 
-        if is_nested:
+        if _types.is_nested(field.type):
             path = path + (field.name,)
             fields_before.append((path, count))
             for i in range(field.type.num_fields):
