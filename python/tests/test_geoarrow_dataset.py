@@ -33,8 +33,9 @@ def test_geodataset_column_type_guessing():
 
     # Error for other types
     with pytest.raises(TypeError):
-        table = pa.table([123], ["geometry"])
-        ga.dataset(table, geometry_columns=["geometry"])
+        table = pa.table([[123]], ["geometry"])
+        geods = ga.dataset(table, geometry_columns=["geometry"])
+        geods.geometry_types
 
 
 def test_geodataset_in_memory():
