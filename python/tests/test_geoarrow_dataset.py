@@ -9,6 +9,34 @@ import geoarrow.pyarrow as ga
 from geoarrow.pyarrow._dataset import ParquetRowGroupGeoDataset
 
 
+def test_geodataset_column_name_guessing():
+    table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
+    geods = ga.dataset(table)
+    assert geods.geometry_columns == ("geometry",)
+
+
+def test_geodataset_column_type_guessing():
+    # Already a geoarrow type
+    table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
+    geods = ga.dataset(table, geometry_columns=["geometry"])
+    assert geods.geometry_types == (ga.wkt(),)
+
+    # utf8 maps to wkt
+    table = pa.table([ga.array(["POINT (0.5 1.5)"]).storage], ["geometry"])
+    geods = ga.dataset(table, geometry_columns=["geometry"])
+    assert geods.geometry_types == (ga.wkt(),)
+
+    # binary maps to wkb
+    table = pa.table([ga.as_wkb(["POINT (0.5 1.5)"]).storage], ["geometry"])
+    geods = ga.dataset(table, geometry_columns=["geometry"])
+    assert geods.geometry_types == (ga.wkb(),)
+
+    # Error for other types
+    with pytest.raises(TypeError):
+        table = pa.table([123], ["geometry"])
+        ga.dataset(table, geometry_columns=["geometry"])
+
+
 def test_geodataset_in_memory():
     table1 = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
     table2 = pa.table([ga.array(["POINT (2.5 3.5)"])], ["geometry"])
