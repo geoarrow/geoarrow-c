@@ -143,7 +143,10 @@ class GeoDataset:
         target. Currently this uses `geoarrow.pyarrow.box_agg()` on `target`
         and performs a simple envelope comparison with each fragment. A future
         implementation may handle spherical edges using a type of simplified
-        geometry more suitable to a spherical comparison.
+        geometry more suitable to a spherical comparison. For datasets with
+        more than one geometry column, the filter will be applied to all columns
+        and include fragments that intersect the simplified geometry from any
+        of the columns.
 
         >>> import geoarrow.pyarrow as ga
         >>> import pyarrow as pa

@@ -24,6 +24,27 @@ def test_geodataset_in_memory():
         ga.dataset([table1], use_row_groups=True)
 
 
+def test_geodataset_multiple_geometry_columns():
+    table1 = pa.table(
+        [ga.array(["POINT (0.5 1.5)"]), ga.array(["POINT (2.5 3.5)"])],
+        ["geometry1", "geometry2"],
+    )
+    table2 = pa.table(
+        [ga.array(["POINT (4.5 5.5)"]), ga.array(["POINT (6.5 7.5)"])],
+        ["geometry1", "geometry2"],
+    )
+
+    geods = ga.dataset([table1, table2])
+    assert isinstance(geods._parent, ds.InMemoryDataset)
+    assert len(list(geods._parent.get_fragments())) == 2
+
+    filtered1 = geods.filter_fragments("POLYGON ((0 1, 1 1, 1 2, 0 2, 0 1))").to_table()
+    assert filtered1.num_rows == 1
+
+    filtered2 = geods.filter_fragments("POLYGON ((2 3, 3 3, 3 4, 2 4, 2 3))").to_table()
+    assert filtered2.num_rows == 1
+
+
 def test_geodataset_parquet():
     table1 = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
     table2 = pa.table([ga.array(["POINT (2.5 3.5)"])], ["geometry"])
