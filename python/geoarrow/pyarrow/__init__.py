@@ -84,7 +84,7 @@ def dataset(*args, geometry_columns=None, use_row_groups=None, **kwargs):
             parent.format, _ds.ParquetFileFormat
         )
     if use_row_groups:
-        return ParquetRowGroupGeoDataset(parent, geometry_columns=geometry_columns)
+        return ParquetRowGroupGeoDataset.create(parent, geometry_columns=geometry_columns)
     else:
         return GeoDataset(parent, geometry_columns=geometry_columns)
 

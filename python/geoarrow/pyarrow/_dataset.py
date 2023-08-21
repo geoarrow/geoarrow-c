@@ -32,6 +32,24 @@ class GeoDataset:
         self._parent = parent
 
     @property
+    def parent(self):
+        """Get the parent Dataset
+
+        Returns the (non geo-aware) parent pyarrow.Dataset.
+
+        >>> import geoarrow.pyarrow as ga
+        >>> import pyarrow as pa
+        >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
+        >>> dataset = ga.dataset(table)
+        >>> type(dataset.parent)
+        <class 'pyarrow._dataset.InMemoryDataset'>
+        """
+        return self._parent
+
+    def to_table(self):
+        return self.parent.to_table()
+
+    @property
     def schema(self):
         """Get the dataset schema
 
@@ -172,6 +190,23 @@ class GeoDataset:
             self.index_fragments(), target_box, self.geometry_columns
         )
         fragment_indices = [scalar.as_py() for scalar in maybe_intersects]
+        filtered_parent = self._filter_parent_fragment_indices(fragment_indices)
+        return self._wrap_parent(filtered_parent, fragment_indices)
+
+    def _wrap_parent(self, filtered_parent, fragment_indices):
+        new_wrapped = GeoDataset(
+            filtered_parent, geometry_columns=self._geometry_columns
+        )
+        new_wrapped._geometry_types = self.geometry_types
+
+        new_index = self.index_fragments().take(fragment_indices)
+        new_wrapped._index = new_index.set_column(
+            0, "_fragment_index", _pa.array(range(new_index.num_rows))
+        )
+
+        return new_wrapped
+
+    def _filter_parent_fragment_indices(self, fragment_indices):
         fragments = self.get_fragments()
         fragments_filtered = [fragments[i] for i in fragment_indices]
 
@@ -260,7 +295,21 @@ class ParquetRowGroupGeoDataset(GeoDataset):
     this capability.
     """
 
-    def __init__(self, parent, geometry_columns=None, use_column_statistics=True):
+    def __init__(
+        self,
+        parent,
+        row_group_fragments,
+        row_group_ids,
+        geometry_columns=None,
+        use_column_statistics=True,
+    ):
+        super().__init__(parent, geometry_columns=geometry_columns)
+        self._fragments = row_group_fragments
+        self._row_group_ids = row_group_ids
+        self._use_column_statistics = use_column_statistics
+
+    @staticmethod
+    def create(parent, geometry_columns=None, use_column_statistics=True):
         if not isinstance(parent, _ds.FileSystemDataset) or not isinstance(
             parent.format, _ds.ParquetFileFormat
         ):
@@ -274,17 +323,33 @@ class ParquetRowGroupGeoDataset(GeoDataset):
         for file_fragment in parent.get_fragments():
             for i, row_group_fragment in enumerate(file_fragment.split_by_row_group()):
                 row_group_fragments.append(row_group_fragment)
-                # Keep track of the row group IDs so we can possibly accellerate
+                # Keep track of the row group IDs so we can accellerate
                 # building an index later where column statistics are supported
                 row_group_ids.append(i)
 
-        super().__init__(
-            _ds.FileSystemDataset(row_group_fragments, parent.schema, parent.format),
-            geometry_columns=geometry_columns,
+        parent = _ds.FileSystemDataset(
+            row_group_fragments, parent.schema, parent.format
         )
-        self._fragments = row_group_fragments
-        self._row_group_ids = row_group_ids
-        self._use_column_statistics = use_column_statistics
+        return ParquetRowGroupGeoDataset(
+            parent,
+            row_group_fragments,
+            row_group_ids,
+            geometry_columns=geometry_columns,
+            use_column_statistics=use_column_statistics,
+        )
+
+    def _wrap_parent(self, filtered_parent, fragment_indices):
+        base_wrapped = super()._wrap_parent(filtered_parent, fragment_indices)
+
+        new_row_group_fragments = [self._fragments[i] for i in fragment_indices]
+        new_row_group_ids = [self._row_group_ids[i] for i in fragment_indices]
+        return ParquetRowGroupGeoDataset(
+            base_wrapped._parent,
+            new_row_group_fragments,
+            new_row_group_ids,
+            geometry_columns=base_wrapped.geometry_columns,
+            use_column_statistics=self._use_column_statistics,
+        )
 
     def _build_index(self, geometry_columns, num_threads=None):
         can_use_statistics = [
