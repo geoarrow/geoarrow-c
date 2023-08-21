@@ -100,8 +100,8 @@ Integration with pyarrow
     .. autoclass:: MultiPolygonType
         :members:
 
-    .. autoclass:: _dataset.GeoDataset
+    .. autoclass:: geoarrow.pyarrow._dataset.GeoDataset
         :members:
 
-    .. autoclass:: dataset.ParquetRowGroupGeoDataset
+    .. autoclass:: geoarrow.pyarrow._dataset.ParquetRowGroupGeoDataset
         :members:

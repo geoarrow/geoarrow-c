@@ -66,7 +66,7 @@ def dataset(*args, geometry_columns=None, use_row_groups=None, **kwargs):
     """Construct a GeoDataset
 
     This constructor is intended to mirror `pyarrow.dataset()`, adding
-    geo-specific arguments. See :class:`geoarrow._dataset.GeoDataset` for
+    geo-specific arguments. See :class:`geoarrow.pyarrow._dataset.GeoDataset` for
     details.
 
     >>> import geoarrow.pyarrow as ga
@@ -84,7 +84,9 @@ def dataset(*args, geometry_columns=None, use_row_groups=None, **kwargs):
             parent.format, _ds.ParquetFileFormat
         )
     if use_row_groups:
-        return ParquetRowGroupGeoDataset.create(parent, geometry_columns=geometry_columns)
+        return ParquetRowGroupGeoDataset.create(
+            parent, geometry_columns=geometry_columns
+        )
     else:
         return GeoDataset(parent, geometry_columns=geometry_columns)
 
