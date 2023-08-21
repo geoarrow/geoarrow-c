@@ -199,7 +199,9 @@ class GeoDataset:
         )
         new_wrapped._geometry_types = self.geometry_types
 
-        new_index = self.index_fragments().take(fragment_indices)
+        new_index = self.index_fragments().take(
+            _pa.array(fragment_indices, type=_pa.int64())
+        )
         new_wrapped._index = new_index.set_column(
             0, "_fragment_index", _pa.array(range(new_index.num_rows))
         )

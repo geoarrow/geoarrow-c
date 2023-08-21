@@ -54,6 +54,10 @@ def test_geodataset_in_memory():
         [1]
     )
 
+    # Make sure we can filter to empty
+    filtered0 = geods.filter_fragments("POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))")
+    assert filtered0.to_table().num_rows == 0
+
     with pytest.raises(TypeError):
         ga.dataset([table1], use_row_groups=True)
 
