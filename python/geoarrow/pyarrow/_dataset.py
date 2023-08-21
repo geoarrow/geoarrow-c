@@ -343,13 +343,15 @@ class ParquetRowGroupGeoDataset(GeoDataset):
 
         new_row_group_fragments = [self._fragments[i] for i in fragment_indices]
         new_row_group_ids = [self._row_group_ids[i] for i in fragment_indices]
-        return ParquetRowGroupGeoDataset(
+        new_wrapped = ParquetRowGroupGeoDataset(
             base_wrapped._parent,
             new_row_group_fragments,
             new_row_group_ids,
             geometry_columns=base_wrapped.geometry_columns,
             use_column_statistics=self._use_column_statistics,
         )
+        new_wrapped._index = base_wrapped._index
+        return new_wrapped
 
     def _build_index(self, geometry_columns, num_threads=None):
         can_use_statistics = [

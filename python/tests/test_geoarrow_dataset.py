@@ -6,7 +6,7 @@ import pyarrow.parquet as pq
 import pytest
 
 import geoarrow.pyarrow as ga
-from geoarrow.pyarrow._dataset import ParquetRowGroupGeoDataset
+from geoarrow.pyarrow._dataset import GeoDataset, ParquetRowGroupGeoDataset
 
 
 def test_geodataset_column_name_guessing():
@@ -46,8 +46,13 @@ def test_geodataset_in_memory():
     assert isinstance(geods._parent, ds.InMemoryDataset)
     assert len(list(geods._parent.get_fragments())) == 2
 
-    filtered1 = geods.filter_fragments("POLYGON ((0 1, 1 1, 1 2, 0 2, 0 1))").to_table()
-    assert filtered1.num_rows == 1
+    filtered1 = geods.filter_fragments("POLYGON ((2 3, 3 3, 3 4, 2 4, 2 3))")
+    assert isinstance(filtered1, GeoDataset)
+    assert filtered1.to_table().num_rows == 1
+    assert filtered1._index.column("_fragment_index") == pa.chunked_array([[0]])
+    assert filtered1._index.column("geometry") == geods._index.column("geometry").take(
+        [1]
+    )
 
     with pytest.raises(TypeError):
         ga.dataset([table1], use_row_groups=True)
@@ -96,12 +101,18 @@ def test_geodataset_parquet_rowgroups():
         pq.write_table(table, f"{td}/table.parquet", row_group_size=1)
 
         geods = ga.dataset(f"{td}/table.parquet")
+        assert isinstance(geods, ParquetRowGroupGeoDataset)
         assert len(geods.get_fragments()) == 2
 
-        filtered1 = geods.filter_fragments(
-            "POLYGON ((0 1, 1 1, 1 2, 0 2, 0 1))"
-        ).to_table()
-        assert filtered1.num_rows == 1
+        filtered1 = geods.filter_fragments("POLYGON ((2 3, 3 3, 3 4, 2 4, 2 3))")
+        assert isinstance(filtered1, ParquetRowGroupGeoDataset)
+        assert filtered1.to_table().num_rows == 1
+        assert filtered1._index.column("_fragment_index") == pa.chunked_array([[0]])
+        assert filtered1._index.column("geometry") == geods._index.column(
+            "geometry"
+        ).take([1])
+
+        assert filtered1._row_group_ids == [1]
 
 
 def test_geodataset_parquet_index_rowgroups():
