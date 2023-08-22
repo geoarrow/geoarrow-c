@@ -62,6 +62,16 @@ def test_geodataset_in_memory():
         ga.dataset([table1], use_row_groups=True)
 
 
+def test_geodataset_in_memory_guessed_type():
+    table1 = pa.table([ga.array(["POINT (0.5 1.5)"]).storage], ["geometry"])
+    table2 = pa.table([ga.array(["POINT (2.5 3.5)"]).storage], ["geometry"])
+    geods = ga.dataset([table1, table2], geometry_columns=["geometry"])
+
+    filtered1 = geods.filter_fragments("POLYGON ((2 3, 3 3, 3 4, 2 4, 2 3))")
+    assert isinstance(filtered1, GeoDataset)
+    assert filtered1.to_table().num_rows == 1
+
+
 def test_geodataset_multiple_geometry_columns():
     table1 = pa.table(
         [ga.array(["POINT (0.5 1.5)"]), ga.array(["POINT (2.5 3.5)"])],
