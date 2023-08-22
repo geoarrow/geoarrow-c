@@ -145,13 +145,18 @@ class GeoDataset:
         [{'_fragment_index': 0, 'geometry': {'xmin': 0.5, 'xmax': 0.5, 'ymin': 1.5, 'ymax': 1.5}}]
         """
         if self._index is None:
-            self._index = self._build_index(self.geometry_columns, num_threads)
+            self._index = self._build_index(
+                self.geometry_columns, self.geometry_types, num_threads
+            )
 
         return self._index
 
-    def _build_index(self, geometry_columns, num_threads=None):
+    def _build_index(self, geometry_columns, geometry_types, num_threads=None):
         return GeoDataset._index_fragments(
-            self.get_fragments(), geometry_columns, num_threads=num_threads
+            self.get_fragments(),
+            geometry_columns,
+            geometry_types,
+            num_threads=num_threads,
         )
 
     def filter_fragments(self, target):
@@ -221,16 +226,16 @@ class GeoDataset:
             return _ds.InMemoryDataset(tables, schema=self.schema)
 
     @staticmethod
-    def _index_fragment(fragment, column):
+    def _index_fragment(fragment, column, type):
         scanner = fragment.scanner(columns=[column])
         reader = scanner.to_reader()
-        kernel = Kernel.box_agg(reader.schema.types[0])
+        kernel = Kernel.box_agg(type)
         for batch in reader:
             kernel.push(batch.column(0))
         return kernel.finish()
 
     @staticmethod
-    def _index_fragments(fragments, columns, num_threads=None):
+    def _index_fragments(fragments, columns, types, num_threads=None):
         columns = list(columns)
         if num_threads is None:
             num_threads = _pa.cpu_count()
@@ -242,10 +247,10 @@ class GeoDataset:
 
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             futures = []
-            for column in columns:
+            for column, type in zip(columns, types):
                 for fragment in fragments:
                     future = executor.submit(
-                        GeoDataset._index_fragment, fragment, column
+                        GeoDataset._index_fragment, fragment, column, type
                     )
                     futures.append(future)
 
@@ -355,13 +360,13 @@ class ParquetRowGroupGeoDataset(GeoDataset):
         new_wrapped._index = base_wrapped._index
         return new_wrapped
 
-    def _build_index(self, geometry_columns, num_threads=None):
+    def _build_index(self, geometry_columns, geometry_types, num_threads=None):
         can_use_statistics = [
             type.coord_type == CoordType.SEPARATE for type in self.geometry_types
         ]
 
         if not self._use_column_statistics or not any(can_use_statistics):
-            return super()._build_index(geometry_columns, num_threads)
+            return super()._build_index(geometry_columns, geometry_types, num_threads)
 
         # Build a list of columns that will work with column stats
         bbox_stats_cols = []
@@ -380,7 +385,9 @@ class ParquetRowGroupGeoDataset(GeoDataset):
                 normal_stats_cols.remove(col)
 
         # Compute any remaining statistics
-        normal_stats = super()._build_index(normal_stats_cols, num_threads)
+        normal_stats = super()._build_index(
+            normal_stats_cols, geometry_types, num_threads
+        )
         for col in normal_stats_cols:
             stats_by_name[col] = normal_stats.column(col)
 
