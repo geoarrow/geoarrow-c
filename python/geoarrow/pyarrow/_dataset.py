@@ -231,10 +231,7 @@ class GeoDataset:
         reader = scanner.to_reader()
         kernel = Kernel.box_agg(type)
         for batch in reader:
-            if isinstance(type, VectorType):
-                kernel.push(batch.column(0))
-            else:
-                kernel.push(type.wrap_array(batch.column(0)))
+            kernel.push(batch.column(0))
         return kernel.finish()
 
     @staticmethod
