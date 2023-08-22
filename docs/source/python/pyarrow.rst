@@ -9,6 +9,11 @@ Integration with pyarrow
 
     .. autofunction:: array
 
+    Dataset constructors
+    --------------------
+
+    .. autofunction:: dataset
+
     Type Constructors
     -----------------
 
@@ -93,4 +98,10 @@ Integration with pyarrow
         :members:
 
     .. autoclass:: MultiPolygonType
+        :members:
+
+    .. autoclass:: geoarrow.pyarrow._dataset.GeoDataset
+        :members:
+
+    .. autoclass:: geoarrow.pyarrow._dataset.ParquetRowGroupGeoDataset
         :members:
