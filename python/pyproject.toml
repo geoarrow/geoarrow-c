@@ -18,7 +18,7 @@
 
 [project]
 name = "geoarrow"
-version = "1.0.0-alpha0"
+version = "0.1.0-alpha0"
 description = ""
 authors = [{name = "Dewey Dunnington", email = "dewey@dunnington.ca"}]
 license = {text = "Apache-2.0"}
