@@ -35,6 +35,6 @@ repository = "https://github.com/geoarrow/geoarrow-c"
 requires = [
     "setuptools >= 61.0.0",
     "setuptools-scm",
-    "Cython <= 0.29.36"
+    "Cython"
 ]
 build-backend = "setuptools.build_meta"

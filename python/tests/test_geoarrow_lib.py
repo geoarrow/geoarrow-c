@@ -125,7 +125,7 @@ def test_kernel_void_agg():
 
 
 def test_kernel_init_error():
-    with pytest.raises(ValueError):
+    with pytest.raises(lib.GeoArrowCException):
         lib.CKernel(b"not_a_kernel")
 
 

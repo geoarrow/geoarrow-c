@@ -27,50 +27,58 @@ from setuptools.command.build_ext import build_ext
 # checkout or copy from ../dist if the caller doesn't have cmake available.
 # Note that bootstrap.py won't exist if building from sdist.
 this_dir = os.path.dirname(__file__)
-bootstrap_py = os.path.join(this_dir, 'bootstrap.py')
+bootstrap_py = os.path.join(this_dir, "bootstrap.py")
 if os.path.exists(bootstrap_py):
     subprocess.run([sys.executable, bootstrap_py])
 
-vendor_dir = os.path.join(this_dir, 'src', 'geoarrow', 'geoarrow')
+vendor_dir = os.path.join(this_dir, "src", "geoarrow", "geoarrow")
 vendored_files = os.listdir(vendor_dir)
-sources = [f'src/geoarrow/geoarrow/{f}' for f in vendored_files if f.endswith('.c')]
+sources = [f"src/geoarrow/geoarrow/{f}" for f in vendored_files if f.endswith(".c")]
+
 
 # Workaround because setuptools has no easy way to mix C and C++ sources
 # if extra flags are required (e.g., -std=c++11 like we need here).
 class build_ext_subclass(build_ext):
     def build_extensions(self):
         original__compile = self.compiler._compile
+
         def new__compile(obj, src, ext, cc_args, extra_postargs, pp_opts):
-            if src.endswith('.c'):
+            if src.endswith(".c"):
                 extra_postargs = [s for s in extra_postargs if s != "-std=c++11"]
             return original__compile(obj, src, ext, cc_args, extra_postargs, pp_opts)
+
         self.compiler._compile = new__compile
         try:
             build_ext.build_extensions(self)
         finally:
             del self.compiler._compile
 
+
 # Set some extra flags for compiling with coverage support
-if os.getenv('GEOARROW_COVERAGE') == "1":
-    coverage_compile_args = ['--coverage']
-    coverage_link_args = ['--coverage']
-    coverage_define_macros = [("CYTHON_TRACE", 1)]
+if os.getenv("GEOARROW_COVERAGE") == "1":
+    extra_compile_args = ["--coverage"]
+    extra_link_args = ["--coverage"]
+    extra_define_macros = [("CYTHON_TRACE", 1)]
+elif os.getenv("GEOARROW_DEBUG_EXTENSION") == "1":
+    extra_compile_args = ["-g", "-O0"]
+    extra_link_args = []
+    extra_define_macros = []
 else:
-    coverage_compile_args = []
-    coverage_link_args = []
-    coverage_define_macros = []
+    extra_compile_args = []
+    extra_link_args = []
+    extra_define_macros = []
 
 setup(
     ext_modules=[
         Extension(
-            name='geoarrow._lib',
-            include_dirs=['src/geoarrow/geoarrow', 'src/geoarrow/geoarrow_python'],
-            language='c++',
-            sources=['src/geoarrow/_lib.pyx'] + sources,
-            extra_compile_args = ['-std=c++11'] + coverage_compile_args,
-            extra_link_args = [] + coverage_link_args,
-            define_macros= [] + coverage_define_macros
+            name="geoarrow._lib",
+            include_dirs=["src/geoarrow/geoarrow", "src/geoarrow/geoarrow_python"],
+            language="c++",
+            sources=["src/geoarrow/_lib.pyx"] + sources,
+            extra_compile_args=["-std=c++11"] + extra_compile_args,
+            extra_link_args=[] + extra_link_args,
+            define_macros=[] + extra_define_macros,
         )
     ],
-    cmdclass = {"build_ext": build_ext_subclass}
+    cmdclass={"build_ext": build_ext_subclass},
 )
