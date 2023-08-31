@@ -4,6 +4,7 @@ import pandas as pd
 import pyarrow as pa
 import geoarrow.pandas as gapd
 import geoarrow.pyarrow as ga
+import geoarrow.lib as lib
 import numpy as np
 
 
@@ -156,7 +157,7 @@ def test_pyarrow_integration():
 def test_accessor_parse_all():
     series = pd.Series(["POINT (0 1)"])
     assert series.geoarrow.parse_all() is series
-    with pytest.raises(ValueError):
+    with pytest.raises(lib.GeoArrowCException):
         pd.Series(["NOT WKT"]).geoarrow.parse_all()
 
 

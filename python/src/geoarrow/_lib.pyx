@@ -421,12 +421,14 @@ cdef class CVectorType:
 
 cdef class CKernel:
     cdef GeoArrowKernel c_kernel
+    cdef object cname_str
 
     def __init__(self, const char* name):
         cdef const char* cname = <const char*>name
+        self.cname_str = cname.decode("UTF-8")
         cdef int result = GeoArrowKernelInit(&self.c_kernel, cname, NULL)
         if result != GEOARROW_OK:
-            Error.raise_error("GeoArrowKernelInit()", result)
+            Error.raise_error("GeoArrowKernelInit('{self.cname_str}'>)", result)
 
     def __dealloc__(self):
         if self.c_kernel.release != NULL:
@@ -438,7 +440,7 @@ cdef class CKernel:
         cdef int result = self.c_kernel.start(&self.c_kernel, &schema.c_schema,
                                               options, &out.c_schema, &error.c_error)
         if result != GEOARROW_OK:
-            error.raise_message("GeoArrowKernel::start()", result)
+            error.raise_message(f"GeoArrowKernel<{self.cname_str}>::start()", result)
 
         return out
 
@@ -450,7 +452,7 @@ cdef class CKernel:
             result = self.c_kernel.push_batch(&self.c_kernel, &array.c_array,
                                               &out.c_array, &error.c_error)
         if result != GEOARROW_OK:
-            error.raise_message("GeoArrowKernel::push_batch()", result)
+            error.raise_message(f"GeoArrowKernel<{self.cname_str}>::push_batch()", result)
 
         return out
 
@@ -461,21 +463,21 @@ cdef class CKernel:
         with nogil:
             result = self.c_kernel.finish(&self.c_kernel, &out.c_array, &error.c_error)
         if result != GEOARROW_OK:
-            error.raise_message("GeoArrowKernel::finish()", result)
+            error.raise_message(f"GeoArrowKernel<{self.cname_str}>::finish()", result)
 
     def push_batch_agg(self, ArrayHolder array):
         cdef Error error = Error()
         cdef int result = self.c_kernel.push_batch(&self.c_kernel, &array.c_array,
                                                    NULL, &error.c_error)
         if result != GEOARROW_OK:
-            error.raise_message("GeoArrowKernel::push_batch()", result)
+            error.raise_message(f"GeoArrowKernel<{self.cname_str}>::push_batch()", result)
 
     def finish_agg(self):
         cdef Error error = Error()
         out = ArrayHolder()
         cdef int result = self.c_kernel.finish(&self.c_kernel, &out.c_array, &error.c_error)
         if result != GEOARROW_OK:
-            error.raise_message("GeoArrowKernel::finish()", result)
+            error.raise_message(f"GeoArrowKernel<{self.cname_str}>::finish()", result)
 
         return out
 

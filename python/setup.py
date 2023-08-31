@@ -52,13 +52,17 @@ class build_ext_subclass(build_ext):
 
 # Set some extra flags for compiling with coverage support
 if os.getenv('GEOARROW_COVERAGE') == "1":
-    coverage_compile_args = ['--coverage']
-    coverage_link_args = ['--coverage']
-    coverage_define_macros = [("CYTHON_TRACE", 1)]
+    extra_compile_args = ['--coverage']
+    extra_link_args = ['--coverage']
+    extra_define_macros = [("CYTHON_TRACE", 1)]
+elif os.getenv('GEOARROW_DEBUG_EXTENSION') == "1":
+    extra_compile_args = ['-g', '-O0']
+    extra_link_args = []
+    extra_define_macros = []
 else:
-    coverage_compile_args = []
-    coverage_link_args = []
-    coverage_define_macros = []
+    extra_compile_args = []
+    extra_link_args = []
+    extra_define_macros = []
 
 setup(
     ext_modules=[
@@ -67,9 +71,9 @@ setup(
             include_dirs=['src/geoarrow/geoarrow', 'src/geoarrow/geoarrow_python'],
             language='c++',
             sources=['src/geoarrow/_lib.pyx'] + sources,
-            extra_compile_args = ['-std=c++11'] + coverage_compile_args,
-            extra_link_args = [] + coverage_link_args,
-            define_macros= [] + coverage_define_macros
+            extra_compile_args = ['-std=c++11'] + extra_compile_args,
+            extra_link_args = [] + extra_link_args,
+            define_macros= [] + extra_define_macros
         )
     ],
     cmdclass = {"build_ext": build_ext_subclass}

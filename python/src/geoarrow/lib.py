@@ -1,5 +1,13 @@
 from . import _lib
-from ._lib import CKernel, SchemaHolder, ArrayHolder, CVectorType, CArrayView, CBuilder
+from ._lib import (
+    CKernel,
+    SchemaHolder,
+    ArrayHolder,
+    CVectorType,
+    CArrayView,
+    CBuilder,
+    GeoArrowCException,
+)
 
 
 class GeometryType:

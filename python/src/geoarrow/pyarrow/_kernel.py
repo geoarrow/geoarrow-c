@@ -88,7 +88,7 @@ class Kernel:
 
     @staticmethod
     def as_geoarrow(type_in, type_id):
-        return Kernel("as_geoarrow", type_in, type=type_id)
+        return Kernel("as_geoarrow", type_in, type=int(type_id))
 
     @staticmethod
     def unique_geometry_types_agg(type_in):

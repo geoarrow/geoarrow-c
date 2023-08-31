@@ -6,6 +6,7 @@ import pytest
 import geoarrow.pyarrow as ga
 import geoarrow.pyarrow._kernel as _kernel
 import geoarrow.pyarrow._compute as _compute
+import geoarrow.lib as lib
 
 
 def test_set_max_workers():
@@ -60,7 +61,7 @@ def test_push_all():
 
 def test_parse_all():
     assert _compute.parse_all(["POINT (0 1)"]) is None
-    with pytest.raises(ValueError):
+    with pytest.raises(lib.GeoArrowCException):
         _compute.parse_all(["not valid wkt"])
 
     geoarrow_array = ga.array(["POINT (0 1)"]).as_geoarrow(ga.point())

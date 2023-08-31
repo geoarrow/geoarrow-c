@@ -297,8 +297,8 @@ def test_kernel_visit_void():
         ["POINT (30 10)", "NOT VALID WKT AT ALL"], ga.wkt(), validate=False
     )
     kernel = ga.Kernel.visit_void_agg(array.type)
-    with pytest.raises(ValueError):
-        kernel.push(array) is None
+    with pytest.raises(lib.GeoArrowCException):
+        kernel.push(array)
     out = kernel.finish()
     assert out.type == pa.null()
     assert len(out) == 1
