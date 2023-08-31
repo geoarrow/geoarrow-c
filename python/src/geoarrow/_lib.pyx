@@ -201,6 +201,33 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
                                 const string& metadata)
 
 
+class GeoArrowCException(RuntimeError):
+
+    def __init__(self, what, code, message=""):
+        self.what = what
+        self.code = code
+        self.message = message
+
+        if self.message == "":
+            super().__init__(f"{self.what} failed ({self.code})")
+        else:
+            super().__init__(f"{self.what} failed ({self.code}): {self.message}")
+
+
+cdef class Error:
+    cdef GeoArrowError c_error
+
+    def __cinit__(self):
+        self.c_error.message[0] = 0
+
+    def raise_message(self, what, code):
+        raise GeoArrowCException(what, code, self.c_error.message.decode("UTF-8"))
+
+    @staticmethod
+    def raise_error(what, code):
+        raise GeoArrowCException(what, code, "")
+
+
 cdef class SchemaHolder:
     cdef ArrowSchema c_schema
 
@@ -399,56 +426,57 @@ cdef class CKernel:
         cdef const char* cname = <const char*>name
         cdef int result = GeoArrowKernelInit(&self.c_kernel, cname, NULL)
         if result != GEOARROW_OK:
-            raise ValueError('GeoArrowKernelInit() failed')
+            Error.raise_error("GeoArrowKernelInit()", result)
 
     def __dealloc__(self):
         if self.c_kernel.release != NULL:
             self.c_kernel.release(&self.c_kernel)
 
     def start(self, SchemaHolder schema, const char* options):
-        cdef GeoArrowError error
+        cdef Error error = Error()
         out = SchemaHolder()
         cdef int result = self.c_kernel.start(&self.c_kernel, &schema.c_schema,
-                                              options, &out.c_schema, &error)
+                                              options, &out.c_schema, &error.c_error)
         if result != GEOARROW_OK:
-            raise ValueError(error.message)
+            error.raise_message("GeoArrowKernel::start()", result)
 
         return out
 
     def push_batch(self, ArrayHolder array):
-        cdef GeoArrowError error
+        cdef Error error = Error()
         out = ArrayHolder()
         cdef int result
         with nogil:
             result = self.c_kernel.push_batch(&self.c_kernel, &array.c_array,
-                                              &out.c_array, &error)
+                                              &out.c_array, &error.c_error)
         if result != GEOARROW_OK:
-            raise ValueError(error.message)
+            error.raise_message("GeoArrowKernel::push_batch()", result)
 
         return out
 
     def finish(self):
-        cdef GeoArrowError error
+        cdef Error error = Error()
         out = ArrayHolder()
         cdef int result
         with nogil:
-            result = self.c_kernel.finish(&self.c_kernel, &out.c_array, &error)
+            result = self.c_kernel.finish(&self.c_kernel, &out.c_array, &error.c_error)
         if result != GEOARROW_OK:
-            raise ValueError(error.message)
+            error.raise_message("GeoArrowKernel::finish()", result)
 
     def push_batch_agg(self, ArrayHolder array):
-        cdef GeoArrowError error
+        cdef Error error = Error()
         cdef int result = self.c_kernel.push_batch(&self.c_kernel, &array.c_array,
-                                                   NULL, &error)
+                                                   NULL, &error.c_error)
         if result != GEOARROW_OK:
-            raise ValueError(error.message)
+            error.raise_message("GeoArrowKernel::push_batch()", result)
 
     def finish_agg(self):
-        cdef GeoArrowError error
+        cdef Error error = Error()
         out = ArrayHolder()
-        cdef int result = self.c_kernel.finish(&self.c_kernel, &out.c_array, &error)
+        cdef int result = self.c_kernel.finish(&self.c_kernel, &out.c_array, &error.c_error)
         if result != GEOARROW_OK:
-            raise ValueError(error.message)
+            error.raise_message("GeoArrowKernel::finish()", result)
+
         return out
 
 
@@ -459,12 +487,12 @@ cdef class CArrayView:
     def __init__(self, ArrayHolder array, SchemaHolder schema):
         self._base = array
 
-        cdef GeoArrowError error
-        cdef int result = GeoArrowArrayViewInitFromSchema(&self.c_array_view, &schema.c_schema, &error)
+        cdef Error error = Error()
+        cdef int result = GeoArrowArrayViewInitFromSchema(&self.c_array_view, &schema.c_schema, &error.c_error)
         if result != GEOARROW_OK:
-            raise ValueError(error.message.decode('UTF-8'))
+            error.raise_message("GeoArrowArrayViewInitFromSchema()", result)
 
-        result = GeoArrowArrayViewSetArray(&self.c_array_view, &array.c_array, &error)
+        result = GeoArrowArrayViewSetArray(&self.c_array_view, &array.c_array, &error.c_error)
         if result != GEOARROW_OK:
             raise ValueError(error.message.decode('UTF-8'))
 
@@ -568,10 +596,10 @@ cdef class CBuilder:
 
     def __init__(self, SchemaHolder schema):
         self._schema = schema
-        cdef GeoArrowError error
-        cdef int result = GeoArrowBuilderInitFromSchema(&self.c_builder, &schema.c_schema, &error)
+        cdef Error error = Error()
+        cdef int result = GeoArrowBuilderInitFromSchema(&self.c_builder, &schema.c_schema, &error.c_error)
         if result != GEOARROW_OK:
-            raise ValueError(error.message.decode('UTF-8'))
+            error.raise_message("GeoArrowBuilderInitFromSchema()", result)
 
     def __dealloc__(self):
         GeoArrowBuilderReset(&self.c_builder)
@@ -579,20 +607,20 @@ cdef class CBuilder:
     def set_buffer_uint8(self, int64_t i, object obj):
         cdef const unsigned char[:] view = memoryview(obj)
         cdef int result = GeoArrowBuilderSetPyBuffer(&self.c_builder, i, <PyObject*>obj, &(view[0]), view.shape[0])
-        if result != 0:
-            raise ValueError("GeoArrowBuilderSetPyBuffer() failed")
+        if result != GEOARROW_OK:
+            Error.raise_error("GeoArrowBuilderSetPyBuffer()", result)
 
     def set_buffer_int32(self, int64_t i, object obj):
         cdef const int32_t[:] view = memoryview(obj)
         cdef int result = GeoArrowBuilderSetPyBuffer(&self.c_builder, i, <PyObject*>obj, &(view[0]), view.shape[0] * 4)
-        if result != 0:
-            raise ValueError("GeoArrowBuilderSetPyBuffer() failed")
+        if result != GEOARROW_OK:
+            Error.raise_error("GeoArrowBuilderSetPyBuffer()", result)
 
     def set_buffer_double(self, int64_t i, object obj):
         cdef const double[:] view = memoryview(obj)
         cdef int result = GeoArrowBuilderSetPyBuffer(&self.c_builder, i, <PyObject*>obj, &(view[0]), view.shape[0] * 8)
-        if result != 0:
-            raise ValueError("GeoArrowBuilderSetPyBuffer() failed")
+        if result != GEOARROW_OK:
+            Error.raise_error("GeoArrowBuilderSetPyBuffer()", result)
 
     @property
     def schema(self):
@@ -600,8 +628,8 @@ cdef class CBuilder:
 
     def finish(self):
         out = ArrayHolder()
-        cdef GeoArrowError error
-        cdef int result = GeoArrowBuilderFinish(&self.c_builder, &out.c_array, &error)
+        cdef Error error = Error()
+        cdef int result = GeoArrowBuilderFinish(&self.c_builder, &out.c_array, &error.c_error)
         if result != GEOARROW_OK:
-            raise ValueError(error.decode('UTF-8'))
+            error.raise_message("GeoArrowBuilderFinish()", result)
         return out
