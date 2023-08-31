@@ -118,7 +118,7 @@ class VectorType(pa.ExtensionType):
 
         >>> import geoarrow.pyarrow as ga
         >>> ga.wkb().id
-        100001
+        <GeoArrowType.65536|32768|1024|512|128|32|1: 100001>
         """
         return self._type.id
 
@@ -156,7 +156,7 @@ class VectorType(pa.ExtensionType):
         >>> ga.linestring().coord_type == ga.CoordType.SEPARATE
         True
         >>> ga.linestring().with_coord_type(ga.CoordType.INTERLEAVED).coord_type
-        2
+        <GeoArrowCoordType.GEOARROW_COORD_TYPE_INTERLEAVED: 2>
         """
         return self._type.coord_type
 
@@ -168,7 +168,7 @@ class VectorType(pa.ExtensionType):
         >>> ga.linestring().edge_type == ga.EdgeType.PLANAR
         True
         >>> ga.linestring().with_edge_type(ga.EdgeType.SPHERICAL).edge_type
-        1
+        <GeoArrowEdgeType.GEOARROW_EDGE_TYPE_SPHERICAL: 1>
         """
         return self._type.edge_type
 
@@ -180,7 +180,7 @@ class VectorType(pa.ExtensionType):
         >>> ga.point().crs_type == ga.CrsType.NONE
         True
         >>> ga.point().with_crs("EPSG:1234").crs_type
-        1
+        <GeoArrowCrsType.GEOARROW_CRS_TYPE_UNKNOWN: 1>
         """
         return self._type.crs_type
 

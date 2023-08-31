@@ -80,7 +80,7 @@ def parse_all(obj):
     >>> ga.parse_all(["POINT (0 1"])
     Traceback (most recent call last):
      ...
-    ValueError: b"Expected ')' at byte 10"
+    geoarrow._lib.GeoArrowCException: GeoArrowKernel<visit_void_agg>::push_batch() failed (22): Expected ')' at byte 10
     """
     obj = obj_as_array_or_chunked(obj)
 
@@ -546,7 +546,7 @@ def with_geometry_type(obj, geometry_type):
     >>> ga.with_geometry_type(["MULTIPOINT (0 1, 2 3)"], ga.GeometryType.POINT)
     Traceback (most recent call last):
       ...
-    ValueError: b"Can't convert feature with >1 coordinate to POINT"
+    geoarrow._lib.GeoArrowCException: GeoArrowKernel<as_geoarrow>::push_batch() failed (22): Can't convert feature with >1 coordinate to POINT
     """
     obj = as_geoarrow(obj)
     if geometry_type == obj.type.geometry_type:
