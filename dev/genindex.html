@@ -27,15 +27,15 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
 
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
 
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-    <script src="_static/doctools.js"></script>
-    <script src="_static/sphinx_highlight.js"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=ccbe24c1"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
     <link rel="index" title="Index" href="#" />
     <link rel="search" title="Search" href="search.html" />
@@ -360,10 +360,12 @@ document.write(`
 <h2 id="D">D</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="python/geoarrow.html#geoarrow.Dimensions">Dimensions (class in geoarrow)</a>
+      <li><a href="python/pyarrow.html#geoarrow.pyarrow.dataset">dataset() (in module geoarrow.pyarrow)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="python/geoarrow.html#geoarrow.Dimensions">Dimensions (class in geoarrow)</a>
+</li>
       <li><a href="python/pyarrow.html#geoarrow.pyarrow.VectorType.dimensions">dimensions (VectorType property)</a>
 </li>
   </ul></td>
@@ -384,6 +386,8 @@ document.write(`
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="python/pyarrow.html#geoarrow.pyarrow._dataset.GeoDataset.filter_fragments">filter_fragments() (GeoDataset method)</a>
+</li>
       <li><a href="python/pyarrow.html#geoarrow.pyarrow.format_wkt">format_wkt() (in module geoarrow.pyarrow)</a>
 </li>
       <li><a href="python/pyarrow.html#geoarrow.pyarrow.LinestringType.from_geobuffers">from_geobuffers() (LinestringType method)</a>
@@ -614,12 +618,12 @@ document.write(`
 </li>
       <li><a href="c/index.html#_CPPv4N12GeoArrowType38GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZE">GeoArrowType::GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_Z (C++ enumerator)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="c/index.html#_CPPv4N12GeoArrowType39GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZME">GeoArrowType::GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZM (C++ enumerator)</a>
 </li>
       <li><a href="c/index.html#_CPPv4N12GeoArrowType38GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGONE">GeoArrowType::GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON (C++ enumerator)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="c/index.html#_CPPv4N12GeoArrowType40GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ME">GeoArrowType::GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_M (C++ enumerator)</a>
 </li>
       <li><a href="c/index.html#_CPPv4N12GeoArrowType40GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZE">GeoArrowType::GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_Z (C++ enumerator)</a>
@@ -808,13 +812,21 @@ document.write(`
 </li>
       <li><a href="c/index.html#_CPPv4N30GeoArrowWritableBufferViewData4dataE">GeoArrowWritableBufferViewData::data (C++ member)</a>
 </li>
+      <li><a href="python/pyarrow.html#geoarrow.pyarrow._dataset.GeoDataset">GeoDataset (class in geoarrow.pyarrow._dataset)</a>
+</li>
       <li><a href="python/geoarrow.html#geoarrow.GeometryType.GEOMETRY">GEOMETRY (GeometryType attribute)</a>
 </li>
+      <li><a href="python/pyarrow.html#geoarrow.pyarrow._dataset.GeoDataset.geometry_columns">geometry_columns (GeoDataset property)</a>
+</li>
       <li><a href="python/pyarrow.html#geoarrow.pyarrow.VectorType.geometry_type">geometry_type (VectorType property)</a>
+</li>
+      <li><a href="python/pyarrow.html#geoarrow.pyarrow._dataset.GeoDataset.geometry_types">geometry_types (GeoDataset property)</a>
 </li>
       <li><a href="python/geoarrow.html#geoarrow.GeometryType.GEOMETRYCOLLECTION">GEOMETRYCOLLECTION (GeometryType attribute)</a>
 </li>
       <li><a href="python/geoarrow.html#geoarrow.GeometryType">GeometryType (class in geoarrow)</a>
+</li>
+      <li><a href="python/pyarrow.html#geoarrow.pyarrow._dataset.GeoDataset.get_fragments">get_fragments() (GeoDataset method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -823,6 +835,8 @@ document.write(`
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="python/pyarrow.html#geoarrow.pyarrow.VectorType.id">id (VectorType property)</a>
+</li>
+      <li><a href="python/pyarrow.html#geoarrow.pyarrow._dataset.GeoDataset.index_fragments">index_fragments() (GeoDataset method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -897,16 +911,20 @@ document.write(`
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="python/pyarrow.html#geoarrow.pyarrow._dataset.GeoDataset.parent">parent (GeoDataset property)</a>
+</li>
+      <li><a href="python/pyarrow.html#geoarrow.pyarrow._dataset.ParquetRowGroupGeoDataset">ParquetRowGroupGeoDataset (class in geoarrow.pyarrow._dataset)</a>
+</li>
       <li><a href="python/pyarrow.html#geoarrow.pyarrow.parse_all">parse_all() (in module geoarrow.pyarrow)</a>
 </li>
       <li><a href="python/geoarrow.html#geoarrow.EdgeType.PLANAR">PLANAR (EdgeType attribute)</a>
 </li>
       <li><a href="python/geoarrow.html#geoarrow.GeometryType.POINT">POINT (GeometryType attribute)</a>
 </li>
-      <li><a href="python/pyarrow.html#geoarrow.pyarrow.point">point() (in module geoarrow.pyarrow)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="python/pyarrow.html#geoarrow.pyarrow.point">point() (in module geoarrow.pyarrow)</a>
+</li>
       <li><a href="python/pyarrow.html#geoarrow.pyarrow.PointType">PointType (class in geoarrow.pyarrow)</a>
 </li>
       <li><a href="python/geoarrow.html#geoarrow.GeometryType.POLYGON">POLYGON (GeometryType attribute)</a>
@@ -931,10 +949,12 @@ document.write(`
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="python/geoarrow.html#geoarrow.CoordType.SEPARATE">SEPARATE (CoordType attribute)</a>
+      <li><a href="python/pyarrow.html#geoarrow.pyarrow._dataset.GeoDataset.schema">schema (GeoDataset property)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="python/geoarrow.html#geoarrow.CoordType.SEPARATE">SEPARATE (CoordType attribute)</a>
+</li>
       <li><a href="python/geoarrow.html#geoarrow.EdgeType.SPHERICAL">SPHERICAL (EdgeType attribute)</a>
 </li>
   </ul></td>
@@ -1096,7 +1116,7 @@ document.write(`
       
         <div class="footer-item">
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.0.1.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
     <br/>
   </p>
 </div>
