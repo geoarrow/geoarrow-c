@@ -527,7 +527,7 @@ arrays to validate their contents. For other types, this is a no-op.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">parse_all</span><span class="p">([</span><span class="s2">&quot;POINT (0 1&quot;</span><span class="p">])</span>
 <span class="gt">Traceback (most recent call last):</span>
 <span class="w"> </span><span class="c">...</span>
-<span class="gr">ValueError</span>: <span class="n">b&quot;Expected &#39;)&#39; at byte 10&quot;</span>
+<span class="gr">geoarrow._lib.GeoArrowCException</span>: <span class="n">GeoArrowKernel&lt;visit_void_agg&gt;::push_batch() failed (22): Expected &#39;)&#39; at byte 10</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -775,7 +775,7 @@ specific <a class="reference internal" href="geoarrow.html#geoarrow.GeometryType
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">with_geometry_type</span><span class="p">([</span><span class="s2">&quot;MULTIPOINT (0 1, 2 3)&quot;</span><span class="p">],</span> <span class="n">ga</span><span class="o">.</span><span class="n">GeometryType</span><span class="o">.</span><span class="n">POINT</span><span class="p">)</span>
 <span class="gt">Traceback (most recent call last):</span>
 <span class="w">  </span><span class="c">...</span>
-<span class="gr">ValueError</span>: <span class="n">b&quot;Can&#39;t convert feature with &gt;1 coordinate to POINT&quot;</span>
+<span class="gr">geoarrow._lib.GeoArrowCException</span>: <span class="n">GeoArrowKernel&lt;as_geoarrow&gt;::push_batch() failed (22): Can&#39;t convert feature with &gt;1 coordinate to POINT</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -795,7 +795,7 @@ specific <a class="reference internal" href="geoarrow.html#geoarrow.GeometryType
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">linestring</span><span class="p">()</span><span class="o">.</span><span class="n">coord_type</span> <span class="o">==</span> <span class="n">ga</span><span class="o">.</span><span class="n">CoordType</span><span class="o">.</span><span class="n">SEPARATE</span>
 <span class="go">True</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">linestring</span><span class="p">()</span><span class="o">.</span><span class="n">with_coord_type</span><span class="p">(</span><span class="n">ga</span><span class="o">.</span><span class="n">CoordType</span><span class="o">.</span><span class="n">INTERLEAVED</span><span class="p">)</span><span class="o">.</span><span class="n">coord_type</span>
-<span class="go">2</span>
+<span class="go">&lt;GeoArrowCoordType.GEOARROW_COORD_TYPE_INTERLEAVED: 2&gt;</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -819,7 +819,7 @@ specific <a class="reference internal" href="geoarrow.html#geoarrow.GeometryType
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">point</span><span class="p">()</span><span class="o">.</span><span class="n">crs_type</span> <span class="o">==</span> <span class="n">ga</span><span class="o">.</span><span class="n">CrsType</span><span class="o">.</span><span class="n">NONE</span>
 <span class="go">True</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">point</span><span class="p">()</span><span class="o">.</span><span class="n">with_crs</span><span class="p">(</span><span class="s2">&quot;EPSG:1234&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">crs_type</span>
-<span class="go">1</span>
+<span class="go">&lt;GeoArrowCrsType.GEOARROW_CRS_TYPE_UNKNOWN: 1&gt;</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -846,7 +846,7 @@ types where this is not constant (i.e., WKT and WKT).</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">linestring</span><span class="p">()</span><span class="o">.</span><span class="n">edge_type</span> <span class="o">==</span> <span class="n">ga</span><span class="o">.</span><span class="n">EdgeType</span><span class="o">.</span><span class="n">PLANAR</span>
 <span class="go">True</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">linestring</span><span class="p">()</span><span class="o">.</span><span class="n">with_edge_type</span><span class="p">(</span><span class="n">ga</span><span class="o">.</span><span class="n">EdgeType</span><span class="o">.</span><span class="n">SPHERICAL</span><span class="p">)</span><span class="o">.</span><span class="n">edge_type</span>
-<span class="go">1</span>
+<span class="go">&lt;GeoArrowEdgeType.GEOARROW_EDGE_TYPE_SPHERICAL: 1&gt;</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -878,7 +878,7 @@ types where this is not constant (i.e., WKT and WKB).</p>
 <dd><p>A unique identifier for the memory layout of this type.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow.pyarrow</span> <span class="k">as</span> <span class="nn">ga</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">wkb</span><span class="p">()</span><span class="o">.</span><span class="n">id</span>
-<span class="go">100001</span>
+<span class="go">&lt;GeoArrowType.65536|32768|1024|512|128|32|1: 100001&gt;</span>
 </pre></div>
 </div>
 </dd></dl>
