@@ -18,18 +18,18 @@
 
 [project]
 name = "geoarrow"
-version = "1.0.0-alpha0"
+version = "0.1.0-alpha0"
 description = ""
 authors = [{name = "Dewey Dunnington", email = "dewey@dunnington.ca"}]
 license = {text = "Apache-2.0"}
 requires-python = ">=3.8"
 
 [project.optional-dependencies]
-test = ["pyarrow", "pytest", "pandas", "numpy", "geopandas"]
+test = ["pyarrow<13.0.0", "pytest", "pandas", "numpy", "geopandas"]
 
 [project.urls]
 homepage = "https://arrow.apache.org"
-repository = "https://github.com/geoarrow/geoarrow-cpp"
+repository = "https://github.com/geoarrow/geoarrow-c"
 
 [build-system]
 requires = [

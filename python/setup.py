@@ -31,9 +31,9 @@ bootstrap_py = os.path.join(this_dir, 'bootstrap.py')
 if os.path.exists(bootstrap_py):
     subprocess.run([sys.executable, bootstrap_py])
 
-vendor_dir = os.path.join(this_dir, 'geoarrow', 'geoarrow')
+vendor_dir = os.path.join(this_dir, 'src', 'geoarrow', 'geoarrow')
 vendored_files = os.listdir(vendor_dir)
-sources = [f'geoarrow/geoarrow/{f}' for f in vendored_files if f.endswith('.c')]
+sources = [f'src/geoarrow/geoarrow/{f}' for f in vendored_files if f.endswith('.c')]
 
 # Workaround because setuptools has no easy way to mix C and C++ sources
 # if extra flags are required (e.g., -std=c++11 like we need here).
@@ -64,9 +64,9 @@ setup(
     ext_modules=[
         Extension(
             name='geoarrow._lib',
-            include_dirs=['geoarrow/geoarrow', 'geoarrow/geoarrow_python'],
+            include_dirs=['src/geoarrow/geoarrow', 'src/geoarrow/geoarrow_python'],
             language='c++',
-            sources=['geoarrow/_lib.pyx'] + sources,
+            sources=['src/geoarrow/_lib.pyx'] + sources,
             extra_compile_args = ['-std=c++11'] + coverage_compile_args,
             extra_link_args = [] + coverage_link_args,
             define_macros= [] + coverage_define_macros
