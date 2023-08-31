@@ -58,6 +58,7 @@ jobs:
           pushd python
 
           # Build with Cython + gcc coverage options
+          pip install -e .
           GEOARROW_COVERAGE=1 python3 setup.py build_ext --inplace
 
           # Run tests + coverage.py (generates .coverage + coverage.xml files)
