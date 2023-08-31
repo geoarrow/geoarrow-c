@@ -44,8 +44,10 @@ jobs:
       - name: Run doctests
         if: success() && matrix.python-version == '3.10'
         run: |
-          pip install pytest-cython
-          pytest --pyargs geoarrow --doctest-cython
+          pytest --pyargs geoarrow --doctest-modules
+          # No Cython docs yet
+          # pip install pytest-cython
+          # pytest --pyargs geoarrow --doctest-cython
 
       - name: Coverage
         if: success() && matrix.python-version == '3.10'
