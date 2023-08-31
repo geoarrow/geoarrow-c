@@ -44,9 +44,7 @@ jobs:
       - name: Run doctests
         if: success() && matrix.python-version == '3.10'
         run: |
-          # Needs editable install to run --doctest-modules
-          pip install -e python
-          pytest python --doctest-modules
+          pytest --pyargs geoarrow --doctest-cython
 
       - name: Coverage
         if: success() && matrix.python-version == '3.10'
@@ -60,7 +58,7 @@ jobs:
           GEOARROW_COVERAGE=1 python3 setup.py build_ext --inplace
 
           # Run tests + coverage.py (generates .coverage + coverage.xml files)
-          python -m pytest --cov ./geoarrow
+          python -m pytest --cov ./src/geoarrow
           python -m coverage xml
 
           # Collect C coverage information
@@ -69,7 +67,7 @@ jobs:
             --exclude "/usr/*" \
             --exclude "/Library/*" \
             --exclude "*/_lib.cpp" \
-            --exclude "*/geoarrow/geoarrow/*" \
+            --exclude "*/src/geoarrow/geoarrow/*" \
             --output-file=coverage.info
 
           lcov --list coverage.info
