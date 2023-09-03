@@ -119,7 +119,7 @@ TEST(GeoArrowHppTest, GeoArrowHppTestArrayFromVectors) {
 
   EXPECT_TRUE(array.valid());
   EXPECT_EQ(array.type().id(), GEOARROW_TYPE_POINT);
-  ASSERT_EQ(array.view()->length, 4);
+  ASSERT_EQ(array.view()->length[0], 4);
   ASSERT_EQ(array.view()->coords.n_coords, 4);
   ASSERT_EQ(array.view()->coords.n_values, 2);
   EXPECT_EQ(array.view()->coords.values[0][0], 1);
@@ -131,7 +131,7 @@ TEST(GeoArrowHppTest, GeoArrowHppTestArrayFromVectors) {
   EXPECT_FALSE(array.valid());
   EXPECT_TRUE(array2.valid());
   EXPECT_EQ(array2.type().id(), GEOARROW_TYPE_POINT);
-  ASSERT_EQ(array2.view()->length, 4);
+  ASSERT_EQ(array2.view()->length[0], 4);
   ASSERT_EQ(array2.view()->coords.n_coords, 4);
   ASSERT_EQ(array2.view()->coords.n_values, 2);
   EXPECT_EQ(array2.view()->coords.values[0][0], 1);

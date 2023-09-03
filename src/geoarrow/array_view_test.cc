@@ -23,7 +23,7 @@ TEST_P(TypeParameterizedTestFixture, ArrayViewTestInitType) {
 
   EXPECT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
   EXPECT_EQ(array_view.schema_view.type, type);
-  EXPECT_EQ(array_view.length, 0);
+  EXPECT_EQ(array_view.length[0], 0);
   EXPECT_EQ(array_view.validity_bitmap, nullptr);
   EXPECT_EQ(array_view.n_offsets, kNumOffsets[array_view.schema_view.geometry_type]);
   EXPECT_EQ(array_view.coords.n_coords, 0);
@@ -203,7 +203,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPoint) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
 
   // Check its contents
-  EXPECT_EQ(array_view.length, 2);
+  EXPECT_EQ(array_view.length[0], 2);
   EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
   EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 1));
   EXPECT_EQ(array_view.coords.n_coords, 2);
@@ -245,7 +245,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidInterleavedPoint) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
 
   // Check its contents
-  EXPECT_EQ(array_view.length, 2);
+  EXPECT_EQ(array_view.length[0], 2);
   EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
   EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 1));
   EXPECT_EQ(array_view.coords.n_coords, 2);
@@ -292,7 +292,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidLinestring) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
 
   // Check its contents
-  EXPECT_EQ(array_view.length, 3);
+  EXPECT_EQ(array_view.length[0], 3);
   EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
   EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 1));
   EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 2));
@@ -363,7 +363,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPolygon) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
 
   // Check its contents
-  EXPECT_EQ(array_view.length, 3);
+  EXPECT_EQ(array_view.length[0], 3);
   EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
   EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 1));
   EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 2));
@@ -426,7 +426,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultipoint) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
 
   // Check its contents
-  EXPECT_EQ(array_view.length, 3);
+  EXPECT_EQ(array_view.length[0], 3);
   EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
   EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 1));
   EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 2));
@@ -500,7 +500,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultilinestring) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
 
   // Check its contents
-  EXPECT_EQ(array_view.length, 3);
+  EXPECT_EQ(array_view.length[0], 3);
   EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
   EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 1));
   EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 2));
@@ -592,7 +592,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultipolygon) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
 
   // Check its contents
-  EXPECT_EQ(array_view.length, 3);
+  EXPECT_EQ(array_view.length[0], 3);
   EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
   EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 1));
   EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 2));
