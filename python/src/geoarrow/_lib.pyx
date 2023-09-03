@@ -114,8 +114,8 @@ cdef extern from "geoarrow_type.h":
 
     struct GeoArrowArrayView:
         GeoArrowSchemaView schema_view
-        int64_t offset
-        int64_t length
+        int64_t offset[4]
+        int64_t length[4]
         const uint8_t* validity_bitmap
         int32_t n_offsets
         const int32_t* offsets[3]
@@ -511,7 +511,7 @@ cdef class CArrayView:
                 self,
                 <uintptr_t>self.c_array_view.offsets[0],
                 4,
-                self.c_array_view.offset + self.c_array_view.length + 1,
+                self.c_array_view.offset[0] + self.c_array_view.length[0] + 1,
                 'i'
             )
             buffers.append(buf)
