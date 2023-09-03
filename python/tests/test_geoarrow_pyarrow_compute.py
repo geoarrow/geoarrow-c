@@ -456,3 +456,20 @@ def test_multipolygon_with_offset():
 
     multipolygon = ga.multipolygon().wrap_array(multipolygon_storage[4:])
     assert ga.as_wkt(multipolygon) == ga.as_wkt(["MULTIPOLYGON (((2 3, 4 5, 6 7)))"])
+
+
+def test_multipolygon_with_offset_nonempty_inner_lists():
+    ring_storage = ga.as_geoarrow(
+        ["LINESTRING (0 1, 2 3)", "LINESTRING (4 5, 6 7)", "LINESTRING (8 9, 10 11)"]
+    ).storage
+
+    polygon_storage = pa.ListArray.from_arrays(
+        offsets=[0, 1, 2], values=ring_storage[1:]
+    )
+
+    multipolygon_storage = pa.ListArray.from_arrays(
+        offsets=[0, 1], values=polygon_storage[1:]
+    )
+
+    multipolygon = ga.multipolygon().wrap_array(multipolygon_storage)
+    assert ga.as_wkt(multipolygon) == ga.as_wkt(["MULTIPOLYGON (((8 9, 10 11)))"])
