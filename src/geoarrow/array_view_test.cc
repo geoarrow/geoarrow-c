@@ -647,6 +647,66 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultipoint) {
   array.release(&array);
 }
 
+TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultiPointWithOffset) {
+  struct ArrowSchema schema;
+  struct ArrowArray array;
+  enum GeoArrowType type = GEOARROW_TYPE_MULTIPOINT;
+
+  // Build the array for [null, null, LINESTRING (0 1, 2 3, 4 5)]
+  ASSERT_EQ(GeoArrowSchemaInit(&schema, type), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendNull(&array, 2), GEOARROW_OK);
+
+  // This first point will be skipped by the offset
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0], -1), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[1], -1), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(array.children[0]), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0], 0), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[1], 1), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(array.children[0]), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0], 2), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[1], 3), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(array.children[0]), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
+
+  // Add an extra point so we can offset into that array
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0], 4), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[1], 5), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(array.children[0]), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
+
+  // Apply an offset to each level
+  array.offset = 1;
+  array.length -= 1;
+  array.children[0]->offset = 1;
+  array.children[0]->length -= 1;
+
+  // Set the array view
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+
+  // Check its contents
+  EXPECT_EQ(array_view.offset[0], 1);
+  EXPECT_EQ(array_view.length[0], 2);
+  EXPECT_EQ(array_view.offset[1], 1);
+  EXPECT_EQ(array_view.length[1], 3);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 2);
+  EXPECT_EQ(values[0], "<null value>");
+  EXPECT_EQ(values[1], "MULTIPOINT ((0 1), (2 3), (4 5))");
+
+  schema.release(&schema);
+  array.release(&array);
+}
+
 TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultilinestring) {
   struct ArrowSchema schema;
   struct ArrowArray array;

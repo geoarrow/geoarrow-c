@@ -327,6 +327,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitMultipoint(
       coord_offset = array_view->offsets[0][array_view->offset[0] + offset + i];
       n_coords =
           array_view->offsets[0][array_view->offset[0] + offset + i + 1] - coord_offset;
+      coord_offset += array_view->offset[1];
       for (int64_t j = 0; j < n_coords; j++) {
         NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POINT,
                                               array_view->schema_view.dimensions));
