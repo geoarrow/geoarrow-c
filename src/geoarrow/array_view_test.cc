@@ -505,6 +505,92 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPolygon) {
   array.release(&array);
 }
 
+TEST(ArrayViewTest, ArrayViewTestSetArrayValidPolygonWithOffset) {
+  struct ArrowSchema schema;
+  struct ArrowArray array;
+  enum GeoArrowType type = GEOARROW_TYPE_POLYGON;
+
+  // Build the array for [null, null, POLYGON ((1 2, 2 3, 4 5, 1 2))]
+  ASSERT_EQ(GeoArrowSchemaInit(&schema, type), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendNull(&array, 2), GEOARROW_OK);
+
+  // First ring won't be used because we will set the offset 1
+  ASSERT_EQ(ArrowArrayAppendEmpty(array.children[0], 1), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
+
+  // Add the actual ring that will be used
+  // First coord won't be used because we will set the offset to 1
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[0], -1),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[1], -1),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(array.children[0]->children[0]), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[0], 1),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[1], 2),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(array.children[0]->children[0]), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[0], 2),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[1], 3),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(array.children[0]->children[0]), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[0], 4),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[1], 5),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(array.children[0]->children[0]), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(array.children[0]), GEOARROW_OK);
+
+  // ..and add the actual last coordinate
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[0], 1),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0]->children[0]->children[1], 2),
+            GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(array.children[0]->children[0]), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
+
+  // Apply an offset at every level
+  array.offset = 1;
+  array.length -= 1;
+  array.children[0]->offset = 1;
+  array.children[0]->length -= 1;
+  array.children[0]->children[0]->offset = 1;
+  array.children[0]->children[0]->length -= 1;
+
+  // Set the array view
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+
+  // Check its contents
+  EXPECT_EQ(array_view.offset[0], 1);
+  EXPECT_EQ(array_view.length[0], 2);
+  EXPECT_EQ(array_view.offset[1], 1);
+  EXPECT_EQ(array_view.length[1], 1);
+  EXPECT_EQ(array_view.offset[2], 1);
+  EXPECT_EQ(array_view.length[2], 4);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 2);
+  EXPECT_EQ(values[0], "<null value>");
+  EXPECT_EQ(values[1], "POLYGON ((1 2, 2 3, 4 5, 1 2))");
+
+  schema.release(&schema);
+  array.release(&array);
+}
+
 TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultipoint) {
   struct ArrowSchema schema;
   struct ArrowArray array;

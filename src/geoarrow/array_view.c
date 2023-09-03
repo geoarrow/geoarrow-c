@@ -288,11 +288,13 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitPolygon(
       ring_offset = array_view->offsets[0][array_view->offset[0] + offset + i];
       n_rings =
           array_view->offsets[0][array_view->offset[0] + offset + i + 1] - ring_offset;
+      ring_offset += array_view->offset[1];
 
       for (int64_t j = 0; j < n_rings; j++) {
         NANOARROW_RETURN_NOT_OK(v->ring_start(v));
         coord_offset = array_view->offsets[1][ring_offset + j];
         n_coords = array_view->offsets[1][ring_offset + j + 1] - coord_offset;
+        coord_offset += array_view->offset[2];
         GeoArrowCoordViewUpdate(&array_view->coords, &coords, coord_offset, n_coords);
         NANOARROW_RETURN_NOT_OK(v->coords(v, &coords));
         NANOARROW_RETURN_NOT_OK(v->ring_end(v));
