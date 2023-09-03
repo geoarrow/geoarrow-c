@@ -364,12 +364,14 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitMultilinestring(
       linestring_offset = array_view->offsets[0][array_view->offset[0] + offset + i];
       n_linestrings = array_view->offsets[0][array_view->offset[0] + offset + i + 1] -
                       linestring_offset;
+      linestring_offset += array_view->offset[1];
 
       for (int64_t j = 0; j < n_linestrings; j++) {
         NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_LINESTRING,
                                               array_view->schema_view.dimensions));
         coord_offset = array_view->offsets[1][linestring_offset + j];
         n_coords = array_view->offsets[1][linestring_offset + j + 1] - coord_offset;
+        coord_offset += array_view->offset[2];
         GeoArrowCoordViewUpdate(&array_view->coords, &coords, coord_offset, n_coords);
         NANOARROW_RETURN_NOT_OK(v->coords(v, &coords));
         NANOARROW_RETURN_NOT_OK(v->geom_end(v));
