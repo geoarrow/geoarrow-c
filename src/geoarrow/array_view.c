@@ -256,6 +256,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitLinestring(
       coord_offset = array_view->offsets[0][array_view->offset[0] + offset + i];
       n_coords =
           array_view->offsets[0][array_view->offset[0] + offset + i + 1] - coord_offset;
+      coord_offset += array_view->offset[1];
       GeoArrowCoordViewUpdate(&array_view->coords, &coords, coord_offset, n_coords);
       NANOARROW_RETURN_NOT_OK(v->coords(v, &coords));
       NANOARROW_RETURN_NOT_OK(v->geom_end(v));
