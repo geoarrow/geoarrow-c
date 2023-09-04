@@ -1,6 +1,7 @@
 import math
 
 import pyarrow as pa
+import numpy as np
 import pytest
 
 import geoarrow.pyarrow as ga
@@ -459,17 +460,26 @@ def test_multipolygon_with_offset():
 
 
 def test_multipolygon_with_offset_nonempty_inner_lists():
-    ring_storage = ga.as_geoarrow(
-        ["LINESTRING (0 1, 2 3)", "LINESTRING (4 5, 6 7)", "LINESTRING (8 9, 10 11)"]
-    ).storage
+    ordinate_storage = pa.array([float(i) for i in range(101)])
+    point_storage = pa.StructArray.from_arrays(
+        [ordinate_storage[:100], ordinate_storage[1:]], names=["x", "y"]
+    )
+
+    ring_storage = pa.ListArray.from_arrays(
+        offsets=[0] + list(np.cumsum([2, 3] * 19)), values=point_storage[5:]
+    )
 
     polygon_storage = pa.ListArray.from_arrays(
-        offsets=[0, 1, 2], values=ring_storage[1:]
+        offsets=[0] + list(np.cumsum([0, 1, 2] * 12)), values=ring_storage[2:]
     )
 
     multipolygon_storage = pa.ListArray.from_arrays(
-        offsets=[0, 1], values=polygon_storage[1:]
+        offsets=[0] + list(np.cumsum([1, 2] * 11)), values=polygon_storage[3:]
     )
 
-    multipolygon = ga.multipolygon().wrap_array(multipolygon_storage)
-    assert ga.as_wkt(multipolygon) == ga.as_wkt(["MULTIPOLYGON (((8 9, 10 11)))"])
+    multipolygon = ga.multipolygon().wrap_array(multipolygon_storage[21:])
+    assert ga.as_wkt(multipolygon) == ga.as_wkt(
+        [
+            "MULTIPOLYGON (((92 93, 93 94, 94 95)), ((95 96, 96 97), (97 98, 98 99, 99 100)))"
+        ]
+    )

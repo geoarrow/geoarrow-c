@@ -116,7 +116,8 @@ static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_vie
           return EINVAL;
         }
 
-        // Set the coord pointers to the data buffer of each child
+        // Set the coord pointers to the data buffer of each child (applying
+        // offset before assigning the pointer)
         for (int32_t i = 0; i < array_view->coords.n_values; i++) {
           if (array->children[i]->n_buffers != 2) {
             ArrowErrorSet(
@@ -126,7 +127,8 @@ static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_vie
             return EINVAL;
           }
 
-          array_view->coords.values[i] = ((const double*)array->children[i]->buffers[1]);
+          array_view->coords.values[i] = ((const double*)array->children[i]->buffers[1]) +
+                                         array->children[i]->offset;
         }
 
         break;
@@ -150,8 +152,9 @@ static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_vie
 
         // Set the coord pointers to the first four doubles in the data buffers
         for (int32_t i = 0; i < array_view->coords.n_values; i++) {
-          array_view->coords.values[i] =
-              ((const double*)array->children[0]->buffers[1]) + i;
+          array_view->coords.values[i] = ((const double*)array->children[0]->buffers[1]) +
+                                         array->children[0]->offset;
+          +i;
         }
 
         break;
