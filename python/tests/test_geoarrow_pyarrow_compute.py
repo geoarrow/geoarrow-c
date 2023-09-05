@@ -1,6 +1,7 @@
 import math
 
 import pyarrow as pa
+import numpy as np
 import pytest
 
 import geoarrow.pyarrow as ga
@@ -334,3 +335,184 @@ def test_point_coords():
     x, y = _compute.point_coords(chunked)
     assert x == pa.chunked_array([pa.array([0.0, 2.0])])
     assert y == pa.chunked_array([pa.array([1.0, 3.0])])
+
+
+def test_point_with_offset():
+    point_storage = pa.array(
+        [
+            {"x": 0.0, "y": 1.0},
+            {"x": 2.0, "y": 3.0},
+            {"x": 4.0, "y": 5.0},
+            {"x": 6.0, "y": 7.0},
+        ]
+    )
+
+    point = ga.point().wrap_array(point_storage[1:])
+    assert ga.as_wkt(point) == ga.as_wkt(["POINT (2 3)", "POINT (4 5)", "POINT (6 7)"])
+
+
+def test_linestring_with_offset():
+    point_storage = pa.array(
+        [
+            {"x": 0.0, "y": 1.0},
+            {"x": 2.0, "y": 3.0},
+            {"x": 4.0, "y": 5.0},
+            {"x": 6.0, "y": 7.0},
+        ]
+    )
+
+    linestring_storage = pa.ListArray.from_arrays(
+        offsets=[0, 0, 0, 3], values=point_storage[1:]
+    )
+
+    linestring = ga.linestring().wrap_array(linestring_storage[2:])
+    assert ga.as_wkt(linestring) == ga.as_wkt(["LINESTRING (2 3, 4 5, 6 7)"])
+
+
+def test_polygon_with_offset():
+    point_storage = pa.array(
+        [
+            {"x": 0.0, "y": 1.0},
+            {"x": 2.0, "y": 3.0},
+            {"x": 4.0, "y": 5.0},
+            {"x": 6.0, "y": 7.0},
+        ]
+    )
+
+    ring_storage = pa.ListArray.from_arrays(
+        offsets=[0, 0, 0, 3], values=point_storage[1:]
+    )
+
+    polygon_storage = pa.ListArray.from_arrays(
+        offsets=[0, 0, 0, 0, 1], values=ring_storage[2:]
+    )
+
+    polygon = ga.polygon().wrap_array(polygon_storage[3:])
+    assert ga.as_wkt(polygon) == ga.as_wkt(["POLYGON ((2 3, 4 5, 6 7))"])
+
+
+def test_multipoint_with_offset():
+    point_storage = pa.array(
+        [
+            {"x": 0.0, "y": 1.0},
+            {"x": 2.0, "y": 3.0},
+            {"x": 4.0, "y": 5.0},
+            {"x": 6.0, "y": 7.0},
+        ]
+    )
+
+    multipoint_storage = pa.ListArray.from_arrays(
+        offsets=[0, 0, 0, 3], values=point_storage[1:]
+    )
+
+    multipoint = ga.multipoint().wrap_array(multipoint_storage[2:])
+    assert ga.as_wkt(multipoint) == ga.as_wkt(["MULTIPOINT (2 3, 4 5, 6 7)"])
+
+
+def test_multilinestring_with_offset():
+    point_storage = pa.array(
+        [
+            {"x": 0.0, "y": 1.0},
+            {"x": 2.0, "y": 3.0},
+            {"x": 4.0, "y": 5.0},
+            {"x": 6.0, "y": 7.0},
+        ]
+    )
+
+    linestring_storage = pa.ListArray.from_arrays(
+        offsets=[0, 0, 0, 3], values=point_storage[1:]
+    )
+
+    multilinestring_storage = pa.ListArray.from_arrays(
+        offsets=[0, 0, 0, 0, 1], values=linestring_storage[2:]
+    )
+
+    multilinestring = ga.multilinestring().wrap_array(multilinestring_storage[3:])
+    assert ga.as_wkt(multilinestring) == ga.as_wkt(
+        ["MULTILINESTRING ((2 3, 4 5, 6 7))"]
+    )
+
+
+def test_multipolygon_with_offset():
+    point_storage = pa.array(
+        [
+            {"x": 0.0, "y": 1.0},
+            {"x": 2.0, "y": 3.0},
+            {"x": 4.0, "y": 5.0},
+            {"x": 6.0, "y": 7.0},
+        ]
+    )
+
+    ring_storage = pa.ListArray.from_arrays(
+        offsets=[0, 0, 0, 3], values=point_storage[1:]
+    )
+
+    polygon_storage = pa.ListArray.from_arrays(
+        offsets=[0, 0, 0, 0, 1], values=ring_storage[2:]
+    )
+
+    multipolygon_storage = pa.ListArray.from_arrays(
+        offsets=[0, 0, 0, 0, 0, 1], values=polygon_storage[3:]
+    )
+
+    multipolygon = ga.multipolygon().wrap_array(multipolygon_storage[4:])
+    assert ga.as_wkt(multipolygon) == ga.as_wkt(["MULTIPOLYGON (((2 3, 4 5, 6 7)))"])
+
+
+def test_multipolygon_with_offset_nonempty_inner_lists():
+    ordinate_storage = pa.array([float(i) for i in range(101)])
+    point_storage = pa.StructArray.from_arrays(
+        [ordinate_storage[:100], ordinate_storage[1:]], names=["x", "y"]
+    )
+
+    ring_storage = pa.ListArray.from_arrays(
+        offsets=[0] + list(np.cumsum([2, 3] * 19)), values=point_storage[5:]
+    )
+
+    polygon_storage = pa.ListArray.from_arrays(
+        offsets=[0] + list(np.cumsum([0, 1, 2] * 12)), values=ring_storage[2:]
+    )
+
+    multipolygon_storage = pa.ListArray.from_arrays(
+        offsets=[0] + list(np.cumsum([1, 2] * 11)), values=polygon_storage[3:]
+    )
+
+    multipolygon = ga.multipolygon().wrap_array(multipolygon_storage[21:])
+    assert ga.as_wkt(multipolygon) == ga.as_wkt(
+        [
+            "MULTIPOLYGON (((92 93, 93 94, 94 95)), ((95 96, 96 97), (97 98, 98 99, 99 100)))"
+        ]
+    )
+
+
+def test_interleaved_multipolygon_with_offset():
+    ordinate_storage_list = [-1]
+    for i in range(100):
+        ordinate_storage_list.append(float(i))
+        ordinate_storage_list.append(i + 1.0)
+    ordinate_storage = pa.array(ordinate_storage_list)
+
+    point_storage = pa.FixedSizeListArray.from_arrays(ordinate_storage[1:], list_size=2)
+
+    ring_storage = pa.ListArray.from_arrays(
+        offsets=[0] + list(np.cumsum([2, 3] * 19)), values=point_storage[5:]
+    )
+
+    polygon_storage = pa.ListArray.from_arrays(
+        offsets=[0] + list(np.cumsum([0, 1, 2] * 12)), values=ring_storage[2:]
+    )
+
+    multipolygon_storage = pa.ListArray.from_arrays(
+        offsets=[0] + list(np.cumsum([1, 2] * 11)), values=polygon_storage[3:]
+    )
+
+    multipolygon = (
+        ga.multipolygon()
+        .with_coord_type(ga.CoordType.INTERLEAVED)
+        .wrap_array(multipolygon_storage[21:])
+    )
+    assert ga.as_wkt(multipolygon) == ga.as_wkt(
+        [
+            "MULTIPOLYGON (((92 93, 93 94, 94 95)), ((95 96, 96 97), (97 98, 98 99, 99 100)))"
+        ]
+    )

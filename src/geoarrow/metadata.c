@@ -529,14 +529,6 @@ int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n)
     return crs.size_bytes;
   }
 
-  int64_t num_escapes = 0;
-  for (int64_t i = 1; i < (crs.size_bytes - 1); i++) {
-    if (crs.data[i] == '\\') {
-      i++;
-      num_escapes++;
-    }
-  }
-
   int64_t out_i = 0;
   int is_escape = 0;
   for (int64_t i = 1; i < (crs.size_bytes - 1); i++) {

@@ -385,11 +385,11 @@ struct GeoArrowArrayView {
   /// \brief Type information for the array represented by this view
   struct GeoArrowSchemaView schema_view;
 
-  /// \brief The logical offset to apply into this array
-  int64_t offset;
+  /// \brief The logical offset to apply into each level of nesting
+  int64_t offset[4];
 
-  /// \brief The number of elements in this array
-  int64_t length;
+  /// \brief The number of elements in each level of nesting
+  int64_t length[4];
 
   /// \brief The validity bitmap for this array
   const uint8_t* validity_bitmap;
