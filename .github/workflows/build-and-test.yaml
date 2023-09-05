@@ -63,7 +63,7 @@ jobs:
           mkdir build/cov
           cd build/cov
           gcov -abcfu --source-prefix=$SOURCE_PREFIX `find ../CMakeFiles/geoarrow.dir/ -name "*.gcno"`
-          rm nanoarrow.h.gcov nanoarrow.c.gcov fast_float.h.gcov
+          rm nanoarrow.h.gcov nanoarrow.c.gcov fast_float.h.gcov || true
 
       - name: Upload coverage
         if: success()
