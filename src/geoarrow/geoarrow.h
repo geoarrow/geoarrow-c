@@ -33,6 +33,9 @@ extern "C" {
 /// \brief Populate a GeoArrowError using a printf-style format string
 GeoArrowErrorCode GeoArrowErrorSet(struct GeoArrowError* error, const char* fmt, ...);
 
+/// \brief Parse a string into a double
+GeoArrowErrorCode GeoArrowFromChars(struct GeoArrowStringView src, double* out);
+
 /// @}
 
 /// \defgroup geoarrow-schema Data type creation and inspection
