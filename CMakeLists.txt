@@ -16,6 +16,7 @@ set(GEOARROW_VERSION_PATCH "${geoarrow_VERSION_PATCH}")
 
 option(GEOARROW_BUILD_TESTS "Build tests" OFF)
 option(GEOARROW_CODE_COVERAGE "Enable coverage reporting" OFF)
+option(GEOARROW_USE_FASTFLOAT "Use fastfloat for WKT value parsing" OFF)
 
 add_library(coverage_config INTERFACE)
 
