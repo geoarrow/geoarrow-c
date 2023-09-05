@@ -483,3 +483,36 @@ def test_multipolygon_with_offset_nonempty_inner_lists():
             "MULTIPOLYGON (((92 93, 93 94, 94 95)), ((95 96, 96 97), (97 98, 98 99, 99 100)))"
         ]
     )
+
+
+def test_interleaved_multipolygon_with_offset():
+    ordinate_storage_list = [-1]
+    for i in range(100):
+        ordinate_storage_list.append(float(i))
+        ordinate_storage_list.append(i + 1.0)
+    ordinate_storage = pa.array(ordinate_storage_list)
+
+    point_storage = pa.FixedSizeListArray.from_arrays(ordinate_storage[1:], list_size=2)
+
+    ring_storage = pa.ListArray.from_arrays(
+        offsets=[0] + list(np.cumsum([2, 3] * 19)), values=point_storage[5:]
+    )
+
+    polygon_storage = pa.ListArray.from_arrays(
+        offsets=[0] + list(np.cumsum([0, 1, 2] * 12)), values=ring_storage[2:]
+    )
+
+    multipolygon_storage = pa.ListArray.from_arrays(
+        offsets=[0] + list(np.cumsum([1, 2] * 11)), values=polygon_storage[3:]
+    )
+
+    multipolygon = (
+        ga.multipolygon()
+        .with_coord_type(ga.CoordType.INTERLEAVED)
+        .wrap_array(multipolygon_storage[21:])
+    )
+    assert ga.as_wkt(multipolygon) == ga.as_wkt(
+        [
+            "MULTIPOLYGON (((92 93, 93 94, 94 95)), ((95 96, 96 97), (97 98, 98 99, 99 100)))"
+        ]
+    )
