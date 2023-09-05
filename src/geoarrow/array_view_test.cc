@@ -269,26 +269,83 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPointWithOffset) {
   struct ArrowArray array;
   enum GeoArrowType type = GEOARROW_TYPE_POINT;
 
-  // Build the array for [POINT (30 10), null, POINT (31 11)]
+  // Build the array for [null, POINT (31 11)]
   ASSERT_EQ(GeoArrowSchemaInit(&schema, type), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], 30), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendDouble(array.children[1], 10), GEOARROW_OK);
+  // First null won't be used because of offset
+  ASSERT_EQ(ArrowArrayAppendNull(&array, 2), GEOARROW_OK);
+
+  // First ordinate won't be used because of offsets on struct children
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], -1), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[1], -1), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
-
+  // Actual first ordinate
   ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], 31), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendDouble(array.children[1], 11), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
 
   ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
 
-  // Apply an offset
+  // Apply an offset to the array and to each ordinate array
   array.offset = 1;
   array.length -= 1;
+  array.children[0]->offset = 1;
+  array.children[0]->length -= 1;
+  array.children[1]->offset = 1;
+  array.children[1]->length -= 1;
+
+  // Set the array view
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+
+  // Check its contents
+  EXPECT_EQ(array_view.offset[0], 1);
+  EXPECT_EQ(array_view.length[0], 2);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 2);
+  EXPECT_EQ(values[0], "<null value>");
+  EXPECT_EQ(values[1], "POINT (31 11)");
+
+  schema.release(&schema);
+  array.release(&array);
+}
+
+TEST(ArrayViewTest, ArrayViewTestSetArrayValidInterleavedPointWithOffset) {
+  struct ArrowSchema schema;
+  struct ArrowArray array;
+  enum GeoArrowType type = GEOARROW_TYPE_INTERLEAVED_POINT;
+
+  // Build the array for [null, POINT (31 11)]
+  ASSERT_EQ(GeoArrowSchemaInit(&schema, type), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
+
+  // First null won't be used because of offset
+  ASSERT_EQ(ArrowArrayAppendNull(&array, 2), GEOARROW_OK);
+
+  // First ordinate won't be used because of offset
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], -1), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], -1), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
+
+  // Actual first ordinate
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], 31), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], 11), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
+
+  // Apply an offset to the array and to each ordinate array
+  array.offset = 1;
+  array.length -= 1;
+  array.children[0]->offset = 2;
+  array.children[0]->length -= 2;
 
   // Set the array view
   struct GeoArrowArrayView array_view;
