@@ -38,7 +38,7 @@ else()
 endif()
 
 if(GEOARROW_USE_RYU)
-  set(GEOARROW_DOUBLE_PRINT_SOURCE src/geoarrow/double_print.c src/geoarrow/ryu/d2fixed.c)
+  set(GEOARROW_DOUBLE_PRINT_SOURCE src/geoarrow/double_print.c src/geoarrow/ryu/d2s.c)
   set(GEOARROW_USE_RYU_DEFINE "#define GEOARROW_USE_RYU 1")
 else()
   set(GEOARROW_DOUBLE_PRINT_SOURCE src/geoarrow/double_print.c)
