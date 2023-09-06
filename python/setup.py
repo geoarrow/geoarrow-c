@@ -33,7 +33,11 @@ if os.path.exists(bootstrap_py):
 
 vendor_dir = os.path.join(this_dir, "src", "geoarrow", "geoarrow")
 vendored_files = os.listdir(vendor_dir)
-sources = [f"src/geoarrow/geoarrow/{f}" for f in vendored_files if f.endswith(".c")]
+sources = [
+    f"src/geoarrow/geoarrow/{f}"
+    for f in vendored_files
+    if f.endswith(".c") or f.endswith(".cc")
+]
 
 
 # Workaround because setuptools has no easy way to mix C and C++ sources
