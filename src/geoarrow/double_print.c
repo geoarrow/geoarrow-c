@@ -6,7 +6,7 @@
 #include "ryu/ryu.h"
 
 int64_t GeoArrowPrintDouble(double f, uint32_t precision, char* result) {
-  return geos_d2sfixed_buffered_n(f, precision, result);
+  return GeoArrowd2sfixed_buffered_n(f, precision, result);
 }
 
 #else

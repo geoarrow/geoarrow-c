@@ -687,7 +687,7 @@ static inline bool d2d_small_int(const uint64_t ieeeMantissa, const uint32_t iee
   return true;
 }
 
-int geos_d2sfixed_buffered_n(double f, uint32_t precision, char* result) {
+int GeoArrowd2sfixed_buffered_n(double f, uint32_t precision, char* result) {
   // Step 1: Decode the floating-point number, and unify normalized and subnormal cases.
   const uint64_t bits = double_to_bits(f);
 
@@ -731,7 +731,7 @@ int geos_d2sfixed_buffered_n(double f, uint32_t precision, char* result) {
   return to_chars_fixed(v, ieeeSign, precision, result);
 }
 
-int geos_d2sexp_buffered_n(double f, uint32_t precision, char* result) {
+int GeoArrowd2sexp_buffered_n(double f, uint32_t precision, char* result) {
   // Step 1: Decode the floating-point number, and unify normalized and subnormal cases.
   const uint64_t bits = double_to_bits(f);
 
