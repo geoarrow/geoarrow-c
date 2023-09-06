@@ -1,4 +1,5 @@
 
+# Use GEOS' version, which includes some UBSAN fixes and removal of trailing zeroes
 curl -L https://github.com/libgeos/geos/archive/refs/tags/3.12.0.tar.gz |
     tar -xzf -
 
