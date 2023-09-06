@@ -6,18 +6,6 @@
 
 #include "geoarrow.h"
 
-// Using ryu for double -> char* is ~5x faster and is not locale dependent
-// could also use to_chars() if C++17 is available
-// https://github.com/paleolimbot/geoarrow/tree/58ccd0a9606f3f6e51f200e143d8c7672782e30a/src/ryu
-#ifndef GEOARROW_TO_CHARS
-static inline int geoarrow_compat_d2s_fixed_n(double f, uint32_t precision,
-                                              char* result) {
-  return snprintf(result, 128, "%.*g", precision, f);
-}
-
-#define GEOARROW_TO_CHARS geoarrow_compat_d2s_fixed_n
-#endif
-
 struct WKTWriterPrivate {
   enum ArrowType storage_type;
   struct ArrowBitmap validity;
@@ -50,8 +38,8 @@ static inline int WKTWriterWrite(struct WKTWriterPrivate* private, const char* v
 static inline void WKTWriterWriteDoubleUnsafe(struct WKTWriterPrivate* private,
                                               double value) {
   private->values.size_bytes +=
-      GEOARROW_TO_CHARS(value, private->significant_digits,
-                        ((char*)private->values.data) + private->values.size_bytes);
+      GeoArrowPrintDouble(value, private->significant_digits,
+                          ((char*)private->values.data) + private->values.size_bytes);
 }
 
 static int feat_start_wkt(struct GeoArrowVisitor* v) {

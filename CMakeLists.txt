@@ -17,6 +17,7 @@ set(GEOARROW_VERSION_PATCH "${geoarrow_VERSION_PATCH}")
 option(GEOARROW_BUILD_TESTS "Build tests" OFF)
 option(GEOARROW_CODE_COVERAGE "Enable coverage reporting" OFF)
 option(GEOARROW_USE_FAST_FLOAT "Use fast_float for numeric value parsing" ON)
+option(GEOARROW_USE_RYU "Use ryu for numeric value printing" ON)
 
 add_library(coverage_config INTERFACE)
 
@@ -36,6 +37,14 @@ else()
   set(GEOARROW_USE_FAST_FLOAT_DEFINE "#define GEOARROW_USE_FAST_FLOAT 0")
 endif()
 
+if(GEOARROW_USE_RYU)
+  set(GEOARROW_DOUBLE_PRINT_SOURCE src/geoarrow/double_print.c src/geoarrow/ryu/d2fixed.c)
+  set(GEOARROW_USE_RYU_DEFINE "#define GEOARROW_USE_RYU 1")
+else()
+  set(GEOARROW_DOUBLE_PRINT_SOURCE src/geoarrow/double_print.c)
+  set(GEOARROW_USE_RYU_DEFINE "#define GEOARROW_USE_RYU 0")
+endif()
+
 configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow_config.h)
 
 add_library(
@@ -53,10 +62,11 @@ add_library(
   src/geoarrow/wkt_reader.c
   src/geoarrow/wkt_writer.c
   ${GEOARROW_DOUBLE_PARSE_SOURCE}
+  ${GEOARROW_DOUBLE_PRINT_SOURCE}
   src/geoarrow/nanoarrow.c)
 
 target_include_directories(geoarrow PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/geoarrow>
   $<INSTALL_INTERFACE:include>)
 target_include_directories(geoarrow
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>

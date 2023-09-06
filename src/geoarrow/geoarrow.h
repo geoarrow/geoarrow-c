@@ -42,6 +42,9 @@ GeoArrowErrorCode GeoArrowErrorSet(struct GeoArrowError* error, const char* fmt,
 /// \brief Parse a string into a double
 GeoArrowErrorCode GeoArrowFromChars(const char* first, const char* last, double* out);
 
+/// \brief Print a double to a buffer
+int64_t GeoArrowPrintDouble(double f, uint32_t precision, char* result);
+
 /// @}
 
 /// \defgroup geoarrow-schema Data type creation and inspection
