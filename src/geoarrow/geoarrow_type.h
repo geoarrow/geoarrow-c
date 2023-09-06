@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "geoarrow_config.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

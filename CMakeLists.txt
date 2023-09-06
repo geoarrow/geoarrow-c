@@ -6,7 +6,7 @@ if(NOT DEFINED CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
 endif()
 
-set(GEOARROW_VERSION "0.2.0-SNAPSHOT")
+set(GEOARROW_VERSION "0.1.0-SNAPSHOT")
 string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" GEOARROW_BASE_VERSION "${GEOARROW_VERSION}")
 project(geoarrow VERSION "${GEOARROW_BASE_VERSION}")
 
@@ -19,6 +19,8 @@ option(GEOARROW_CODE_COVERAGE "Enable coverage reporting" OFF)
 option(GEOARROW_USE_FAST_FLOAT "Use fast_float for numeric value parsing" ON)
 
 add_library(coverage_config INTERFACE)
+
+configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow_config.h)
 
 if(GEOARROW_CODE_COVERAGE)
   target_compile_options(coverage_config INTERFACE -O0 -g --coverage)
@@ -54,6 +56,9 @@ add_library(
 target_include_directories(geoarrow PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
   $<INSTALL_INTERFACE:include>)
+target_include_directories(geoarrow
+  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
+)
 target_compile_definitions(geoarrow PUBLIC
   "$<$<CONFIG:Debug>:NANOARROW_DEBUG>"
   "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
@@ -86,6 +91,8 @@ endif()
 
 install(TARGETS geoarrow DESTINATION lib)
 install(DIRECTORY src/ DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/geoarrow_config.h
+        DESTINATION include/geoarrow)
 
 if(GEOARROW_BUILD_TESTS)
   set(MEMORYCHECK_COMMAND_OPTIONS "--leak-check=full --suppressions=${CMAKE_CURRENT_LIST_DIR}/valgrind.supp --error-exitcode=1")

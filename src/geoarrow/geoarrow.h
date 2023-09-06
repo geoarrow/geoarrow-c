@@ -30,6 +30,12 @@ extern "C" {
 ///
 /// @{
 
+/// \brief Return a version string in the form "major.minor.patch"
+const char* GeoArrowVersion(void);
+
+/// \brief Return an integer that can be used to compare versions sequentially
+int GeoArrowVersionInt(void);
+
 /// \brief Populate a GeoArrowError using a printf-style format string
 GeoArrowErrorCode GeoArrowErrorSet(struct GeoArrowError* error, const char* fmt, ...);
 
