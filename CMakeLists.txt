@@ -20,8 +20,6 @@ option(GEOARROW_USE_FAST_FLOAT "Use fast_float for numeric value parsing" ON)
 
 add_library(coverage_config INTERFACE)
 
-configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow_config.h)
-
 if(GEOARROW_CODE_COVERAGE)
   target_compile_options(coverage_config INTERFACE -O0 -g --coverage)
   target_link_options(coverage_config INTERFACE --coverage)
@@ -31,10 +29,14 @@ if(GEOARROW_USE_FAST_FLOAT)
   if(NOT DEFINED CMAKE_CXX_STANDARD)
     set(CMAKE_CXX_STANDARD 11)
   endif()
-  set(GEOARROW_VALUE_PARSING_SOURCES src/geoarrow/double_serde_fast_float.cc)
+  set(GEOARROW_DOUBLE_PARSE_SOURCE src/geoarrow/double_parse_fast_float.cc)
+  set(GEOARROW_USE_FAST_FLOAT_DEFINE "#define GEOARROW_USE_FAST_FLOAT 1")
 else()
-  set(GEOARROW_VALUE_PARSING_SOURCES src/geoarrow/double_serde_std.c)
+  set(GEOARROW_DOUBLE_PARSE_SOURCE src/geoarrow/double_parse_std.c)
+  set(GEOARROW_USE_FAST_FLOAT_DEFINE "#define GEOARROW_USE_FAST_FLOAT 0")
 endif()
+
+configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow_config.h)
 
 add_library(
   geoarrow
@@ -50,7 +52,7 @@ add_library(
   src/geoarrow/wkb_writer.c
   src/geoarrow/wkt_reader.c
   src/geoarrow/wkt_writer.c
-  ${GEOARROW_VALUE_PARSING_SOURCES}
+  ${GEOARROW_DOUBLE_PARSE_SOURCE}
   src/geoarrow/nanoarrow.c)
 
 target_include_directories(geoarrow PUBLIC

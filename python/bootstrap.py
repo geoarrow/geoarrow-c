@@ -28,6 +28,7 @@ if __name__ == '__main__':
         shutil.rmtree(vendor_dir)
 
     vendor_source_files = glob.glob(os.path.join(vendor_source_dir, '*.c'))
+    vendor_source_files = glob.glob(os.path.join(vendor_source_dir, 'double_parse_fast_float.cc'))
     vendor_source_files += glob.glob(os.path.join(vendor_source_dir, '*.h'))
     vendor_source_files += glob.glob(os.path.join(vendor_source_dir, 'geoarrow.hpp'))
 
