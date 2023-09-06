@@ -34,7 +34,7 @@ extern "C" {
 GeoArrowErrorCode GeoArrowErrorSet(struct GeoArrowError* error, const char* fmt, ...);
 
 /// \brief Parse a string into a double
-GeoArrowErrorCode GeoArrowFromChars(struct GeoArrowStringView src, double* out);
+GeoArrowErrorCode GeoArrowFromChars(const char* first, const char* last, double* out);
 
 /// @}
 

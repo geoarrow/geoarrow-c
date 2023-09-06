@@ -16,25 +16,6 @@ struct WKTReaderPrivate {
   struct GeoArrowCoordView coord_view;
 };
 
-// Using fastfloat for char* -> double is ~5x faster and is not locale dependent
-#ifndef GEOARROW_FROM_CHARS
-static inline int from_chars_internal(const char* first, const char* last, double* out) {
-  if (first == last) {
-    return EINVAL;
-  }
-
-  char* end_ptr;
-  *out = strtod(first, &end_ptr);
-  if (end_ptr != last) {
-    return EINVAL;
-  }
-
-  return GEOARROW_OK;
-}
-
-#define GEOARROW_FROM_CHARS from_chars_internal
-#endif
-
 static inline void AdvanceUnsafe(struct WKTReaderPrivate* s, int64_t n) {
   s->data += n;
   s->size_bytes -= n;
@@ -144,7 +125,7 @@ static inline int ReadOrdinate(struct WKTReaderPrivate* s, double* out,
                                struct GeoArrowError* error) {
   const char* start = s->data;
   SkipUntilSep(s);
-  int result = GEOARROW_FROM_CHARS(start, s->data, out);
+  int result = GeoArrowFromChars(start, s->data, out);
   if (result != GEOARROW_OK) {
     s->size_bytes += s->data - start;
     s->data = start;

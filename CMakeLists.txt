@@ -16,13 +16,22 @@ set(GEOARROW_VERSION_PATCH "${geoarrow_VERSION_PATCH}")
 
 option(GEOARROW_BUILD_TESTS "Build tests" OFF)
 option(GEOARROW_CODE_COVERAGE "Enable coverage reporting" OFF)
-option(GEOARROW_USE_FASTFLOAT "Use fastfloat for WKT value parsing" OFF)
+option(GEOARROW_USE_FAST_FLOAT "Use fast_float for numeric value parsing" ON)
 
 add_library(coverage_config INTERFACE)
 
 if(GEOARROW_CODE_COVERAGE)
   target_compile_options(coverage_config INTERFACE -O0 -g --coverage)
   target_link_options(coverage_config INTERFACE --coverage)
+endif()
+
+if(GEOARROW_USE_FAST_FLOAT)
+  if(NOT DEFINED CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD 11)
+  endif()
+  set(GEOARROW_VALUE_PARSING_SOURCES src/geoarrow/double_serde_fast_float.cc)
+else()
+  set(GEOARROW_VALUE_PARSING_SOURCES src/geoarrow/double_serde_std.c)
 endif()
 
 add_library(
@@ -39,6 +48,7 @@ add_library(
   src/geoarrow/wkb_writer.c
   src/geoarrow/wkt_reader.c
   src/geoarrow/wkt_writer.c
+  ${GEOARROW_VALUE_PARSING_SOURCES}
   src/geoarrow/nanoarrow.c)
 
 target_include_directories(geoarrow PUBLIC
