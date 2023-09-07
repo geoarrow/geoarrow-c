@@ -71,7 +71,7 @@ jobs:
             --exclude "/usr/*" \
             --exclude "/Library/*" \
             --exclude "*/_lib.cpp" \
-            --exclude "*/src/geoarrow/geoarrow/*" \
+            --exclude "*/src/geoarrow/c/geoarrow/*" \
             --output-file=coverage.info
 
           lcov --list coverage.info

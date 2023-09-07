@@ -21,7 +21,7 @@ import shutil
 
 if __name__ == "__main__":
     this_dir = os.path.abspath(os.path.dirname(__file__))
-    vendor_dir = os.path.join(this_dir, "src", "geoarrow", "geoarrow")
+    vendor_dir = os.path.join(this_dir, "src", "geoarrow", "c", "geoarrow")
     vendor_source_dir = os.path.join(this_dir, "..", "..", "src", "geoarrow")
 
     if os.path.exists(vendor_dir):

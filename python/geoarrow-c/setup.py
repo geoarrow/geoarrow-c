@@ -31,15 +31,15 @@ bootstrap_py = os.path.join(this_dir, "bootstrap.py")
 if os.path.exists(bootstrap_py):
     subprocess.run([sys.executable, bootstrap_py])
 
-vendor_dir = os.path.join(this_dir, "src", "geoarrow", "geoarrow")
+vendor_dir = os.path.join(this_dir, "src", "geoarrow", "c", "geoarrow")
 sources = [
-    f"src/geoarrow/geoarrow/{f}"
+    f"src/geoarrow/c/geoarrow/{f}"
     for f in os.listdir(vendor_dir)
     if f.endswith(".c") or f.endswith(".cc")
 ]
 
 sources += [
-    f"src/geoarrow/geoarrow/ryu/{f}"
+    f"src/geoarrow/c/geoarrow/ryu/{f}"
     for f in os.listdir(os.path.join(vendor_dir, "ryu"))
     if f.endswith(".c")
 ]
@@ -81,9 +81,9 @@ setup(
     ext_modules=[
         Extension(
             name="geoarrow._lib",
-            include_dirs=["src/geoarrow/geoarrow", "src/geoarrow/geoarrow_python"],
+            include_dirs=["src/geoarrow/c/geoarrow", "src/geoarrow/c/geoarrow_python"],
             language="c++",
-            sources=["src/geoarrow/_lib.pyx"] + sources,
+            sources=["src/geoarrow/c/_lib.pyx"] + sources,
             extra_compile_args=["-std=c++11"] + extra_compile_args,
             extra_link_args=[] + extra_link_args,
             define_macros=[] + extra_define_macros,
