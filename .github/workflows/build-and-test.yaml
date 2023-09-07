@@ -63,11 +63,11 @@ jobs:
 
           lcov --list coverage.info
 
-      # - name: Upload coverage
-      #   if: success()
-      #   uses: codecov/codecov-action@v2
-      #   with:
-      #     directory: build/cov
+      - name: Upload coverage
+        if: success()
+        uses: codecov/codecov-action@v2
+        with:
+          files: build/coverage.info
 
       - name: Test with memcheck
         run: |
