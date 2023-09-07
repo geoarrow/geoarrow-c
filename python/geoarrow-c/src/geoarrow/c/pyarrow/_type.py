@@ -118,7 +118,7 @@ class VectorType(pa.ExtensionType):
 
         >>> import geoarrow.c.pyarrow as ga
         >>> ga.wkb().id
-        <GeoArrowType.65536|32768|1024|512|128|32|1: 100001>
+        <GeoArrowType: 100001>
         """
         return self._type.id
 

@@ -44,7 +44,9 @@ jobs:
       - name: Run doctests
         if: success() && matrix.python-version == '3.10'
         run: |
-          pytest --pyargs geoarrow --doctest-modules
+          # Because of namespace packaging we have to add this here to avoid confusing pytest
+          touch python/geoarrow-c/src/geoarrow/__init__.py
+          pytest --pyargs geoarrow.c --doctest-modules
           # No Cython docs yet
           # pip install pytest-cython
           # pytest --pyargs geoarrow --doctest-cython
