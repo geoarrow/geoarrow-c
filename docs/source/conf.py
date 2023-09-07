@@ -14,7 +14,7 @@ import os
 import sys
 import datetime
 
-import geoarrow
+import geoarrow.c
 
 sys.path.insert(0, os.path.abspath(".."))
 

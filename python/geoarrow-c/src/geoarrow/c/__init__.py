@@ -6,7 +6,7 @@ as ``import geoarrow.c.pyarrow as ga``.
 Examples
 --------
 
->>> import geoarrow as ga
+>>> import geoarrow.c as ga
 """
 
 

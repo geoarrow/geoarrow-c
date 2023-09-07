@@ -17,7 +17,7 @@ class GeometryType:
     Examples
     --------
 
-    >>> import geoarrow as ga
+    >>> import geoarrow.c as ga
     >>> ga.GeometryType.MULTIPOINT
     <GeoArrowGeometryType.GEOARROW_GEOMETRY_TYPE_MULTIPOINT: 4>
     """
@@ -46,7 +46,7 @@ class Dimensions:
     Examples
     --------
 
-    >>> import geoarrow as ga
+    >>> import geoarrow.c as ga
     >>> ga.Dimensions.XYZM
     <GeoArrowDimensions.GEOARROW_DIMENSIONS_XYZM: 4>
     """
@@ -69,7 +69,7 @@ class CoordType:
     Examples
     --------
 
-    >>> import geoarrow as ga
+    >>> import geoarrow.c as ga
     >>> ga.CoordType.INTERLEAVED
     <GeoArrowCoordType.GEOARROW_COORD_TYPE_INTERLEAVED: 2>
     """
@@ -89,7 +89,7 @@ class EdgeType:
     Examples
     --------
 
-    >>> import geoarrow as ga
+    >>> import geoarrow.c as ga
     >>> ga.EdgeType.SPHERICAL
     <GeoArrowEdgeType.GEOARROW_EDGE_TYPE_SPHERICAL: 1>
     """
@@ -106,7 +106,7 @@ class CrsType:
     Examples
     --------
 
-    >>> import geoarrow as ga
+    >>> import geoarrow.c as ga
     >>> ga.CrsType.PROJJSON
     <GeoArrowCrsType.GEOARROW_CRS_TYPE_PROJJSON: 2>
     """
