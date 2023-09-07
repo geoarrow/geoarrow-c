@@ -298,7 +298,7 @@ def format_wkt(obj, precision=None, max_element_size_bytes=None):
     on digits and element size to prevent excessive output for large features.
 
     >>> import geoarrow.pyarrow as ga
-    >>> print(str(ga.format_wkt(ga.array(["POINT (0 1.3333333333333)"]), precision=6)))
+    >>> print(str(ga.format_wkt(ga.array(["POINT (0 1.3333333333333)"]), precision=5)))
     [
       "POINT (0 1.33333)"
     ]
