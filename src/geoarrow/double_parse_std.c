@@ -5,7 +5,7 @@
 
 #include "geoarrow_type.h"
 
-#if defined(GEOARROW_USE_FAST_FLOAT) && !GEOARROW_USE_FAST_FLOAT
+#if !defined(GEOARROW_USE_FAST_FLOAT) || !GEOARROW_USE_FAST_FLOAT
 
 GeoArrowErrorCode GeoArrowFromChars(const char* first, const char* last, double* out) {
   if (first == last) {
