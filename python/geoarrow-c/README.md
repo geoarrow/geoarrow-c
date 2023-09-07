@@ -1,13 +1,13 @@
 # geoarrow for Python
 
-The geoarrow Python package provides bindings to the geoarrow-c implementation of the [GeoArrow specification](https://github.com/geoarrow/geoarrow). The geoarrow Python bindings provide input/output to/from Arrow-friendly formats (e.g., Parquet, Arrow Stream, Arrow File) and general-purpose coordinate shuffling tools among GeoArrow, WKT, and WKB encodings. 
+The geoarrow Python package provides bindings to the geoarrow-c implementation of the [GeoArrow specification](https://github.com/geoarrow/geoarrow). The geoarrow Python bindings provide input/output to/from Arrow-friendly formats (e.g., Parquet, Arrow Stream, Arrow File) and general-purpose coordinate shuffling tools among GeoArrow, WKT, and WKB encodings.
 
 ## Installation
 
 Python bindings for nanoarrow are not yet available on PyPI. You can install via URL (requires a C++ compiler):
 
 ```bash
-python -m pip install "https://github.com/geoarrow/geoarrow-cpp/archive/refs/heads/main.zip#egg=geoarrow&subdirectory=python"
+python -m pip install "https://github.com/geoarrow/geoarrow-c/archive/refs/heads/main.zip#egg=geoarrow-c&subdirectory=python/geoarrow-c"
 ```
 
 If you can import the namespace, you're good to go! The only reasonable interface to geoarrow currently depends on `pyarrow`, which you can import with:
@@ -50,7 +50,7 @@ Alternatively, you can construct GeoArrow arrays directly from a series of buffe
 import numpy as np
 
 ga.point().from_geobuffers(
-    None, 
+    None,
     np.array([1.0, 2.0, 3.0]),
     np.array([3.0, 4.0, 5.0])
 )
@@ -165,7 +165,7 @@ geopandas.GeoSeries.from_wkb(ga.as_wkb(array))
     2      MULTILINESTRING ((631355.519 5122892.285, 6313...
     3      MULTILINESTRING ((665166.020 5138641.982, 6651...
     4      MULTILINESTRING ((673606.020 5162961.982, 6736...
-                                 ...                        
+                                 ...
     250    MULTILINESTRING ((681672.620 5078601.582, 6818...
     251    MULTILINESTRING ((414867.917 5093040.881, 4147...
     252    MULTILINESTRING ((414867.917 5093040.881, 4148...
