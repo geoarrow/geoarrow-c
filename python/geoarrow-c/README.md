@@ -1,6 +1,6 @@
 # geoarrow for Python
 
-The geoarrow Python package provides bindings to the geoarrow-c implementation of the [GeoArrow specification](https://github.com/geoarrow/geoarrow). The geoarrow Python bindings provide input/output to/from Arrow-friendly formats (e.g., Parquet, Arrow Stream, Arrow File) and general-purpose coordinate shuffling tools among GeoArrow, WKT, and WKB encodings.
+The geoarrow Python package provides bindings to the geoarrow-c implementation of the [GeoArrow specification](https://github.com/geoarrow/geoarrow). The geoarrow Python bindings provide input/output to/from Arrow-friendly formats (e.g., Parquet, Arrow Stream, Arrow File) and general-purpose coordinate shuffling tools among GeoArrow, WKT, and WKB encodings. 
 
 ## Installation
 
@@ -34,7 +34,6 @@ ga.as_geoarrow(["POINT (0 1)"])
 
 
 
-
 This will work with:
 
 - An existing array created by geoarrow
@@ -51,7 +50,7 @@ Alternatively, you can construct GeoArrow arrays directly from a series of buffe
 import numpy as np
 
 ga.point().from_geobuffers(
-    None,
+    None, 
     np.array([1.0, 2.0, 3.0]),
     np.array([3.0, 4.0, 5.0])
 )
@@ -64,7 +63,6 @@ ga.point().from_geobuffers(
     <POINT (1 3)>
     <POINT (2 4)>
     <POINT (3 5)>
-
 
 
 
@@ -83,7 +81,6 @@ ga.point().with_coord_type(ga.CoordType.INTERLEAVED).from_geobuffers(
     <POINT (1 2)>
     <POINT (3 4)>
     <POINT (5 6)>
-
 
 
 
@@ -135,18 +132,6 @@ array = ga.as_geoarrow(df.geometry)
 array
 ```
 
-    /Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/geopandas/_compat.py:124: UserWarning: The Shapely GEOS version (3.11.1-CAPI-1.17.1) is incompatible with the GEOS version PyGEOS was compiled with (3.10.1-CAPI-1.16.0). Conversions between both will be slow.
-      warnings.warn(
-    /var/folders/gt/l87wjg8s7312zs9s7c1fgs900000gn/T/ipykernel_81348/2107898165.py:1: DeprecationWarning: Shapely 2.0 is installed, but because PyGEOS is also installed, GeoPandas still uses PyGEOS by default. However, starting with version 0.14, the default will switch to Shapely. To force to use Shapely 2.0 now, you can either uninstall PyGEOS or set the environment variable USE_PYGEOS=0. You can do this before starting the Python process, or in your code before importing geopandas:
-
-    import os
-    os.environ['USE_PYGEOS'] = '0'
-    import geopandas
-
-    In the next release, GeoPandas will switch to using Shapely by default, even if PyGEOS is installed. If you only have PyGEOS installed to get speed-ups, this switch should be smooth. However, if you are using PyGEOS directly (calling PyGEOS functions on geometries from GeoPandas), this will then stop working and you are encouraged to migrate from PyGEOS to Shapely 2.0 (https://shapely.readthedocs.io/en/latest/migration_pygeos.html).
-      import geopandas
-
-
 
 
 
@@ -158,9 +143,9 @@ array
     <MULTILINESTRING ((673606.0199999996 5162961.9823, 673606.01999999...>
     ...245 values...
     <MULTILINESTRING ((681672.6200000001 5078601.5823, 681866.01999999...>
-    <MULTILINESTRING ((414867.9170000004 5093040.8807, 414793.81699999...>
-    <MULTILINESTRING ((414867.9170000004 5093040.8807, 414829.71700000...>
-    <MULTILINESTRING ((414867.9170000004 5093040.8807, 414937.21700000...>
+    <MULTILINESTRING ((414867.91700000037 5093040.8807, 414793.8169999...>
+    <MULTILINESTRING ((414867.91700000037 5093040.8807, 414829.7170000...>
+    <MULTILINESTRING ((414867.91700000037 5093040.8807, 414937.2170000...>
     <MULTILINESTRING ((648686.0197000001 5099181.984099999, 648866.019...>
 
 
@@ -180,7 +165,7 @@ geopandas.GeoSeries.from_wkb(ga.as_wkb(array))
     2      MULTILINESTRING ((631355.519 5122892.285, 6313...
     3      MULTILINESTRING ((665166.020 5138641.982, 6651...
     4      MULTILINESTRING ((673606.020 5162961.982, 6736...
-                                 ...
+                                 ...                        
     250    MULTILINESTRING ((681672.620 5078601.582, 6818...
     251    MULTILINESTRING ((414867.917 5093040.881, 4147...
     252    MULTILINESTRING ((414867.917 5093040.881, 4148...
@@ -280,9 +265,9 @@ geoarrow_array2
     <MULTILINESTRING ((673606.0199999996 5162961.9823, 673606.01999999...>
     ...245 values...
     <MULTILINESTRING ((681672.6200000001 5078601.5823, 681866.01999999...>
-    <MULTILINESTRING ((414867.9170000004 5093040.8807, 414793.81699999...>
-    <MULTILINESTRING ((414867.9170000004 5093040.8807, 414829.71700000...>
-    <MULTILINESTRING ((414867.9170000004 5093040.8807, 414937.21700000...>
+    <MULTILINESTRING ((414867.91700000037 5093040.8807, 414793.8169999...>
+    <MULTILINESTRING ((414867.91700000037 5093040.8807, 414829.7170000...>
+    <MULTILINESTRING ((414867.91700000037 5093040.8807, 414937.2170000...>
     <MULTILINESTRING ((648686.0197000001 5099181.984099999, 648866.019...>
 
 
