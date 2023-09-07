@@ -45,6 +45,30 @@ jobs:
           cd build
           GEOARROW_TESTING_DIR=$GITHUB_WORKSPACE/testing ctest -T test --output-on-failure .
 
+      - name: Install lcov
+        run: |
+          sudo apt-get install lcov
+
+      - name: Calculate coverage
+        run: |
+          cd build
+          lcov --capture --directory . \
+            --exclude "*_test.cc" \
+            --exclude "/usr/*" \
+            --exclude "*/gtest/*" \
+            --exclude "*/ryu/*" \
+            --exclude "*/fast_float.h" \
+            --exclude "*/nanoarrow.*" \
+            --output-file coverage.info
+
+          lcov --list coverage.info
+
+      # - name: Upload coverage
+      #   if: success()
+      #   uses: codecov/codecov-action@v2
+      #   with:
+      #     directory: build/cov
+
       - name: Test with memcheck
         run: |
           cd build
@@ -56,17 +80,3 @@ jobs:
         with:
           name: geoarrow-memcheck
           path: build/Testing/Temporary/MemoryChecker.*.log
-
-      - name: Calculate coverage
-        run: |
-          SOURCE_PREFIX=`pwd`
-          mkdir build/cov
-          cd build/cov
-          gcov -abcfu --source-prefix=$SOURCE_PREFIX `find ../CMakeFiles/geoarrow.dir/ -name "*.gcno"`
-          rm nanoarrow.h.gcov nanoarrow.c.gcov fast_float.h.gcov || true
-
-      - name: Upload coverage
-        if: success()
-        uses: codecov/codecov-action@v2
-        with:
-          directory: build/cov
