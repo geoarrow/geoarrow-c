@@ -12,4 +12,6 @@
 
 #define GEOARROW_USE_FAST_FLOAT 1
 
+#define GEOARROW_USE_RYU 1
+
 #endif

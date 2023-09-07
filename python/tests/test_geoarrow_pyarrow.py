@@ -246,7 +246,7 @@ def test_kernel_as():
 
 def test_kernel_format():
     array = ga.array(["POINT (30.12345 10.12345)"])
-    kernel = ga.Kernel.format_wkt(array.type, precision=5, max_element_size_bytes=15)
+    kernel = ga.Kernel.format_wkt(array.type, precision=3, max_element_size_bytes=15)
 
     out = kernel.push(array)
     assert out.type == pa.string()

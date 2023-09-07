@@ -19,22 +19,25 @@ import os
 import glob
 import shutil
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     this_dir = os.path.abspath(os.path.dirname(__file__))
-    vendor_dir = os.path.join(this_dir, 'src', 'geoarrow', 'geoarrow')
-    vendor_source_dir = os.path.join(this_dir, '..', 'src', 'geoarrow')
+    vendor_dir = os.path.join(this_dir, "src", "geoarrow", "geoarrow")
+    vendor_source_dir = os.path.join(this_dir, "..", "src", "geoarrow")
 
     if os.path.exists(vendor_dir):
         shutil.rmtree(vendor_dir)
 
-    vendor_source_files = glob.glob(os.path.join(vendor_source_dir, '*.c'))
-    vendor_source_files += glob.glob(os.path.join(vendor_source_dir, 'double_parse_fast_float.cc'))
-    vendor_source_files += glob.glob(os.path.join(vendor_source_dir, '*.h'))
-    vendor_source_files += glob.glob(os.path.join(vendor_source_dir, 'geoarrow.hpp'))
+    vendor_source_files = glob.glob(os.path.join(vendor_source_dir, "*.c"))
+    vendor_source_files += glob.glob(os.path.join(vendor_source_dir, "*.h"))
+    vendor_source_files += glob.glob(os.path.join(vendor_source_dir, "geoarrow.hpp"))
+    vendor_source_files += glob.glob(
+        os.path.join(vendor_source_dir, "double_parse_fast_float.cc")
+    )
+    vendor_source_files += glob.glob(os.path.join(vendor_source_dir, "ryu/*.h"))
+    vendor_source_files += glob.glob(os.path.join(vendor_source_dir, "ryu/*.c"))
 
     os.mkdir(vendor_dir)
+    os.mkdir(os.path.join(vendor_dir, "ryu"))
     for source_file in vendor_source_files:
-        shutil.copyfile(
-            source_file,
-            os.path.join(vendor_dir, os.path.basename(source_file))
-        )
+        dst_file = source_file.removeprefix(os.path.join(vendor_source_dir, ""))
+        shutil.copyfile(source_file, os.path.join(vendor_dir, dst_file))
