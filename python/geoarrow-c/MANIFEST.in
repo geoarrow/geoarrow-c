@@ -16,5 +16,6 @@
 # under the License.
 
 exclude bootstrap.py
-include src/geoarrow/geoarrow/*.h
-include src/geoarrow/geoarrow/*.hpp
+include src/geoarrow/c/**/**/*.h
+include src/geoarrow/c/**/*.h
+include src/geoarrow/c/**/*.hpp

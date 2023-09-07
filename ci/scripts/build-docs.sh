@@ -54,7 +54,7 @@ main() {
    pushd python/geoarrow-c
    rm -rf dist
    python3 -m build --wheel
-   pip3 install dist/geoarrow-*.whl
+   pip3 install dist/geoarrow*.whl
    popd
 
    pushd docs
