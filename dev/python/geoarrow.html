@@ -331,76 +331,76 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article" role="main">
                   
-  <section id="module-geoarrow">
-<span id="core-api"></span><h1>Core API<a class="headerlink" href="#module-geoarrow" title="Permalink to this heading">#</a></h1>
+  <section id="module-geoarrow.c">
+<span id="core-api"></span><h1>Core API<a class="headerlink" href="#module-geoarrow.c" title="Permalink to this heading">#</a></h1>
 <p>The root import for geoarrow. This import is intended for those working
 with geoarrow at a low level; most users should use the pyarrow integration
-as <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">geoarrow.pyarrow</span> <span class="pre">as</span> <span class="pre">ga</span></code>.</p>
+as <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">geoarrow.c.pyarrow</span> <span class="pre">as</span> <span class="pre">ga</span></code>.</p>
 <section id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading">#</a></h2>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow</span> <span class="k">as</span> <span class="nn">ga</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow.c</span> <span class="k">as</span> <span class="nn">ga</span>
 </pre></div>
 </div>
 </section>
 <section id="constants">
 <h2>Constants<a class="headerlink" href="#constants" title="Permalink to this heading">#</a></h2>
 <dl class="py class">
-<dt class="sig sig-object py" id="geoarrow.GeometryType">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">GeometryType</span></span><a class="headerlink" href="#geoarrow.GeometryType" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.GeometryType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">GeometryType</span></span><a class="headerlink" href="#geoarrow.c.GeometryType" title="Permalink to this definition">#</a></dt>
 <dd><p>Constants for geometry type. These values are the same as those used
 in well-known binary (i.e, 0-7).</p>
 <section id="id1">
 <h3>Examples<a class="headerlink" href="#id1" title="Permalink to this heading">#</a></h3>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow</span> <span class="k">as</span> <span class="nn">ga</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow.c</span> <span class="k">as</span> <span class="nn">ga</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">GeometryType</span><span class="o">.</span><span class="n">MULTIPOINT</span>
 <span class="go">&lt;GeoArrowGeometryType.GEOARROW_GEOMETRY_TYPE_MULTIPOINT: 4&gt;</span>
 </pre></div>
 </div>
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.GeometryType.GEOMETRY">
-<span class="sig-name descname"><span class="pre">GEOMETRY</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#geoarrow.GeometryType.GEOMETRY" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.GeometryType.GEOMETRY">
+<span class="sig-name descname"><span class="pre">GEOMETRY</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#geoarrow.c.GeometryType.GEOMETRY" title="Permalink to this definition">#</a></dt>
 <dd><p>Unknown or uninitialized geometry type</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.GeometryType.GEOMETRYCOLLECTION">
-<span class="sig-name descname"><span class="pre">GEOMETRYCOLLECTION</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">7</span></em><a class="headerlink" href="#geoarrow.GeometryType.GEOMETRYCOLLECTION" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.GeometryType.GEOMETRYCOLLECTION">
+<span class="sig-name descname"><span class="pre">GEOMETRYCOLLECTION</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">7</span></em><a class="headerlink" href="#geoarrow.c.GeometryType.GEOMETRYCOLLECTION" title="Permalink to this definition">#</a></dt>
 <dd><p>Geometrycollection geometry type</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.GeometryType.LINESTRING">
-<span class="sig-name descname"><span class="pre">LINESTRING</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#geoarrow.GeometryType.LINESTRING" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.GeometryType.LINESTRING">
+<span class="sig-name descname"><span class="pre">LINESTRING</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#geoarrow.c.GeometryType.LINESTRING" title="Permalink to this definition">#</a></dt>
 <dd><p>Linestring geometry type</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.GeometryType.MULTILINESTRING">
-<span class="sig-name descname"><span class="pre">MULTILINESTRING</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">5</span></em><a class="headerlink" href="#geoarrow.GeometryType.MULTILINESTRING" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.GeometryType.MULTILINESTRING">
+<span class="sig-name descname"><span class="pre">MULTILINESTRING</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">5</span></em><a class="headerlink" href="#geoarrow.c.GeometryType.MULTILINESTRING" title="Permalink to this definition">#</a></dt>
 <dd><p>Multilinestring geometry type</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.GeometryType.MULTIPOINT">
-<span class="sig-name descname"><span class="pre">MULTIPOINT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#geoarrow.GeometryType.MULTIPOINT" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.GeometryType.MULTIPOINT">
+<span class="sig-name descname"><span class="pre">MULTIPOINT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#geoarrow.c.GeometryType.MULTIPOINT" title="Permalink to this definition">#</a></dt>
 <dd><p>Multipoint geometry type</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.GeometryType.MULTIPOLYGON">
-<span class="sig-name descname"><span class="pre">MULTIPOLYGON</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">6</span></em><a class="headerlink" href="#geoarrow.GeometryType.MULTIPOLYGON" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.GeometryType.MULTIPOLYGON">
+<span class="sig-name descname"><span class="pre">MULTIPOLYGON</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">6</span></em><a class="headerlink" href="#geoarrow.c.GeometryType.MULTIPOLYGON" title="Permalink to this definition">#</a></dt>
 <dd><p>Multipolygon geometry type</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.GeometryType.POINT">
-<span class="sig-name descname"><span class="pre">POINT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#geoarrow.GeometryType.POINT" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.GeometryType.POINT">
+<span class="sig-name descname"><span class="pre">POINT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#geoarrow.c.GeometryType.POINT" title="Permalink to this definition">#</a></dt>
 <dd><p>Point geometry type</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.GeometryType.POLYGON">
-<span class="sig-name descname"><span class="pre">POLYGON</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></em><a class="headerlink" href="#geoarrow.GeometryType.POLYGON" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.GeometryType.POLYGON">
+<span class="sig-name descname"><span class="pre">POLYGON</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></em><a class="headerlink" href="#geoarrow.c.GeometryType.POLYGON" title="Permalink to this definition">#</a></dt>
 <dd><p>Polygon geometry type</p>
 </dd></dl>
 
@@ -408,43 +408,43 @@ in well-known binary (i.e, 0-7).</p>
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="geoarrow.Dimensions">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Dimensions</span></span><a class="headerlink" href="#geoarrow.Dimensions" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.Dimensions">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Dimensions</span></span><a class="headerlink" href="#geoarrow.c.Dimensions" title="Permalink to this definition">#</a></dt>
 <dd><p>Constants for dimensions.</p>
 <section id="id2">
 <h3>Examples<a class="headerlink" href="#id2" title="Permalink to this heading">#</a></h3>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow</span> <span class="k">as</span> <span class="nn">ga</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow.c</span> <span class="k">as</span> <span class="nn">ga</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">Dimensions</span><span class="o">.</span><span class="n">XYZM</span>
 <span class="go">&lt;GeoArrowDimensions.GEOARROW_DIMENSIONS_XYZM: 4&gt;</span>
 </pre></div>
 </div>
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.Dimensions.UNKNOWN">
-<span class="sig-name descname"><span class="pre">UNKNOWN</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#geoarrow.Dimensions.UNKNOWN" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.Dimensions.UNKNOWN">
+<span class="sig-name descname"><span class="pre">UNKNOWN</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#geoarrow.c.Dimensions.UNKNOWN" title="Permalink to this definition">#</a></dt>
 <dd><p>Unknown or ininitialized dimensions</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.Dimensions.XY">
-<span class="sig-name descname"><span class="pre">XY</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#geoarrow.Dimensions.XY" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.Dimensions.XY">
+<span class="sig-name descname"><span class="pre">XY</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#geoarrow.c.Dimensions.XY" title="Permalink to this definition">#</a></dt>
 <dd><p>XY dimensions</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.Dimensions.XYM">
-<span class="sig-name descname"><span class="pre">XYM</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></em><a class="headerlink" href="#geoarrow.Dimensions.XYM" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.Dimensions.XYM">
+<span class="sig-name descname"><span class="pre">XYM</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></em><a class="headerlink" href="#geoarrow.c.Dimensions.XYM" title="Permalink to this definition">#</a></dt>
 <dd><p>XYM dimensions</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.Dimensions.XYZ">
-<span class="sig-name descname"><span class="pre">XYZ</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#geoarrow.Dimensions.XYZ" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.Dimensions.XYZ">
+<span class="sig-name descname"><span class="pre">XYZ</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#geoarrow.c.Dimensions.XYZ" title="Permalink to this definition">#</a></dt>
 <dd><p>XYZ dimensions</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.Dimensions.XYZM">
-<span class="sig-name descname"><span class="pre">XYZM</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#geoarrow.Dimensions.XYZM" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.Dimensions.XYZM">
+<span class="sig-name descname"><span class="pre">XYZM</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#geoarrow.c.Dimensions.XYZM" title="Permalink to this definition">#</a></dt>
 <dd><p>XYZM dimensions</p>
 </dd></dl>
 
@@ -452,32 +452,32 @@ in well-known binary (i.e, 0-7).</p>
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="geoarrow.CoordType">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">CoordType</span></span><a class="headerlink" href="#geoarrow.CoordType" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.CoordType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">CoordType</span></span><a class="headerlink" href="#geoarrow.c.CoordType" title="Permalink to this definition">#</a></dt>
 <dd><p>Constants for coordinate type.</p>
 <section id="id3">
 <h3>Examples<a class="headerlink" href="#id3" title="Permalink to this heading">#</a></h3>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow</span> <span class="k">as</span> <span class="nn">ga</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow.c</span> <span class="k">as</span> <span class="nn">ga</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">CoordType</span><span class="o">.</span><span class="n">INTERLEAVED</span>
 <span class="go">&lt;GeoArrowCoordType.GEOARROW_COORD_TYPE_INTERLEAVED: 2&gt;</span>
 </pre></div>
 </div>
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.CoordType.INTERLEAVED">
-<span class="sig-name descname"><span class="pre">INTERLEAVED</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#geoarrow.CoordType.INTERLEAVED" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.CoordType.INTERLEAVED">
+<span class="sig-name descname"><span class="pre">INTERLEAVED</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#geoarrow.c.CoordType.INTERLEAVED" title="Permalink to this definition">#</a></dt>
 <dd><p>Coordinate type compose of a single array containing all dimensions
 (i.e., a fixed-size list)</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.CoordType.SEPARATE">
-<span class="sig-name descname"><span class="pre">SEPARATE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#geoarrow.CoordType.SEPARATE" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.CoordType.SEPARATE">
+<span class="sig-name descname"><span class="pre">SEPARATE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#geoarrow.c.CoordType.SEPARATE" title="Permalink to this definition">#</a></dt>
 <dd><p>Coordinate type composed of separate arrays for each dimension (i.e., a struct)</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.CoordType.UNKNOWN">
-<span class="sig-name descname"><span class="pre">UNKNOWN</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#geoarrow.CoordType.UNKNOWN" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.CoordType.UNKNOWN">
+<span class="sig-name descname"><span class="pre">UNKNOWN</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#geoarrow.c.CoordType.UNKNOWN" title="Permalink to this definition">#</a></dt>
 <dd><p>Unknown or uninitialized coordinate type</p>
 </dd></dl>
 
@@ -485,25 +485,25 @@ in well-known binary (i.e, 0-7).</p>
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="geoarrow.EdgeType">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">EdgeType</span></span><a class="headerlink" href="#geoarrow.EdgeType" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.EdgeType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">EdgeType</span></span><a class="headerlink" href="#geoarrow.c.EdgeType" title="Permalink to this definition">#</a></dt>
 <dd><p>Constants for edge type.</p>
 <section id="id4">
 <h3>Examples<a class="headerlink" href="#id4" title="Permalink to this heading">#</a></h3>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow</span> <span class="k">as</span> <span class="nn">ga</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow.c</span> <span class="k">as</span> <span class="nn">ga</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">EdgeType</span><span class="o">.</span><span class="n">SPHERICAL</span>
 <span class="go">&lt;GeoArrowEdgeType.GEOARROW_EDGE_TYPE_SPHERICAL: 1&gt;</span>
 </pre></div>
 </div>
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.EdgeType.PLANAR">
-<span class="sig-name descname"><span class="pre">PLANAR</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#geoarrow.EdgeType.PLANAR" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.EdgeType.PLANAR">
+<span class="sig-name descname"><span class="pre">PLANAR</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#geoarrow.c.EdgeType.PLANAR" title="Permalink to this definition">#</a></dt>
 <dd><p>Edges form a Cartesian line on a plane</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.EdgeType.SPHERICAL">
-<span class="sig-name descname"><span class="pre">SPHERICAL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#geoarrow.EdgeType.SPHERICAL" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.EdgeType.SPHERICAL">
+<span class="sig-name descname"><span class="pre">SPHERICAL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#geoarrow.c.EdgeType.SPHERICAL" title="Permalink to this definition">#</a></dt>
 <dd><p>Edges are geodesic on a sphere</p>
 </dd></dl>
 
@@ -511,31 +511,31 @@ in well-known binary (i.e, 0-7).</p>
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="geoarrow.CrsType">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">CrsType</span></span><a class="headerlink" href="#geoarrow.CrsType" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.CrsType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">CrsType</span></span><a class="headerlink" href="#geoarrow.c.CrsType" title="Permalink to this definition">#</a></dt>
 <dd><p>Constants for coordinate reference system type.</p>
 <section id="id5">
 <h3>Examples<a class="headerlink" href="#id5" title="Permalink to this heading">#</a></h3>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow</span> <span class="k">as</span> <span class="nn">ga</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow.c</span> <span class="k">as</span> <span class="nn">ga</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">CrsType</span><span class="o">.</span><span class="n">PROJJSON</span>
 <span class="go">&lt;GeoArrowCrsType.GEOARROW_CRS_TYPE_PROJJSON: 2&gt;</span>
 </pre></div>
 </div>
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.CrsType.NONE">
-<span class="sig-name descname"><span class="pre">NONE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#geoarrow.CrsType.NONE" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.CrsType.NONE">
+<span class="sig-name descname"><span class="pre">NONE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#geoarrow.c.CrsType.NONE" title="Permalink to this definition">#</a></dt>
 <dd><p>Explicit empty coordinate reference system</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.CrsType.PROJJSON">
-<span class="sig-name descname"><span class="pre">PROJJSON</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#geoarrow.CrsType.PROJJSON" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.CrsType.PROJJSON">
+<span class="sig-name descname"><span class="pre">PROJJSON</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#geoarrow.c.CrsType.PROJJSON" title="Permalink to this definition">#</a></dt>
 <dd><p>The CRS value is a PROJJSON-encoded string</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="geoarrow.CrsType.UNKNOWN">
-<span class="sig-name descname"><span class="pre">UNKNOWN</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#geoarrow.CrsType.UNKNOWN" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="geoarrow.c.CrsType.UNKNOWN">
+<span class="sig-name descname"><span class="pre">UNKNOWN</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#geoarrow.c.CrsType.UNKNOWN" title="Permalink to this definition">#</a></dt>
 <dd><p>The CRS value is a string of unspecified origin</p>
 </dd></dl>
 
@@ -594,40 +594,40 @@ in well-known binary (i.e, 0-7).</p>
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#constants">Constants</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.GeometryType"><code class="docutils literal notranslate"><span class="pre">GeometryType</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.GeometryType.GEOMETRY"><code class="docutils literal notranslate"><span class="pre">GeometryType.GEOMETRY</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.GeometryType.GEOMETRYCOLLECTION"><code class="docutils literal notranslate"><span class="pre">GeometryType.GEOMETRYCOLLECTION</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.GeometryType.LINESTRING"><code class="docutils literal notranslate"><span class="pre">GeometryType.LINESTRING</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.GeometryType.MULTILINESTRING"><code class="docutils literal notranslate"><span class="pre">GeometryType.MULTILINESTRING</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.GeometryType.MULTIPOINT"><code class="docutils literal notranslate"><span class="pre">GeometryType.MULTIPOINT</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.GeometryType.MULTIPOLYGON"><code class="docutils literal notranslate"><span class="pre">GeometryType.MULTIPOLYGON</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.GeometryType.POINT"><code class="docutils literal notranslate"><span class="pre">GeometryType.POINT</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.GeometryType.POLYGON"><code class="docutils literal notranslate"><span class="pre">GeometryType.POLYGON</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.GeometryType"><code class="docutils literal notranslate"><span class="pre">GeometryType</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.GeometryType.GEOMETRY"><code class="docutils literal notranslate"><span class="pre">GeometryType.GEOMETRY</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.GeometryType.GEOMETRYCOLLECTION"><code class="docutils literal notranslate"><span class="pre">GeometryType.GEOMETRYCOLLECTION</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.GeometryType.LINESTRING"><code class="docutils literal notranslate"><span class="pre">GeometryType.LINESTRING</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.GeometryType.MULTILINESTRING"><code class="docutils literal notranslate"><span class="pre">GeometryType.MULTILINESTRING</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.GeometryType.MULTIPOINT"><code class="docutils literal notranslate"><span class="pre">GeometryType.MULTIPOINT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.GeometryType.MULTIPOLYGON"><code class="docutils literal notranslate"><span class="pre">GeometryType.MULTIPOLYGON</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.GeometryType.POINT"><code class="docutils literal notranslate"><span class="pre">GeometryType.POINT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.GeometryType.POLYGON"><code class="docutils literal notranslate"><span class="pre">GeometryType.POLYGON</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.Dimensions"><code class="docutils literal notranslate"><span class="pre">Dimensions</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.Dimensions.UNKNOWN"><code class="docutils literal notranslate"><span class="pre">Dimensions.UNKNOWN</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.Dimensions.XY"><code class="docutils literal notranslate"><span class="pre">Dimensions.XY</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.Dimensions.XYM"><code class="docutils literal notranslate"><span class="pre">Dimensions.XYM</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.Dimensions.XYZ"><code class="docutils literal notranslate"><span class="pre">Dimensions.XYZ</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.Dimensions.XYZM"><code class="docutils literal notranslate"><span class="pre">Dimensions.XYZM</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.Dimensions"><code class="docutils literal notranslate"><span class="pre">Dimensions</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.Dimensions.UNKNOWN"><code class="docutils literal notranslate"><span class="pre">Dimensions.UNKNOWN</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.Dimensions.XY"><code class="docutils literal notranslate"><span class="pre">Dimensions.XY</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.Dimensions.XYM"><code class="docutils literal notranslate"><span class="pre">Dimensions.XYM</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.Dimensions.XYZ"><code class="docutils literal notranslate"><span class="pre">Dimensions.XYZ</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.Dimensions.XYZM"><code class="docutils literal notranslate"><span class="pre">Dimensions.XYZM</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.CoordType"><code class="docutils literal notranslate"><span class="pre">CoordType</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.CoordType.INTERLEAVED"><code class="docutils literal notranslate"><span class="pre">CoordType.INTERLEAVED</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.CoordType.SEPARATE"><code class="docutils literal notranslate"><span class="pre">CoordType.SEPARATE</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.CoordType.UNKNOWN"><code class="docutils literal notranslate"><span class="pre">CoordType.UNKNOWN</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.CoordType"><code class="docutils literal notranslate"><span class="pre">CoordType</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.CoordType.INTERLEAVED"><code class="docutils literal notranslate"><span class="pre">CoordType.INTERLEAVED</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.CoordType.SEPARATE"><code class="docutils literal notranslate"><span class="pre">CoordType.SEPARATE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.CoordType.UNKNOWN"><code class="docutils literal notranslate"><span class="pre">CoordType.UNKNOWN</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.EdgeType"><code class="docutils literal notranslate"><span class="pre">EdgeType</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.EdgeType.PLANAR"><code class="docutils literal notranslate"><span class="pre">EdgeType.PLANAR</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.EdgeType.SPHERICAL"><code class="docutils literal notranslate"><span class="pre">EdgeType.SPHERICAL</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.EdgeType"><code class="docutils literal notranslate"><span class="pre">EdgeType</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.EdgeType.PLANAR"><code class="docutils literal notranslate"><span class="pre">EdgeType.PLANAR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.EdgeType.SPHERICAL"><code class="docutils literal notranslate"><span class="pre">EdgeType.SPHERICAL</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.CrsType"><code class="docutils literal notranslate"><span class="pre">CrsType</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.CrsType.NONE"><code class="docutils literal notranslate"><span class="pre">CrsType.NONE</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.CrsType.PROJJSON"><code class="docutils literal notranslate"><span class="pre">CrsType.PROJJSON</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.CrsType.UNKNOWN"><code class="docutils literal notranslate"><span class="pre">CrsType.UNKNOWN</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.CrsType"><code class="docutils literal notranslate"><span class="pre">CrsType</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.CrsType.NONE"><code class="docutils literal notranslate"><span class="pre">CrsType.NONE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.CrsType.PROJJSON"><code class="docutils literal notranslate"><span class="pre">CrsType.PROJJSON</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.CrsType.UNKNOWN"><code class="docutils literal notranslate"><span class="pre">CrsType.UNKNOWN</span></code></a></li>
 </ul>
 </li>
 </ul>
