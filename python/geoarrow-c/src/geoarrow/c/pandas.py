@@ -245,7 +245,7 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
             self._parent = parent._parent
         else:
             raise TypeError(
-                "`geoarrow_type` must inherit from geoarrow.pyarrow.VectorType, "
+                "`geoarrow_type` must inherit from geoarrow.c.pyarrow.VectorType, "
                 "geoarrow.CVectorType, or geoarrow.pandas.GeoArrowExtensionDtype"
             )
 

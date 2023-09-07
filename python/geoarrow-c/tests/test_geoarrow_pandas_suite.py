@@ -1,7 +1,7 @@
 import pytest
 from pandas.tests.extension import base
-import geoarrow.pandas as gapd
-import geoarrow.pyarrow as ga
+import geoarrow.c.pandas as gapd
+import geoarrow.c.pyarrow as ga
 import operator
 
 from pandas import (

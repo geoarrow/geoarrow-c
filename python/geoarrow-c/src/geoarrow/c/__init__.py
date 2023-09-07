@@ -1,12 +1,12 @@
 """
 The root import for geoarrow. This import is intended for those working
 with geoarrow at a low level; most users should use the pyarrow integration
-as ``import geoarrow.pyarrow as ga``.
+as ``import geoarrow.c.pyarrow as ga``.
 
 Examples
 --------
 
->>> import geoarrow as ga
+>>> import geoarrow.c as ga
 """
 
 

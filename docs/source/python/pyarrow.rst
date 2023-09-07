@@ -2,7 +2,7 @@
 Integration with pyarrow
 ========================
 
-.. automodule:: geoarrow.pyarrow
+.. automodule:: geoarrow.c.pyarrow
 
     Array constructors
     ------------------
@@ -100,8 +100,8 @@ Integration with pyarrow
     .. autoclass:: MultiPolygonType
         :members:
 
-    .. autoclass:: geoarrow.pyarrow._dataset.GeoDataset
+    .. autoclass:: geoarrow.c.pyarrow._dataset.GeoDataset
         :members:
 
-    .. autoclass:: geoarrow.pyarrow._dataset.ParquetRowGroupGeoDataset
+    .. autoclass:: geoarrow.c.pyarrow._dataset.ParquetRowGroupGeoDataset
         :members:

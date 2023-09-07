@@ -2,7 +2,7 @@
 Core API
 ========
 
-.. automodule:: geoarrow
+.. automodule:: geoarrow.c
    :members:
 
 Constants

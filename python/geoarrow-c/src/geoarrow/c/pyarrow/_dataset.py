@@ -15,7 +15,7 @@ class GeoDataset:
 
     The GeoDataset wraps a pyarrow.Dataset containing one or more geometry columns
     and provides indexing and IO capability. If `geometry_columns` is `None`,
-    it will include all columns that inherit from `geoarrow.pyarrow.VectorType`.
+    it will include all columns that inherit from `geoarrow.c.pyarrow.VectorType`.
     The `geometry_columns` are not required to be geoarrow extension type columns:
     text columns will be parsed as WKT; binary columns will be parsed as WKB
     (but are not detected automatically).
@@ -37,7 +37,7 @@ class GeoDataset:
 
         Returns the (non geo-aware) parent pyarrow.Dataset.
 
-        >>> import geoarrow.pyarrow as ga
+        >>> import geoarrow.c.pyarrow as ga
         >>> import pyarrow as pa
         >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
         >>> dataset = ga.dataset(table)
@@ -55,7 +55,7 @@ class GeoDataset:
 
         The schema of a GeoDataset is identical to that of its parent.
 
-        >>> import geoarrow.pyarrow as ga
+        >>> import geoarrow.c.pyarrow as ga
         >>> import pyarrow as pa
         >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
         >>> dataset = ga.dataset(table)
@@ -77,7 +77,7 @@ class GeoDataset:
     def geometry_columns(self):
         """Get a tuple of geometry column names
 
-        >>> import geoarrow.pyarrow as ga
+        >>> import geoarrow.c.pyarrow as ga
         >>> import pyarrow as pa
         >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
         >>> dataset = ga.dataset(table)
@@ -103,7 +103,7 @@ class GeoDataset:
         columns actually refer a field that can be interpreted as
         geometry.
 
-        >>> import geoarrow.pyarrow as ga
+        >>> import geoarrow.c.pyarrow as ga
         >>> import pyarrow as pa
         >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
         >>> dataset = ga.dataset(table)
@@ -137,7 +137,7 @@ class GeoDataset:
         name. A future implementation may handle spherical edges using a type
         of simplified geometry more suitable to a spherical comparison.
 
-        >>> import geoarrow.pyarrow as ga
+        >>> import geoarrow.c.pyarrow as ga
         >>> import pyarrow as pa
         >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
         >>> dataset = ga.dataset(table)
@@ -163,7 +163,7 @@ class GeoDataset:
         """Push down a spatial query into a GeoDataset
 
         Returns a potentially simplified dataset based on the geometry of
-        target. Currently this uses `geoarrow.pyarrow.box_agg()` on `target`
+        target. Currently this uses `geoarrow.c.pyarrow.box_agg()` on `target`
         and performs a simple envelope comparison with each fragment. A future
         implementation may handle spherical edges using a type of simplified
         geometry more suitable to a spherical comparison. For datasets with
@@ -171,7 +171,7 @@ class GeoDataset:
         and include fragments that intersect the simplified geometry from any
         of the columns.
 
-        >>> import geoarrow.pyarrow as ga
+        >>> import geoarrow.c.pyarrow as ga
         >>> import pyarrow as pa
         >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
         >>> dataset = ga.dataset(table)

@@ -32,22 +32,14 @@ jobs:
 
       - name: Install geoarrow
         run: |
-          pushd python
+          pushd python/geoarrow-c
           pip install .[test]
           popd
           pip list
 
       - name: Run tests
         run: |
-          pytest python/tests -v -s
-
-      - name: Run doctests
-        if: success() && matrix.python-version == '3.10'
-        run: |
-          pytest --pyargs geoarrow --doctest-modules
-          # No Cython docs yet
-          # pip install pytest-cython
-          # pytest --pyargs geoarrow --doctest-cython
+          pytest python/geoarrow-c/tests -v -s
 
       - name: Coverage
         if: success() && matrix.python-version == '3.10'
@@ -55,7 +47,7 @@ jobs:
           sudo apt-get install -y lcov
           pip uninstall --yes geoarrow
           pip install pytest-cov Cython
-          pushd python
+          pushd python/geoarrow-c
 
           # Build with Cython + gcc coverage options
           pip install -e .[test]
@@ -69,9 +61,10 @@ jobs:
           lcov \
             --capture --directory build \
             --exclude "/usr/*" \
+            --exclude "/opt/*" \
             --exclude "/Library/*" \
             --exclude "*/_lib.cpp" \
-            --exclude "*/src/geoarrow/geoarrow/*" \
+            --exclude "*/src/geoarrow/c/geoarrow/*" \
             --output-file=coverage.info
 
           lcov --list coverage.info
@@ -80,4 +73,17 @@ jobs:
         if: success() && matrix.python-version == '3.10'
         uses: codecov/codecov-action@v2
         with:
-          files: 'python/coverage.info,python/coverage.xml'
+          files: 'python/geoarrow-coverage.info,python/geoarrow-c/coverage.xml'
+
+      - name: Run doctests
+        if: success() && matrix.python-version == '3.10'
+        run: |
+          # Because of namespace packaging we have to add this here and
+          # rebuild to avoid confusig pytest
+          touch python/geoarrow-c/src/geoarrow/__init__.py
+          pip install python/geoarrow-c
+
+          pytest --pyargs geoarrow.c --doctest-modules
+          # No Cython docs yet
+          # pip install pytest-cython
+          # pytest --pyargs geoarrow --doctest-cython
