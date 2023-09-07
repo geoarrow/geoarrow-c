@@ -117,8 +117,8 @@ class VectorType(pa.ExtensionType):
         """A unique identifier for the memory layout of this type.
 
         >>> import geoarrow.c.pyarrow as ga
-        >>> ga.wkb().id
-        <GeoArrowType: 100001>
+        >>> int(ga.wkb().id)
+        100001
         """
         return self._type.id
 
