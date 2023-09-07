@@ -263,11 +263,11 @@ TEST(KernelTest, KernelTestFormatWKTFromWKT) {
 
   struct ArrowBuffer buffer;
   ASSERT_EQ(ArrowMetadataBuilderInit(&buffer, nullptr), GEOARROW_OK);
-  ASSERT_EQ(ArrowMetadataBuilderAppend(&buffer, ArrowCharView("significant_digits"),
-                                       ArrowCharView("3")),
-            GEOARROW_OK);
+  ASSERT_EQ(
+      ArrowMetadataBuilderAppend(&buffer, ArrowCharView("precision"), ArrowCharView("3")),
+      GEOARROW_OK);
   ASSERT_EQ(ArrowMetadataBuilderAppend(&buffer, ArrowCharView("max_element_size_bytes"),
-                                       ArrowCharView("14")),
+                                       ArrowCharView("16")),
             GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowKernelInit(&kernel, "format_wkt", nullptr), GEOARROW_OK);
@@ -289,9 +289,9 @@ TEST(KernelTest, KernelTestFormatWKTFromWKT) {
 
   ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array_out1, nullptr), GEOARROW_OK);
   item = ArrowArrayViewGetStringUnsafe(&array_view, 0);
-  EXPECT_EQ(std::string(item.data, item.size_bytes), "LINESTRING (30");
+  EXPECT_EQ(std::string(item.data, item.size_bytes), "LINESTRING (30.1");
   item = ArrowArrayViewGetStringUnsafe(&array_view, 1);
-  EXPECT_EQ(std::string(item.data, item.size_bytes), "POINT (31.1 11");
+  EXPECT_EQ(std::string(item.data, item.size_bytes), "POINT (31.123 11");
   EXPECT_TRUE(ArrowArrayViewIsNull(&array_view, 2));
 
   ArrowArrayViewReset(&array_view);

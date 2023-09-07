@@ -3,6 +3,11 @@
 
 #include "geoarrow.h"
 
+TEST(BuildIdTest, VersionTest) {
+  EXPECT_STREQ(GeoArrowVersion(), GEOARROW_VERSION);
+  EXPECT_EQ(GeoArrowVersionInt(), GEOARROW_VERSION_INT);
+}
+
 TEST(GeoArrowErrorTest, ErrorTestSet) {
   struct GeoArrowError error;
   EXPECT_EQ(GeoArrowErrorSet(&error, "there were %d foxes", 4), GEOARROW_OK);

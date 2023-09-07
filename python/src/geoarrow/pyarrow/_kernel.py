@@ -78,11 +78,11 @@ class Kernel:
         return Kernel("as_wkb", type_in)
 
     @staticmethod
-    def format_wkt(type_in, significant_digits=None, max_element_size_bytes=None):
+    def format_wkt(type_in, precision=None, max_element_size_bytes=None):
         return Kernel(
             "format_wkt",
             type_in,
-            significant_digits=significant_digits,
+            precision=precision,
             max_element_size_bytes=max_element_size_bytes,
         )
 

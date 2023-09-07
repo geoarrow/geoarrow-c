@@ -6,6 +6,10 @@
 
 #include "geoarrow.h"
 
+const char* GeoArrowVersion(void) { return GEOARROW_VERSION; }
+
+int GeoArrowVersionInt(void) { return GEOARROW_VERSION_INT; }
+
 GeoArrowErrorCode GeoArrowErrorSet(struct GeoArrowError* error, const char* fmt, ...) {
   if (error == NULL) {
     return GEOARROW_OK;

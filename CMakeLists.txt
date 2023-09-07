@@ -6,7 +6,7 @@ if(NOT DEFINED CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
 endif()
 
-set(GEOARROW_VERSION "0.2.0-SNAPSHOT")
+set(GEOARROW_VERSION "0.1.0-SNAPSHOT")
 string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" GEOARROW_BASE_VERSION "${GEOARROW_VERSION}")
 project(geoarrow VERSION "${GEOARROW_BASE_VERSION}")
 
@@ -16,6 +16,8 @@ set(GEOARROW_VERSION_PATCH "${geoarrow_VERSION_PATCH}")
 
 option(GEOARROW_BUILD_TESTS "Build tests" OFF)
 option(GEOARROW_CODE_COVERAGE "Enable coverage reporting" OFF)
+option(GEOARROW_USE_FAST_FLOAT "Use fast_float for numeric value parsing" ON)
+option(GEOARROW_USE_RYU "Use ryu for numeric value printing" ON)
 
 add_library(coverage_config INTERFACE)
 
@@ -23,6 +25,27 @@ if(GEOARROW_CODE_COVERAGE)
   target_compile_options(coverage_config INTERFACE -O0 -g --coverage)
   target_link_options(coverage_config INTERFACE --coverage)
 endif()
+
+if(GEOARROW_USE_FAST_FLOAT)
+  if(NOT DEFINED CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD 11)
+  endif()
+  set(GEOARROW_DOUBLE_PARSE_SOURCE src/geoarrow/double_parse_fast_float.cc)
+  set(GEOARROW_USE_FAST_FLOAT_DEFINE "#define GEOARROW_USE_FAST_FLOAT 1")
+else()
+  set(GEOARROW_DOUBLE_PARSE_SOURCE src/geoarrow/double_parse_std.c)
+  set(GEOARROW_USE_FAST_FLOAT_DEFINE "#define GEOARROW_USE_FAST_FLOAT 0")
+endif()
+
+if(GEOARROW_USE_RYU)
+  set(GEOARROW_DOUBLE_PRINT_SOURCE src/geoarrow/double_print.c src/geoarrow/ryu/d2s.c)
+  set(GEOARROW_USE_RYU_DEFINE "#define GEOARROW_USE_RYU 1")
+else()
+  set(GEOARROW_DOUBLE_PRINT_SOURCE src/geoarrow/double_print.c)
+  set(GEOARROW_USE_RYU_DEFINE "#define GEOARROW_USE_RYU 0")
+endif()
+
+configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow_config.h)
 
 add_library(
   geoarrow
@@ -38,11 +61,16 @@ add_library(
   src/geoarrow/wkb_writer.c
   src/geoarrow/wkt_reader.c
   src/geoarrow/wkt_writer.c
+  ${GEOARROW_DOUBLE_PARSE_SOURCE}
+  ${GEOARROW_DOUBLE_PRINT_SOURCE}
   src/geoarrow/nanoarrow.c)
 
 target_include_directories(geoarrow PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/geoarrow>
   $<INSTALL_INTERFACE:include>)
+target_include_directories(geoarrow
+  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
+)
 target_compile_definitions(geoarrow PUBLIC
   "$<$<CONFIG:Debug>:NANOARROW_DEBUG>"
   "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
@@ -75,6 +103,8 @@ endif()
 
 install(TARGETS geoarrow DESTINATION lib)
 install(DIRECTORY src/ DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/geoarrow_config.h
+        DESTINATION include/geoarrow)
 
 if(GEOARROW_BUILD_TESTS)
   set(MEMORYCHECK_COMMAND_OPTIONS "--leak-check=full --suppressions=${CMAKE_CURRENT_LIST_DIR}/valgrind.supp --error-exitcode=1")

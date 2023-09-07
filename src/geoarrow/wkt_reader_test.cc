@@ -233,10 +233,10 @@ TEST(WKTReaderTest, WKTReaderTestManyCoordinates) {
 
 TEST(WKTReaderTest, WKTReaderTestLongCoordinates) {
   // All of the readers above use integer coordinates. This tests really
-  // long coordinates that always use all 16 precision spaces.
+  // long coordinates that always use all 15 precision spaces.
 
   std::stringstream ss;
-  ss << std::setprecision(16);
+  ss << std::setprecision(15);
   ss << "LINESTRING (" << (1.0 / 3.0) << " " << (1 + (1.0 / 3.0));
   for (int i = 1; i < 10; i++) {
     ss << ", " << (i + (1.0 / 3.0)) << " " << (i + 1 + (1.0 / 3.0));
@@ -244,5 +244,6 @@ TEST(WKTReaderTest, WKTReaderTestLongCoordinates) {
   ss << ")";
 
   WKXTester tester;
+  tester.SetPrecision(15);
   EXPECT_WKT_ROUNDTRIP(tester, ss.str());
 }

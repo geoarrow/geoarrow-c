@@ -32,8 +32,17 @@ if os.path.exists(bootstrap_py):
     subprocess.run([sys.executable, bootstrap_py])
 
 vendor_dir = os.path.join(this_dir, "src", "geoarrow", "geoarrow")
-vendored_files = os.listdir(vendor_dir)
-sources = [f"src/geoarrow/geoarrow/{f}" for f in vendored_files if f.endswith(".c")]
+sources = [
+    f"src/geoarrow/geoarrow/{f}"
+    for f in os.listdir(vendor_dir)
+    if f.endswith(".c") or f.endswith(".cc")
+]
+
+sources += [
+    f"src/geoarrow/geoarrow/ryu/{f}"
+    for f in os.listdir(os.path.join(vendor_dir, "ryu"))
+    if f.endswith(".c")
+]
 
 
 # Workaround because setuptools has no easy way to mix C and C++ sources

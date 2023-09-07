@@ -6,18 +6,6 @@
 
 #include "geoarrow.h"
 
-// Using ryu for double -> char* is ~5x faster and is not locale dependent
-// could also use to_chars() if C++17 is available
-// https://github.com/paleolimbot/geoarrow/tree/58ccd0a9606f3f6e51f200e143d8c7672782e30a/src/ryu
-#ifndef GEOARROW_TO_CHARS
-static inline int geoarrow_compat_d2s_fixed_n(double f, uint32_t precision,
-                                              char* result) {
-  return snprintf(result, 128, "%.*g", precision, f);
-}
-
-#define GEOARROW_TO_CHARS geoarrow_compat_d2s_fixed_n
-#endif
-
 struct WKTWriterPrivate {
   enum ArrowType storage_type;
   struct ArrowBitmap validity;
@@ -29,7 +17,7 @@ struct WKTWriterPrivate {
   int64_t length;
   int64_t null_count;
   int64_t values_feat_start;
-  int significant_digits;
+  int precision;
   int use_flat_multipoint;
   int64_t max_element_size_bytes;
   int feat_is_null;
@@ -50,8 +38,8 @@ static inline int WKTWriterWrite(struct WKTWriterPrivate* private, const char* v
 static inline void WKTWriterWriteDoubleUnsafe(struct WKTWriterPrivate* private,
                                               double value) {
   private->values.size_bytes +=
-      GEOARROW_TO_CHARS(value, private->significant_digits,
-                        ((char*)private->values.data) + private->values.size_bytes);
+      GeoArrowPrintDouble(value, private->precision,
+                          ((char*)private->values.data) + private->values.size_bytes);
 }
 
 static int feat_start_wkt(struct GeoArrowVisitor* v) {
@@ -157,7 +145,7 @@ static int coords_wkt(struct GeoArrowVisitor* v, const struct GeoArrowCoordView*
 
   int64_t max_chars_needed = (n_coords * 2) +  // space + comma after coordinate
                              (n_coords * (n_dims - 1)) +  // spaces between ordinates
-                             ((private->significant_digits + 1 + 5) * n_coords *
+                             ((private->precision + 1 + 5) * n_coords *
                               n_dims);  // significant digits + decimal + exponent
   if (private->max_element_size_bytes >= 0 &&
       max_chars_needed > private->max_element_size_bytes) {
@@ -274,8 +262,8 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer) {
   ArrowBitmapInit(&private->validity);
   ArrowBufferInit(&private->offsets);
   ArrowBufferInit(&private->values);
-  writer->significant_digits = 16;
-  private->significant_digits = 16;
+  writer->precision = 16;
+  private->precision = 16;
   writer->use_flat_multipoint = 1;
   private->use_flat_multipoint = 1;
   writer->max_element_size_bytes = -1;
@@ -290,7 +278,7 @@ void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
   GeoArrowVisitorInitVoid(v);
 
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
-  private->significant_digits = writer->significant_digits;
+  private->precision = writer->precision;
   private->use_flat_multipoint = writer->use_flat_multipoint;
   private->max_element_size_bytes = writer->max_element_size_bytes;
 
