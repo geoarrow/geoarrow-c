@@ -80,7 +80,7 @@ else:
 setup(
     ext_modules=[
         Extension(
-            name="geoarrow._lib",
+            name="geoarrow.c._lib",
             include_dirs=["src/geoarrow/c/geoarrow", "src/geoarrow/c/geoarrow_python"],
             language="c++",
             sources=["src/geoarrow/c/_lib.pyx"] + sources,

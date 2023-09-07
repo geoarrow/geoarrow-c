@@ -4,10 +4,10 @@ import pyarrow as pa
 import numpy as np
 import pytest
 
-import geoarrow.pyarrow as ga
-import geoarrow.pyarrow._kernel as _kernel
-import geoarrow.pyarrow._compute as _compute
-import geoarrow.lib as lib
+import geoarrow.c.pyarrow as ga
+import geoarrow.c.pyarrow._kernel as _kernel
+import geoarrow.c.pyarrow._compute as _compute
+import geoarrow.c.lib as lib
 
 
 def test_set_max_workers():

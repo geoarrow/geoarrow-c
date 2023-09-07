@@ -5,8 +5,8 @@ import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 import pytest
 
-import geoarrow.pyarrow as ga
-from geoarrow.pyarrow._dataset import GeoDataset, ParquetRowGroupGeoDataset
+import geoarrow.c.pyarrow as ga
+from geoarrow.c.pyarrow._dataset import GeoDataset, ParquetRowGroupGeoDataset
 
 
 def test_geodataset_column_name_guessing():

@@ -1,6 +1,6 @@
 # geoarrow for Python
 
-The geoarrow Python package provides bindings to the geoarrow-c implementation of the [GeoArrow specification](https://github.com/geoarrow/geoarrow). The geoarrow Python bindings provide input/output to/from Arrow-friendly formats (e.g., Parquet, Arrow Stream, Arrow File) and general-purpose coordinate shuffling tools among GeoArrow, WKT, and WKB encodings. 
+The geoarrow Python package provides bindings to the geoarrow-c implementation of the [GeoArrow specification](https://github.com/geoarrow/geoarrow). The geoarrow Python bindings provide input/output to/from Arrow-friendly formats (e.g., Parquet, Arrow Stream, Arrow File) and general-purpose coordinate shuffling tools among GeoArrow, WKT, and WKB encodings.
 
 ## Installation
 
@@ -14,7 +14,7 @@ If you can import the namespace, you're good to go! The only reasonable interfac
 
 
 ```python
-import geoarrow.pyarrow as ga
+import geoarrow.c.pyarrow as ga
 ```
 
 ## Examples
@@ -51,7 +51,7 @@ Alternatively, you can construct GeoArrow arrays directly from a series of buffe
 import numpy as np
 
 ga.point().from_geobuffers(
-    None, 
+    None,
     np.array([1.0, 2.0, 3.0]),
     np.array([3.0, 4.0, 5.0])
 )
@@ -87,7 +87,7 @@ ga.point().with_coord_type(ga.CoordType.INTERLEAVED).from_geobuffers(
 
 
 
-Importing `geoarrow.pyarrow` will register the geoarrow extension types with pyarrow such that you can read/write Arrow streams, Arrow files, and Parquet that contains Geoarrow extension types. A number of these files are available from the [geoarrow-data](https://github.com/geoarrow/geoarrow-data) repository.
+Importing `geoarrow.c.pyarrow` will register the geoarrow extension types with pyarrow such that you can read/write Arrow streams, Arrow files, and Parquet that contains Geoarrow extension types. A number of these files are available from the [geoarrow-data](https://github.com/geoarrow/geoarrow-data) repository.
 
 
 ```python
@@ -138,11 +138,11 @@ array
     /Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/geopandas/_compat.py:124: UserWarning: The Shapely GEOS version (3.11.1-CAPI-1.17.1) is incompatible with the GEOS version PyGEOS was compiled with (3.10.1-CAPI-1.16.0). Conversions between both will be slow.
       warnings.warn(
     /var/folders/gt/l87wjg8s7312zs9s7c1fgs900000gn/T/ipykernel_81348/2107898165.py:1: DeprecationWarning: Shapely 2.0 is installed, but because PyGEOS is also installed, GeoPandas still uses PyGEOS by default. However, starting with version 0.14, the default will switch to Shapely. To force to use Shapely 2.0 now, you can either uninstall PyGEOS or set the environment variable USE_PYGEOS=0. You can do this before starting the Python process, or in your code before importing geopandas:
-    
+
     import os
     os.environ['USE_PYGEOS'] = '0'
     import geopandas
-    
+
     In the next release, GeoPandas will switch to using Shapely by default, even if PyGEOS is installed. If you only have PyGEOS installed to get speed-ups, this switch should be smooth. However, if you are using PyGEOS directly (calling PyGEOS functions on geometries from GeoPandas), this will then stop working and you are encouraged to migrate from PyGEOS to Shapely 2.0 (https://shapely.readthedocs.io/en/latest/migration_pygeos.html).
       import geopandas
 
@@ -180,7 +180,7 @@ geopandas.GeoSeries.from_wkb(ga.as_wkb(array))
     2      MULTILINESTRING ((631355.519 5122892.285, 6313...
     3      MULTILINESTRING ((665166.020 5138641.982, 6651...
     4      MULTILINESTRING ((673606.020 5162961.982, 6736...
-                                 ...                        
+                                 ...
     250    MULTILINESTRING ((681672.620 5078601.582, 6818...
     251    MULTILINESTRING ((414867.917 5093040.881, 4147...
     252    MULTILINESTRING ((414867.917 5093040.881, 4148...
