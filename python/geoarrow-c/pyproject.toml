@@ -17,7 +17,7 @@
 # under the License.
 
 [project]
-name = "geoarrow"
+name = "geoarrow-c"
 version = "0.1.0-alpha0"
 description = ""
 authors = [{name = "Dewey Dunnington", email = "dewey@dunnington.ca"}]
