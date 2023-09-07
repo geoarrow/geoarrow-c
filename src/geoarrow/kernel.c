@@ -340,7 +340,7 @@ static int finish_start_visit_void_agg(struct GeoArrowVisitorKernelPrivate* priv
 // Kernels as_wkt and format_wkt
 //
 // Visits every feature in the input and writes the corresponding well-known text output.
-// For the format_wkt kernel, optionally specify significant_digits and
+// For the format_wkt kernel, optionally specify precision and
 // max_element_size_bytes.
 
 static int finish_start_as_wkt(struct GeoArrowVisitorKernelPrivate* private_data,
@@ -359,10 +359,10 @@ static int finish_start_as_wkt(struct GeoArrowVisitorKernelPrivate* private_data
 static int finish_start_format_wkt(struct GeoArrowVisitorKernelPrivate* private_data,
                                    struct ArrowSchema* schema, const char* options,
                                    struct ArrowSchema* out, struct GeoArrowError* error) {
-  long significant_digits = private_data->wkt_writer.significant_digits;
+  long precision = private_data->wkt_writer.precision;
   NANOARROW_RETURN_NOT_OK(
-      kernel_get_arg_long(options, "significant_digits", &significant_digits, 0, error));
-  private_data->wkt_writer.significant_digits = (int)significant_digits;
+      kernel_get_arg_long(options, "precision", &precision, 0, error));
+  private_data->wkt_writer.precision = (int)precision;
 
   long max_element_size_bytes = private_data->wkt_writer.max_element_size_bytes;
   NANOARROW_RETURN_NOT_OK(kernel_get_arg_long(options, "max_element_size_bytes",

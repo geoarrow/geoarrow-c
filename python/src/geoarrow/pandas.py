@@ -44,7 +44,7 @@ class GeoArrowExtensionScalar(bytes):
 
     def __repr__(self):
         wkt_array = _ga.format_wkt(
-            _ga.array([self]), significant_digits=7, max_element_size_bytes=1024
+            _ga.array([self]), precision=7, max_element_size_bytes=1024
         )
         return f'GeoArrowExtensionScalar("{wkt_array[0].as_py()}")'
 
@@ -396,13 +396,13 @@ class GeoArrowAccessor:
     def as_wkb(self):
         return self._wrap_series(_ga.as_wkb(self._obj))
 
-    def format_wkt(self, significant_digits=None, max_element_size_bytes=None):
+    def format_wkt(self, precision=None, max_element_size_bytes=None):
         if not self._obj_is_geoarrow():
             raise TypeError("Can't format_wkt() a non-geoarrow Series")
 
         array_or_chunked = _ga.format_wkt(
             _pa.array(self._obj),
-            significant_digits=significant_digits,
+            precision=precision,
             max_element_size_bytes=max_element_size_bytes,
         )
         return _pd.Series(
@@ -478,4 +478,5 @@ class GeoArrowAccessor:
 
     def to_geopandas(self):
         import geopandas
+
         return geopandas.GeoSeries.from_wkb(self.as_wkb().geoarrow.format_wkb())

@@ -293,12 +293,12 @@ def as_geoarrow(obj, type=None, coord_type=None, promote_multi=False):
         return push_all(Kernel.as_geoarrow, obj, args={"type_id": type.id})
 
 
-def format_wkt(obj, significant_digits=None, max_element_size_bytes=None):
+def format_wkt(obj, precision=None, max_element_size_bytes=None):
     """Format geometries in an object as well-known text with an optional cap
     on digits and element size to prevent excessive output for large features.
 
     >>> import geoarrow.pyarrow as ga
-    >>> print(str(ga.format_wkt(ga.array(["POINT (0 1.3333333333333)"]), significant_digits=6)))
+    >>> print(str(ga.format_wkt(ga.array(["POINT (0 1.3333333333333)"]), precision=6)))
     [
       "POINT (0 1.33333)"
     ]
@@ -311,7 +311,7 @@ def format_wkt(obj, significant_digits=None, max_element_size_bytes=None):
         Kernel.format_wkt,
         obj,
         args={
-            "significant_digits": significant_digits,
+            "precision": precision,
             "max_element_size_bytes": max_element_size_bytes,
         },
     )

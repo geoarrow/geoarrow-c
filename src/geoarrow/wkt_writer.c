@@ -17,7 +17,7 @@ struct WKTWriterPrivate {
   int64_t length;
   int64_t null_count;
   int64_t values_feat_start;
-  int significant_digits;
+  int precision;
   int use_flat_multipoint;
   int64_t max_element_size_bytes;
   int feat_is_null;
@@ -38,7 +38,7 @@ static inline int WKTWriterWrite(struct WKTWriterPrivate* private, const char* v
 static inline void WKTWriterWriteDoubleUnsafe(struct WKTWriterPrivate* private,
                                               double value) {
   private->values.size_bytes +=
-      GeoArrowPrintDouble(value, private->significant_digits,
+      GeoArrowPrintDouble(value, private->precision,
                           ((char*)private->values.data) + private->values.size_bytes);
 }
 
@@ -145,7 +145,7 @@ static int coords_wkt(struct GeoArrowVisitor* v, const struct GeoArrowCoordView*
 
   int64_t max_chars_needed = (n_coords * 2) +  // space + comma after coordinate
                              (n_coords * (n_dims - 1)) +  // spaces between ordinates
-                             ((private->significant_digits + 1 + 5) * n_coords *
+                             ((private->precision + 1 + 5) * n_coords *
                               n_dims);  // significant digits + decimal + exponent
   if (private->max_element_size_bytes >= 0 &&
       max_chars_needed > private->max_element_size_bytes) {
@@ -262,8 +262,8 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer) {
   ArrowBitmapInit(&private->validity);
   ArrowBufferInit(&private->offsets);
   ArrowBufferInit(&private->values);
-  writer->significant_digits = 16;
-  private->significant_digits = 16;
+  writer->precision = 16;
+  private->precision = 16;
   writer->use_flat_multipoint = 1;
   private->use_flat_multipoint = 1;
   writer->max_element_size_bytes = -1;
@@ -278,7 +278,7 @@ void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
   GeoArrowVisitorInitVoid(v);
 
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
-  private->significant_digits = writer->significant_digits;
+  private->precision = writer->precision;
   private->use_flat_multipoint = writer->use_flat_multipoint;
   private->max_element_size_bytes = writer->max_element_size_bytes;
 

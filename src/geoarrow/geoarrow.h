@@ -256,7 +256,7 @@ void GeoArrowBuilderReset(struct GeoArrowBuilder* builder);
 ///   as faithfully as possible (including transferring metadata from the input).
 ///   Arrays with valid `GeoArrowType`s are supported. The type of the output is
 ///   controlled by the `type` option, specified as a `GeoArrowType` cast to integer.
-/// - format_wkt: A variation on as_wkt that supports options `significant_digits`
+/// - format_wkt: A variation on as_wkt that supports options `precision`
 ///   and `max_element_size_bytes`. This kernel is lazy and does not visit an entire
 ///   feature beyond that required for `max_element_size_bytes`.
 /// - unique_geometry_types_agg: An aggregate kernel that collects unique geometry
@@ -320,7 +320,7 @@ GeoArrowErrorCode GeoArrowArrayViewVisit(struct GeoArrowArrayView* array_view,
 /// GeoArrowWKTWriterInit() and before GeoArrowWKTWriterInitVisitor().
 struct GeoArrowWKTWriter {
   /// \brief The number of significant digits to include in the output (default: 16)
-  int significant_digits;
+  int precision;
 
   /// \brief Set to 0 to use the verbose (but still technically valid) MULTIPOINT
   /// representation (i.e., MULTIPOINT((0 1), (2 3))).
