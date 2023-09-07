@@ -80,8 +80,9 @@ jobs:
         run: |
           # Because of namespace packaging we have to add this here and
           # rebuild to avoid confusig pytest
-          pip install python/geoarrow-c
           touch python/geoarrow-c/src/geoarrow/__init__.py
+          pip install python/geoarrow-c
+
           pytest --pyargs geoarrow.c --doctest-modules
           # No Cython docs yet
           # pip install pytest-cython
