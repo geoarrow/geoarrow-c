@@ -22,7 +22,7 @@ import shutil
 if __name__ == "__main__":
     this_dir = os.path.abspath(os.path.dirname(__file__))
     vendor_dir = os.path.join(this_dir, "src", "geoarrow", "geoarrow")
-    vendor_source_dir = os.path.join(this_dir, "..", "src", "geoarrow")
+    vendor_source_dir = os.path.join(this_dir, "..", "..", "src", "geoarrow")
 
     if os.path.exists(vendor_dir):
         shutil.rmtree(vendor_dir)
