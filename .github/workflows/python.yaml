@@ -41,18 +41,6 @@ jobs:
         run: |
           pytest python/geoarrow-c/tests -v -s
 
-      - name: Run doctests
-        if: success() && matrix.python-version == '3.10'
-        run: |
-          # Because of namespace packaging we have to add this here and
-          # rebuild to avoid confusig pytest
-          pip install .
-          touch python/geoarrow-c/src/geoarrow/__init__.py
-          pytest --pyargs geoarrow.c --doctest-modules
-          # No Cython docs yet
-          # pip install pytest-cython
-          # pytest --pyargs geoarrow --doctest-cython
-
       - name: Coverage
         if: success() && matrix.python-version == '3.10'
         run: |
@@ -85,3 +73,15 @@ jobs:
         uses: codecov/codecov-action@v2
         with:
           files: 'python/geoarrow-coverage.info,python/geoarrow-c/coverage.xml'
+
+      - name: Run doctests
+        if: success() && matrix.python-version == '3.10'
+        run: |
+          # Because of namespace packaging we have to add this here and
+          # rebuild to avoid confusig pytest
+          pip install .
+          touch python/geoarrow-c/src/geoarrow/__init__.py
+          pytest --pyargs geoarrow.c --doctest-modules
+          # No Cython docs yet
+          # pip install pytest-cython
+          # pytest --pyargs geoarrow --doctest-cython
