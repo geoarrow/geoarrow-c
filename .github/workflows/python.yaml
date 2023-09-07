@@ -32,14 +32,14 @@ jobs:
 
       - name: Install geoarrow
         run: |
-          pushd python
+          pushd python/geoarrow-c
           pip install .[test]
           popd
           pip list
 
       - name: Run tests
         run: |
-          pytest python/tests -v -s
+          pytest python/geoarrow-c/tests -v -s
 
       - name: Run doctests
         if: success() && matrix.python-version == '3.10'
@@ -55,7 +55,7 @@ jobs:
           sudo apt-get install -y lcov
           pip uninstall --yes geoarrow
           pip install pytest-cov Cython
-          pushd python
+          pushd python/geoarrow-c
 
           # Build with Cython + gcc coverage options
           pip install -e .[test]
@@ -80,4 +80,4 @@ jobs:
         if: success() && matrix.python-version == '3.10'
         uses: codecov/codecov-action@v2
         with:
-          files: 'python/coverage.info,python/coverage.xml'
+          files: 'python/geoarrow-coverage.info,python/geoarrow-c/coverage.xml'
