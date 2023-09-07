@@ -61,6 +61,7 @@ jobs:
           lcov \
             --capture --directory build \
             --exclude "/usr/*" \
+            --exclude "/opt/*" \
             --exclude "/Library/*" \
             --exclude "*/_lib.cpp" \
             --exclude "*/src/geoarrow/c/geoarrow/*" \
