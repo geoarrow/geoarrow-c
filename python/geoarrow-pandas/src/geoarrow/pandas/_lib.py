@@ -2,8 +2,8 @@ import re as _re
 import pandas as _pd
 import pyarrow as _pa
 import numpy as _np
-from . import lib
-from . import pyarrow as _ga
+from geoarrow.c import lib
+import geoarrow.pyarrow as _ga
 
 
 class GeoArrowExtensionScalar(bytes):
@@ -245,7 +245,7 @@ class GeoArrowExtensionDtype(_pd.api.extensions.ExtensionDtype):
             self._parent = parent._parent
         else:
             raise TypeError(
-                "`geoarrow_type` must inherit from geoarrow.c.pyarrow.VectorType, "
+                "`geoarrow_type` must inherit from geoarrow.pyarrow.VectorType, "
                 "geoarrow.CVectorType, or geoarrow.pandas.GeoArrowExtensionDtype"
             )
 

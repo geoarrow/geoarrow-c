@@ -2,9 +2,9 @@ import pytest
 
 import pandas as pd
 import pyarrow as pa
-import geoarrow.c.pandas as gapd
-import geoarrow.c.pyarrow as ga
-import geoarrow.c.lib as lib
+import geoarrow.pandas as gapd
+import geoarrow.pyarrow as ga
+from geoarrow.c import lib
 import numpy as np
 
 

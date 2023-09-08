@@ -23,19 +23,18 @@ description = ""
 authors = [{name = "Dewey Dunnington", email = "dewey@dunnington.ca"}]
 license = {text = "Apache-2.0"}
 requires-python = ">=3.8"
-dependencies = ["pyarrow<13.0.0"]
+dependencies = ["geoarrow-c", "pyarrow<13.0.0"]
 
 [project.optional-dependencies]
 test = ["pytest", "pandas", "numpy", "geopandas"]
 
 [project.urls]
-homepage = "https://arrow.apache.org"
+homepage = "https://geoarrow.org"
 repository = "https://github.com/geoarrow/geoarrow-c"
 
 [build-system]
 requires = [
     "setuptools >= 61.0.0",
-    "setuptools-scm",
-    "Cython"
+    "setuptools-scm"
 ]
 build-backend = "setuptools.build_meta"
