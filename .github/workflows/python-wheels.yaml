@@ -1,6 +1,6 @@
 name: Build
 
-# Build wheels only on a release branch since it's expensive
+# Build wheels only on a release branch or when requested since it's expensive
 on:
   workflow_dispatch:
   push:
