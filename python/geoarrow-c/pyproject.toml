@@ -25,10 +25,10 @@ license = {text = "Apache-2.0"}
 requires-python = ">=3.8"
 
 [project.optional-dependencies]
-test = ["pyarrow<13.0.0", "pytest", "pandas", "numpy", "geopandas"]
+test = ["pyarrow<13.0.0", "pytest", "numpy"]
 
 [project.urls]
-homepage = "https://arrow.apache.org"
+homepage = "https://geoarrow.org"
 repository = "https://github.com/geoarrow/geoarrow-c"
 
 [build-system]
