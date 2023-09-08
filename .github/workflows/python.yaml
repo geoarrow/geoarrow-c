@@ -62,13 +62,18 @@ jobs:
           sudo apt-get install -y lcov
           pip install pytest-cov Cython
 
+      - name: Install editable
+        run: |
+          for pkg in c pyarrow pandas; do
+            pip install -e python/geoarrow-$pkg/
+          done
+
       - name: Coverage (geoarrow-c)
         if: success() && matrix.python-version == '3.10'
         run: |
           pushd python/geoarrow-c
 
           # Build with Cython + gcc coverage options
-          pip install -e ."[test]"
           GEOARROW_COVERAGE=1 python setup.py build_ext --inplace
 
           # Run tests
@@ -88,8 +93,6 @@ jobs:
             --output-file=coverage.info
 
           lcov --list coverage.info
-
-
           popd
 
       - name: Coverage (geoarrow-pyarrow, geoarrow-pandas)
@@ -97,7 +100,7 @@ jobs:
         run: |
           # Have to install non-editable geoarrow-c or xml generation will not work
           # because it gets confused about the .pxd file
-          pip uninstall geoarrow-c
+          pip uninstall --yes geoarrow-c
           pip install python/geoarrow-c/
 
           pushd python/geoarrow-pyarrow
@@ -120,10 +123,11 @@ jobs:
         if: success() && matrix.python-version == '3.10'
         run: |
           # Because of namespace packaging we have to add __init__.py in geoarrow and
-          # rebuild to avoid confusig pytest
+          # rebuild to avoid confusing pytest
 
           for pkg in c pyarrow pandas; do
             touch python/geoarrow-$pkg/src/geoarrow/__init__.py
+            pip uninstall --yes geoarrow-$pkg
             pip install python/geoarrow-$pkg
             pytest --pyargs geoarrow.$pkg --doctest-modules
           done
