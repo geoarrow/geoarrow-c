@@ -39,5 +39,5 @@ if __name__ == "__main__":
     os.mkdir(vendor_dir)
     os.mkdir(os.path.join(vendor_dir, "ryu"))
     for source_file in vendor_source_files:
-        dst_file = source_file.removeprefix(os.path.join(vendor_source_dir, ""))
+        dst_file = source_file.replace(os.path.join(vendor_source_dir, ""), "")
         shutil.copyfile(source_file, os.path.join(vendor_dir, dst_file))
