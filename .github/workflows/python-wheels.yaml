@@ -21,6 +21,12 @@ jobs:
       - name: Build wheels
         run: |
           python -m cibuildwheel --output-dir wheelhouse python/geoarrow-c
+        env:
+          CIBW_ARCHS_MACOS: x86_64 arm64
+          # Optional (test suite will pass if these are not available)
+          CIBW_BEFORE_TEST: pip install pyarrow numpy || pip install numpy || true
+          CIBW_TEST_REQUIRES: pytest
+          CIBW_TEST_COMMAND: pytest {package}/tests
 
       - uses: actions/upload-artifact@v3
         with:
