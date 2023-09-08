@@ -16,8 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-src/geoarrow/c/geoarrow
-src/geoarrow/c/_lib.cpp
+geoarrow-c/src/geoarrow/c/geoarrow
+geoarrow-c/src/geoarrow/c/_lib.cpp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

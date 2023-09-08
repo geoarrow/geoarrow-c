@@ -1,6 +1,6 @@
 import pyarrow as pa
 
-from .. import lib
+from geoarrow.c import lib
 
 from ._kernel import Kernel
 from ._type import WktType, WkbType, VectorType, wkb, wkt, large_wkb, large_wkt

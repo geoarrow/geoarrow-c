@@ -5,7 +5,7 @@ import pyarrow.types as _types
 import pyarrow.dataset as _ds
 import pyarrow.compute as _compute
 import pyarrow.parquet as _pq
-from ..lib import CoordType
+from geoarrow.c.lib import CoordType
 from ._type import wkt, wkb, VectorType
 from ._kernel import Kernel
 

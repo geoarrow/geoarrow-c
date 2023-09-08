@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, wait
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from ..lib import GeometryType, Dimensions, CoordType, EdgeType
+from geoarrow.c.lib import GeometryType, Dimensions, CoordType, EdgeType
 from . import _type
 from ._array import array
 from ._kernel import Kernel

@@ -7,7 +7,7 @@ Examples
 >>> import geoarrow.c.pyarrow as ga
 """
 
-from ..lib import GeometryType, Dimensions, CoordType, EdgeType, CrsType
+from geoarrow.c.lib import GeometryType, Dimensions, CoordType, EdgeType, CrsType
 
 from ._type import (
     VectorType,

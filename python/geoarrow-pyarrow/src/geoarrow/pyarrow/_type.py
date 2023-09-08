@@ -1,6 +1,6 @@
 import pyarrow as pa
 
-from .. import lib
+from geoarrow.c import lib
 
 
 class VectorType(pa.ExtensionType):

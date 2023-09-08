@@ -1,9 +1,8 @@
 import sys
-import json
 
 import pyarrow as pa
 
-from .. import lib
+from geoarrow.c import lib
 from ._type import VectorType
 
 
