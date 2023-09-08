@@ -16,37 +16,25 @@
 # specific language governing permissions and limitations
 # under the License.
 
-src/geoarrow/c/geoarrow
-src/geoarrow/c/_lib.cpp
+[project]
+name = "geoarrow-pandas"
+version = "0.1.0-alpha0"
+description = ""
+authors = [{name = "Dewey Dunnington", email = "dewey@dunnington.ca"}]
+license = {text = "Apache-2.0"}
+requires-python = ">=3.8"
+dependencies = ["geoarrow-c", "pandas", "pyarrow<13.0.0"]
 
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+[project.optional-dependencies]
+test = ["pytest", "numpy", "geopandas"]
 
-# C extensions
-*.so
+[project.urls]
+homepage = "https://arrow.apache.org"
+repository = "https://github.com/geoarrow/geoarrow-c"
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Unit test / coverage reports
-.pytest_cache/
+[build-system]
+requires = [
+    "setuptools >= 61.0.0",
+    "setuptools-scm"
+]
+build-backend = "setuptools.build_meta"

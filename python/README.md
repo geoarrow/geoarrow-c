@@ -1,20 +1,22 @@
 # geoarrow for Python
 
-The geoarrow Python package provides bindings to the geoarrow-c implementation of the [GeoArrow specification](https://github.com/geoarrow/geoarrow). The geoarrow Python bindings provide input/output to/from Arrow-friendly formats (e.g., Parquet, Arrow Stream, Arrow File) and general-purpose coordinate shuffling tools among GeoArrow, WKT, and WKB encodings.
+The geoarrow Python packages provide bindings to the geoarrow-c implementation of the [GeoArrow specification](https://github.com/geoarrow/geoarrow) and integrations with [pyarrow](https://arrow.apache.org/docs/python) and [pandas](https://pandas.pydata.org/). The geoarrow Python bindings provide input/output to/from Arrow-friendly formats (e.g., Parquet, Arrow Stream, Arrow File) and general-purpose coordinate shuffling tools among GeoArrow, WKT, and WKB encodings.
 
 ## Installation
 
-Python bindings for nanoarrow are not yet available on PyPI. You can install via URL (requires a C++ compiler):
+Python bindings for geoarrow are not yet available on PyPI. You can install via URL (requires a C++ compiler):
 
 ```bash
 python -m pip install "https://github.com/geoarrow/geoarrow-c/archive/refs/heads/main.zip#egg=geoarrow-c&subdirectory=python/geoarrow-c"
+python -m pip install "https://github.com/geoarrow/geoarrow-c/archive/refs/heads/main.zip#egg=geoarrow-pyarrow&subdirectory=python/geoarrow-pyarrow"
+python -m pip install "https://github.com/geoarrow/geoarrow-c/archive/refs/heads/main.zip#egg=geoarrow-pandas&subdirectory=python/geoarrow-pandas"
 ```
 
-If you can import the namespace, you're good to go! The only reasonable interface to geoarrow currently depends on `pyarrow`, which you can import with:
+If you can import the namespace, you're good to go! The most user-friendly interface to geoarrow currently depends on `pyarrow`, which you can import with:
 
 
 ```python
-import geoarrow.c.pyarrow as ga
+import geoarrow.pyarrow as ga
 ```
 
 ## Examples
@@ -84,7 +86,7 @@ ga.point().with_coord_type(ga.CoordType.INTERLEAVED).from_geobuffers(
 
 
 
-Importing `geoarrow.c.pyarrow` will register the geoarrow extension types with pyarrow such that you can read/write Arrow streams, Arrow files, and Parquet that contains Geoarrow extension types. A number of these files are available from the [geoarrow-data](https://github.com/geoarrow/geoarrow-data) repository.
+Importing `geoarrow.pyarrow` will register the geoarrow extension types with pyarrow such that you can read/write Arrow streams, Arrow files, and Parquet that contains Geoarrow extension types. A number of these files are available from the [geoarrow-data](https://github.com/geoarrow/geoarrow-data) repository.
 
 
 ```python
@@ -278,17 +280,21 @@ Python bindings for nanoarrow are managed with [setuptools](https://setuptools.p
 This means you can build the project using:
 
 ```shell
-git clone https://github.com/geoarrow/geoarrow-cpp.git
+git clone https://github.com/geoarrow/geoarrow-c.git
 cd python
-pip install -e .
+pip install -e geoarrow-c/ goearrow-pyarrow/ geoarrow-pandas/
 ```
 
 Tests use [pytest](https://docs.pytest.org/):
 
 ```shell
 # Install dependencies
-pip install -e .[test]
+for d in geoarrow-c geoarrow-pyarrow geoarrow-pandas; do
+    cd $d && pip install -e ".[test]" && cd ..
+done
 
 # Run tests
-pytest -vvx
+for d in geoarrow-c geoarrow-pyarrow geoarrow-pandas; do
+    cd $d && pytest && cd ..
+done
 ```

@@ -17,15 +17,16 @@
 # under the License.
 
 [project]
-name = "geoarrow-c"
+name = "geoarrow-pyarrow"
 version = "0.1.0-alpha0"
 description = ""
 authors = [{name = "Dewey Dunnington", email = "dewey@dunnington.ca"}]
 license = {text = "Apache-2.0"}
 requires-python = ">=3.8"
+dependencies = ["geoarrow-c", "pyarrow<13.0.0"]
 
 [project.optional-dependencies]
-test = ["pyarrow<13.0.0", "pytest", "numpy"]
+test = ["pytest", "pandas", "numpy", "geopandas"]
 
 [project.urls]
 homepage = "https://geoarrow.org"
@@ -34,7 +35,6 @@ repository = "https://github.com/geoarrow/geoarrow-c"
 [build-system]
 requires = [
     "setuptools >= 61.0.0",
-    "setuptools-scm",
-    "Cython"
+    "setuptools-scm"
 ]
 build-backend = "setuptools.build_meta"

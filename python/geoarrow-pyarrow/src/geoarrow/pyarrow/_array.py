@@ -1,6 +1,6 @@
 import pyarrow as pa
 
-from .. import lib
+from geoarrow.c import lib
 
 from ._kernel import Kernel
 from ._type import WktType, WkbType, VectorType, wkb, wkt, large_wkb, large_wkt
@@ -144,12 +144,12 @@ def array(obj, type_=None, *args, validate=True, **kwargs) -> VectorArray:
     """Attempt to create an Array or ChunkedArray with a geoarrow extension type
     from ``obj``. This constructor attempts to perform the fewest transformations
     possible (i.e., WKB is left as WKB, WKT is left as WKT), whereas
-    :func:`geoarrow.c.pyarrow.as_geoarrow` actively attempts a conversion to
+    :func:`geoarrow.pyarrow.as_geoarrow` actively attempts a conversion to
     a geoarrow-encoding based on a common geometry type. GeoPandas objects are
     supported. This implementation relies heavily on ``pyarrow.array()`` and has
     similar behaviour.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> ga.array(["POINT (0 1)"])
     VectorArray:WktType(geoarrow.wkt)[1]
     <POINT (0 1)>

@@ -4,10 +4,10 @@ Contains pyarrow integration for the geoarrow Python bindings.
 Examples
 --------
 
->>> import geoarrow.c.pyarrow as ga
+>>> import geoarrow.pyarrow as ga
 """
 
-from ..lib import GeometryType, Dimensions, CoordType, EdgeType, CrsType
+from geoarrow.c.lib import GeometryType, Dimensions, CoordType, EdgeType, CrsType
 
 from ._type import (
     VectorType,
@@ -66,10 +66,10 @@ def dataset(*args, geometry_columns=None, use_row_groups=None, **kwargs):
     """Construct a GeoDataset
 
     This constructor is intended to mirror `pyarrow.dataset()`, adding
-    geo-specific arguments. See :class:`geoarrow.c.pyarrow._dataset.GeoDataset` for
+    geo-specific arguments. See :class:`geoarrow.pyarrow._dataset.GeoDataset` for
     details.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> import pyarrow as pa
     >>> table = pa.table([ga.array(["POINT (0.5 1.5)"])], ["geometry"])
     >>> dataset = ga.dataset(table)

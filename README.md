@@ -18,7 +18,7 @@ release of the geoarrow specification.
 ## Get started in Python
 
 ```python
-import geoarrow.c.pyarrow as ga
+import geoarrow.pyarrow as ga
 
 ga.point()
 # PointType(geoarrow.point)

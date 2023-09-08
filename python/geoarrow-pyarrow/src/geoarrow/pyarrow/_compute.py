@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, wait
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from ..lib import GeometryType, Dimensions, CoordType, EdgeType
+from geoarrow.c.lib import GeometryType, Dimensions, CoordType, EdgeType
 from . import _type
 from ._array import array
 from ._kernel import Kernel
@@ -72,10 +72,10 @@ def push_all(
 
 def parse_all(obj):
     """Parse all features and return nothing. This is useful for
-    :func:`geoarrow.c.pyarrow.wkb` and :func:`geoarrow.c.pyarrow.wkt`-encoded
+    :func:`geoarrow.pyarrow.wkb` and :func:`geoarrow.pyarrow.wkt`-encoded
     arrays to validate their contents. For other types, this is a no-op.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> ga.parse_all(["POINT (0 1)"])
     >>> ga.parse_all(["POINT (0 1"])
     Traceback (most recent call last):
@@ -97,7 +97,7 @@ def unique_geometry_types(obj):
     values of the :class:`geoarrow.GeometryType` and :class:`geoarrow.Dimensions`
     enumerators.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> print(str(ga.unique_geometry_types(["POINT Z (0 1 2)", "LINESTRING (0 0, 1 3)"])))
     -- is_valid: all not null
     -- child 0 type: int32
@@ -152,11 +152,11 @@ def unique_geometry_types(obj):
 
 
 def infer_type_common(obj, coord_type=None, promote_multi=False):
-    """Infer a common :class:`geoarrow.c.pyarrow.VectorType` for the
+    """Infer a common :class:`geoarrow.pyarrow.VectorType` for the
     geometries in ``obj``, preferring geoarrow-encoded types and falling back
     to well-known binary.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> ga.infer_type_common(["POINT Z (0 1 2)", "LINESTRING (0 0, 1 3)"])
     WkbType(geoarrow.wkb)
     >>> ga.infer_type_common(["POINT Z (0 1 2)", "MULTIPOINT (0 0, 1 3)"])
@@ -232,9 +232,9 @@ def infer_type_common(obj, coord_type=None, promote_multi=False):
 
 
 def as_wkt(obj):
-    """Encode ``obj`` as :func:`geoarrow.c.pyarrow.wkt`.
+    """Encode ``obj`` as :func:`geoarrow.pyarrow.wkt`.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> points = ga.as_geoarrow(["POINT (0 1)"])
     >>> ga.as_wkt(points)
     VectorArray:WktType(geoarrow.wkt)[1]
@@ -249,9 +249,9 @@ def as_wkt(obj):
 
 
 def as_wkb(obj):
-    """Encode ``obj`` as :func:`geoarrow.c.pyarrow.wkb`.
+    """Encode ``obj`` as :func:`geoarrow.pyarrow.wkb`.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> points = ga.as_geoarrow(["POINT (0 1)"])
     >>> ga.as_wkb(points)
     VectorArray:WkbType(geoarrow.wkb)[1]
@@ -269,7 +269,7 @@ def as_geoarrow(obj, type=None, coord_type=None, promote_multi=False):
     """Encode ``obj`` as a geoarrow-encoded array, preferring geoarrow encodings
     and falling back to well-known binary if no common geoemtry type is found.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> ga.as_geoarrow(["POINT (0 1)", "MULTIPOINT Z (0 1 2, 4 5 6)"])
     MultiPointArray:MultiPointType(geoarrow.multipoint_z)[2]
     <MULTIPOINT Z (0 1 nan)>
@@ -297,7 +297,7 @@ def format_wkt(obj, precision=None, max_element_size_bytes=None):
     """Format geometries in an object as well-known text with an optional cap
     on digits and element size to prevent excessive output for large features.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> print(str(ga.format_wkt(ga.array(["POINT (0 1.3333333333333)"]), precision=5)))
     [
       "POINT (0 1.33333)"
@@ -329,7 +329,7 @@ def box(obj):
     """Compute a Cartesian 2D bounding box for each feature in ``obj`` as
     a struct(xmin, xmax, ymin, ymax) array.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> ga.box(["LINESTRING (0 10, 34 -1)"]).type
     StructType(struct<xmin: double, xmax: double, ymin: double, ymax: double>)
     >>> print(str(ga.box(["LINESTRING (0 10, 34 -1)"])))
@@ -392,7 +392,7 @@ def box_agg(obj):
     a scalar struct(xmin, xmax, ymin, ymax). Values that are null are currently
     ignored.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> ga.box_agg(["POINT (0 10)", "POINT (34 -1)"])
     <pyarrow.StructScalar: [('xmin', 0.0), ('xmax', 34.0), ('ymin', -1.0), ('ymax', 10.0)]>
     """
@@ -436,7 +436,7 @@ def rechunk(obj, max_bytes):
     ``max_bytes``. This may be useful to more predictibly parallelize a
     computation for variable feature sizes.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> print(str(ga.rechunk(["POINT (0 1)", "POINT (2 3)"], max_bytes=100)))
     [
       [
@@ -470,7 +470,7 @@ def with_coord_type(obj, coord_type):
     """Attempt to convert ``obj`` to a geoarrow-encoded array with a
     specific :class:`CoordType`.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> ga.with_coord_type(["POINT (0 1)"], ga.CoordType.INTERLEAVED)
     PointArray:PointType(interleaved geoarrow.point)[1]
     <POINT (0 1)>
@@ -481,7 +481,7 @@ def with_coord_type(obj, coord_type):
 def with_edge_type(obj, edge_type):
     """Force a :class:`geoarrow.EdgeType` on an array.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> ga.with_edge_type(["LINESTRING (0 1, 2 3)"], ga.EdgeType.SPHERICAL)
     VectorArray:WktType(spherical geoarrow.wkt)[1]
     <LINESTRING (0 1, 2 3)>
@@ -494,7 +494,7 @@ def with_edge_type(obj, edge_type):
 def with_crs(obj, crs, crs_type=None):
     """Force a :class:`geoarrow.CrsType`/crs value on an array.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> ga.with_crs(["POINT (0 1)"], "EPSG:1234")
     VectorArray:WktType(geoarrow.wkt <EPSG:1234>)[1]
     <POINT (0 1)>
@@ -509,10 +509,10 @@ def with_dimensions(obj, dimensions):
     specific :class:`geoarrow.Dimensions`. If dimensions need to be
     added, nonexistent values will be filled with ``nan``. If
     dimensions need to be dropped, this function will silently
-    drop them. You can use :func:`geoarrow.c.pyarrow.unique_geometry_types`
+    drop them. You can use :func:`geoarrow.pyarrow.unique_geometry_types`
     to efficiently detect if one or both of these will occur.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> ga.with_dimensions(["POINT (0 1)"], ga.Dimensions.XYZM)
     PointArray:PointType(geoarrow.point_zm)[1]
     <POINT ZM (0 1 nan nan)>
@@ -532,7 +532,7 @@ def with_geometry_type(obj, geometry_type):
     """Attempt to convert ``obj`` to a geoarrow-encoded array with a
     specific :class:`geoarrow.GeometryType`.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> ga.with_geometry_type(["POINT (0 1)"], ga.GeometryType.MULTIPOINT)
     MultiPointArray:MultiPointType(geoarrow.multipoint)[1]
     <MULTIPOINT (0 1)>
@@ -559,7 +559,7 @@ def with_geometry_type(obj, geometry_type):
 def point_coords(obj, dimensions=None):
     """Extract point coordinates into separate arrays or chunked arrays.
 
-    >>> import geoarrow.c.pyarrow as ga
+    >>> import geoarrow.pyarrow as ga
     >>> x, y = ga.point_coords(["POINT (0 1)", "POINT (2 3)"])
     >>> list(x)
     [<pyarrow.DoubleScalar: 0.0>, <pyarrow.DoubleScalar: 2.0>]

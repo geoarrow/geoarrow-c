@@ -6,9 +6,9 @@ import numpy as np
 import pytest
 
 import geoarrow.c.lib as lib
-import geoarrow.c.pyarrow as ga
-import geoarrow.c.pyarrow._type as _type
-import geoarrow.c.pyarrow._array as _array
+import geoarrow.pyarrow as ga
+import geoarrow.pyarrow._type as _type
+import geoarrow.pyarrow._array as _array
 
 
 def test_vector_type_basic():

@@ -16,25 +16,37 @@
 # specific language governing permissions and limitations
 # under the License.
 
-[project]
-name = "geoarrow-c"
-version = "0.1.0-alpha0"
-description = ""
-authors = [{name = "Dewey Dunnington", email = "dewey@dunnington.ca"}]
-license = {text = "Apache-2.0"}
-requires-python = ">=3.8"
+geoarrow-c/src/geoarrow/c/geoarrow
+geoarrow-c/src/geoarrow/c/_lib.cpp
 
-[project.optional-dependencies]
-test = ["pyarrow<13.0.0", "pytest", "numpy"]
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
 
-[project.urls]
-homepage = "https://geoarrow.org"
-repository = "https://github.com/geoarrow/geoarrow-c"
+# C extensions
+*.so
 
-[build-system]
-requires = [
-    "setuptools >= 61.0.0",
-    "setuptools-scm",
-    "Cython"
-]
-build-backend = "setuptools.build_meta"
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Unit test / coverage reports
+.pytest_cache/
