@@ -1,6 +1,11 @@
 name: Build
 
-on: [push, pull_request]
+# Build wheels only on a release branch since it's expensive
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'maint-**'
 
 jobs:
   build_wheels:
