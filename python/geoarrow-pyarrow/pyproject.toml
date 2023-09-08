@@ -18,7 +18,7 @@
 
 [project]
 name = "geoarrow-pyarrow"
-version = "0.1.0-alpha0"
+dynamic = ["version"]
 description = ""
 authors = [{name = "Dewey Dunnington", email = "dewey@dunnington.ca"}]
 license = {text = "Apache-2.0"}
@@ -38,3 +38,6 @@ requires = [
     "setuptools-scm"
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+root = "../.."
