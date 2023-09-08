@@ -57,41 +57,27 @@ jobs:
         run: |
           pytest python/geoarrow-pandas/tests -v -s
 
+      - name: Install coverage dependencies
+        run: |
+          sudo apt-get install -y lcov
+          pip install pytest-cov Cython
+
       - name: Coverage (geoarrow-c)
         if: success() && matrix.python-version == '3.10'
         run: |
-          sudo apt-get install -y lcov
-          pip uninstall --yes geoarrow
-          pip install pytest-cov Cython
-
           pushd python/geoarrow-c
 
           # Build with Cython + gcc coverage options
-          pip install -e .[test]
-          GEOARROW_COVERAGE=1 python3 setup.py build_ext --inplace
+          pip install -e ."[test]"
+          GEOARROW_COVERAGE=1 python setup.py build_ext --inplace
 
-          # Run tests + coverage.py (generates .coverage + coverage.xml files)
-          python -m pytest --cov ./src/geoarrow
+          # Run tests
+          python -m pytest --cov ./src/geoarrow ..
+
+          # Generate xml Python coverage
           python -m coverage xml
 
-      - name: Coverage (geoarrow-pyarrow, geoarrow-pandas)
-        if: success() && matrix.python-version == '3.10'
-        run: |
-          # Run tests + coverage.py (generates .coverage + coverage.xml files)
-          pushd python/geoarrow-pyarrow
-          python -m pytest --cov ./src/geoarrow
-          python -m coverage xml
-          popd
-
-          pushd python/geoarrow-pandas
-          python -m pytest --cov ./src/geoarrow
-          python -m coverage xml
-          popd
-
-      - name: Collect C Coverage
-        if: success() && matrix.python-version == '3.10'
-        run: |
-          pushd python/geoarrow-c
+          # Generate C coverage
           lcov \
             --capture --directory build \
             --exclude "/usr/*" \
@@ -102,6 +88,27 @@ jobs:
             --output-file=coverage.info
 
           lcov --list coverage.info
+
+
+          popd
+
+      - name: Coverage (geoarrow-pyarrow, geoarrow-pandas)
+        if: success() && matrix.python-version == '3.10'
+        run: |
+          # Have to install non-editable geoarrow-c or xml generation will not work
+          # because it gets confused about the .pxd file
+          pip uninstall geoarrow-c
+          pip install python/geoarrow-c/
+
+          pushd python/geoarrow-pyarrow
+          python -m pytest --cov ./src/geoarrow ..
+          python -m coverage xml
+          popd
+
+          pushd python/geoarrow-pandas
+          python -m pytest --cov ./src/geoarrow ..
+          python -m coverage xml
+          popd
 
       - name: Upload coverage to codecov
         if: success() && matrix.python-version == '3.10'
