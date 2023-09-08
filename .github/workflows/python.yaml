@@ -126,8 +126,10 @@ jobs:
           # rebuild to avoid confusing pytest
 
           for pkg in c pyarrow pandas; do
-            touch python/geoarrow-$pkg/src/geoarrow/__init__.py
+            pushd python/geoarrow-$pkg
+            touch src/geoarrow/__init__.py
             pip uninstall --yes geoarrow-$pkg
-            pip install python/geoarrow-$pkg
+            pip install .
             pytest --pyargs geoarrow.$pkg --doctest-modules
+            popd
           done
