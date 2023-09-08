@@ -1,9 +1,9 @@
-import numpy as np
 import pytest
 
 import geoarrow.c as ga
 import geoarrow.c.lib as lib
 
+np = pytest.importorskip("numpy")
 pa = pytest.importorskip("pyarrow")
 
 def test_schema_holder():
