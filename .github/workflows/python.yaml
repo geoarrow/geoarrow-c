@@ -72,6 +72,7 @@ jobs:
 
           # Run tests + coverage.py (generates .coverage + coverage.xml files)
           python -m pytest --cov ./src/geoarrow
+          python -m coverage xml
 
       - name: Coverage (geoarrow-pyarrow, geoarrow-pandas)
         if: success() && matrix.python-version == '3.10'
@@ -79,22 +80,17 @@ jobs:
           # Run tests + coverage.py (generates .coverage + coverage.xml files)
           pushd python/geoarrow-pyarrow
           python -m pytest --cov ./src/geoarrow
+          python -m coverage xml
           popd
 
           pushd python/geoarrow-pandas
           python -m pytest --cov ./src/geoarrow
+          python -m coverage xml
           popd
 
-      - name: Collect coverage
+      - name: Collect C Coverage
         if: success() && matrix.python-version == '3.10'
         run: |
-          for pkg in c pyarrow pandas; do
-            pushd python/geoarrow-$pkg
-            python -m coverage xml
-            popd
-          done
-
-          # Collect C coverage information
           pushd python/geoarrow-c
           lcov \
             --capture --directory build \
