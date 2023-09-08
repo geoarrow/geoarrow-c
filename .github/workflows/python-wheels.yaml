@@ -1,0 +1,38 @@
+name: Build
+
+# Build wheels only on a release branch or when requested since it's expensive
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'maint-**'
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, windows-2019, macOS-11]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v3
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==2.15.0
+
+      - name: Build wheels
+        run: |
+          python -m cibuildwheel --output-dir wheelhouse python/geoarrow-c
+        env:
+          CIBW_ARCHS_MACOS: x86_64 arm64
+          # Optional (test suite will pass if these are not available)
+          CIBW_BEFORE_TEST: pip install --only-binary ":all:" pyarrow numpy || pip install --only-binary ":all:" numpy || true
+          CIBW_TEST_REQUIRES: pytest
+          CIBW_TEST_COMMAND: pytest {package}/tests
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./wheelhouse/*.whl
