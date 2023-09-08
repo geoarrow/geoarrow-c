@@ -1,6 +1,6 @@
 # geoarrow for Python
 
-The geoarrow Python packages provide bindings to the geoarrow-c implementation of the [GeoArrow specification](https://github.com/geoarrow/geoarrow) and integrations with [pyarrow](https://arrow.apache.org/docs/python) and [pandas](https://pandas.pydata.org/). The geoarrow Python bindings provide input/output to/from Arrow-friendly formats (e.g., Parquet, Arrow Stream, Arrow File) and general-purpose coordinate shuffling tools among GeoArrow, WKT, and WKB encodings. 
+The geoarrow Python packages provide bindings to the geoarrow-c implementation of the [GeoArrow specification](https://github.com/geoarrow/geoarrow) and integrations with [pyarrow](https://arrow.apache.org/docs/python) and [pandas](https://pandas.pydata.org/). The geoarrow Python bindings provide input/output to/from Arrow-friendly formats (e.g., Parquet, Arrow Stream, Arrow File) and general-purpose coordinate shuffling tools among GeoArrow, WKT, and WKB encodings.
 
 ## Installation
 
@@ -52,7 +52,7 @@ Alternatively, you can construct GeoArrow arrays directly from a series of buffe
 import numpy as np
 
 ga.point().from_geobuffers(
-    None, 
+    None,
     np.array([1.0, 2.0, 3.0]),
     np.array([3.0, 4.0, 5.0])
 )
@@ -86,7 +86,7 @@ ga.point().with_coord_type(ga.CoordType.INTERLEAVED).from_geobuffers(
 
 
 
-Importing `geoarrow.c.pyarrow` will register the geoarrow extension types with pyarrow such that you can read/write Arrow streams, Arrow files, and Parquet that contains Geoarrow extension types. A number of these files are available from the [geoarrow-data](https://github.com/geoarrow/geoarrow-data) repository.
+Importing `geoarrow.pyarrow` will register the geoarrow extension types with pyarrow such that you can read/write Arrow streams, Arrow files, and Parquet that contains Geoarrow extension types. A number of these files are available from the [geoarrow-data](https://github.com/geoarrow/geoarrow-data) repository.
 
 
 ```python
@@ -167,7 +167,7 @@ geopandas.GeoSeries.from_wkb(ga.as_wkb(array))
     2      MULTILINESTRING ((631355.519 5122892.285, 6313...
     3      MULTILINESTRING ((665166.020 5138641.982, 6651...
     4      MULTILINESTRING ((673606.020 5162961.982, 6736...
-                                 ...                        
+                                 ...
     250    MULTILINESTRING ((681672.620 5078601.582, 6818...
     251    MULTILINESTRING ((414867.917 5093040.881, 4147...
     252    MULTILINESTRING ((414867.917 5093040.881, 4148...

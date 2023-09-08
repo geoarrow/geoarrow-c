@@ -10,3 +10,4 @@ Contents
 
     GeoArrow core library <geoarrow>
     PyArrow integration <pyarrow>
+    Pandas integration <pandas>
