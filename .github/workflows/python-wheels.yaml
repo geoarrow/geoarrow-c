@@ -20,9 +20,8 @@ jobs:
 
       - name: Build wheels
         run: |
-          cd python/geoarrow-c
-          python -m cibuildwheel --output-dir wheelhouse
+          python -m cibuildwheel --output-dir wheelhouse python/geoarrow-c
 
       - uses: actions/upload-artifact@v3
         with:
-          path: ./python/geoarrow-c/wheelhouse/*.whl
+          path: ./wheelhouse/*.whl
