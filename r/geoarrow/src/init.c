@@ -3,9 +3,7 @@
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
 
-SEXP geoarrow_c_handle_stream(SEXP data, SEXP handler_xptr) {
-  return R_NilValue;
-}
+SEXP geoarrow_c_handle_stream(SEXP data, SEXP handler_xptr);
 
 static const R_CallMethodDef CallEntries[] = {
   {"geoarrow_c_handle_stream", (DL_FUNC) &geoarrow_c_handle_stream, 2},
