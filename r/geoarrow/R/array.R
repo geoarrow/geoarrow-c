@@ -72,10 +72,9 @@ point_array_from_buffers <- function(schema, x, y = NULL, z_or_m = NULL, m = NUL
 
   if (schema$format == "+s") {
     len_factor <- 1L
-  } else if (isTRUE(schema$children[[1]]$name %in% c("xyz", "xym", "xyzm"))) {
-    len_factor <- nchar(schema$children[[1]]$name)
   } else {
-    len_factor <- 2L
+    parsed <- nanoarrow::nanoarrow_schema_parse(schema)
+    len_factor <- parsed$fixed_size
   }
 
   nanoarrow::nanoarrow_array_modify(
