@@ -31,25 +31,31 @@ class WKGeoArrowHandler {
     meta_stack_.reserve(32);
   }
 
-  void new_geometry_type(GeoArrowGeometryType geometry_type) {
-    if (geometry_type == GEOARROW_GEOMETRY_TYPE_GEOMETRY) {
-      vector_meta_.geometry_type = WK_GEOMETRY;
-    } else {
-      vector_meta_.geometry_type = geometry_type;
-    }
+  // Visitor interface
+  void InitVisitor(struct GeoArrowVisitor* v) {
+    v->feat_start = &feat_start_visitor;
+    v->null_feat = &null_feat_visitor;
+    v->geom_start = &geom_start_visitor;
+    v->ring_start = &ring_start_visitor;
+    v->coords = &coords_visitor;
+    v->ring_end = &ring_end_visitor;
+    v->geom_end = &geom_end_visitor;
+    v->feat_end = &feat_end_visitor;
+    v->private_data = this;
   }
 
-  void new_dimensions(GeoArrowDimensions dimensions) {
+  void set_vector_geometry_type(GeoArrowGeometryType geometry_type) {
+    vector_meta_.geometry_type = geometry_type;
+  }
+
+  void set_vector_dimensions(GeoArrowDimensions dimensions) {
     vector_meta_.flags &= ~WK_FLAG_HAS_Z;
     vector_meta_.flags &= ~WK_FLAG_HAS_M;
-    meta_.flags &= ~WK_FLAG_HAS_Z;
-    meta_.flags &= ~WK_FLAG_HAS_M;
 
     switch (dimensions) {
       case GEOARROW_DIMENSIONS_XYZ:
       case GEOARROW_DIMENSIONS_XYZM:
         vector_meta_.flags |= WK_FLAG_HAS_Z;
-        meta_.flags |= WK_FLAG_HAS_Z;
         break;
       default:
         break;
@@ -59,7 +65,6 @@ class WKGeoArrowHandler {
       case GEOARROW_DIMENSIONS_XYM:
       case GEOARROW_DIMENSIONS_XYZM:
         vector_meta_.flags |= WK_FLAG_HAS_M;
-        meta_.flags |= WK_FLAG_HAS_M;
         break;
       default:
         break;
@@ -69,6 +74,29 @@ class WKGeoArrowHandler {
       vector_meta_.flags |= WK_FLAG_DIMS_UNKNOWN;
     } else {
       vector_meta_.flags &= ~WK_FLAG_DIMS_UNKNOWN;
+    }
+  }
+
+  void set_meta_dimensions(GeoArrowDimensions dimensions) {
+    meta_.flags &= ~WK_FLAG_HAS_Z;
+    meta_.flags &= ~WK_FLAG_HAS_M;
+
+    switch (dimensions) {
+      case GEOARROW_DIMENSIONS_XYZ:
+      case GEOARROW_DIMENSIONS_XYZM:
+        meta_.flags |= WK_FLAG_HAS_Z;
+        break;
+      default:
+        break;
+    }
+
+    switch (dimensions) {
+      case GEOARROW_DIMENSIONS_XYM:
+      case GEOARROW_DIMENSIONS_XYZM:
+        meta_.flags |= WK_FLAG_HAS_M;
+        break;
+      default:
+        break;
     }
   }
 
@@ -92,6 +120,7 @@ class WKGeoArrowHandler {
 
     meta_.geometry_type = geometry_type;
     meta_.size = size;
+    set_meta_dimensions(dimensions);
     meta_stack_.push_back(meta_);
 
     int result = handler_->geometry_start(meta(), part_id(), handler_->handler_data);
@@ -167,6 +196,71 @@ class WKGeoArrowHandler {
       throw std::runtime_error("geom_start()/geom_end() stack imbalance <meta>");
     }
     return meta_stack_.data() + meta_stack_.size() - 1;
+  }
+
+  static int wrap_result(int result, GeoArrowError* error) {
+    if (result == WK_ABORT_FEATURE) {
+      GeoArrowErrorSet(error, "WK_ABORT_FEATURE");
+      return EALREADY;
+    }
+
+    if (result != WK_CONTINUE) {
+      GeoArrowErrorSet(error, "result !+ WK_CONTINUE (%d)", result);
+      return EINVAL;
+    } else {
+      return GEOARROW_OK;
+    }
+  }
+
+  static int feat_start_visitor(struct GeoArrowVisitor* v) {
+    auto private_data = reinterpret_cast<WKGeoArrowHandler*>(v->private_data);
+    int result = private_data->feat_start();
+    return wrap_result(result, v->error);
+  }
+
+  static int null_feat_visitor(struct GeoArrowVisitor* v) {
+    auto private_data = reinterpret_cast<WKGeoArrowHandler*>(v->private_data);
+    int result = private_data->null_feat();
+    return wrap_result(result, v->error);
+  }
+
+  static int geom_start_visitor(struct GeoArrowVisitor* v,
+                                enum GeoArrowGeometryType geometry_type,
+                                enum GeoArrowDimensions dimensions) {
+    auto private_data = reinterpret_cast<WKGeoArrowHandler*>(v->private_data);
+    int result = private_data->geom_start(geometry_type, dimensions, WK_SIZE_UNKNOWN);
+    return wrap_result(result, v->error);
+  }
+
+  static int ring_start_visitor(struct GeoArrowVisitor* v) {
+    auto private_data = reinterpret_cast<WKGeoArrowHandler*>(v->private_data);
+    int result = private_data->ring_start(WK_SIZE_UNKNOWN);
+    return wrap_result(result, v->error);
+  }
+
+  static int coords_visitor(struct GeoArrowVisitor* v,
+                            const struct GeoArrowCoordView* coords) {
+    auto private_data = reinterpret_cast<WKGeoArrowHandler*>(v->private_data);
+    int result = private_data->coords(coords);
+    return wrap_result(result, v->error);
+  }
+
+  static int ring_end_visitor(struct GeoArrowVisitor* v) {
+    auto private_data = reinterpret_cast<WKGeoArrowHandler*>(v->private_data);
+    int result = private_data->ring_end();
+    return wrap_result(result, v->error);
+  }
+
+  static int geom_end_visitor(struct GeoArrowVisitor* v) {
+    auto private_data = reinterpret_cast<WKGeoArrowHandler*>(v->private_data);
+    int result = private_data->geom_end();
+    return wrap_result(result, v->error);
+  }
+
+  static int feat_end_visitor(struct GeoArrowVisitor* v) {
+    auto private_data = reinterpret_cast<WKGeoArrowHandler*>(v->private_data);
+    int result = private_data->feat_end();
+    return wrap_result(result, v->error);
   }
 };
 
