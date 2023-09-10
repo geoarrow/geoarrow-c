@@ -265,86 +265,98 @@ class WKGeoArrowHandler {
   }
 };
 
+static void finalize_wk_geoarrow_handler_xptr(SEXP xptr) {
+  auto private_data = reinterpret_cast<WKGeoArrowHandler*>(R_ExternalPtrAddr(xptr));
+  delete private_data;
+}
+
 SEXP geoarrow_handle_stream(SEXP data, wk_handler_t* handler) {
-  //     CPP_START
+  auto array_stream =
+      reinterpret_cast<struct ArrowArrayStream*>(R_ExternalPtrAddr(VECTOR_ELT(data, 0)));
+  auto schema =
+      reinterpret_cast<struct ArrowSchema*>(R_ExternalPtrAddr(VECTOR_ELT(data, 1)));
+  auto array =
+      reinterpret_cast<struct ArrowArray*>(R_ExternalPtrAddr(VECTOR_ELT(data, 2)));
+  SEXP n_features_sexp = VECTOR_ELT(data, 3);
 
-  //     struct ArrowArrayStream* array_stream = array_stream_from_xptr(VECTOR_ELT(data,
-  //     0), "handleable"); struct ArrowSchema* schema = schema_from_xptr(VECTOR_ELT(data,
-  //     1), "schema"); SEXP n_features_sexp = VECTOR_ELT(data, 2);
+  R_xlen_t vector_size = WK_VECTOR_SIZE_UNKNOWN;
+  if (TYPEOF(n_features_sexp) == INTSXP) {
+    if (INTEGER(n_features_sexp)[0] != NA_INTEGER) {
+      vector_size = INTEGER(n_features_sexp)[0];
+    }
+  } else {
+    double n_features_double = REAL(n_features_sexp)[0];
+    if (!ISNA(n_features_double) && !ISNAN(n_features_double)) {
+      vector_size = n_features_double;
+    }
+  }
 
-  //     // We can't stack allocate this because we don't know the exact type that is
-  //     returned
-  //     // and we can't rely on the deleter to run because one of the handler
-  //     // calls could longjmp. We use the same trick for making sure the array_data is
-  //     // released for each array in the stream.
-  //     geoarrow::ArrayView* view = geoarrow::create_view(schema);
-  //     SEXP view_xptr = PROTECT(R_MakeExternalPtr(view, R_NilValue, R_NilValue));
-  //     R_RegisterCFinalizer(view_xptr, &delete_array_view_xptr);
+  struct GeoArrowSchemaView schema_view;
+  struct GeoArrowError error;
+  int errno_code = GeoArrowSchemaViewInit(&schema_view, schema, &error);
+  if (errno_code != GEOARROW_OK) {
+    Rf_error("[GeoArrowSchemaViewInit] %s", error.message);
+  }
 
-  //     R_xlen_t vector_size = WK_VECTOR_SIZE_UNKNOWN;
-  //     if (TYPEOF(n_features_sexp) == INTSXP) {
-  //         if (INTEGER(n_features_sexp)[0] != NA_INTEGER) {
-  //             vector_size = INTEGER(n_features_sexp)[0];
-  //         }
-  //     } else {
-  //         double n_features_double = REAL(n_features_sexp)[0];
-  //         if (!ISNA(n_features_double) && !ISNAN(n_features_double)) {
-  //             vector_size = n_features_double;
-  //         }
-  //     }
+  struct GeoArrowArrayView array_view;
+  int errno_code = GeoArrowArrayViewInitFromSchema(&array_view, schema, &error);
+  if (errno_code != GEOARROW_OK) {
+    Rf_error("[GeoArrowArrayViewInitFromSchema] %s", error.message);
+  }
 
-  //     WKGeoArrowHandler geoarrow_handler(handler, vector_size);
-  //     view->read_meta(&geoarrow_handler);
+  // Instantiate + protect the adapter
+  auto adapter = new WKGeoArrowHandler(handler, vector_size);
+  SEXP adapter_xptr = PROTECT(R_MakeExternalPtr(adapter, R_NilValue, R_NilValue));
+  R_RegisterCFinalizer(adapter_xptr, &finalize_wk_geoarrow_handler_xptr);
+  adapter->set_vector_dimensions(schema_view.dimensions);
+  adapter->set_vector_geometry_type(schema_view.geometry_type);
 
-  //     int result = handler->vector_start(&geoarrow_handler.vector_meta_,
-  //     handler->handler_data); if (result == WK_CONTINUE) {
-  //         struct ArrowArray* array_data = (struct ArrowArray*) malloc(sizeof(struct
-  //         ArrowArray)); if (array_data == NULL) {
-  //             Rf_error("Failed to allocate struct ArrowArray");
-  //         }
-  //         array_data->release = NULL;
-  //         SEXP array_data_wrapper = PROTECT(R_MakeExternalPtr(array_data, R_NilValue,
-  //         R_NilValue)); R_RegisterCFinalizer(array_data_wrapper,
-  //         &geoarrow_finalize_array_data);
+  // Initialize the visitor
+  struct GeoArrowVisitor visitor;
+  adapter->InitVisitor(&visitor);
+  visitor.error = &error;
 
-  //         int stream_result = 0;
-  //         while(result != WK_ABORT) {
-  //             if (array_data->release != NULL) {
-  //                 array_data->release(array_data);
-  //             }
-  //             stream_result = array_stream->get_next(array_stream, array_data);
-  //             if (stream_result != 0) {
-  //                 const char* error_message =
-  //                 array_stream->get_last_error(array_stream); if (error_message !=
-  //                 NULL) {
-  //                     Rf_error("[%d] %s", stream_result, error_message);
-  //                 } else {
-  //                     Rf_error("ArrowArrayStream->get_next() failed with code %d",
-  //                     stream_result);
-  //                 }
-  //             }
+  int result = handler->vector_start(&adapter->vector_meta_, handler->handler_data);
+  if (result == WK_CONTINUE) {
+    while (true) {
+      if (array->release != NULL) {
+        array->release(array);
+      }
 
-  //             if (array_data->release == NULL) {
-  //                 break;
-  //             }
+      // Get the next array
+      errno_code = array_stream->get_next(array_stream, array);
+      if (errno_code != 0) {
+        const char* error_message = array_stream->get_last_error(array_stream);
+        if (error_message != NULL) {
+          Rf_error("[array_stream->get_next] %s", errno_code, error_message);
+        } else {
+          Rf_error("[array_stream->get_next] failed with code %d", errno_code);
+        }
+      }
 
-  //             view->set_array(array_data);
-  //             result = (int) view->read_features(&geoarrow_handler);
-  //             if (result == WK_CONTINUE) {
-  //                 continue;
-  //             } else if (result == WK_ABORT) {
-  //                 break;
-  //             }
-  //         }
+      // End of stream
+      if (array->release == NULL) {
+        break;
+      }
 
-  //         UNPROTECT(1);
-  //     }
+      // We have a valid array: set the array in the visitor
+      errno_code = GeoArrowArrayViewSetArray(&array_view, array, &error);
+      if (errno_code != GEOARROW_OK) {
+        Rf_error("[GeoArrowArrayViewSetArray] %s", error.message);
+      }
 
-  //     SEXP result_sexp = PROTECT(handler->vector_end(&geoarrow_handler.vector_meta_,
-  //     handler->handler_data)); UNPROTECT(2); return result_sexp;
+      // ...and visit!
+      errno_code = GeoArrowArrayViewVisit(&array_view, 0, array->length, &visitor);
+      if (errno_code != GEOARROW_OK) {
+        Rf_error("[GeoArrowArrayViewVisit] %s", error.message);
+      }
+    }
+  }
 
-  //     CPP_END
-  return R_NilValue;
+  SEXP result_sexp =
+      PROTECT(handler->vector_end(&adapter->vector_meta_, handler->handler_data));
+  UNPROTECT(2);
+  return result_sexp;
 }
 
 extern "C" SEXP geoarrow_c_handle_stream(SEXP data, SEXP handler_xptr) {
