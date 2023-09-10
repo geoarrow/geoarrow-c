@@ -42,23 +42,42 @@ na_extension_geoarrow <- function(geometry_type, dimensions = "XY",
   na_extension_geoarrow_internal(type_id, crs = crs, edge_type = edge_type)
 }
 
-na_extension_geoarrow_internal <- function(type_id, crs = NULL, edge_type = "PLANAR") {
-  crs <- sanitize_crs(crs)
-  edge_type <- enum_value_scalar(edge_type, "EdgeType")
+na_extension_geoarrow_internal <- function(type_id, crs, edge_type) {
+  metadata <- na_extension_metadata_internal(crs, edge_type)
   schema <- nanoarrow::nanoarrow_allocate_schema()
+
   .Call(
     geoarrow_c_schema_init_extension,
-    type_id,
-    crs$type,
-    crs$crs,edge_type
+    schema,
+    type_id
   )
 
+  schema$metadata[["ARROW:extension:metadata"]] <- metadata
   schema
+}
+
+na_extension_metadata_internal <- function(crs, edge_type) {
+  crs <- sanitize_crs(crs)
+  edge_type <- enum_value_scalar(edge_type, "EdgeType")
+
+  metadata <- character()
+
+  if (identical(crs$crs_type, enum$CrsType$UNKNOWN)) {
+    metadata <- sprintf('"crs":"%s"', gsub('"', '\\\\"', crs$crs))
+  } else if(identical(crs$crs_type, enum$CrsType$PROJJSON)) {
+    metadata <- sprintf('"crs":%s', crs$crs)
+  }
+
+  if (identical(edge_type, enum$EdgeType$SPHERICAL)) {
+    metadata <- c(metadata, '"edge_type":"spherical"')
+  }
+
+  sprintf("{%s}", paste(metadata, collapse = ","))
 }
 
 sanitize_crs <- function(crs = NULL) {
   if (is.null(crs)) {
-    return(list(crs_type = enum$CrsType$NONE, crs = NA_character_))
+    return(list(crs_type = enum$CrsType$NONE, crs = ""))
   }
 
   crs_projjson <- wk::wk_crs_projjson(crs)

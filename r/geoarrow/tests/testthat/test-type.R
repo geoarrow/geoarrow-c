@@ -1,6 +1,63 @@
 
-test_that("serialized extensions work", {
+test_that("nanoarrow_schema can be created for serialized types", {
+  schema_wkb <- na_extension_wkb()
+  expect_identical(schema_wkb$format, "z")
+  expect_identical(schema_wkb$metadata[["ARROW:extension:name"]], "geoarrow.wkb")
+  expect_identical(schema_wkb$metadata[["ARROW:extension:metadata"]], "{}")
 
+  schema_large_wkb <- na_extension_large_wkb()
+  expect_identical(schema_large_wkb$format, "Z")
+  expect_identical(schema_large_wkb$metadata[["ARROW:extension:name"]], "geoarrow.wkb")
+  expect_identical(schema_large_wkb$metadata[["ARROW:extension:metadata"]], "{}")
+
+  schema_wkt <- na_extension_wkt()
+  expect_identical(schema_wkt$format, "u")
+  expect_identical(schema_wkt$metadata[["ARROW:extension:name"]], "geoarrow.wkt")
+  expect_identical(schema_wkt$metadata[["ARROW:extension:metadata"]], "{}")
+
+  schema_large_wkt <- na_extension_large_wkt()
+  expect_identical(schema_large_wkt$format, "U")
+  expect_identical(schema_large_wkt$metadata[["ARROW:extension:name"]], "geoarrow.wkt")
+  expect_identical(schema_large_wkt$metadata[["ARROW:extension:metadata"]], "{}")
+})
+
+test_that("nanoarrow_schema can be created for native types", {
+  schema_point <- na_extension_geoarrow("POINT")
+  expect_identical(schema_point$format, "+s")
+  expect_identical(schema_point$metadata[["ARROW:extension:name"]], "geoarrow.point")
+  expect_identical(schema_point$metadata[["ARROW:extension:metadata"]], "{}")
+})
+
+test_that("nanoarrow_schema can be created with metadata", {
+  schema <- na_extension_wkb(crs = "{}", edge_type = "SPHERICAL")
+  expect_identical(
+    schema$metadata[["ARROW:extension:metadata"]],
+    '{"crs":"{}","edge_type":"spherical"}'
+  )
+
+  schema <- na_extension_wkb(crs = "{}", edge_type = "PLANAR")
+  expect_identical(
+    schema$metadata[["ARROW:extension:metadata"]],
+    '{"crs":"{}"}'
+  )
+
+  schema <- na_extension_wkb(crs = NULL, edge_type = "PLANAR")
+  expect_identical(
+    schema$metadata[["ARROW:extension:metadata"]],
+    '{}'
+  )
+
+  schema <- na_extension_wkb(crs = "some unknown crs", edge_type = "PLANAR")
+  expect_identical(
+    schema$metadata[["ARROW:extension:metadata"]],
+    '{"crs":"some unknown crs"}'
+  )
+
+  schema <- na_extension_wkb(crs = 'unknown with quote"ing', edge_type = "PLANAR")
+  expect_identical(
+    schema$metadata[["ARROW:extension:metadata"]],
+    '{"crs":"unknown with quote\\"ing"}'
+  )
 })
 
 test_that("enum matcher works", {
