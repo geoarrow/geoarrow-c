@@ -1,0 +1,3 @@
+
+# Just call the original configure script
+./configure
