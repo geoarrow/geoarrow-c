@@ -14,6 +14,7 @@
 //         continue; \
 //     else if (result == geoarrow::Handler::Result::ABORT) break
 
+// Helper to translate between the GeoArrowVisitor and the wk_handler_t.
 class WKGeoArrowHandler {
  public:
   WKGeoArrowHandler(wk_handler_t* handler, R_xlen_t size)
