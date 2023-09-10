@@ -19,6 +19,7 @@ Imports:
 LinkingTo:
     wk
 Config/testthat/edition: 3
+Config/build/bootstrap: TRUE
 URL: https://github.com/geoarrow/geoarrow-c
 Depends: 
     R (>= 2.10)
