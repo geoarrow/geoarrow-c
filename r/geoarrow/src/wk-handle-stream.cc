@@ -8,12 +8,6 @@
 #include "geoarrow.h"
 #include "wk-v1.h"
 
-// #define HANDLE_CONTINUE_OR_BREAK(expr)                         \
-//     result = expr;                                             \
-//     if (result == geoarrow::Handler::Result::ABORT_FEATURE) \
-//         continue; \
-//     else if (result == geoarrow::Handler::Result::ABORT) break
-
 // Helper to translate between the GeoArrowVisitor and the wk_handler_t.
 class WKGeoArrowHandler {
  public:
@@ -201,8 +195,8 @@ class WKGeoArrowHandler {
 
   static int wrap_result(int result, GeoArrowError* error) {
     if (result == WK_ABORT_FEATURE) {
-      GeoArrowErrorSet(error, "WK_ABORT_FEATURE");
-      return EALREADY;
+      GeoArrowErrorSet(error, "WK_ABORT_FEATURE not supported");
+      return EINVAL;
     }
 
     if (result != WK_CONTINUE) {
@@ -299,7 +293,7 @@ SEXP geoarrow_handle_stream(SEXP data, wk_handler_t* handler) {
   }
 
   struct GeoArrowArrayView array_view;
-  int errno_code = GeoArrowArrayViewInitFromSchema(&array_view, schema, &error);
+  errno_code = GeoArrowArrayViewInitFromSchema(&array_view, schema, &error);
   if (errno_code != GEOARROW_OK) {
     Rf_error("[GeoArrowArrayViewInitFromSchema] %s", error.message);
   }
