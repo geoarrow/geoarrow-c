@@ -54,3 +54,123 @@ test_that("geoarrow_array_from_buffers() works for large wkt", {
   vctr <- suppressWarnings(nanoarrow::convert_array(array, character()))
   expect_identical(wkt, vctr)
 })
+
+test_that("geoarrow_array_from_buffers() works for point", {
+  array <- geoarrow_array_from_buffers(
+    na_extension_geoarrow("POINT"),
+    list(
+      NULL,
+      1:5,
+      6:10
+    )
+  )
+
+  expect_identical(
+    as.raw(array$children[[1]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(as.double(1:5)))
+  )
+
+  expect_identical(
+    as.raw(array$children[[2]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(as.double(6:10)))
+  )
+})
+
+test_that("geoarrow_array_from_buffers() works for linestring", {
+  array <- geoarrow_array_from_buffers(
+    na_extension_geoarrow("LINESTRING"),
+    list(
+      NULL,
+      c(0, 5),
+      1:5,
+      6:10
+    )
+  )
+
+  expect_identical(
+    as.raw(array$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(0L, 5L)))
+  )
+
+  expect_identical(
+    as.raw(array$children[[1]]$children[[1]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(as.double(1:5)))
+  )
+
+  expect_identical(
+    as.raw(array$children[[1]]$children[[2]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(as.double(6:10)))
+  )
+})
+
+test_that("geoarrow_array_from_buffers() works for multilinestring", {
+  array <- geoarrow_array_from_buffers(
+    na_extension_geoarrow("MULTILINESTRING"),
+    list(
+      NULL,
+      c(0, 1),
+      c(0, 5),
+      1:5,
+      6:10
+    )
+  )
+
+  expect_identical(
+    as.raw(array$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(0L, 1L)))
+  )
+
+  expect_identical(
+    as.raw(array$children[[1]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(0L, 5L)))
+  )
+
+  expect_identical(
+    as.raw(array$children[[1]]$children[[1]]$children[[1]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(as.double(1:5)))
+  )
+
+  expect_identical(
+    as.raw(array$children[[1]]$children[[1]]$children[[2]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(as.double(6:10)))
+  )
+})
+
+test_that("geoarrow_array_from_buffers() works for multipolygon", {
+  array <- geoarrow_array_from_buffers(
+    na_extension_geoarrow("MULTIPOLYGON"),
+    list(
+      NULL,
+      c(0, 1),
+      c(0, 1),
+      c(0, 5),
+      1:5,
+      6:10
+    )
+  )
+
+  expect_identical(
+    as.raw(array$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(0L, 1L)))
+  )
+
+  expect_identical(
+    as.raw(array$children[[1]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(0L, 1L)))
+  )
+
+  expect_identical(
+    as.raw(array$children[[1]]$children[[1]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(0L, 5L)))
+  )
+
+  expect_identical(
+    as.raw(array$children[[1]]$children[[1]]$children[[1]]$children[[1]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(as.double(1:5)))
+  )
+
+  expect_identical(
+    as.raw(array$children[[1]]$children[[1]]$children[[1]]$children[[2]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(as.double(6:10)))
+  )
+})

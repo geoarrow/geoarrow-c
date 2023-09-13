@@ -17,10 +17,7 @@ geoarrow_array_from_buffers <- function(schema, buffers) {
     ),
     "geoarrow.point" = point_array_from_buffers(
       schema,
-      buffers[[2]],
-      buffers[[3]],
-      buffers[[4]],
-      buffers[[5]],
+      buffers[-1],
       validity = buffers[[1]]
     ),
     "geoarrow.linestring" = ,
@@ -40,7 +37,7 @@ geoarrow_array_from_buffers <- function(schema, buffers) {
     "geoarrow.multipolygon" = nested_array_from_buffers(
       schema,
       buffers[-1],
-      level = 0,
+      level = 2,
       validity = buffers[[1]]
     ),
     stop(sprintf("Unhandled extension name: '%s'", extension_name))
@@ -74,17 +71,10 @@ binary_array_from_buffers <- function(schema, offsets, data, validity = NULL) {
   )
 }
 
-point_array_from_buffers <- function(schema, x, y = NULL, z_or_m = NULL, m = NULL,
-                                     validity = NULL) {
+point_array_from_buffers <- function(schema, buffers, validity = NULL) {
   validity <- as_validity_buffer(validity)
 
-  ordinate_buffers <- list(
-    as_coord_buffer(x),
-    if (!is.null(y)) as_coord_buffer(y),
-    if (!is.null(z_or_m)) as_coord_buffer(z_or_m),
-    if (!is.null(m)) as_coord_buffer(m)
-  )
-  ordinate_buffers <- ordinate_buffers[!vapply(ordinate_buffers, is.null, logical(1))]
+  ordinate_buffers <- lapply(buffers, as_coord_buffer)
 
   array <- nanoarrow::nanoarrow_array_init(schema)
 
@@ -128,10 +118,7 @@ nested_array_from_buffers <- function(schema, buffers, level, validity = NULL) {
   if (level == 0) {
     child <- point_array_from_buffers(
       schema$children[[1]],
-      buffers[[2]],
-      buffers[[3]],
-      buffers[[4]],
-      buffers[[5]]
+      buffers[-1]
     )
   } else {
     child <- nested_array_from_buffers(
@@ -144,9 +131,6 @@ nested_array_from_buffers <- function(schema, buffers, level, validity = NULL) {
   validity <- as_validity_buffer(validity)
 
   array <- nanoarrow::nanoarrow_array_init(schema)
-  if (buffers[[1]]$size_bytes == 0) {
-    return(array)
-  }
 
   if (identical(schema$format, "+l")) {
     offsets <- as_offset_buffer(buffers[[1]])
@@ -154,6 +138,10 @@ nested_array_from_buffers <- function(schema, buffers, level, validity = NULL) {
   } else {
     offsets <- as_large_offset_buffer(buffers[[1]])
     offset_element_size <- 8L
+  }
+
+  if (offsets$size_bytes == 0) {
+    return(array)
   }
 
   nanoarrow::nanoarrow_array_modify(
