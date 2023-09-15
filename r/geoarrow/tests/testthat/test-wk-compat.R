@@ -22,7 +22,25 @@ test_that("as_geoarrow_array() for wkt() generates the correct buffers", {
   )
 })
 
-test_that("as_geoarrow_array() for wkt() generates the correct metadata", {
+test_that("as_geoarrow_array() for xy() generates the correct buffers", {
+  array <- as_geoarrow_array(wk::xy(1:5, 6:10))
+  schema <- infer_nanoarrow_schema(array)
+
+  expect_identical(schema$format, "+s")
+  expect_identical(schema$metadata[["ARROW:extension:name"]], "geoarrow.point")
+
+  expect_identical(
+    as.raw(array$children[[1]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(as.double(1:5)))
+  )
+
+  expect_identical(
+    as.raw(array$children[[2]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(as.double(6:10)))
+  )
+})
+
+test_that("as_geoarrow_array() for wk generates the correct metadata", {
   array <- as_geoarrow_array(wk::wkt(c("POINT (0 1)", NA)))
   schema <- infer_nanoarrow_schema(array)
   expect_identical(schema$format, "u")

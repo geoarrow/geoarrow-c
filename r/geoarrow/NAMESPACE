@@ -2,8 +2,10 @@
 
 S3method(as_geoarrow_array,character)
 S3method(as_geoarrow_array,wk_wkt)
+S3method(as_geoarrow_array,wk_xy)
 S3method(as_geoarrow_array_stream,default)
 S3method(infer_nanoarrow_schema,wk_wkt)
+S3method(infer_nanoarrow_schema,wk_xy)
 export(as_geoarrow_array)
 export(as_geoarrow_array_stream)
 importFrom(nanoarrow,infer_nanoarrow_schema)

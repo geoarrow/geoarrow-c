@@ -19,16 +19,42 @@ as_geoarrow_array.wk_wkt <- function(x, ..., schema = NULL) {
   storage_shallow_copy
 }
 
+#' @export
+as_geoarrow_array.wk_xy <- function(x, ..., schema = NULL) {
+  if (!is.null(schema)) {
+    # TODO: Check if this is geoarrow.point
+    return(NextMethod())
+  }
+
+  schema <- infer_nanoarrow_schema(x)
+  data <- unclass(x)
+  geoarrow_array_from_buffers(
+    schema,
+    # Treating NULLs as EMPTY for now
+    c(list(NULL), data)
+  )
+}
+
 #' @importFrom nanoarrow infer_nanoarrow_schema
 #' @export
 infer_nanoarrow_schema.wk_wkt <- function(x, ...) {
   data <- unclass(x)
   schema <- nanoarrow::infer_nanoarrow_schema(data)
-
-  crs <- wk::wk_crs(x)
-  edge_type <- if (wk::wk_is_geodesic(x)) "SPHERICAL" else "PLANAR"
-
-  schema_for_metadata <- na_extension_wkt(crs, edge_type)
+  schema_for_metadata <- wk_geoarrow_schema(x, na_extension_wkt)
   schema$metadata <- schema_for_metadata$metadata
   schema
+}
+
+#' @importFrom nanoarrow infer_nanoarrow_schema
+#' @export
+infer_nanoarrow_schema.wk_xy <- function(x, ...) {
+  data <- unclass(x)
+  dims <- paste0(toupper(names(data)), collapse = "")
+  wk_geoarrow_schema(x, na_extension_geoarrow, "POINT", dimensions = dims)
+}
+
+wk_geoarrow_schema <- function(x, type_constructor, ...) {
+  crs <- wk::wk_crs(x)
+  edges <- if (wk::wk_is_geodesic(x)) "SPHERICAL" else "PLANAR"
+  type_constructor(..., crs = crs, edges = edges)
 }
