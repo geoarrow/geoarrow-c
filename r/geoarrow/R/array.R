@@ -2,12 +2,13 @@
 #' Convert an object to a GeoArrow array
 #'
 #' @param x An object
+#' @param schema A geoarrow extension schema to use as the target type
 #' @param ... Passed to S3 methods
 #'
 #' @return A [nanoarrow_array][nanoarrow::as_nanoarrow_array].
 #' @export
 #'
-as_geoarrow_array <- function(x, ...) {
+as_geoarrow_array <- function(x, ..., schema = NULL) {
   UseMethod("as_geoarrow_array")
 }
 

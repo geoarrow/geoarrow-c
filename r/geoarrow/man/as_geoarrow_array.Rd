@@ -4,12 +4,14 @@
 \alias{as_geoarrow_array}
 \title{Convert an object to a GeoArrow array}
 \usage{
-as_geoarrow_array(x, ...)
+as_geoarrow_array(x, ..., schema = NULL)
 }
 \arguments{
 \item{x}{An object}
 
 \item{...}{Passed to S3 methods}
+
+\item{schema}{A geoarrow extension schema to use as the target type}
 }
 \value{
 A \link[nanoarrow:as_nanoarrow_array]{nanoarrow_array}.
