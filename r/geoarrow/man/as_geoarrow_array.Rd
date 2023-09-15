@@ -2,9 +2,12 @@
 % Please edit documentation in R/array.R
 \name{as_geoarrow_array}
 \alias{as_geoarrow_array}
+\alias{as_geoarrow_array_stream}
 \title{Convert an object to a GeoArrow array}
 \usage{
 as_geoarrow_array(x, ..., schema = NULL)
+
+as_geoarrow_array_stream(x, ..., schema = NULL)
 }
 \arguments{
 \item{x}{An object}

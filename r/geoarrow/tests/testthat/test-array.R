@@ -1,4 +1,16 @@
 
+test_that("as_geoarrow_array() for character() uses the wkt method", {
+  array_chr <- as_geoarrow_array("POINT (0 1)")
+  schema <- nanoarrow::infer_nanoarrow_schema(array_chr)
+  expect_identical(schema$metadata[["ARROW:extension:name"]], "geoarrow.wkt")
+})
+
+test_that("as_geoarrow_array_stream() default method calls as_geoarrow_array()", {
+  stream <- as_geoarrow_array_stream("POINT (0 1)")
+  schema <- stream$get_schema()
+  expect_identical(schema$metadata[["ARROW:extension:name"]], "geoarrow.wkt")
+})
+
 test_that("geoarrow_array_from_buffers() works for wkb", {
   wkb <- wk::as_wkb("POINT (0 1)")
   array <- geoarrow_array_from_buffers(

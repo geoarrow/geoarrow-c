@@ -12,6 +12,25 @@ as_geoarrow_array <- function(x, ..., schema = NULL) {
   UseMethod("as_geoarrow_array")
 }
 
+#' @export
+as_geoarrow_array.character <- function(x, ..., schema = NULL) {
+  as_geoarrow_array.wk_wkt(wk::new_wk_wkt(x), schema = schema)
+}
+
+#' @rdname as_geoarrow_array
+#' @export
+as_geoarrow_array_stream <- function(x, ..., schema = NULL) {
+  UseMethod("as_geoarrow_array_stream")
+}
+
+#' @export
+as_geoarrow_array_stream.default <- function(x, ..., schema = NULL) {
+  nanoarrow::basic_array_stream(
+    list(as_geoarrow_array(x, schema = schema)),
+    schema = schema
+  )
+}
+
 geoarrow_array_from_buffers <- function(schema, buffers) {
   schema <- nanoarrow::as_nanoarrow_schema(schema)
   extension_name <- schema$metadata[["ARROW:extension:name"]]
