@@ -29,31 +29,31 @@ test_that("nanoarrow_schema can be created for native types", {
 })
 
 test_that("nanoarrow_schema can be created with metadata", {
-  schema <- na_extension_wkb(crs = "{}", edge_type = "SPHERICAL")
+  schema <- na_extension_wkb(crs = "{}", edges = "SPHERICAL")
   expect_identical(
     schema$metadata[["ARROW:extension:metadata"]],
-    '{"crs":"{}","edge_type":"spherical"}'
+    '{"crs":{},"edges":"spherical"}'
   )
 
-  schema <- na_extension_wkb(crs = "{}", edge_type = "PLANAR")
+  schema <- na_extension_wkb(crs = "{}", edges = "PLANAR")
   expect_identical(
     schema$metadata[["ARROW:extension:metadata"]],
-    '{"crs":"{}"}'
+    '{"crs":{}}'
   )
 
-  schema <- na_extension_wkb(crs = NULL, edge_type = "PLANAR")
+  schema <- na_extension_wkb(crs = NULL, edges = "PLANAR")
   expect_identical(
     schema$metadata[["ARROW:extension:metadata"]],
     '{}'
   )
 
-  schema <- na_extension_wkb(crs = "some unknown crs", edge_type = "PLANAR")
+  schema <- na_extension_wkb(crs = "some unknown crs", edges = "PLANAR")
   expect_identical(
     schema$metadata[["ARROW:extension:metadata"]],
     '{"crs":"some unknown crs"}'
   )
 
-  schema <- na_extension_wkb(crs = 'unknown with quote"ing', edge_type = "PLANAR")
+  schema <- na_extension_wkb(crs = 'unknown with quote"ing', edges = "PLANAR")
   expect_identical(
     schema$metadata[["ARROW:extension:metadata"]],
     '{"crs":"unknown with quote\\"ing"}'

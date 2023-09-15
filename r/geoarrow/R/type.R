@@ -1,49 +1,49 @@
 
-na_extension_wkb <- function(crs = NULL, edge_type = "PLANAR") {
+na_extension_wkb <- function(crs = NULL, edges = "PLANAR") {
   na_extension_geoarrow_internal(
     enum$Type$WKB,
     crs = crs,
-    edge_type = edge_type
+    edges = edges
   )
 }
 
-na_extension_wkt <- function(crs = NULL, edge_type = "PLANAR") {
+na_extension_wkt <- function(crs = NULL, edges = "PLANAR") {
   na_extension_geoarrow_internal(
     enum$Type$WKT,
     crs = crs,
-    edge_type = edge_type
+    edges = edges
   )
 }
 
-na_extension_large_wkb <- function(crs = NULL, edge_type = "PLANAR") {
+na_extension_large_wkb <- function(crs = NULL, edges = "PLANAR") {
   na_extension_geoarrow_internal(
     enum$Type$LARGE_WKB,
     crs = crs,
-    edge_type = edge_type
+    edges = edges
   )
 }
 
-na_extension_large_wkt <- function(crs = NULL, edge_type = "PLANAR") {
+na_extension_large_wkt <- function(crs = NULL, edges = "PLANAR") {
   na_extension_geoarrow_internal(
     enum$Type$LARGE_WKT,
     crs = crs,
-    edge_type = edge_type
+    edges = edges
   )
 }
 
 na_extension_geoarrow <- function(geometry_type, dimensions = "XY",
                                   coord_type = "SEPARATE",
-                                  crs = NULL, edge_type = "PLANAR") {
+                                  crs = NULL, edges = "PLANAR") {
   geometry_type <- enum_value_scalar(geometry_type, "GeometryType")
   dimensions <- enum_value_scalar(dimensions, "Dimensions")
   coord_type <- enum_value_scalar(coord_type, "CoordType")
 
   type_id <- .Call(geoarrow_c_make_type, geometry_type, dimensions, coord_type)
-  na_extension_geoarrow_internal(type_id, crs = crs, edge_type = edge_type)
+  na_extension_geoarrow_internal(type_id, crs = crs, edges = edges)
 }
 
-na_extension_geoarrow_internal <- function(type_id, crs, edge_type) {
-  metadata <- na_extension_metadata_internal(crs, edge_type)
+na_extension_geoarrow_internal <- function(type_id, crs, edges) {
+  metadata <- na_extension_metadata_internal(crs, edges)
   schema <- nanoarrow::nanoarrow_allocate_schema()
 
   .Call(
@@ -56,9 +56,9 @@ na_extension_geoarrow_internal <- function(type_id, crs, edge_type) {
   schema
 }
 
-na_extension_metadata_internal <- function(crs, edge_type) {
+na_extension_metadata_internal <- function(crs, edges) {
   crs <- sanitize_crs(crs)
-  edge_type <- enum_value_scalar(edge_type, "EdgeType")
+  edges <- enum_value_scalar(edges, "EdgeType")
 
   metadata <- character()
 
@@ -68,8 +68,8 @@ na_extension_metadata_internal <- function(crs, edge_type) {
     metadata <- sprintf('"crs":%s', crs$crs)
   }
 
-  if (identical(edge_type, enum$EdgeType$SPHERICAL)) {
-    metadata <- c(metadata, '"edge_type":"spherical"')
+  if (identical(edges, enum$EdgeType$SPHERICAL)) {
+    metadata <- c(metadata, '"edges":"spherical"')
   }
 
   sprintf("{%s}", paste(metadata, collapse = ","))
@@ -86,7 +86,7 @@ sanitize_crs <- function(crs = NULL) {
     return(list(crs_type = enum$CrsType$UNKNOWN, crs = crs))
   }
 
-  list(crs_type = enum$CrsType$UNKNOWN, crs = crs_projjson)
+  list(crs_type = enum$CrsType$PROJJSON, crs = crs_projjson)
 }
 
 enum_value <- function(x, enum_name) {

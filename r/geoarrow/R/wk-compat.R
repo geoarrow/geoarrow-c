@@ -25,7 +25,6 @@ infer_nanoarrow_schema.wk_wkt <- function(x, ...) {
   data <- unclass(x)
   schema <- nanoarrow::infer_nanoarrow_schema(data)
 
-
   crs <- wk::wk_crs(x)
   edge_type <- if (wk::wk_is_geodesic(x)) "SPHERICAL" else "PLANAR"
 
