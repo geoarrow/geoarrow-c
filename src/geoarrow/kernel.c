@@ -101,9 +101,8 @@ struct GeoArrowVisitorKernelPrivate {
   int visit_by_feature;
   struct GeoArrowArrayReader reader;
   struct GeoArrowArrayView array_view;
-  struct GeoArrowWKBWriter wkb_writer;
+  struct GeoArrowArrayWriter writer;
   struct GeoArrowWKTWriter wkt_writer;
-  struct GeoArrowBuilder builder;
   struct GeoArrowGeometryTypesVisitorPrivate geometry_types_private;
   struct GeoArrowBox2DPrivate box2d_private;
   int (*finish_push_batch)(struct GeoArrowVisitorKernelPrivate* private_data,
@@ -146,12 +145,8 @@ static void kernel_release_visitor(struct GeoArrowKernel* kernel) {
     GeoArrowArrayReaderReset(&private_data->reader);
   }
 
-  if (private_data->builder.private_data != NULL) {
-    GeoArrowBuilderReset(&private_data->builder);
-  }
-
-  if (private_data->wkb_writer.private_data != NULL) {
-    GeoArrowWKBWriterReset(&private_data->wkb_writer);
+  if (private_data->writer.private_data != NULL) {
+    GeoArrowArrayWriterReset(&private_data->writer);
   }
 
   if (private_data->wkt_writer.private_data != NULL) {
@@ -251,24 +246,10 @@ static int finish_start_visit_void_agg(struct GeoArrowVisitorKernelPrivate* priv
   return ArrowSchemaInitFromType(out, NANOARROW_TYPE_NA);
 }
 
-// Kernels as_wkt and format_wkt
+// Kernel format_wkt
 //
-// Visits every feature in the input and writes the corresponding well-known text output.
-// For the format_wkt kernel, optionally specify precision and
-// max_element_size_bytes.
-
-static int finish_start_as_wkt(struct GeoArrowVisitorKernelPrivate* private_data,
-                               struct ArrowSchema* schema, const char* options,
-                               struct ArrowSchema* out, struct GeoArrowError* error) {
-  GeoArrowWKTWriterInitVisitor(&private_data->wkt_writer, &private_data->v);
-
-  struct ArrowSchema tmp;
-  NANOARROW_RETURN_NOT_OK(GeoArrowSchemaInitExtension(&tmp, GEOARROW_TYPE_WKT));
-  NANOARROW_RETURN_NOT_OK(GeoArrowSchemaSetMetadataFrom(&tmp, schema));
-  ArrowSchemaMove(&tmp, out);
-
-  return GEOARROW_OK;
-}
+// Visits every feature in the input and writes the corresponding well-known text output,
+// optionally specifying precision and max_element_size_bytes.
 
 static int finish_start_format_wkt(struct GeoArrowVisitorKernelPrivate* private_data,
                                    struct ArrowSchema* schema, const char* options,
@@ -285,41 +266,19 @@ static int finish_start_format_wkt(struct GeoArrowVisitorKernelPrivate* private_
 
   GeoArrowWKTWriterInitVisitor(&private_data->wkt_writer, &private_data->v);
 
-  struct ArrowSchema tmp;
-  NANOARROW_RETURN_NOT_OK(ArrowSchemaInitFromType(&tmp, NANOARROW_TYPE_STRING));
-  ArrowSchemaMove(&tmp, out);
-
+  NANOARROW_RETURN_NOT_OK(ArrowSchemaInitFromType(out, NANOARROW_TYPE_STRING));
   return GEOARROW_OK;
 }
 
-static int finish_push_batch_as_wkt(struct GeoArrowVisitorKernelPrivate* private_data,
-                                    struct ArrowArray* out, struct GeoArrowError* error) {
+static int finish_push_batch_format_wkt(struct GeoArrowVisitorKernelPrivate* private_data,
+                                        struct ArrowArray* out,
+                                        struct GeoArrowError* error) {
   return GeoArrowWKTWriterFinish(&private_data->wkt_writer, out, error);
-}
-
-// Kernel as_wkb
-//
-// Visits every feature in the input and writes the corresponding well-known binary output
-
-static int finish_start_as_wkb(struct GeoArrowVisitorKernelPrivate* private_data,
-                               struct ArrowSchema* schema, const char* options,
-                               struct ArrowSchema* out, struct GeoArrowError* error) {
-  struct ArrowSchema tmp;
-  NANOARROW_RETURN_NOT_OK(GeoArrowSchemaInitExtension(&tmp, GEOARROW_TYPE_WKB));
-  NANOARROW_RETURN_NOT_OK(GeoArrowSchemaSetMetadataFrom(&tmp, schema));
-  ArrowSchemaMove(&tmp, out);
-
-  return GEOARROW_OK;
-}
-
-static int finish_push_batch_as_wkb(struct GeoArrowVisitorKernelPrivate* private_data,
-                                    struct ArrowArray* out, struct GeoArrowError* error) {
-  return GeoArrowWKBWriterFinish(&private_data->wkb_writer, out, error);
 }
 
 // Kernel as_geoarrow
 //
-// Visits every feature in the input and writes a geoarrow-encoded array.
+// Visits every feature in the input and writes an array of the specified type.
 // Takes option 'type' as the desired integer enum GeoArrowType.
 
 static int finish_start_as_geoarrow(struct GeoArrowVisitorKernelPrivate* private_data,
@@ -330,26 +289,34 @@ static int finish_start_as_geoarrow(struct GeoArrowVisitorKernelPrivate* private
   NANOARROW_RETURN_NOT_OK(kernel_get_arg_long(options, "type", &out_type_long, 1, error));
   enum GeoArrowType out_type = (enum GeoArrowType)out_type_long;
 
-  if (out_type != private_data->builder.view.schema_view.type) {
-    GeoArrowBuilderReset(&private_data->builder);
-    NANOARROW_RETURN_NOT_OK(
-        GeoArrowBuilderInitFromType(&private_data->builder, out_type));
-    NANOARROW_RETURN_NOT_OK(
-        GeoArrowBuilderInitVisitor(&private_data->builder, &private_data->v));
+  if (private_data->writer.private_data != NULL) {
+    GeoArrowErrorSet(error, "Expected exactly one call to start(as_geoarrow)");
+    return EINVAL;
   }
+
+  NANOARROW_RETURN_NOT_OK(
+      GeoArrowArrayWriterInitFromType(&private_data->writer, out_type));
+  NANOARROW_RETURN_NOT_OK(
+      GeoArrowArrayWriterInitVisitor(&private_data->writer, &private_data->v));
 
   struct ArrowSchema tmp;
   NANOARROW_RETURN_NOT_OK(GeoArrowSchemaInitExtension(&tmp, out_type));
-  NANOARROW_RETURN_NOT_OK(GeoArrowSchemaSetMetadataFrom(&tmp, schema));
-  ArrowSchemaMove(&tmp, out);
 
+  int result = GeoArrowSchemaSetMetadataFrom(&tmp, schema);
+  if (result != GEOARROW_OK) {
+    GeoArrowErrorSet(error, "GeoArrowSchemaSetMetadataFrom() failed");
+    tmp.release(&tmp);
+    return result;
+  }
+
+  ArrowSchemaMove(&tmp, out);
   return GEOARROW_OK;
 }
 
 static int finish_push_batch_as_geoarrow(
     struct GeoArrowVisitorKernelPrivate* private_data, struct ArrowArray* out,
     struct GeoArrowError* error) {
-  return GeoArrowBuilderFinish(&private_data->builder, out, error);
+  return GeoArrowArrayWriterFinish(&private_data->writer, out, error);
 }
 
 // Kernel unique_geometry_types_agg
@@ -694,23 +661,12 @@ static int GeoArrowInitVisitorKernelInternal(struct GeoArrowKernel* kernel,
   if (strcmp(name, "visit_void_agg") == 0) {
     kernel->finish = &kernel_finish_void_agg;
     private_data->finish_start = &finish_start_visit_void_agg;
-  } else if (strcmp(name, "as_wkt") == 0) {
-    kernel->finish = &kernel_finish_void;
-    private_data->finish_start = &finish_start_as_wkt;
-    private_data->finish_push_batch = &finish_push_batch_as_wkt;
-    result = GeoArrowWKTWriterInit(&private_data->wkt_writer);
   } else if (strcmp(name, "format_wkt") == 0) {
     kernel->finish = &kernel_finish_void;
     private_data->finish_start = &finish_start_format_wkt;
-    private_data->finish_push_batch = &finish_push_batch_as_wkt;
+    private_data->finish_push_batch = &finish_push_batch_format_wkt;
     result = GeoArrowWKTWriterInit(&private_data->wkt_writer);
     private_data->visit_by_feature = 1;
-  } else if (strcmp(name, "as_wkb") == 0) {
-    kernel->finish = &kernel_finish_void;
-    private_data->finish_start = &finish_start_as_wkb;
-    private_data->finish_push_batch = &finish_push_batch_as_wkb;
-    result = GeoArrowWKBWriterInit(&private_data->wkb_writer);
-    GeoArrowWKBWriterInitVisitor(&private_data->wkb_writer, &private_data->v);
   } else if (strcmp(name, "as_geoarrow") == 0) {
     kernel->finish = &kernel_finish_void;
     private_data->finish_start = &finish_start_as_geoarrow;
@@ -751,11 +707,7 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
     return NANOARROW_OK;
   } else if (strcmp(name, "visit_void_agg") == 0) {
     return GeoArrowInitVisitorKernelInternal(kernel, name);
-  } else if (strcmp(name, "as_wkt") == 0) {
-    return GeoArrowInitVisitorKernelInternal(kernel, name);
   } else if (strcmp(name, "format_wkt") == 0) {
-    return GeoArrowInitVisitorKernelInternal(kernel, name);
-  } else if (strcmp(name, "as_wkb") == 0) {
     return GeoArrowInitVisitorKernelInternal(kernel, name);
   } else if (strcmp(name, "as_geoarrow") == 0) {
     return GeoArrowInitVisitorKernelInternal(kernel, name);
