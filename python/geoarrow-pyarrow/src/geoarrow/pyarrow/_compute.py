@@ -240,12 +240,7 @@ def as_wkt(obj):
     VectorArray:WktType(geoarrow.wkt)[1]
     <POINT (0 1)>
     """
-    obj = obj_as_array_or_chunked(obj)
-
-    if isinstance(obj.type, _type.WktType):
-        return obj
-
-    return push_all(Kernel.as_wkt, obj)
+    return as_geoarrow(obj, _type.wkt())
 
 
 def as_wkb(obj):
@@ -257,12 +252,7 @@ def as_wkb(obj):
     VectorArray:WkbType(geoarrow.wkb)[1]
     <POINT (0 1)>
     """
-    obj = obj_as_array_or_chunked(obj)
-
-    if isinstance(obj.type, _type.WkbType):
-        return obj
-
-    return push_all(Kernel.as_wkb, obj)
+    return as_geoarrow(obj, _type.wkb())
 
 
 def as_geoarrow(obj, type=None, coord_type=None, promote_multi=False):
@@ -285,12 +275,7 @@ def as_geoarrow(obj, type=None, coord_type=None, promote_multi=False):
     if obj.type.id == type.id:
         return obj
 
-    if type.extension_name == "geoarrow.wkt":
-        return push_all(Kernel.as_wkt, obj)
-    elif type._extension_name == "geoarrow.wkb":
-        return push_all(Kernel.as_wkb, obj)
-    else:
-        return push_all(Kernel.as_geoarrow, obj, args={"type_id": type.id})
+    return push_all(Kernel.as_geoarrow, obj, args={"type_id": type.id})
 
 
 def format_wkt(obj, precision=None, max_element_size_bytes=None):
