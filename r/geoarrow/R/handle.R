@@ -1,5 +1,5 @@
 
-geoarrow_handle_wk <- function(x, handler, size = NA_integer_) {
+geoarrow_handle <- function(x, handler, size = NA_integer_) {
   stream <- as_geoarrow_array_stream(x)
   handler <- wk::as_wk_handler(handler)
 
