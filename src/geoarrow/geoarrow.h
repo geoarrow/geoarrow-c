@@ -452,6 +452,39 @@ GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
 /// \brief Free resources held by a GeoArrowArrayReader
 void GeoArrowArrayReaderReset(struct GeoArrowArrayReader* reader);
 
+/// \brief Generc GeoArrow array writer
+struct GeoArrowArrayWriter {
+  void* private_data;
+};
+
+/// \brief Initialize the memory of a GeoArrowArrayWriter from a GeoArrowType
+///
+/// If GEOARROW_OK is returned, the caller is responsible for calling
+/// GeoArrowWKTWriterReset().
+GeoArrowErrorCode GeoArrowArrayWriterInitFromType(struct GeoArrowArrayWriter* writer,
+                                                  enum GeoArrowType type);
+
+/// \brief Initialize the memory of a GeoArrowArrayWriter from an ArrowSchema
+///
+/// If GEOARROW_OK is returned, the caller is responsible for calling
+/// GeoArrowWKTWriterReset().
+GeoArrowErrorCode GeoArrowArrayWriterInitFromSchema(struct GeoArrowArrayWriter* writer,
+                                                    struct ArrowSchema* schema);
+
+/// \brief Populate a GeoArrowVisitor pointing to this writer
+GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* writer,
+                                                 struct GeoArrowVisitor* v);
+
+/// \brief Finish an ArrowArray containing elements from the visited input
+///
+/// This function can be called more than once to support multiple batches.
+GeoArrowErrorCode GeoArrowArrayWriterFinish(struct GeoArrowArrayWriter* writer,
+                                            struct ArrowArray* array,
+                                            struct GeoArrowError* error);
+
+/// \brief Free resources held by a GeoArrowArrayWriter
+void GeoArrowArrayWriterReset(struct GeoArrowArrayWriter* writer);
+
 /// @}
 
 #ifdef __cplusplus

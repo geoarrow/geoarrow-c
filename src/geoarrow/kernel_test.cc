@@ -204,8 +204,17 @@ TEST(KernelTest, KernelTestAsWKT) {
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array_in, nullptr), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowKernelInit(&kernel, "as_wkt", nullptr), GEOARROW_OK);
-  EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowKernelInit(&kernel, "as_geoarrow", nullptr), GEOARROW_OK);
+
+  struct ArrowBuffer buffer;
+  ASSERT_EQ(ArrowMetadataBuilderInit(&buffer, nullptr), GEOARROW_OK);
+  ASSERT_EQ(
+      ArrowMetadataBuilderAppend(&buffer, ArrowCharView("type"), ArrowCharView("100003")),
+      GEOARROW_OK);
+
+  EXPECT_EQ(kernel.start(&kernel, &schema_in, reinterpret_cast<char*>(buffer.data),
+                         &schema_out, &error),
+            GEOARROW_OK);
   EXPECT_STREQ(schema_out.format, "u");
   EXPECT_EQ(kernel.push_batch(&kernel, &array_in, &array_out1, &error), GEOARROW_OK);
   EXPECT_EQ(kernel.push_batch(&kernel, &array_in, &array_out2, &error), GEOARROW_OK);
@@ -231,6 +240,7 @@ TEST(KernelTest, KernelTestAsWKT) {
   EXPECT_EQ(std::string(item.data, item.size_bytes), "POINT (30 10)");
   EXPECT_TRUE(ArrowArrayViewIsNull(&array_view, 1));
 
+  ArrowBufferReset(&buffer);
   ArrowArrayViewReset(&array_view);
   schema_in.release(&schema_in);
   schema_out.release(&schema_out);
@@ -446,8 +456,17 @@ TEST(KernelTest, KernelTestAsWKB) {
   ASSERT_EQ(ArrowArrayAppendNull(&array_in, 1), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array_in, nullptr), GEOARROW_OK);
 
-  EXPECT_EQ(GeoArrowKernelInit(&kernel, "as_wkb", nullptr), GEOARROW_OK);
-  EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowKernelInit(&kernel, "as_geoarrow", nullptr), GEOARROW_OK);
+
+  struct ArrowBuffer buffer;
+  ASSERT_EQ(ArrowMetadataBuilderInit(&buffer, nullptr), GEOARROW_OK);
+  ASSERT_EQ(
+      ArrowMetadataBuilderAppend(&buffer, ArrowCharView("type"), ArrowCharView("100001")),
+      GEOARROW_OK);
+
+  EXPECT_EQ(kernel.start(&kernel, &schema_in, reinterpret_cast<char*>(buffer.data),
+                         &schema_out, &error),
+            GEOARROW_OK);
   EXPECT_STREQ(schema_out.format, "z");
   EXPECT_EQ(kernel.push_batch(&kernel, &array_in, &array_out1, &error), GEOARROW_OK);
   EXPECT_EQ(kernel.push_batch(&kernel, &array_in, &array_out2, &error), GEOARROW_OK);
@@ -480,6 +499,7 @@ TEST(KernelTest, KernelTestAsWKB) {
   EXPECT_EQ(std::basic_string<uint8_t>(item.data.as_uint8, item.size_bytes), point);
   EXPECT_TRUE(ArrowArrayViewIsNull(&array_view, 1));
 
+  ArrowBufferReset(&buffer);
   ArrowArrayViewReset(&array_view);
   schema_in.release(&schema_in);
   schema_out.release(&schema_out);
