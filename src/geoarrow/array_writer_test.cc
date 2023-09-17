@@ -6,9 +6,18 @@
 
 #include "wkx_testing.hpp"
 
-TEST(ArrayWriterTest, ArrayWriterTestBasic) {
+TEST(ArrayWriterTest, ArrayWriterTestInitFromType) {
   struct GeoArrowArrayWriter writer;
   ASSERT_EQ(GeoArrowArrayWriterInitFromType(&writer, GEOARROW_TYPE_WKT), GEOARROW_OK);
+  GeoArrowArrayWriterReset(&writer);
+}
+
+TEST(ArrayWriterTest, ArrayWriterTestInitFromSchema) {
+  struct GeoArrowArrayWriter writer;
+  struct ArrowSchema schema;
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, GEOARROW_TYPE_WKT), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayWriterInitFromSchema(&writer, &schema), GEOARROW_OK);
+  schema.release(&schema);
   GeoArrowArrayWriterReset(&writer);
 }
 
