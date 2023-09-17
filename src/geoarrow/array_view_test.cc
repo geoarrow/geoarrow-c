@@ -102,17 +102,6 @@ INSTANTIATE_TEST_SUITE_P(
         GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_ZM,
         GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM));
 
-TEST(ArrayViewTest, ArrayViewTestInitErrors) {
-  struct GeoArrowArrayView array_view;
-  struct GeoArrowError error;
-  struct ArrowSchema schema;
-
-  ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, GEOARROW_TYPE_WKB), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArrayViewInitFromSchema(&array_view, &schema, &error), EINVAL);
-  EXPECT_STREQ(error.message, "Unsupported geometry type in GeoArrowArrayViewInit()");
-  schema.release(&schema);
-}
-
 TEST(ArrayViewTest, ArrayViewTestSetArrayErrors) {
   struct GeoArrowArrayView array_view;
   struct GeoArrowError error;

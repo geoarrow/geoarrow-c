@@ -61,6 +61,7 @@ add_library(
   src/geoarrow/wkb_writer.c
   src/geoarrow/wkt_reader.c
   src/geoarrow/wkt_writer.c
+  src/geoarrow/array_reader.c
   ${GEOARROW_DOUBLE_PARSE_SOURCE}
   ${GEOARROW_DOUBLE_PRINT_SOURCE}
   src/geoarrow/nanoarrow.c)
@@ -166,6 +167,7 @@ if(GEOARROW_BUILD_TESTS)
   add_executable(wkb_writer_test src/geoarrow/wkb_writer_test.cc)
   add_executable(wkt_reader_test src/geoarrow/wkt_reader_test.cc)
   add_executable(wkt_writer_test src/geoarrow/wkt_writer_test.cc)
+  add_executable(array_reader_test src/geoarrow/array_reader_test.cc)
   add_executable(wkx_files_test src/geoarrow/wkx_files_test.cc)
   add_executable(geoarrow_arrow_test src/geoarrow/geoarrow_arrow_test.cc)
 
@@ -189,6 +191,7 @@ if(GEOARROW_BUILD_TESTS)
   target_link_libraries(wkb_writer_test geoarrow gtest_main)
   target_link_libraries(wkt_reader_test geoarrow gtest_main)
   target_link_libraries(wkt_writer_test geoarrow gtest_main)
+  target_link_libraries(array_reader_test geoarrow gtest_main)
   target_link_libraries(wkx_files_test geoarrow gtest_main)
   target_link_libraries(geoarrow_arrow_test geoarrow arrow_shared gtest_main)
 
@@ -208,5 +211,6 @@ if(GEOARROW_BUILD_TESTS)
   gtest_discover_tests(wkt_reader_test)
   gtest_discover_tests(wkt_writer_test)
   gtest_discover_tests(wkx_files_test)
+  gtest_discover_tests(array_reader_test)
   gtest_discover_tests(geoarrow_arrow_test)
 endif()
