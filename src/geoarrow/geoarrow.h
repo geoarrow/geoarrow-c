@@ -452,6 +452,24 @@ GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
 /// \brief Free resources held by a GeoArrowArrayReader
 void GeoArrowArrayReaderReset(struct GeoArrowArrayReader* reader);
 
+/// \brief Generc GeoArrow array writer
+struct GeoArrowArrayWriter {
+  void* private_data;
+};
+
+/// \brief Initialize the memory of a GeoArrowArrayWriter
+///
+/// If GEOARROW_OK is returned, the caller is responsible for calling
+/// GeoArrowWKTWriterReset().
+GeoArrowErrorCode GeoArrowArrayWriterInit(struct GeoArrowArrayWriter* writer);
+
+/// \brief Populate a GeoArrowVisitor pointing to this writer
+void GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* writer,
+                                    struct GeoArrowVisitor* v);
+
+/// \brief Free resources held by a GeoArrowArrayWriter
+void GeoArrowArrayWriterReset(struct GeoArrowArrayWriter* writer);
+
 /// @}
 
 #ifdef __cplusplus
