@@ -99,10 +99,8 @@ struct GeoArrowBox2DPrivate {
 struct GeoArrowVisitorKernelPrivate {
   struct GeoArrowVisitor v;
   int visit_by_feature;
-  struct GeoArrowWKBReader wkb_reader;
-  struct GeoArrowWKTReader wkt_reader;
+  struct GeoArrowArrayReader reader;
   struct GeoArrowArrayView array_view;
-  struct ArrowArrayView na_array_view;
   struct GeoArrowWKBWriter wkb_writer;
   struct GeoArrowWKTWriter wkt_writer;
   struct GeoArrowBuilder builder;
@@ -144,20 +142,12 @@ static int finish_push_batch_do_nothing(struct GeoArrowVisitorKernelPrivate* pri
 static void kernel_release_visitor(struct GeoArrowKernel* kernel) {
   struct GeoArrowVisitorKernelPrivate* private_data =
       (struct GeoArrowVisitorKernelPrivate*)kernel->private_data;
-  if (private_data->wkb_reader.private_data != NULL) {
-    GeoArrowWKBReaderReset(&private_data->wkb_reader);
-  }
-
-  if (private_data->wkt_reader.private_data != NULL) {
-    GeoArrowWKTReaderReset(&private_data->wkt_reader);
+  if (private_data->reader.private_data != NULL) {
+    GeoArrowArrayReaderReset(&private_data->reader);
   }
 
   if (private_data->builder.private_data != NULL) {
     GeoArrowBuilderReset(&private_data->builder);
-  }
-
-  if (private_data->na_array_view.storage_type != NANOARROW_TYPE_UNINITIALIZED) {
-    ArrowArrayViewReset(&private_data->na_array_view);
   }
 
   if (private_data->wkb_writer.private_data != NULL) {
@@ -178,75 +168,8 @@ static void kernel_release_visitor(struct GeoArrowKernel* kernel) {
   kernel->release = NULL;
 }
 
-static int kernel_push_batch_wkb(struct GeoArrowKernel* kernel, struct ArrowArray* array,
-                                 struct ArrowArray* out, struct GeoArrowError* error) {
-  struct GeoArrowVisitorKernelPrivate* private_data =
-      (struct GeoArrowVisitorKernelPrivate*)kernel->private_data;
-
-  private_data->v.error = error;
-  struct ArrowArrayView* array_view = &private_data->na_array_view;
-  struct GeoArrowBufferView buffer_view;
-  NANOARROW_RETURN_NOT_OK(
-      ArrowArrayViewSetArray(array_view, array, (struct ArrowError*)error));
-
-  for (int64_t i = 0; i < array->length; i++) {
-    if (ArrowArrayViewIsNull(array_view, i)) {
-      NANOARROW_RETURN_NOT_OK(private_data->v.feat_start(&private_data->v));
-      NANOARROW_RETURN_NOT_OK(private_data->v.null_feat(&private_data->v));
-      NANOARROW_RETURN_NOT_OK(private_data->v.feat_end(&private_data->v));
-    } else {
-      struct ArrowBufferView value = ArrowArrayViewGetBytesUnsafe(array_view, i);
-      buffer_view.data = value.data.as_uint8;
-      buffer_view.size_bytes = value.size_bytes;
-      int result = GeoArrowWKBReaderVisit(&private_data->wkb_reader, buffer_view,
-                                          &private_data->v);
-      if (result == EAGAIN) {
-        NANOARROW_RETURN_NOT_OK(private_data->v.feat_end(&private_data->v));
-      } else if (result != NANOARROW_OK) {
-        return result;
-      }
-    }
-  }
-
-  return private_data->finish_push_batch(private_data, out, error);
-}
-
-static int kernel_push_batch_wkt(struct GeoArrowKernel* kernel, struct ArrowArray* array,
-                                 struct ArrowArray* out, struct GeoArrowError* error) {
-  struct GeoArrowVisitorKernelPrivate* private_data =
-      (struct GeoArrowVisitorKernelPrivate*)kernel->private_data;
-
-  private_data->v.error = error;
-  struct ArrowArrayView* array_view = &private_data->na_array_view;
-  struct GeoArrowStringView buffer_view;
-  NANOARROW_RETURN_NOT_OK(
-      ArrowArrayViewSetArray(array_view, array, (struct ArrowError*)error));
-
-  for (int64_t i = 0; i < array->length; i++) {
-    if (ArrowArrayViewIsNull(array_view, i)) {
-      NANOARROW_RETURN_NOT_OK(private_data->v.feat_start(&private_data->v));
-      NANOARROW_RETURN_NOT_OK(private_data->v.null_feat(&private_data->v));
-      NANOARROW_RETURN_NOT_OK(private_data->v.feat_end(&private_data->v));
-    } else {
-      struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(array_view, i);
-      buffer_view.data = value.data;
-      buffer_view.size_bytes = value.size_bytes;
-      int result = GeoArrowWKTReaderVisit(&private_data->wkt_reader, buffer_view,
-                                          &private_data->v);
-      if (result == EAGAIN) {
-        NANOARROW_RETURN_NOT_OK(private_data->v.feat_end(&private_data->v));
-      } else if (result != NANOARROW_OK) {
-        return result;
-      }
-    }
-  }
-
-  return private_data->finish_push_batch(private_data, out, error);
-}
-
-static int kernel_push_batch_geoarrow(struct GeoArrowKernel* kernel,
-                                      struct ArrowArray* array, struct ArrowArray* out,
-                                      struct GeoArrowError* error) {
+static int kernel_push_batch(struct GeoArrowKernel* kernel, struct ArrowArray* array,
+                             struct ArrowArray* out, struct GeoArrowError* error) {
   struct GeoArrowVisitorKernelPrivate* private_data =
       (struct GeoArrowVisitorKernelPrivate*)kernel->private_data;
 
@@ -254,16 +177,16 @@ static int kernel_push_batch_geoarrow(struct GeoArrowKernel* kernel,
       GeoArrowArrayViewSetArray(&private_data->array_view, array, error));
 
   private_data->v.error = error;
-  NANOARROW_RETURN_NOT_OK(GeoArrowArrayViewVisit(&private_data->array_view, 0,
-                                                 array->length, &private_data->v));
+  NANOARROW_RETURN_NOT_OK(GeoArrowArrayReaderVisit(&private_data->reader,
+                                                   &private_data->array_view, 0,
+                                                   array->length, &private_data->v));
 
   return private_data->finish_push_batch(private_data, out, error);
 }
 
-static int kernel_push_batch_geoarrow_by_feature(struct GeoArrowKernel* kernel,
-                                                 struct ArrowArray* array,
-                                                 struct ArrowArray* out,
-                                                 struct GeoArrowError* error) {
+static int kernel_push_batch_by_feature(struct GeoArrowKernel* kernel,
+                                        struct ArrowArray* array, struct ArrowArray* out,
+                                        struct GeoArrowError* error) {
   struct GeoArrowVisitorKernelPrivate* private_data =
       (struct GeoArrowVisitorKernelPrivate*)kernel->private_data;
 
@@ -271,10 +194,10 @@ static int kernel_push_batch_geoarrow_by_feature(struct GeoArrowKernel* kernel,
       GeoArrowArrayViewSetArray(&private_data->array_view, array, error));
 
   private_data->v.error = error;
-
+  int result;
   for (int64_t i = 0; i < array->length; i++) {
-    int result =
-        GeoArrowArrayViewVisit(&private_data->array_view, i, 1, &private_data->v);
+    result = GeoArrowArrayReaderVisit(&private_data->reader, &private_data->array_view, i,
+                                      1, &private_data->v);
 
     if (result == EAGAIN) {
       NANOARROW_RETURN_NOT_OK(private_data->v.feat_end(&private_data->v));
@@ -300,21 +223,12 @@ static int kernel_visitor_start(struct GeoArrowKernel* kernel, struct ArrowSchem
     case GEOARROW_TYPE_LARGE_WKB:
     case GEOARROW_TYPE_LARGE_WKT:
       return EINVAL;
-    case GEOARROW_TYPE_WKT:
-      kernel->push_batch = &kernel_push_batch_wkt;
-      NANOARROW_RETURN_NOT_OK(GeoArrowWKTReaderInit(&private_data->wkt_reader));
-      ArrowArrayViewInitFromType(&private_data->na_array_view, NANOARROW_TYPE_STRING);
-      break;
-    case GEOARROW_TYPE_WKB:
-      kernel->push_batch = &kernel_push_batch_wkb;
-      GeoArrowWKBReaderInit(&private_data->wkb_reader);
-      ArrowArrayViewInitFromType(&private_data->na_array_view, NANOARROW_TYPE_BINARY);
-      break;
     default:
+      NANOARROW_RETURN_NOT_OK(GeoArrowArrayReaderInit(&private_data->reader));
       if (private_data->visit_by_feature) {
-        kernel->push_batch = &kernel_push_batch_geoarrow_by_feature;
+        kernel->push_batch = &kernel_push_batch_by_feature;
       } else {
-        kernel->push_batch = &kernel_push_batch_geoarrow;
+        kernel->push_batch = &kernel_push_batch;
       }
       NANOARROW_RETURN_NOT_OK(
           GeoArrowArrayViewInitFromType(&private_data->array_view, schema_view.type));
