@@ -46,6 +46,7 @@ GeoArrowErrorCode GeoArrowArrayWriterInitFromType(struct GeoArrowArrayWriter* wr
   }
 
   private_data->type = type;
+  writer->private_data = private_data;
   return GEOARROW_OK;
 }
 
