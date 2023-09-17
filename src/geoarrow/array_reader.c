@@ -16,9 +16,16 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitWKT(struct GeoArrowArrayView* arr
   const int32_t* offset_begin = array_view->offsets[0] + array_view->offset[0] + offset;
 
   for (int64_t i = 0; i < length; i++) {
-    item.data = (const char*)(array_view->data + offset_begin[i]);
-    item.size_bytes = offset_begin[i + 1] - offset_begin[i];
-    NANOARROW_RETURN_NOT_OK(GeoArrowWKTReaderVisit(reader, item, v));
+    if (!array_view->validity_bitmap ||
+        ArrowBitGet(array_view->validity_bitmap, array_view->offset[0] + offset + i)) {
+      item.data = (const char*)(array_view->data + offset_begin[i]);
+      item.size_bytes = offset_begin[i + 1] - offset_begin[i];
+      NANOARROW_RETURN_NOT_OK(GeoArrowWKTReaderVisit(reader, item, v));
+    } else {
+      NANOARROW_RETURN_NOT_OK(v->feat_start(v));
+      NANOARROW_RETURN_NOT_OK(v->null_feat(v));
+      NANOARROW_RETURN_NOT_OK(v->feat_end(v));
+    }
   }
 
   return GEOARROW_OK;
@@ -32,9 +39,16 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitWKB(struct GeoArrowArrayView* arr
   const int32_t* offset_begin = array_view->offsets[0] + array_view->offset[0] + offset;
 
   for (int64_t i = 0; i < length; i++) {
-    item.data = array_view->data + offset_begin[i];
-    item.size_bytes = offset_begin[i + 1] - offset_begin[i];
-    NANOARROW_RETURN_NOT_OK(GeoArrowWKBReaderVisit(reader, item, v));
+    if (!array_view->validity_bitmap ||
+        ArrowBitGet(array_view->validity_bitmap, array_view->offset[0] + offset + i)) {
+      item.data = array_view->data + offset_begin[i];
+      item.size_bytes = offset_begin[i + 1] - offset_begin[i];
+      NANOARROW_RETURN_NOT_OK(GeoArrowWKBReaderVisit(reader, item, v));
+    } else {
+      NANOARROW_RETURN_NOT_OK(v->feat_start(v));
+      NANOARROW_RETURN_NOT_OK(v->null_feat(v));
+      NANOARROW_RETURN_NOT_OK(v->feat_end(v));
+    }
   }
 
   return GEOARROW_OK;
