@@ -269,38 +269,6 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitPoint(struct GeoArrowArrayView* a
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitWKT(struct GeoArrowArrayView* array_view,
-                                                   int64_t offset, int64_t length,
-                                                   struct GeoArrowWKTReader* reader,
-                                                   struct GeoArrowVisitor* v) {
-  struct GeoArrowStringView item;
-  const int32_t* offset_begin = array_view->offsets[0][array_view->offset[0] + offset];
-
-  for (int64_t i = 0; i < length; i++) {
-    item.data = (const char*)(array_view->data + offset_begin[i]);
-    item.size_bytes = offset_begin[i + 1] - offset_begin[i];
-    NANOARROW_RETURN_NOT_OK(GeoArrowWKTReaderVisit(reader, item, v));
-  }
-
-  return GEOARROW_OK;
-}
-
-static GeoArrowErrorCode GeoArrowArrayViewVisitWKB(struct GeoArrowArrayView* array_view,
-                                                   int64_t offset, int64_t length,
-                                                   struct GeoArrowWKBReader* reader,
-                                                   struct GeoArrowVisitor* v) {
-  struct GeoArrowBufferView item;
-  const int32_t* offset_begin = array_view->offsets[0][array_view->offset[0] + offset];
-
-  for (int64_t i = 0; i < length; i++) {
-    item.data = array_view->data + offset_begin[i];
-    item.size_bytes = offset_begin[i + 1] - offset_begin[i];
-    NANOARROW_RETURN_NOT_OK(GeoArrowWKBReaderVisit(reader, item, v));
-  }
-
-  return GEOARROW_OK;
-}
-
 static GeoArrowErrorCode GeoArrowArrayViewVisitLinestring(
     struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowVisitor* v) {

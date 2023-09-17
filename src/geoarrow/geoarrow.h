@@ -429,6 +429,29 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
 /// \brief Free resources held by a GeoArrowWKBWriter
 void GeoArrowWKBReaderReset(struct GeoArrowWKBReader* reader);
 
+/// \brief Array reader for any geoarrow extension array
+struct GeoArrowArrayReader {
+  void* private_data;
+};
+
+/// \brief Initialize the memory of a GeoArrowArrayReader
+///
+/// If GEOARROW_OK is returned, the caller is responsible for calling
+/// GeoArrowArrayReaderReset().
+GeoArrowErrorCode GeoArrowArrayReaderInit(struct GeoArrowArrayReader* reader);
+
+/// \brief Visit a GeoArrowArray
+///
+/// The caller must have initialized the GeoArrowVisitor with the appropriate
+/// writer before calling this function.
+GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
+                                           struct GeoArrowArrayView* array_view,
+                                           int64_t offset, int64_t length,
+                                           struct GeoArrowVisitor* v);
+
+/// \brief Free resources held by a GeoArrowArrayReader
+void GeoArrowArrayReaderReset(struct GeoArrowArrayReader* reader);
+
 /// @}
 
 #ifdef __cplusplus
