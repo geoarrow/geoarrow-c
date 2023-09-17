@@ -62,6 +62,7 @@ add_library(
   src/geoarrow/wkt_reader.c
   src/geoarrow/wkt_writer.c
   src/geoarrow/array_reader.c
+  src/geoarrow/array_writer.c
   ${GEOARROW_DOUBLE_PARSE_SOURCE}
   ${GEOARROW_DOUBLE_PRINT_SOURCE}
   src/geoarrow/nanoarrow.c)
