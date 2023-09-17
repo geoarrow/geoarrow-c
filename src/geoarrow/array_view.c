@@ -25,8 +25,9 @@ static int GeoArrowArrayViewInitInternal(struct GeoArrowArrayView* array_view,
       array_view->n_offsets = 3;
       break;
     default:
-      GeoArrowErrorSet(error, "Unsupported geometry type in GeoArrowArrayViewInit()");
-      return EINVAL;
+      // i.e., serialized type
+      array_view->n_offsets = 1;
+      break;
   }
 
   for (int i = 0; i < 4; i++) {
@@ -38,6 +39,7 @@ static int GeoArrowArrayViewInitInternal(struct GeoArrowArrayView* array_view,
   for (int i = 0; i < 3; i++) {
     array_view->offsets[i] = NULL;
   }
+  array_view->data = NULL;
 
   array_view->coords.n_coords = 0;
   switch (array_view->schema_view.dimensions) {
@@ -52,8 +54,9 @@ static int GeoArrowArrayViewInitInternal(struct GeoArrowArrayView* array_view,
       array_view->coords.n_values = 4;
       break;
     default:
-      GeoArrowErrorSet(error, "Unsupported dimensions in GeoArrowArrayViewInit()");
-      return EINVAL;
+      // i.e., serialized type
+      array_view->coords.n_coords = 0;
+      break;
   }
 
   switch (array_view->schema_view.coord_type) {
@@ -64,8 +67,9 @@ static int GeoArrowArrayViewInitInternal(struct GeoArrowArrayView* array_view,
       array_view->coords.coords_stride = array_view->coords.n_values;
       break;
     default:
-      GeoArrowErrorSet(error, "Unsupported coord type in GeoArrowArrayViewInit()");
-      return EINVAL;
+      // i.e., serialized type
+      array_view->coords.coords_stride = 0;
+      break;
   }
 
   for (int i = 0; i < 4; i++) {

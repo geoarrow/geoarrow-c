@@ -408,6 +408,9 @@ struct GeoArrowArrayView {
   /// \brief The last offset value in each offset bufer
   int32_t last_offset[3];
 
+  /// \brief For serialized types, a pointer to the start of the data buffer
+  const uint8_t* data;
+
   /// \brief Generic view of the coordinates in this array
   struct GeoArrowCoordView coords;
 };
