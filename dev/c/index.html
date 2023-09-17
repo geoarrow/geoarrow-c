@@ -18,12 +18,12 @@
   </script>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
-<link href="../_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=927b94d3fcb96560df09" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=927b94d3fcb96560df09" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=927b94d3fcb96560df09" rel="stylesheet" />
 
   
-  <link href="../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link href="../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=927b94d3fcb96560df09" rel="stylesheet" />
   <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
@@ -31,8 +31,9 @@
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=927b94d3fcb96560df09" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=927b94d3fcb96560df09" />
+  <script src="../_static/vendor/fontawesome/6.1.2/js/all.min.js?digest=927b94d3fcb96560df09"></script>
 
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=ccbe24c1"></script>
     <script src="../_static/doctools.js?v=888ff710"></script>
@@ -52,6 +53,15 @@
   
   
   <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>
+    Back to top
+  </button>
+
   
   <input type="checkbox"
           class="sidebar-toggle"
@@ -92,7 +102,8 @@
     <span class="fa-solid fa-bars"></span>
   </label>
   
-  <div class="navbar-header-items__start">
+  
+  <div class="col-lg-3 navbar-header-items__start">
     
       <div class="navbar-item">
   
@@ -108,7 +119,6 @@
 </a></div>
     
   </div>
-  
   
   <div class="col-lg-9 navbar-header-items">
     
@@ -146,23 +156,25 @@
       
         <div class="navbar-item navbar-persistent--container">
           
-<script>
-document.write(`
-  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass"></i>
-  </button>
-`);
-</script>
+    <span class="search-button__kbd-shortcut">Search</span>
+    <span><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
         </div>
       
       
         <div class="navbar-item">
 <script>
 document.write(`
-  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
-    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
-    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
   </button>
 `);
 </script></div>
@@ -173,18 +185,20 @@ document.write(`
   
   
     <div class="navbar-persistent--mobile">
-<script>
-document.write(`
-  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass"></i>
-  </button>
-`);
-</script>
+    <span class="search-button__kbd-shortcut">Search</span>
+    <span><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
     </div>
   
 
   
-    <label class="sidebar-toggle secondary-toggle" for="__secondary">
+    <label class="sidebar-toggle secondary-toggle" for="__secondary" tabindex="0">
       <span class="fa-solid fa-outdent"></span>
     </label>
   
@@ -238,10 +252,10 @@ document.write(`
           <div class="navbar-item">
 <script>
 document.write(`
-  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
-    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
-    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
   </button>
 `);
 </script></div>
@@ -294,8 +308,8 @@ document.write(`
 
 
 
-<nav aria-label="Breadcrumbs">
-  <ul class="bd-breadcrumbs" role="navigation" aria-label="Breadcrumb">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
     
     <li class="breadcrumb-item breadcrumb-home">
       <a href="../index.html" class="nav-link" aria-label="Home">
@@ -995,6 +1009,12 @@ document.write(`
 </dd></dl>
 
 <dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N17GeoArrowArrayView4dataE">
+<span id="_CPPv3N17GeoArrowArrayView4dataE"></span><span id="_CPPv2N17GeoArrowArrayView4dataE"></span><span id="GeoArrowArrayView::data__uint8_tCP"></span><span class="target" id="struct_geo_arrow_array_view_1abee16d9cff21aee8aeaa7cb2176cb971"></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">data</span></span></span><a class="headerlink" href="#_CPPv4N17GeoArrowArrayView4dataE" title="Permalink to this definition">#</a><br /></dt>
+<dd><p>For serialized types, a pointer to the start of the data buffer. </p>
+</dd></dl>
+
+<dl class="cpp var">
 <dt class="sig sig-object cpp" id="_CPPv4N17GeoArrowArrayView6coordsE">
 <span id="_CPPv3N17GeoArrowArrayView6coordsE"></span><span id="_CPPv2N17GeoArrowArrayView6coordsE"></span><span id="GeoArrowArrayView::coords__GeoArrowCoordView"></span><span class="target" id="struct_geo_arrow_array_view_1a58fa81f22e8d17b40443fbebbe9dc527"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv417GeoArrowCoordView" title="GeoArrowCoordView"><span class="n"><span class="pre">GeoArrowCoordView</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">coords</span></span></span><a class="headerlink" href="#_CPPv4N17GeoArrowArrayView6coordsE" title="Permalink to this definition">#</a><br /></dt>
 <dd><p>Generic view of the coordinates in this array. </p>
@@ -1364,6 +1384,26 @@ document.write(`
 <dd><p>Free resources held by a <a class="reference internal" href="#struct_geo_arrow_w_k_b_writer"><span class="std std-ref">GeoArrowWKBWriter</span></a>. </p>
 </dd></dl>
 
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv423GeoArrowArrayReaderInitP19GeoArrowArrayReader">
+<span id="_CPPv323GeoArrowArrayReaderInitP19GeoArrowArrayReader"></span><span id="_CPPv223GeoArrowArrayReaderInitP19GeoArrowArrayReader"></span><span id="GeoArrowArrayReaderInit__GeoArrowArrayReaderP"></span><span class="target" id="group__geoarrow-visitor_1ga42c4131c55da3c3dcf9e63cc51eeddba"></span><a class="reference internal" href="#_CPPv417GeoArrowErrorCode" title="GeoArrowErrorCode"><span class="n"><span class="pre">GeoArrowErrorCode</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowArrayReaderInit</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv419GeoArrowArrayReader" title="GeoArrowArrayReader"><span class="n"><span class="pre">GeoArrowArrayReader</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">reader</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv423GeoArrowArrayReaderInitP19GeoArrowArrayReader" title="Permalink to this definition">#</a><br /></dt>
+<dd><p>Initialize the memory of a <a class="reference internal" href="#struct_geo_arrow_array_reader"><span class="std std-ref">GeoArrowArrayReader</span></a>. </p>
+<p>If GEOARROW_OK is returned, the caller is responsible for calling <a class="reference internal" href="#group__geoarrow-visitor_1ga001534cf98b31b11c49415f6724df481"><span class="std std-ref">GeoArrowArrayReaderReset()</span></a>. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv424GeoArrowArrayReaderVisitP19GeoArrowArrayReaderP17GeoArrowArrayView7int64_t7int64_tP15GeoArrowVisitor">
+<span id="_CPPv324GeoArrowArrayReaderVisitP19GeoArrowArrayReaderP17GeoArrowArrayView7int64_t7int64_tP15GeoArrowVisitor"></span><span id="_CPPv224GeoArrowArrayReaderVisitP19GeoArrowArrayReaderP17GeoArrowArrayView7int64_t7int64_tP15GeoArrowVisitor"></span><span id="GeoArrowArrayReaderVisit__GeoArrowArrayReaderP.GeoArrowArrayViewP.int64_t.int64_t.GeoArrowVisitorP"></span><span class="target" id="group__geoarrow-visitor_1gac61eb3bcb565bae213e687cc5e57f0ab"></span><a class="reference internal" href="#_CPPv417GeoArrowErrorCode" title="GeoArrowErrorCode"><span class="n"><span class="pre">GeoArrowErrorCode</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowArrayReaderVisit</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv419GeoArrowArrayReader" title="GeoArrowArrayReader"><span class="n"><span class="pre">GeoArrowArrayReader</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">reader</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv417GeoArrowArrayView" title="GeoArrowArrayView"><span class="n"><span class="pre">GeoArrowArrayView</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">array_view</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">offset</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">length</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv415GeoArrowVisitor" title="GeoArrowVisitor"><span class="n"><span class="pre">GeoArrowVisitor</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">v</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv424GeoArrowArrayReaderVisitP19GeoArrowArrayReaderP17GeoArrowArrayView7int64_t7int64_tP15GeoArrowVisitor" title="Permalink to this definition">#</a><br /></dt>
+<dd><p>Visit a GeoArrowArray. </p>
+<p>The caller must have initialized the <a class="reference internal" href="#struct_geo_arrow_visitor"><span class="std std-ref">GeoArrowVisitor</span></a> with the appropriate writer before calling this function. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv424GeoArrowArrayReaderResetP19GeoArrowArrayReader">
+<span id="_CPPv324GeoArrowArrayReaderResetP19GeoArrowArrayReader"></span><span id="_CPPv224GeoArrowArrayReaderResetP19GeoArrowArrayReader"></span><span id="GeoArrowArrayReaderReset__GeoArrowArrayReaderP"></span><span class="target" id="group__geoarrow-visitor_1ga001534cf98b31b11c49415f6724df481"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowArrayReaderReset</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv419GeoArrowArrayReader" title="GeoArrowArrayReader"><span class="n"><span class="pre">GeoArrowArrayReader</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">reader</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv424GeoArrowArrayReaderResetP19GeoArrowArrayReader" title="Permalink to this definition">#</a><br /></dt>
+<dd><p>Free resources held by a <a class="reference internal" href="#struct_geo_arrow_array_reader"><span class="std std-ref">GeoArrowArrayReader</span></a>. </p>
+</dd></dl>
+
 </div>
 <dl class="cpp struct">
 <dt class="sig sig-object cpp" id="_CPPv417GeoArrowWKTWriter">
@@ -1442,6 +1482,14 @@ document.write(`
 </dd></dl>
 
 </div>
+</dd></dl>
+
+<dl class="cpp struct">
+<dt class="sig sig-object cpp" id="_CPPv419GeoArrowArrayReader">
+<span id="_CPPv319GeoArrowArrayReader"></span><span id="_CPPv219GeoArrowArrayReader"></span><span id="GeoArrowArrayReader"></span><span class="target" id="struct_geo_arrow_array_reader"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowArrayReader</span></span></span><a class="headerlink" href="#_CPPv419GeoArrowArrayReader" title="Permalink to this definition">#</a><br /></dt>
+<dd><div class="docutils container">
+<em>#include &lt;geoarrow.h&gt;</em></div>
+<p>Array reader for any geoarrow extension array. </p>
 </dd></dl>
 
 <dl class="cpp struct">
@@ -1654,11 +1702,10 @@ document.write(`
               
               
               
-                <footer class="bd-footer-article">
-                  
-<div class="footer-article-items footer-article__inner">
-  
-    <div class="footer-article-item"><!-- Previous / next buttons -->
+              
+              
+                <footer class="prev-next-footer">
+                  <!-- Previous / next buttons -->
 <div class="prev-next-area">
     <a class="left-prev"
        href="../index.html"
@@ -1678,10 +1725,7 @@ document.write(`
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
-</div></div>
-  
 </div>
-
                 </footer>
               
             </div>
@@ -1741,8 +1785,8 @@ document.write(`
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
-<script src="../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
+  <script src="../_static/scripts/bootstrap.js?digest=927b94d3fcb96560df09"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=927b94d3fcb96560df09"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1768,10 +1812,11 @@ document.write(`
     </div>
   
   
+  
     <div class="footer-items__end">
       
         <div class="footer-item"><p class="theme-version">
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.13.3.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.14.0.
 </p></div>
       
     </div>
