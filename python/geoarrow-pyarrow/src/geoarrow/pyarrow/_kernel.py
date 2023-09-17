@@ -70,11 +70,11 @@ class Kernel:
 
     @staticmethod
     def as_wkt(type_in):
-        return Kernel("as_wkt", type_in)
+        return Kernel.as_geoarrow(type_in, 100003)
 
     @staticmethod
     def as_wkb(type_in):
-        return Kernel("as_wkb", type_in)
+        return Kernel.as_geoarrow(type_in, 100001)
 
     @staticmethod
     def format_wkt(type_in, precision=None, max_element_size_bytes=None):
