@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "geoarrow.h"
+#include "nanoarrow.h"
 #include "wk-v1.h"
 
 // Helper to translate between the GeoArrowVisitor and the wk_handler_t.
@@ -264,6 +265,15 @@ static void finalize_wk_geoarrow_handler_xptr(SEXP xptr) {
   delete private_data;
 }
 
+static void finalize_array_reader_xptr(SEXP xptr) {
+  auto ptr = reinterpret_cast<GeoArrowArrayReader*>(R_ExternalPtrAddr(xptr));
+  if (ptr != NULL) {
+    GeoArrowArrayReaderReset(ptr);
+  }
+
+  ArrowFree(ptr);
+}
+
 SEXP geoarrow_handle_stream(SEXP data, wk_handler_t* handler) {
   auto array_stream =
       reinterpret_cast<struct ArrowArrayStream*>(R_ExternalPtrAddr(VECTOR_ELT(data, 0)));
@@ -285,6 +295,7 @@ SEXP geoarrow_handle_stream(SEXP data, wk_handler_t* handler) {
     }
   }
 
+  // Initialize the schema_view
   struct GeoArrowSchemaView schema_view;
   struct GeoArrowError error;
   int errno_code = GeoArrowSchemaViewInit(&schema_view, schema, &error);
@@ -292,10 +303,26 @@ SEXP geoarrow_handle_stream(SEXP data, wk_handler_t* handler) {
     Rf_error("[GeoArrowSchemaViewInit] %s", error.message);
   }
 
+  // Initialize the array view
   struct GeoArrowArrayView array_view;
   errno_code = GeoArrowArrayViewInitFromSchema(&array_view, schema, &error);
   if (errno_code != GEOARROW_OK) {
     Rf_error("[GeoArrowArrayViewInitFromSchema] %s", error.message);
+  }
+
+  // Initialize the reader + make sure it is always cleaned up
+  struct GeoArrowArrayReader* reader = reinterpret_cast<struct GeoArrowArrayReader*>(
+      ArrowMalloc(sizeof(GeoArrowArrayReader)));
+  if (reader == NULL) {
+    Rf_error("Failed to malloc sizeof(GeoArrowArrayReader)");
+  }
+  memset(reader, 0, sizeof(struct GeoArrowArrayReader));
+  SEXP reader_xptr = PROTECT(R_MakeExternalPtr(reader, R_NilValue, R_NilValue));
+  R_RegisterCFinalizer(reader_xptr, &finalize_array_reader_xptr);
+
+  errno_code = GeoArrowArrayReaderInit(reader);
+  if (errno_code != GEOARROW_OK) {
+    Rf_error("GeoArrowArrayReaderInit() failed");
   }
 
   // Instantiate + protect the adapter
@@ -340,16 +367,20 @@ SEXP geoarrow_handle_stream(SEXP data, wk_handler_t* handler) {
       }
 
       // ...and visit!
-      errno_code = GeoArrowArrayViewVisit(&array_view, 0, array->length, &visitor);
+      errno_code =
+          GeoArrowArrayReaderVisit(reader, &array_view, 0, array->length, &visitor);
       if (errno_code != GEOARROW_OK) {
         Rf_error("[GeoArrowArrayViewVisit] %s", error.message);
       }
+
+      // Check for cancel
+      R_CheckUserInterrupt();
     }
   }
 
   SEXP result_sexp =
       PROTECT(handler->vector_end(&adapter->vector_meta_, handler->handler_data));
-  UNPROTECT(2);
+  UNPROTECT(3);
   return result_sexp;
 }
 

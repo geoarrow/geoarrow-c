@@ -4,6 +4,8 @@
 
 # --- vendored files from bootstrap.R ---
 array_view.c
+array_reader.c
+array_writer.c
 builder.c
 double_parse_fast_float.cc
 double_parse_std.c
