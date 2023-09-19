@@ -8,8 +8,40 @@
 #' @return A [nanoarrow_array][nanoarrow::as_nanoarrow_array].
 #' @export
 #'
+#' @examples
+#' as_geoarrow_array(wk::wkt("POINT (0 1)"))
+#'
 as_geoarrow_array <- function(x, ..., schema = NULL) {
   UseMethod("as_geoarrow_array")
+}
+
+#' @export
+as_geoarrow_array.default <- function(x, ..., schema = NULL) {
+  if (is.null(schema)) {
+    schema <- infer_nanoarrow_schema(x)
+  }
+
+  wk::wk_handle(x, geoarrow_writer(schema))
+}
+
+#' @export
+as_geoarrow_array.nanoarrow_array <- function(x, ..., schema = NULL) {
+  if (is.null(schema)) {
+    schema <- infer_nanoarrow_schema(x)
+    schema_src <- schema
+  } else {
+    schema_src <- infer_nanoarrow_schema(x)
+  }
+
+  parsed <- geoarrow_schema_parse(schema)
+  parsed_src <- geoarrow_schema_parse(schema_src)
+  if (identical(parsed, parsed_src)) {
+    x
+  } else {
+    # Eventually we can call as_geoarrow here to avoid going through both handler
+    # wrappers.
+    NextMethod()
+  }
 }
 
 #' @export

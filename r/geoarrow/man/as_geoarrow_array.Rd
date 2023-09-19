@@ -22,3 +22,7 @@ A \link[nanoarrow:as_nanoarrow_array]{nanoarrow_array}.
 \description{
 Convert an object to a GeoArrow array
 }
+\examples{
+as_geoarrow_array(wk::wkt("POINT (0 1)"))
+
+}
