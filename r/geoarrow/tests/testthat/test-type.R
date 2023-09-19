@@ -60,6 +60,33 @@ test_that("nanoarrow_schema can be created with metadata", {
   )
 })
 
+test_that("geoarrow_schema_parse() can parse a schema", {
+  parsed <- geoarrow_schema_parse(na_extension_geoarrow("POINT"))
+  expect_identical(parsed$id, 1L)
+  expect_identical(parsed$geometry_type, enum$GeometryType$POINT)
+  expect_identical(parsed$dimensions, enum$Dimensions$XY)
+  expect_identical(parsed$coord_type, enum$CoordType$SEPARATE)
+  expect_identical(parsed$extension_name, "geoarrow.point")
+  expect_identical(parsed$crs_type, enum$CrsType$NONE)
+  expect_identical(parsed$crs, "")
+  expect_identical(parsed$edge_type, enum$EdgeType$PLANAR)
+})
+
+test_that("geoarrow_schema_parse() can parse a storage schema", {
+  parsed <- geoarrow_schema_parse(nanoarrow::na_string(), "geoarrow.wkt")
+  expect_identical(parsed$extension_name, "geoarrow.wkt")
+
+  expect_error(
+    geoarrow_schema_parse(nanoarrow::na_string(), NA_character_),
+    "extension_name must not be NA"
+  )
+
+  expect_error(
+    geoarrow_schema_parse(nanoarrow::na_string(), "not an extension name"),
+    "Unrecognized GeoArrow extension name"
+  )
+})
+
 test_that("enum matcher works", {
   expect_identical(
     enum_value(c("GEOMETRY", "MULTIPOINT", "NOT VALID"), "GeometryType"),

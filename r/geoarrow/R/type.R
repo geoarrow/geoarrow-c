@@ -67,6 +67,26 @@ na_extension_geoarrow <- function(geometry_type, dimensions = "XY",
   na_extension_geoarrow_internal(type_id, crs = crs, edges = edges)
 }
 
+#' Inspect a GeoArrow schema
+#'
+#' @param schema A [nanoarrow_schema][nanoarrow::as_nanoarrow_schema]
+#' @param extension_name An extension name to use if schema is a storage type.
+#'
+#' @return A list of parsed properties
+#' @export
+#'
+#' @examples
+#' geoarrow_schema_parse(na_extension_geoarrow("POINT"))
+#'
+geoarrow_schema_parse <- function(schema, extension_name = NULL) {
+  schema <- nanoarrow::as_nanoarrow_schema(schema)
+  if (!is.null(extension_name)) {
+    extension_name <- as.character(extension_name)[1]
+  }
+
+  .Call(geoarrow_c_schema_parse, schema, extension_name)
+}
+
 na_extension_geoarrow_internal <- function(type_id, crs, edges) {
   metadata <- na_extension_metadata_internal(crs, edges)
   schema <- nanoarrow::nanoarrow_allocate_schema()
