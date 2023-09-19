@@ -1,4 +1,21 @@
 
+#' Extension type definitions for GeoArrow extension types
+#'
+#' @param crs An object representing a CRS. For maximum portability,
+#'   it should implement [wk::wk_crs_projjson()].
+#' @param edges One of "PLANAR" or "SPHERICAL".
+#' @param geometry_type One of "POINT", "LINESTRING", "POLYGON", "MULTIPOINT",
+#'   "MULTILINESTRING", "MULTIPOLYGON".
+#' @param dimensions One of "XY", "XYZ", "XYM", or "XYZM"
+#' @param coord_type One of "SEPARATE" or "INTERLEAVED"
+#'
+#' @return A [nanoarrow_schema][nanoarrow::as_nanoarrow_schema].
+#' @export
+#'
+#' @examples
+#' na_extension_wkb(crs = "OGC:CRS84")
+#' na_extension_geoarrow("POINT")
+#'
 na_extension_wkb <- function(crs = NULL, edges = "PLANAR") {
   na_extension_geoarrow_internal(
     enum$Type$WKB,
@@ -7,6 +24,8 @@ na_extension_wkb <- function(crs = NULL, edges = "PLANAR") {
   )
 }
 
+#' @rdname na_extension_wkb
+#' @export
 na_extension_wkt <- function(crs = NULL, edges = "PLANAR") {
   na_extension_geoarrow_internal(
     enum$Type$WKT,
@@ -15,6 +34,8 @@ na_extension_wkt <- function(crs = NULL, edges = "PLANAR") {
   )
 }
 
+#' @rdname na_extension_wkb
+#' @export
 na_extension_large_wkb <- function(crs = NULL, edges = "PLANAR") {
   na_extension_geoarrow_internal(
     enum$Type$LARGE_WKB,
@@ -23,6 +44,8 @@ na_extension_large_wkb <- function(crs = NULL, edges = "PLANAR") {
   )
 }
 
+#' @rdname na_extension_wkb
+#' @export
 na_extension_large_wkt <- function(crs = NULL, edges = "PLANAR") {
   na_extension_geoarrow_internal(
     enum$Type$LARGE_WKT,
@@ -31,6 +54,8 @@ na_extension_large_wkt <- function(crs = NULL, edges = "PLANAR") {
   )
 }
 
+#' @rdname na_extension_wkb
+#' @export
 na_extension_geoarrow <- function(geometry_type, dimensions = "XY",
                                   coord_type = "SEPARATE",
                                   crs = NULL, edges = "PLANAR") {
