@@ -1,5 +1,19 @@
 
-geoarrow_infer_schema_default <- function(handleable, promote_multi = TRUE, coord_type = NULL) {
+#' Infer a GeoArrow-native type from a vector
+#'
+#' @param handleable An object implementing [wk_vector_meta()] and [wk_meta()].
+#' @param promote_multi Use `TRUE` to return a MULTI type when both normal and
+#'   MULTI elements are in the same array.
+#' @param coord_type Specify the coordinate type to use if returning
+#'
+#' @return A [nanoarrow_schema][as_nanoarrow_schema]
+#' @export
+#'
+#' @examples
+#' geoarrow_infer_schema_default(wk::wkt("POINT (0 1)"))
+#'
+geoarrow_infer_schema_default <- function(handleable, promote_multi = TRUE,
+                                          coord_type = NULL) {
   if (is.null(coord_type)) {
     coord_type <- enum$CoordType$SEPARATE
   }
