@@ -32,7 +32,7 @@ geoarrow_infer_schema_default <- function(handleable, promote_multi = TRUE, coor
     }
 
     vector_meta$has_z <- any(meta$has_z, na.rm = TRUE)
-    vector_meta$has_m <- any(meta$has_z, na.rm = TRUE)
+    vector_meta$has_m <- any(meta$has_m, na.rm = TRUE)
   }
 
   geometry_type <- names(enum$GeometryType)[vector_meta$geometry_type + 1L]
