@@ -4,8 +4,7 @@
 infer_nanoarrow_schema.sfc <- function(x, ...) {
   geometry_type <- substr(class(x)[1], 5, nchar(class(x)[1]))
 
-  # TODO: Infer using wk_vector_meta or wk_meta
-  if (identical(geometry_type, "GEOMETRY") || identical(geometry_type, "GEOMETRYCOLLECTION")) {
+  if (!(geometry_type %in% names(enum$GeometryType[2:7]))) {
     return(wk_geoarrow_schema(x, na_extension_wkb))
   }
 
