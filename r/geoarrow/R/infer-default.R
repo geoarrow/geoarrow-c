@@ -50,5 +50,11 @@ geoarrow_infer_schema_default <- function(handleable, promote_multi = TRUE, coor
     "XY"
   }
 
-  wk_geoarrow_schema(handleable, na_extension_geoarrow, geometry_type, dimensions = dims)
+  wk_geoarrow_schema(
+    handleable,
+    na_extension_geoarrow,
+    geometry_type,
+    dimensions = dims,
+    coord_type = coord_type
+  )
 }

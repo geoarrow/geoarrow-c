@@ -15,7 +15,18 @@ test_that("geoarrow_infer_schema_default() works for single-type vectors", {
   parsed <- geoarrow_schema_parse(schema)
   expect_identical(parsed$geometry_type, enum$GeometryType$POINT)
   expect_identical(parsed$dimensions, enum$Dimensions$XY)
+  expect_identical(parsed$coord_type, enum$CoordType$SEPARATE)
   expect_identical(parsed$crs_type, enum$CrsType$PROJJSON)
+})
+
+test_that("geoarrow_infer_schema_default() respects coord_type", {
+  vec <- wk::wkt(c("POINT (0 1)", "POINT (2 3)"))
+
+  schema <- geoarrow_infer_schema_default(vec, coord_type = "INTERLEAVED")
+  parsed <- geoarrow_schema_parse(schema)
+  expect_identical(parsed$geometry_type, enum$GeometryType$POINT)
+  expect_identical(parsed$dimensions, enum$Dimensions$XY)
+  expect_identical(parsed$coord_type, enum$CoordType$INTERLEAVED)
 })
 
 test_that("geoarrow_infer_schema_default() can promote mixed points to multi", {
