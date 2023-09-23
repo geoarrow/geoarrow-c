@@ -55,11 +55,60 @@ SEXP geoarrow_c_kernel(SEXP kernel_name_sexp, SEXP arg_types_sexp, SEXP options_
     Rf_error("GeoArrowKernelInit() failed");
   }
 
-  result = kernel->start(&kernel, args[0], NULL, schema_out, &error);
+  result = kernel->start(kernel, args[0], options, schema_out, &error);
   if (result != GEOARROW_OK) {
-    Rf_error("kernel->start() failed: %s", error.message);
+    Rf_error("kernel->start() failed [%d]: %s", result, error.message);
   }
 
   UNPROTECT(1);
   return kernel_xptr;
+}
+
+SEXP geoarrow_c_kernel_push(SEXP kernel_xptr, SEXP args_sexp, SEXP array_out_xptr) {
+  struct GeoArrowKernel* kernel = (struct GeoArrowKernel*)R_ExternalPtrAddr(kernel_xptr);
+
+  struct ArrowArray* array_out;
+  if (array_out_xptr == R_NilValue) {
+    array_out = NULL;
+  } else {
+    array_out = (struct ArrowArray*)R_ExternalPtrAddr(array_out_xptr);
+  }
+
+  // All kernels currently have just one argument
+  struct ArrowArray* args[1];
+  int n_args = Rf_length(args_sexp);
+  for (int i = 0; i < n_args; i++) {
+    args[i] = (struct ArrowArray*)R_ExternalPtrAddr(VECTOR_ELT(args_sexp, i));
+  }
+
+  struct GeoArrowError error;
+  error.message[0] = '\0';
+
+  int result = kernel->push_batch(kernel, args[0], array_out, &error);
+  if (result != GEOARROW_OK) {
+    Rf_error("kernel->push_batch() failed [%d]: %s", result, error.message);
+  }
+
+  return R_NilValue;
+}
+
+SEXP geoarrow_c_kernel_finish(SEXP kernel_xptr, SEXP array_out_xptr) {
+  struct GeoArrowKernel* kernel = (struct GeoArrowKernel*)R_ExternalPtrAddr(kernel_xptr);
+
+  struct ArrowArray* array_out;
+  if (array_out_xptr == R_NilValue) {
+    array_out = NULL;
+  } else {
+    array_out = (struct ArrowArray*)R_ExternalPtrAddr(array_out_xptr);
+  }
+
+  struct GeoArrowError error;
+  error.message[0] = '\0';
+
+  int result = kernel->finish(kernel, array_out, &error);
+  if (result != GEOARROW_OK) {
+    Rf_error("kernel->finish() failed [%d]: %s", result, error.message);
+  }
+
+  return R_NilValue;
 }

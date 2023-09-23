@@ -21,11 +21,43 @@ geoarrow_kernel <- function(kernel_name, input_types, options = NULL) {
   )
 }
 
-geoarrow_kernel_push <- function(x) {
+geoarrow_kernel_push <- function(kernel, args) {
+  if (!inherits(kernel, "geoarrow_kernel")) {
+    stop("kernel must inherit from 'geoarrow_kernel'")
+  }
 
+  if (isTRUE(attr(kernel, "is_agg"))) {
+    array_out <- NULL
+  } else {
+    array_out <- nanoarrow::nanoarrow_allocate_array()
+    nanoarrow::nanoarrow_array_set_schema(
+      array_out,
+      attr(kernel, "output_type"),
+      validate = FALSE
+    )
+  }
+
+  args <- lapply(args, nanoarrow::as_nanoarrow_array)
+  expected_arg_count <- length(attr(kernel, "input_types"))
+  if (length(args) != expected_arg_count) {
+    stop(sprintf("Expected %d arguments but got %d", expected_arg_count, length(args)))
+  }
+
+  .Call(geoarrow_c_kernel_push, kernel, args, array_out)
+  array_out
 }
 
+geoarrow_kernel_finish <- function(kernel) {
+  array_out <- nanoarrow::nanoarrow_allocate_array()
+  nanoarrow::nanoarrow_array_set_schema(
+    array_out,
+    attr(kernel, "output_type"),
+    validate = FALSE
+  )
 
+  .Call(geoarrow_c_kernel_finish, kernel, array_out)
+  array_out
+}
 
 serialize_kernel_options <- function(vals) {
   vals <- vals[!vapply(vals, is.null, logical(1))]
