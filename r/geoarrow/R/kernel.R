@@ -1,4 +1,60 @@
 
+geoarrow_kernel_call_scalar <- function(kernel_name, stream, options = NULL, n = Inf) {
+  if (inherits(stream, "nanoarrow_array")) {
+    stream <- nanoarrow::basic_array_stream(list(stream))
+  } else {
+    stream <- nanoarrow::as_nanoarrow_array_stream(stream)
+  }
+
+  schema_in <- stream$get_schema()
+  kernel <- geoarrow_kernel(kernel_name, list(schema_in), options)
+
+  batches <- vector("list", 1024L)
+  n_batches <- 0
+  get_next <- stream$get_next
+  while (n_batches < n) {
+    array_in <- get_next(schema_in, validate = FALSE)
+    if (is.null(array_in)) {
+      break
+    }
+
+    n_batches <- n_batches + 1
+    batches[[n_batches]] <- geoarrow_kernel_push(kernel, list(array_in))
+  }
+
+  schema <- attr(kernel, "output_type")
+  nanoarrow::basic_array_stream(
+    batches[seq_len(n_batches)],
+    schema,
+    validate = FALSE
+  )
+}
+
+geoarrow_kernel_call_agg <- function(kernel_name, stream, options = NULL, n = Inf) {
+  if (inherits(stream, "nanoarrow_array")) {
+    stream <- nanoarrow::basic_array_stream(list(stream))
+  } else {
+    stream <- nanoarrow::as_nanoarrow_array_stream(stream)
+  }
+
+  schema_in <- stream$get_schema()
+  kernel <- geoarrow_kernel(kernel_name, list(schema_in), options)
+
+  get_next <- stream$get_next
+  n_batches <- 0
+  while (n_batches < n) {
+    array_in <- get_next(schema_in, validate = FALSE)
+    if (is.null(array_in)) {
+      break
+    }
+
+    geoarrow_kernel_push(kernel, list(array_in))
+    n_batches <- n_batches + 1
+  }
+
+  geoarrow_kernel_finish(kernel)
+}
+
 geoarrow_kernel <- function(kernel_name, input_types, options = NULL) {
   if (!is.null(options)) {
     stop("options not yet supported")
