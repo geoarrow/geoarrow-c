@@ -10,16 +10,22 @@
 #' @export
 #'
 #' @examples
-#' geoarrow_infer_schema_default(wk::wkt("POINT (0 1)"))
+#' geoarrow_infer_schema(wk::wkt("POINT (0 1)"))
 #'
-geoarrow_infer_schema_default <- function(handleable, promote_multi = TRUE,
+geoarrow_infer_schema <- function(x, ..., promote_multi = TRUE,
+                                  coord_type = NULL) {
+  UseMethod("geoarrow_infer_schema")
+}
+
+#' @export
+geoarrow_infer_schema.default <- function(x, promote_multi = TRUE,
                                           coord_type = NULL) {
   if (is.null(coord_type)) {
     coord_type <- enum$CoordType$SEPARATE
   }
 
   # try vector_meta (doesn't iterate along features)
-  vector_meta <- wk::wk_vector_meta(handleable)
+  vector_meta <- wk::wk_vector_meta(x)
   all_types <- vector_meta$geometry_type
 
   has_mising_info <- is.na(vector_meta$geometry_type) ||
@@ -32,7 +38,7 @@ geoarrow_infer_schema_default <- function(handleable, promote_multi = TRUE,
     # the unique_geometry_types kernel (because it has the option to disregard
     # empties).
 
-    meta <- wk::wk_meta(handleable)
+    meta <- wk::wk_meta(x)
     unique_types <- sort(unique(meta$geometry_type))
 
     if (length(unique_types) == 1) {
@@ -51,7 +57,7 @@ geoarrow_infer_schema_default <- function(handleable, promote_multi = TRUE,
 
   geometry_type <- names(enum$GeometryType)[vector_meta$geometry_type + 1L]
   if (!isTRUE(geometry_type %in% names(enum$GeometryType[2:7]))) {
-    return(wk_geoarrow_schema(handleable, na_extension_wkb))
+    return(wk_geoarrow_schema(x, na_extension_wkb))
   }
 
   dims <- if (vector_meta$has_z && vector_meta$has_m) {
@@ -65,10 +71,82 @@ geoarrow_infer_schema_default <- function(handleable, promote_multi = TRUE,
   }
 
   wk_geoarrow_schema(
-    handleable,
+    x,
     na_extension_geoarrow,
     geometry_type,
     dimensions = dims,
     coord_type = coord_type
   )
 }
+
+geoarrow_infer_schema_array <- function(array, promote_multi = TRUE,
+                                        coord_type = NULL) {
+ geoarrow_infer_schema_stream(
+   array,
+   promote_multi = promote_multi,
+   coord_type = coord_type
+  )
+}
+
+geoarrow_infer_schema_stream <- function(stream, promote_multi = TRUE,
+                                         coord_type = NULL) {
+  unique_types_array <- geoarrow_kernel_call_agg("unique_geometry_types_agg", stream)
+  unique_types_integer <- nanoarrow::convert_array(unique_types_array, integer())
+  unique_types <- unique(unique_types_integer %% 1000L)
+  unique_dims <- unique(unique_types_integer %/% 1000L + 1L)
+
+  has_z <- any(unique_dims %in% c(2L, 4L))
+  has_m <- any(unique_dims %in% c(3L, 4L))
+
+  schema_from_geometry_types_and_dims(
+    stream,
+    unique_types,
+    has_z,
+    has_m,
+    promote_multi = promote_multi,
+    coord_type = coord_type
+  )
+}
+
+schema_from_geometry_types_and_dims <- function(x, unique_types, has_z, has_m,
+                                                promote_multi, coord_type) {
+  if (is.null(coord_type)) {
+    coord_type <- enum$CoordType$SEPARATE
+  }
+
+  unique_types <- sort(unique_types)
+
+  if (length(unique_types) == 1 && (unique_types %in% 1:6)) {
+    geometry_type <- unique_types
+  } else if (promote_multi && identical(unique_types, c(1L, 4L))) {
+    vector_meta$geometry_type <- 4L
+  } else if (promote_multi && identical(unique_types, c(2L, 5L))) {
+    vector_meta$geometry_type <- 5L
+  } else if (promote_multi && identical(unique_types, c(3L, 6L))) {
+    vector_meta$geometry_type <- 6L
+  } else {
+    return(wk_geoarrow_schema(x, na_extension_wkb))
+  }
+
+  geometry_type <- names(enum$GeometryType)[vector_meta$geometry_type + 1L]
+
+  dims <- if (vector_meta$has_z && vector_meta$has_m) {
+    "XYZM"
+  } else if (vector_meta$has_z) {
+    "XYZ"
+  } else if (vector_meta$has_m) {
+    "XYM"
+  } else {
+    "XY"
+  }
+
+  wk_geoarrow_schema(
+    x,
+    na_extension_geoarrow,
+    geometry_type,
+    dimensions = dims,
+    coord_type = coord_type
+  )
+}
+
+
