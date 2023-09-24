@@ -23,6 +23,8 @@ test_that("as_geoarrow_array() for wkt() generates the correct buffers", {
 })
 
 test_that("as_geoarrow_array() for wkt() respects schema", {
+  skip_if_not_installed("arrow")
+
   array <- as_geoarrow_array(
     wk::wkt(c("POINT (0 1)")),
     schema = na_extension_large_wkt()
@@ -50,6 +52,8 @@ test_that("as_geoarrow_array() for wkb() generates the correct buffers", {
 })
 
 test_that("as_geoarrow_array() for wkb() respects schema", {
+  skip_if_not_installed("arrow")
+
   array <- as_geoarrow_array(
     wk::as_wkb(c("POINT (0 1)")),
     schema = na_extension_large_wkb()

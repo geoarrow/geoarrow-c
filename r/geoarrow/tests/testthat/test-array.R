@@ -26,6 +26,8 @@ test_that("geoarrow_array_from_buffers() works for wkb", {
 })
 
 test_that("geoarrow_array_from_buffers() works for large wkb", {
+  skip_if_not_installed("arrow")
+
   wkb <- wk::as_wkb("POINT (0 1)")
   array <- geoarrow_array_from_buffers(
     na_extension_large_wkb(),
@@ -54,6 +56,8 @@ test_that("geoarrow_array_from_buffers() works for wkt", {
 })
 
 test_that("geoarrow_array_from_buffers() works for large wkt", {
+  skip_if_not_installed("arrow")
+
   wkt <- "POINT (0 1)"
   array <- geoarrow_array_from_buffers(
     na_extension_large_wkt(),
