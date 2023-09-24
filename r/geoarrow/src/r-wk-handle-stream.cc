@@ -4,6 +4,7 @@
 #include <Rinternals.h>
 
 #include <vector>
+#include <stdexcept>
 
 #include "geoarrow.h"
 #include "nanoarrow.h"
