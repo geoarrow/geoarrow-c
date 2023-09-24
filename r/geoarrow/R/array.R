@@ -38,9 +38,12 @@ as_geoarrow_array.nanoarrow_array <- function(x, ..., schema = NULL) {
   if (identical(parsed, parsed_src)) {
     x
   } else {
-    # Eventually we can call as_geoarrow here to avoid going through both handler
-    # wrappers.
-    NextMethod()
+    stream <- geoarrow_kernel_call_scalar(
+      "as_geoarrow",
+      nanoarrow::basic_array_stream(x),
+      list("id" = parsed$id)
+    )
+    stream$get_next()
   }
 }
 
@@ -60,6 +63,32 @@ as_geoarrow_array_stream.default <- function(x, ..., schema = NULL) {
   nanoarrow::basic_array_stream(
     list(as_geoarrow_array(x, schema = schema)),
     schema = schema
+  )
+}
+
+#' @export
+as_geoarrow_array_stream.nanoarrow_array_stream <- function(x, ..., schema = NULL) {
+  if (is.null(schema)) {
+    return(x)
+  }
+
+  x_schema <- x$get_schema()
+  x_schema_parsed <- geoarrow_schema_parse(x_schema)
+  schema_parsed <- geoarrow_schema_parse(schema)
+  if (identical(x_schema_parsed, schema_parsed)) {
+    return(x)
+  }
+
+  collected <- nanoarrow::collect_array_stream(
+    stream,
+    schema = x_schema,
+    validate = FALSE
+  )
+
+  geoarrow_kernel_call_scalar(
+    "as_geoarrow",
+    nanoarrow::basic_array_stream(x),
+    list("id" = parsed$id)
   )
 }
 
