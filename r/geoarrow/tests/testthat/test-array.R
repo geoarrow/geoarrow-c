@@ -22,7 +22,9 @@ test_that("geoarrow_array_from_buffers() works for wkb", {
     )
   )
   vctr <- suppressWarnings(nanoarrow::convert_array(array))
-  expect_identical(unclass(wkb), as.list(vctr))
+  attributes(vctr) <- NULL
+  attributes(wkb) <- NULL
+  expect_identical(wkb, vctr)
 })
 
 test_that("geoarrow_array_from_buffers() works for large wkb", {
