@@ -64,8 +64,7 @@ jobs:
         with:
           extra-packages: any::rcmdcheck, arrow=?ignore-before-r=4.0.0
           needs: check
-          working-directory: r
-          pak-version: devel
+          working-directory: r/geoarrow
 
       - uses: r-lib/actions/check-r-package@v2
         env:
@@ -73,4 +72,4 @@ jobs:
           _R_CHECK_FORCE_SUGGESTS_: false
         with:
           upload-snapshots: true
-          working-directory: r
+          working-directory: r/geoarrow
