@@ -39,44 +39,29 @@ geoarrow_infer_schema.default <- function(x, promote_multi = TRUE,
     # empties).
 
     meta <- wk::wk_meta(x)
-    unique_types <- sort(unique(meta$geometry_type))
-
-    if (length(unique_types) == 1) {
-      vector_meta$geometry_type <- unique_types
-    } else if (promote_multi && identical(unique_types, c(1L, 4L))) {
-      vector_meta$geometry_type <- 4L
-    } else if (promote_multi && identical(unique_types, c(2L, 5L))) {
-      vector_meta$geometry_type <- 5L
-    } else if (promote_multi && identical(unique_types, c(3L, 6L))) {
-      vector_meta$geometry_type <- 6L
-    }
+    unique_types <- unique(meta$geometry_type)
 
     vector_meta$has_z <- any(meta$has_z, na.rm = TRUE)
     vector_meta$has_m <- any(meta$has_m, na.rm = TRUE)
-  }
 
-  geometry_type <- names(enum$GeometryType)[vector_meta$geometry_type + 1L]
-  if (!isTRUE(geometry_type %in% names(enum$GeometryType[2:7]))) {
-    return(wk_geoarrow_schema(x, na_extension_wkb))
-  }
-
-  dims <- if (vector_meta$has_z && vector_meta$has_m) {
-    "XYZM"
-  } else if (vector_meta$has_z) {
-    "XYZ"
-  } else if (vector_meta$has_m) {
-    "XYM"
+    schema_from_geometry_types_and_dims(
+      x,
+      unique_types,
+      has_z = any(meta$has_z, na.rm = TRUE),
+      has_m = any(meta$has_m, na.rm = TRUE),
+      promote_multi = promote_multi,
+      coord_type = coord_type
+    )
   } else {
-    "XY"
+    schema_from_geometry_types_and_dims(
+      x,
+      vector_meta$geometry_type,
+      has_z = vector_meta$has_z,
+      has_m = vector_meta$has_m,
+      promote_multi = promote_multi,
+      coord_type = coord_type
+    )
   }
-
-  wk_geoarrow_schema(
-    x,
-    na_extension_geoarrow,
-    geometry_type,
-    dimensions = dims,
-    coord_type = coord_type
-  )
 }
 
 geoarrow_infer_schema_array <- function(array, promote_multi = TRUE,
@@ -119,22 +104,22 @@ schema_from_geometry_types_and_dims <- function(x, unique_types, has_z, has_m,
   if (length(unique_types) == 1 && (unique_types %in% 1:6)) {
     geometry_type <- unique_types
   } else if (promote_multi && identical(unique_types, c(1L, 4L))) {
-    vector_meta$geometry_type <- 4L
+    geometry_type <- 4L
   } else if (promote_multi && identical(unique_types, c(2L, 5L))) {
-    vector_meta$geometry_type <- 5L
+    geometry_type <- 5L
   } else if (promote_multi && identical(unique_types, c(3L, 6L))) {
-    vector_meta$geometry_type <- 6L
+    geometry_type <- 6L
   } else {
     return(wk_geoarrow_schema(x, na_extension_wkb))
   }
 
-  geometry_type <- names(enum$GeometryType)[vector_meta$geometry_type + 1L]
+  geometry_type <- names(enum$GeometryType)[geometry_type + 1L]
 
-  dims <- if (vector_meta$has_z && vector_meta$has_m) {
+  dims <- if (has_z && has_m) {
     "XYZM"
-  } else if (vector_meta$has_z) {
+  } else if (has_z) {
     "XYZ"
-  } else if (vector_meta$has_m) {
+  } else if (has_m) {
     "XYM"
   } else {
     "XY"
@@ -148,5 +133,3 @@ schema_from_geometry_types_and_dims <- function(x, unique_types, has_z, has_m,
     coord_type = coord_type
   )
 }
-
-
