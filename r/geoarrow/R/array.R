@@ -49,7 +49,7 @@ as_geoarrow_array.nanoarrow_array <- function(x, ..., schema = NULL) {
 
 #' @export
 as_geoarrow_array.character <- function(x, ..., schema = NULL) {
-  as_geoarrow_array.wk_wkt(wk::new_wk_wkt(x), schema = schema)
+  as_geoarrow_array(wk::new_wk_wkt(x), schema = schema)
 }
 
 #' @rdname as_geoarrow_array
@@ -79,17 +79,17 @@ as_geoarrow_array_stream.nanoarrow_array_stream <- function(x, ..., schema = NUL
     return(x)
   }
 
-  collected <- nanoarrow::collect_array_stream(
-    stream,
-    schema = x_schema,
-    validate = FALSE
-  )
-
-  geoarrow_kernel_call_scalar(
-    "as_geoarrow",
-    nanoarrow::basic_array_stream(x),
-    list("id" = parsed$id)
-  )
+  # collected <- nanoarrow::collect_array_stream(
+  #   x,
+  #   schema = x_schema,
+  #   validate = FALSE
+  # )
+  #
+  # geoarrow_kernel_call_scalar(
+  #   "as_geoarrow",
+  #   nanoarrow::basic_array_stream(x),
+  #   list("id" = parsed$id)
+  # )
 }
 
 geoarrow_array_from_buffers <- function(schema, buffers) {
