@@ -65,6 +65,7 @@ jobs:
           extra-packages: any::rcmdcheck, arrow=?ignore-before-r=4.0.0
           needs: check
           working-directory: r
+          pak-version: devel
 
       - uses: r-lib/actions/check-r-package@v2
         env:
