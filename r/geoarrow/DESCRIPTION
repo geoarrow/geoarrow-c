@@ -27,3 +27,5 @@ Suggests:
     arrow,
     sf,
     testthat (>= 3.0.0)
+Remotes:
+    nanoarrow=apache/arrow-nanoarrow/r
