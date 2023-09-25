@@ -89,7 +89,15 @@ infer_nanoarrow_schema.wk_xy <- function(x, ...) {
 }
 
 wk_geoarrow_schema <- function(x, type_constructor, ...) {
-  crs <- wk::wk_crs(x)
-  edges <- if (wk::wk_is_geodesic(x)) "SPHERICAL" else "PLANAR"
+  if (inherits(x, c("nanoarrow_array", "nanoarrow_array_stream"))) {
+    schema <- nanoarrow::infer_nanoarrow_schema(x)
+    parsed <- geoarrow_schema_parse(schema)
+    crs <- if (parsed$crs_type != enum$CrsType$NONE) parsed$crs
+    edges <- parsed$edge_type
+  } else {
+    crs <- wk::wk_crs(x)
+    edges <- if (wk::wk_is_geodesic(x)) "SPHERICAL" else "PLANAR"
+  }
+
   type_constructor(..., crs = crs, edges = edges)
 }

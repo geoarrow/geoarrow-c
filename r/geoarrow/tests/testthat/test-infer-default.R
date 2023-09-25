@@ -88,3 +88,44 @@ test_that("infer_geoarrow_schema() works for mixed dimensions (ZM)", {
   expect_identical(parsed$geometry_type, enum$GeometryType$POINT)
   expect_identical(parsed$dimensions, enum$Dimensions$XYZM)
 })
+
+test_that("infer_geoarrow_schema() works for native arrays", {
+  array <- as_geoarrow_array(wk::xy(1:5, 6:10))
+  schema <- infer_geoarrow_schema(array)
+  parsed <- geoarrow_schema_parse(schema)
+  expect_identical(parsed$geometry_type, enum$GeometryType$POINT)
+  expect_identical(parsed$dimensions, enum$Dimensions$XY)
+  expect_identical(parsed$coord_type, enum$CoordType$SEPARATE)
+})
+
+test_that("infer_geoarrow_schema() works for non-native arrays", {
+  array <- as_geoarrow_array(
+    wk::wkt(c("POINT Z (0 1 2)", "POINT M (2 3 4)"), crs = "OGC:CRS84")
+  )
+  schema <- infer_geoarrow_schema(array)
+  parsed <- geoarrow_schema_parse(schema)
+  expect_identical(parsed$geometry_type, enum$GeometryType$POINT)
+  expect_identical(parsed$dimensions, enum$Dimensions$XYZM)
+  expect_identical(parsed$coord_type, enum$CoordType$SEPARATE)
+  expect_identical(parsed$crs_type, enum$CrsType$PROJJSON)
+})
+
+test_that("infer_geoarrow_schema() works for native streams", {
+  array <- as_geoarrow_array(wk::xy(1:5, 6:10))
+  stream <- nanoarrow::basic_array_stream(list(array))
+  schema <- infer_geoarrow_schema(array)
+  parsed <- geoarrow_schema_parse(schema)
+  expect_identical(parsed$geometry_type, enum$GeometryType$POINT)
+  expect_identical(parsed$dimensions, enum$Dimensions$XY)
+  expect_identical(parsed$coord_type, enum$CoordType$SEPARATE)
+})
+
+test_that("infer_geoarrow_schema() works for non-native streams", {
+  array <- as_geoarrow_array(wk::wkt(c("POINT Z (0 1 2)", "POINT M (2 3 4)")))
+  stream <- nanoarrow::basic_array_stream(list(array))
+  schema <- infer_geoarrow_schema(stream)
+  parsed <- geoarrow_schema_parse(schema)
+  expect_identical(parsed$geometry_type, enum$GeometryType$POINT)
+  expect_identical(parsed$dimensions, enum$Dimensions$XYZM)
+  expect_identical(parsed$coord_type, enum$CoordType$SEPARATE)
+})

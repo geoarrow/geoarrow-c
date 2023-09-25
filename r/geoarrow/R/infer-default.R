@@ -67,10 +67,16 @@ infer_geoarrow_schema.default <- function(x, promote_multi = TRUE,
 #' @export
 infer_geoarrow_schema.nanoarrow_array <- function(array, promote_multi = TRUE,
                                                   coord_type = NULL) {
- infer_geoarrow_schema_stream(
-   array,
-   promote_multi = promote_multi,
-   coord_type = coord_type
+  schema <- nanoarrow::infer_nanoarrow_schema(array)
+  parsed <- geoarrow_schema_parse(schema)
+  if (parsed$coord_type != enum$CoordType$UNKNOWN) {
+    return(schema)
+  }
+
+  infer_geoarrow_schema.nanoarrow_array_stream(
+    nanoarrow::basic_array_stream(list(array), schema = schema, validate = FALSE),
+    promote_multi = promote_multi,
+    coord_type = coord_type
   )
 }
 
@@ -78,6 +84,12 @@ infer_geoarrow_schema.nanoarrow_array <- function(array, promote_multi = TRUE,
 #' @export
 infer_geoarrow_schema.nanoarrow_array_stream <- function(stream, promote_multi = TRUE,
                                                          coord_type = NULL) {
+  schema <- stream$get_schema()
+  parsed <- geoarrow_schema_parse(schema)
+  if (parsed$coord_type != enum$CoordType$UNKNOWN) {
+    return(schema)
+  }
+
   unique_types_array <- geoarrow_kernel_call_agg("unique_geometry_types_agg", stream)
   unique_types_integer <- nanoarrow::convert_array(unique_types_array, integer())
   unique_types <- unique(unique_types_integer %% 1000L)
