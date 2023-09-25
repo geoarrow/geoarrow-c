@@ -23,6 +23,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
 
       - uses: actions/setup-python@v3
 
@@ -38,7 +40,6 @@ jobs:
           CIBW_BEFORE_TEST: pip install --only-binary ":all:" pyarrow numpy || pip install --only-binary ":all:" numpy || true
           CIBW_TEST_REQUIRES: pytest
           CIBW_TEST_COMMAND: pytest {package}/tests
-          SETUPTOOLS_SCM_PRETEND_VERSION: 0.1.0
 
       - uses: actions/upload-artifact@v3
         with:
