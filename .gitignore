@@ -20,3 +20,4 @@ out/
 .DS_Store
 CMakeUserPresets.json
 .vscode
+.Rproj.user

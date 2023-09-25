@@ -1,0 +1,31 @@
+Package: geoarrow
+Title: Extension types for geospatial data for use with 'Arrow'
+Version: 0.0.0.9000
+Authors@R:
+    person(given = "Dewey",
+           family = "Dunnington",
+           role = c("aut", "cre"),
+           email = "dewey@dunnington.ca",
+           comment = c(ORCID = "0000-0002-9415-4582"))
+Description: Provides extension types and conversions to between R-native
+  object types and 'Arrow' columnar types.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
+Imports:
+    nanoarrow,
+    wk (>= 0.6.0)
+LinkingTo:
+    wk
+Config/testthat/edition: 3
+Config/build/bootstrap: TRUE
+URL: https://github.com/geoarrow/geoarrow-c
+Depends: 
+    R (>= 2.10)
+Suggests: 
+    arrow,
+    sf,
+    testthat (>= 3.0.0)
+Remotes:
+    nanoarrow=apache/arrow-nanoarrow/r
