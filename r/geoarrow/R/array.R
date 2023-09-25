@@ -86,7 +86,7 @@ as_geoarrow_array_stream.nanoarrow_array_stream <- function(x, ..., schema = NUL
   geoarrow_kernel_call_scalar(
     "as_geoarrow",
     nanoarrow::basic_array_stream(collected),
-    list("type" = parsed$id)
+    list("type" = schema_parsed$id)
   )
 }
 

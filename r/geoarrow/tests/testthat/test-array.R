@@ -15,7 +15,7 @@ test_that("as_geoarrow_array() works for non-native geoarrow array", {
   array_wkt <- as_geoarrow_array(wk::wkt(c("POINT Z (0 1 2)", "POINT M (2 3 4)")))
   array <- as_geoarrow_array(array_wkt)
 
-  expect_true(FALSE) # here!
+  skip("Test not implemented")
 })
 
 test_that("geoarrow_array_from_buffers() works for wkb", {

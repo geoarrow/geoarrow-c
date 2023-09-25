@@ -1,10 +1,11 @@
 
 #' Infer a GeoArrow-native type from a vector
 #'
-#' @param handleable An object implementing [wk_vector_meta()] and [wk_meta()].
+#' @param x An object from which to infer a schema.
 #' @param promote_multi Use `TRUE` to return a MULTI type when both normal and
 #'   MULTI elements are in the same array.
 #' @param coord_type Specify the coordinate type to use if returning
+#' @param ... Passed to S3 methods.
 #'
 #' @return A [nanoarrow_schema][as_nanoarrow_schema]
 #' @export
@@ -18,7 +19,7 @@ infer_geoarrow_schema <- function(x, ..., promote_multi = TRUE,
 }
 
 #' @export
-infer_geoarrow_schema.default <- function(x, promote_multi = TRUE,
+infer_geoarrow_schema.default <- function(x, ..., promote_multi = TRUE,
                                           coord_type = NULL) {
   if (is.null(coord_type)) {
     coord_type <- enum$CoordType$SEPARATE
@@ -65,16 +66,16 @@ infer_geoarrow_schema.default <- function(x, promote_multi = TRUE,
 }
 
 #' @export
-infer_geoarrow_schema.nanoarrow_array <- function(array, promote_multi = TRUE,
+infer_geoarrow_schema.nanoarrow_array <- function(x, ..., promote_multi = TRUE,
                                                   coord_type = NULL) {
-  schema <- nanoarrow::infer_nanoarrow_schema(array)
+  schema <- nanoarrow::infer_nanoarrow_schema(x)
   parsed <- geoarrow_schema_parse(schema)
   if (parsed$coord_type != enum$CoordType$UNKNOWN) {
     return(schema)
   }
 
   infer_geoarrow_schema.nanoarrow_array_stream(
-    nanoarrow::basic_array_stream(list(array), schema = schema, validate = FALSE),
+    nanoarrow::basic_array_stream(list(x), schema = schema, validate = FALSE),
     promote_multi = promote_multi,
     coord_type = coord_type
   )
@@ -82,15 +83,15 @@ infer_geoarrow_schema.nanoarrow_array <- function(array, promote_multi = TRUE,
 
 
 #' @export
-infer_geoarrow_schema.nanoarrow_array_stream <- function(stream, promote_multi = TRUE,
+infer_geoarrow_schema.nanoarrow_array_stream <- function(x, ..., promote_multi = TRUE,
                                                          coord_type = NULL) {
-  schema <- stream$get_schema()
+  schema <- x$get_schema()
   parsed <- geoarrow_schema_parse(schema)
   if (parsed$coord_type != enum$CoordType$UNKNOWN) {
     return(schema)
   }
 
-  unique_types_array <- geoarrow_kernel_call_agg("unique_geometry_types_agg", stream)
+  unique_types_array <- geoarrow_kernel_call_agg("unique_geometry_types_agg", x)
   unique_types_integer <- nanoarrow::convert_array(unique_types_array, integer())
   unique_types <- unique(unique_types_integer %% 1000L)
   unique_dims <- unique(unique_types_integer %/% 1000L + 1L)
@@ -99,7 +100,7 @@ infer_geoarrow_schema.nanoarrow_array_stream <- function(stream, promote_multi =
   has_m <- any(unique_dims %in% c(3L, 4L))
 
   schema_from_geometry_types_and_dims(
-    stream,
+    x,
     unique_types,
     has_z,
     has_m,

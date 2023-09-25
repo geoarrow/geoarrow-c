@@ -7,12 +7,14 @@
 infer_geoarrow_schema(x, ..., promote_multi = TRUE, coord_type = NULL)
 }
 \arguments{
+\item{x}{An object from which to infer a schema.}
+
+\item{...}{Passed to S3 methods.}
+
 \item{promote_multi}{Use \code{TRUE} to return a MULTI type when both normal and
 MULTI elements are in the same array.}
 
 \item{coord_type}{Specify the coordinate type to use if returning}
-
-\item{handleable}{An object implementing \code{\link[=wk_vector_meta]{wk_vector_meta()}} and \code{\link[=wk_meta]{wk_meta()}}.}
 }
 \value{
 A \link[=as_nanoarrow_schema]{nanoarrow_schema}
