@@ -2,7 +2,7 @@
 #' @importFrom nanoarrow infer_nanoarrow_schema
 #' @export
 infer_nanoarrow_schema.sfc <- function(x, ...) {
-  geoarrow_infer_schema(x)
+  infer_geoarrow_schema(x)
 }
 
 # Eventually we can add specializations for as_geoarrow_array() based on

@@ -10,15 +10,15 @@
 #' @export
 #'
 #' @examples
-#' geoarrow_infer_schema(wk::wkt("POINT (0 1)"))
+#' infer_geoarrow_schema(wk::wkt("POINT (0 1)"))
 #'
-geoarrow_infer_schema <- function(x, ..., promote_multi = TRUE,
+infer_geoarrow_schema <- function(x, ..., promote_multi = TRUE,
                                   coord_type = NULL) {
-  UseMethod("geoarrow_infer_schema")
+  UseMethod("infer_geoarrow_schema")
 }
 
 #' @export
-geoarrow_infer_schema.default <- function(x, promote_multi = TRUE,
+infer_geoarrow_schema.default <- function(x, promote_multi = TRUE,
                                           coord_type = NULL) {
   if (is.null(coord_type)) {
     coord_type <- enum$CoordType$SEPARATE
@@ -64,17 +64,20 @@ geoarrow_infer_schema.default <- function(x, promote_multi = TRUE,
   }
 }
 
-geoarrow_infer_schema_array <- function(array, promote_multi = TRUE,
-                                        coord_type = NULL) {
- geoarrow_infer_schema_stream(
+#' @export
+infer_geoarrow_schema.nanoarrow_array <- function(array, promote_multi = TRUE,
+                                                  coord_type = NULL) {
+ infer_geoarrow_schema_stream(
    array,
    promote_multi = promote_multi,
    coord_type = coord_type
   )
 }
 
-geoarrow_infer_schema_stream <- function(stream, promote_multi = TRUE,
-                                         coord_type = NULL) {
+
+#' @export
+infer_geoarrow_schema.nanoarrow_array_stream <- function(stream, promote_multi = TRUE,
+                                                         coord_type = NULL) {
   unique_types_array <- geoarrow_kernel_call_agg("unique_geometry_types_agg", stream)
   unique_types_integer <- nanoarrow::convert_array(unique_types_array, integer())
   unique_types <- unique(unique_types_integer %% 1000L)
