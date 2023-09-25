@@ -1,8 +1,14 @@
-name: Build
+name: Build Python Wheels
 
 # Build wheels only on a release branch or when requested since it's expensive
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to force on wheels"
+        required: false
+        type: string
+        default: ""
   push:
     branches:
       - 'maint-**'
@@ -32,6 +38,8 @@ jobs:
           CIBW_BEFORE_TEST: pip install --only-binary ":all:" pyarrow numpy || pip install --only-binary ":all:" numpy || true
           CIBW_TEST_REQUIRES: pytest
           CIBW_TEST_COMMAND: pytest {package}/tests
+          env:
+            SETUPTOOLS_SCM_PRETEND_VERSION: ${{ github.event.inputs.version }}
 
       - uses: actions/upload-artifact@v3
         with:
