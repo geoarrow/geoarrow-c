@@ -56,10 +56,6 @@ geoarrow_kernel_call_agg <- function(kernel_name, stream, options = NULL, n = In
 }
 
 geoarrow_kernel <- function(kernel_name, input_types, options = NULL) {
-  if (!is.null(options)) {
-    stop("options not yet supported")
-  }
-
   kernel_name <- as.character(kernel_name)[1]
   input_types <- lapply(input_types, nanoarrow::as_nanoarrow_schema)
   options_raw <- serialize_kernel_options(options)
@@ -117,7 +113,7 @@ geoarrow_kernel_finish <- function(kernel) {
 
 serialize_kernel_options <- function(vals) {
   vals <- vals[!vapply(vals, is.null, logical(1))]
-  vals <- vapply(vals, as.character, logical(1))
+  vals <- vapply(vals, as.character, character(1))
 
   if (length(vals) == 0) {
     return(as.raw(c(0x00, 0x00, 0x00, 0x00)))

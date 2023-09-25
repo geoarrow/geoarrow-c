@@ -11,6 +11,13 @@ test_that("as_geoarrow_array_stream() default method calls as_geoarrow_array()",
   expect_identical(schema$metadata[["ARROW:extension:name"]], "geoarrow.wkt")
 })
 
+test_that("as_geoarrow_array() works for non-native geoarrow array", {
+  array_wkt <- as_geoarrow_array(wk::wkt(c("POINT Z (0 1 2)", "POINT M (2 3 4)")))
+  array <- as_geoarrow_array(array_wkt)
+
+  expect_true(FALSE) # here!
+})
+
 test_that("geoarrow_array_from_buffers() works for wkb", {
   wkb <- wk::as_wkb("POINT (0 1)")
   array <- geoarrow_array_from_buffers(

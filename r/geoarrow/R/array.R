@@ -26,11 +26,9 @@ as_geoarrow_array.default <- function(x, ..., schema = NULL) {
 
 #' @export
 as_geoarrow_array.nanoarrow_array <- function(x, ..., schema = NULL) {
+  schema_src <- infer_nanoarrow_schema(x)
   if (is.null(schema)) {
-    schema <- infer_nanoarrow_schema(x)
-    schema_src <- schema
-  } else {
-    schema_src <- infer_nanoarrow_schema(x)
+    schema <- infer_geoarrow_schema(x)
   }
 
   parsed <- geoarrow_schema_parse(schema)
@@ -40,8 +38,8 @@ as_geoarrow_array.nanoarrow_array <- function(x, ..., schema = NULL) {
   } else {
     stream <- geoarrow_kernel_call_scalar(
       "as_geoarrow",
-      nanoarrow::basic_array_stream(x),
-      list("id" = parsed$id)
+      nanoarrow::basic_array_stream(list(x), schema = schema_src, validate = FALSE),
+      list("type" = parsed$id)
     )
     stream$get_next()
   }
@@ -79,17 +77,17 @@ as_geoarrow_array_stream.nanoarrow_array_stream <- function(x, ..., schema = NUL
     return(x)
   }
 
-  # collected <- nanoarrow::collect_array_stream(
-  #   x,
-  #   schema = x_schema,
-  #   validate = FALSE
-  # )
-  #
-  # geoarrow_kernel_call_scalar(
-  #   "as_geoarrow",
-  #   nanoarrow::basic_array_stream(x),
-  #   list("id" = parsed$id)
-  # )
+  collected <- nanoarrow::collect_array_stream(
+    x,
+    schema = x_schema,
+    validate = FALSE
+  )
+
+  geoarrow_kernel_call_scalar(
+    "as_geoarrow",
+    nanoarrow::basic_array_stream(collected),
+    list("type" = parsed$id)
+  )
 }
 
 geoarrow_array_from_buffers <- function(schema, buffers) {
