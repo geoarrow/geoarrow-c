@@ -51,13 +51,11 @@ main() {
    # pip install . doesn't quite work with the setuptools available on the
    # ubuntu docker image...python -m build works I think because it sets up
    # a virtualenv
-   for pkg in geoarrow-c geoarrow-pyarrow geoarrow-pandas; do
-     pushd python/$pkg
-     rm -rf dist
-     python3 -m build --wheel
-     pip3 install dist/geoarrow*.whl
-     popd
-   done
+   pushd python/geoarrow-c
+   rm -rf dist
+   python3 -m build --wheel
+   pip3 install dist/geoarrow*.whl
+   popd
 
    pushd docs
 
