@@ -7,5 +7,5 @@ Contents
 .. toctree::
    :maxdepth: 2
 
-   C/C++ <c/index>
-   Python <python/index>
+   C/C++ <c>
+   Python <python>
