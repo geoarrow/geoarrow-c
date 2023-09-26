@@ -19,10 +19,14 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ['3.10']
+        python-version: ['3.8', '3.9', '3.10', '3.11']
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repo: geoarrow/geoarrow-python
+
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
@@ -37,12 +41,12 @@ jobs:
 
       - name: Install (geoarrow-pyarrow)
         run: |
-          pushd python/geoarrow-pyarrow
+          pushd geoarrow-python/geoarrow-pyarrow
           pip install ".[test]"
 
       - name: Install (geoarrow-pandas)
         run: |
-          pushd python/geoarrow-pandas
+          pushd geoarrow-python/geoarrow-pandas
           pip install ".[test]"
 
       - name: Run tests (geoarrow-c)
@@ -51,11 +55,11 @@ jobs:
 
       - name: Run tests (geoarrow-pyarrow)
         run: |
-          pytest python/geoarrow-pyarrow/tests -v -s
+          pytest geoarrow-python/geoarrow-pyarrow/tests -v -s
 
       - name: Run tests (geoarrow-pandas)
         run: |
-          pytest python/geoarrow-pandas/tests -v -s
+          pytest geoarrow-python/geoarrow-pandas/tests -v -s
 
       - name: Install coverage dependencies
         run: |
@@ -64,12 +68,10 @@ jobs:
 
       - name: Install editable
         run: |
-          for pkg in c pyarrow pandas; do
-            pip install -e python/geoarrow-$pkg/
-          done
+          pip install -e python/geoarrow-c/
 
       - name: Coverage (geoarrow-c)
-        if: success() && matrix.python-version == '3.10'
+        if: success() && matrix.python-version == '3.11'
         run: |
           pushd python/geoarrow-c
 
@@ -95,41 +97,14 @@ jobs:
           lcov --list coverage.info
           popd
 
-      - name: Coverage (geoarrow-pyarrow, geoarrow-pandas)
-        if: success() && matrix.python-version == '3.10'
-        run: |
-          # Have to install non-editable geoarrow-c or xml generation will not work
-          # because it gets confused about the .pxd file
-          pip uninstall --yes geoarrow-c
-          pip install python/geoarrow-c/
-
-          pushd python/geoarrow-pyarrow
-          python -m pytest --cov ./src/geoarrow ..
-          python -m coverage xml
-          popd
-
-          pushd python/geoarrow-pandas
-          python -m pytest --cov ./src/geoarrow ..
-          python -m coverage xml
-          popd
-
       - name: Upload coverage to codecov
-        if: success() && matrix.python-version == '3.10'
+        if: success() && matrix.python-version == '3.11'
         uses: codecov/codecov-action@v2
         with:
           files: 'python/geoarrow-c/geoarrow-coverage.info,python/geoarrow-c/coverage.xml,python/geoarrow-pyarrow/coverage.xml,python/geoarrow-pandas/coverage.xml'
 
       - name: Run doctests
-        if: success() && matrix.python-version == '3.10'
+        if: success() && matrix.python-version == '3.11'
         run: |
-          # Because of namespace packaging we have to add __init__.py in geoarrow and
-          # rebuild to avoid confusing pytest
-
-          for pkg in c pyarrow pandas; do
-            pushd python/geoarrow-$pkg
-            touch src/geoarrow/__init__.py
-            pip uninstall --yes geoarrow-$pkg
-            pip install .
-            pytest --pyargs geoarrow.$pkg --doctest-modules
-            popd
-          done
+          pushd python/geoarrow-c
+          pytest --pyargs geoarrow.c --doctest-modules
