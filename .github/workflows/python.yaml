@@ -26,6 +26,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: geoarrow/geoarrow-python
+          path: geoarrow-python
 
 
       - name: Set up Python ${{ matrix.python-version }}
