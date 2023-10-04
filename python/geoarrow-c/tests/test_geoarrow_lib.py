@@ -36,6 +36,7 @@ def test_c_vector_type():
     assert type_obj.geometry_type == ga.GeometryType.POINT
     assert type_obj.dimensions == ga.Dimensions.XY
     assert type_obj.coord_type == ga.CoordType.SEPARATE
+    assert type_obj.id == ga._lib.GeoArrowType.GEOARROW_TYPE_POINT
 
     schema = type_obj.to_schema()
     type_obj2 = lib.CVectorType.FromExtension(schema)
