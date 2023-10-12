@@ -283,7 +283,7 @@ cdef class Error:
 cdef class SchemaHolder:
     cdef ArrowSchema c_schema
 
-    def __init__(self):
+    def __cinit__(self):
         self.c_schema.release = NULL
 
     def __dealloc__(self):
@@ -305,7 +305,7 @@ cdef class SchemaHolder:
 cdef class ArrayHolder:
     cdef ArrowArray c_array
 
-    def __init__(self):
+    def __cinit__(self):
         self.c_array.release = NULL
 
     def __dealloc__(self):
@@ -327,7 +327,7 @@ cdef class ArrayHolder:
 cdef class CVectorType:
     cdef VectorType c_vector_type
 
-    def __init__(self):
+    def __cinit__(self):
         pass
 
     def __repr__(self):
@@ -475,7 +475,7 @@ cdef class CKernel:
     cdef GeoArrowKernel c_kernel
     cdef object cname_str
 
-    def __init__(self, const char* name):
+    def __cinit__(self, const char* name):
         cdef const char* cname = <const char*>name
         self.cname_str = cname.decode("UTF-8")
         cdef int result = GeoArrowKernelInit(&self.c_kernel, cname, NULL)
@@ -538,7 +538,7 @@ cdef class CArrayView:
     cdef GeoArrowArrayView c_array_view
     cdef object _base
 
-    def __init__(self, ArrayHolder array, SchemaHolder schema):
+    def __cinit__(self, ArrayHolder array, SchemaHolder schema):
         self._base = array
 
         cdef Error error = Error()
@@ -613,7 +613,7 @@ cdef class CArrayViewBuffer:
     cdef Py_ssize_t _shape
     cdef str _format
 
-    def __init__(self, base, uintptr_t ptr, item_size_bytes, length_elements, format):
+    def __cinit__(self, base, uintptr_t ptr, item_size_bytes, length_elements, format):
         self._base = base
         self._ptr = <void*>ptr
         self._item_size = item_size_bytes
@@ -648,7 +648,7 @@ cdef class CBuilder:
     cdef GeoArrowBuilder c_builder
     cdef SchemaHolder _schema
 
-    def __init__(self, SchemaHolder schema):
+    def __cinit__(self, SchemaHolder schema):
         self._schema = schema
         cdef Error error = Error()
         cdef int result = GeoArrowBuilderInitFromSchema(&self.c_builder, &schema.c_schema, &error.c_error)

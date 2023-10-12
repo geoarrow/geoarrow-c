@@ -6,6 +6,7 @@ import geoarrow.c.lib as lib
 np = pytest.importorskip("numpy")
 pa = pytest.importorskip("pyarrow")
 
+
 def test_schema_holder():
     holder = lib.SchemaHolder()
     assert holder.is_valid() is False
@@ -128,6 +129,12 @@ def test_kernel_void_agg():
 def test_kernel_init_error():
     with pytest.raises(lib.GeoArrowCException):
         lib.CKernel(b"not_a_kernel")
+
+    with pytest.raises(TypeError):
+        lib.CKernel()
+
+    with pytest.raises(TypeError):
+        lib.CKernel(None)
 
 
 def test_builder():
