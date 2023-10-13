@@ -315,22 +315,10 @@ Python. The library supports well-known binary (WKB), well-known text
 (ISO) and <a class="reference external" href="https://github.com/geoarrow/geoarrow">geoarrow</a> encodings
 as Arrow extension types with all possible mutual conversions including
 support for Z, M, and ZM geometries.</p>
-<p>The library and bindings are still in draft form pending an initial
-release of the geoarrow specification.</p>
-<section id="get-started-in-python">
-<h2>Get started in Python<a class="headerlink" href="#get-started-in-python" title="Permalink to this heading">#</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">geoarrow.pyarrow</span> <span class="k">as</span> <span class="nn">ga</span>
-
-<span class="n">ga</span><span class="o">.</span><span class="n">point</span><span class="p">()</span>
-<span class="c1"># PointType(geoarrow.point)</span>
-<span class="n">ga</span><span class="o">.</span><span class="n">point</span><span class="p">()</span><span class="o">.</span><span class="n">storage_type</span>
-<span class="c1"># StructType(struct&lt;x: double, y: double&gt;)</span>
-<span class="n">ga</span><span class="o">.</span><span class="n">as_geoarrow</span><span class="p">([</span><span class="s2">&quot;POINT (0 1)&quot;</span><span class="p">])</span>
-<span class="c1"># PointArray:PointType(geoarrow.point)[1]</span>
-<span class="c1"># &lt;POINT (0 1)&gt;</span>
-</pre></div>
-</div>
-</section>
+<p>The library currently implements version 0.1.0 of the GeoArrow
+specification. The easiest way to get started with GeoArrow is to use
+the <a class="reference external" href="https://github.com/geoarrow/geoarrow-python">Python bindings</a>,
+which currently use geoarrow-c under the hood for most operations.</p>
 <section id="contents">
 <h2>Contents<a class="headerlink" href="#contents" title="Permalink to this heading">#</a></h2>
 <div class="toctree-wrapper compound">
@@ -388,7 +376,6 @@ release of the geoarrow specification.</p>
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#get-started-in-python">Get started in Python</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#contents">Contents</a></li>
 </ul>
   </nav></div>
