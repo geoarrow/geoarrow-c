@@ -283,7 +283,7 @@ cdef class Error:
 cdef class SchemaHolder:
     cdef ArrowSchema c_schema
 
-    def __init__(self):
+    def __cinit__(self):
         self.c_schema.release = NULL
 
     def __dealloc__(self):
@@ -305,7 +305,7 @@ cdef class SchemaHolder:
 cdef class ArrayHolder:
     cdef ArrowArray c_array
 
-    def __init__(self):
+    def __cinit__(self):
         self.c_array.release = NULL
 
     def __dealloc__(self):
@@ -327,10 +327,14 @@ cdef class ArrayHolder:
 cdef class CVectorType:
     cdef VectorType c_vector_type
 
-    def __init__(self):
+    def __cinit__(self):
         pass
 
     def __repr__(self):
+        if not self.c_vector_type.valid():
+            msg = self.c_vector_type.error().decode("UTF-8")
+            return f"<Invalid CVectorType: {msg}"
+
         ext_name = self.extension_name
         spherical = self.edge_type == GEOARROW_EDGE_TYPE_SPHERICAL
         interleaved = self.coord_type == GEOARROW_COORD_TYPE_INTERLEAVED
@@ -373,59 +377,77 @@ cdef class CVectorType:
         out.c_vector_type.MoveFrom(c_vector_type)
         return out
 
+    def _assert_valid(self):
+        if not self.c_vector_type.valid():
+            raise ValueError("CVectorType is not valid")
+
     @property
     def id(self):
+        self._assert_valid()
         return self.c_vector_type.id()
 
     @property
     def geometry_type(self):
+        self._assert_valid()
         return self.c_vector_type.geometry_type()
 
     @property
     def dimensions(self):
+        self._assert_valid()
         return self.c_vector_type.dimensions()
 
     @property
     def coord_type(self):
+        self._assert_valid()
         return self.c_vector_type.coord_type()
 
     @property
     def extension_name(self):
+        self._assert_valid()
         return self.c_vector_type.extension_name().decode("UTF-8")
 
     @property
     def extension_metadata(self):
+        self._assert_valid()
         return self.c_vector_type.extension_metadata()
 
     @property
     def edge_type(self):
+        self._assert_valid()
         return self.c_vector_type.edge_type()
 
     @property
     def crs_type(self):
+        self._assert_valid()
         return self.c_vector_type.crs_type()
 
     @property
     def crs(self):
+        self._assert_valid()
         return self.c_vector_type.crs()
 
     def with_geometry_type(self, GeoArrowGeometryType geometry_type):
+        self._assert_valid()
         cdef VectorType ctype = self.c_vector_type.WithGeometryType(geometry_type)
         return CVectorType._move_from_ctype(&ctype)
 
     def with_dimensions(self, GeoArrowDimensions dimensions):
+        self._assert_valid()
         cdef VectorType ctype = self.c_vector_type.WithDimensions(dimensions)
         return CVectorType._move_from_ctype(&ctype)
 
     def with_coord_type(self, GeoArrowCoordType coord_type):
+        self._assert_valid()
         cdef VectorType ctype = self.c_vector_type.WithCoordType(coord_type)
         return CVectorType._move_from_ctype(&ctype)
 
     def with_edge_type(self, GeoArrowEdgeType edge_type):
+        self._assert_valid()
         cdef VectorType ctype = self.c_vector_type.WithEdgeType(edge_type)
         return CVectorType._move_from_ctype(&ctype)
 
     def with_crs(self, string crs, GeoArrowCrsType crs_type):
+        self._assert_valid()
         cdef VectorType ctype = self.c_vector_type.WithCrs(crs, crs_type)
         return CVectorType._move_from_ctype(&ctype)
 
@@ -440,6 +462,7 @@ cdef class CVectorType:
         return self.crs_type == other.crs_type
 
     def to_schema(self):
+        self._assert_valid()
         out = SchemaHolder()
         cdef int result = self.c_vector_type.InitSchema(&out.c_schema)
         if result != GEOARROW_OK:
@@ -447,6 +470,7 @@ cdef class CVectorType:
         return out
 
     def to_storage_schema(self):
+        self._assert_valid()
         out = SchemaHolder()
         cdef int result = self.c_vector_type.InitStorageSchema(&out.c_schema)
         if result != GEOARROW_OK:
@@ -475,7 +499,7 @@ cdef class CKernel:
     cdef GeoArrowKernel c_kernel
     cdef object cname_str
 
-    def __init__(self, const char* name):
+    def __cinit__(self, const char* name):
         cdef const char* cname = <const char*>name
         self.cname_str = cname.decode("UTF-8")
         cdef int result = GeoArrowKernelInit(&self.c_kernel, cname, NULL)
@@ -538,7 +562,7 @@ cdef class CArrayView:
     cdef GeoArrowArrayView c_array_view
     cdef object _base
 
-    def __init__(self, ArrayHolder array, SchemaHolder schema):
+    def __cinit__(self, ArrayHolder array, SchemaHolder schema):
         self._base = array
 
         cdef Error error = Error()
@@ -613,7 +637,7 @@ cdef class CArrayViewBuffer:
     cdef Py_ssize_t _shape
     cdef str _format
 
-    def __init__(self, base, uintptr_t ptr, item_size_bytes, length_elements, format):
+    def __cinit__(self, base, uintptr_t ptr, item_size_bytes, length_elements, format):
         self._base = base
         self._ptr = <void*>ptr
         self._item_size = item_size_bytes
@@ -648,7 +672,7 @@ cdef class CBuilder:
     cdef GeoArrowBuilder c_builder
     cdef SchemaHolder _schema
 
-    def __init__(self, SchemaHolder schema):
+    def __cinit__(self, SchemaHolder schema):
         self._schema = schema
         cdef Error error = Error()
         cdef int result = GeoArrowBuilderInitFromSchema(&self.c_builder, &schema.c_schema, &error.c_error)

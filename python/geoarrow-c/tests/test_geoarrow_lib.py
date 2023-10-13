@@ -6,6 +6,7 @@ import geoarrow.c.lib as lib
 np = pytest.importorskip("numpy")
 pa = pytest.importorskip("pyarrow")
 
+
 def test_schema_holder():
     holder = lib.SchemaHolder()
     assert holder.is_valid() is False
@@ -26,6 +27,59 @@ def test_array_holder():
     pa.array([1, 2, 3], pa.int32())._export_to_c(holder._addr())
     assert holder.is_valid() is True
     holder.release()
+
+
+def test_c_vector_type_empty():
+    empty = lib.CVectorType()
+    assert "Invalid CVectorType" in repr(empty)
+
+    with pytest.raises(ValueError):
+        empty.id
+
+    with pytest.raises(ValueError):
+        empty.geometry_type
+
+    with pytest.raises(ValueError):
+        empty.dimensions
+
+    with pytest.raises(ValueError):
+        empty.coord_type
+
+    with pytest.raises(ValueError):
+        empty.extension_name
+
+    with pytest.raises(ValueError):
+        empty.extension_metadata
+
+    with pytest.raises(ValueError):
+        empty.edge_type
+
+    with pytest.raises(ValueError):
+        empty.crs_type
+
+    with pytest.raises(ValueError):
+        empty.crs
+
+    with pytest.raises(ValueError):
+        empty.with_geometry_type(0)
+
+    with pytest.raises(ValueError):
+        empty.with_dimensions(0)
+
+    with pytest.raises(ValueError):
+        empty.with_coord_type(0)
+
+    with pytest.raises(ValueError):
+        empty.with_edge_type(0)
+
+    with pytest.raises(ValueError):
+        empty.with_crs(bytes(), 0)
+
+    with pytest.raises(ValueError):
+        empty.to_schema()
+
+    with pytest.raises(ValueError):
+        empty.to_storage_schema()
 
 
 def test_c_vector_type():
@@ -128,6 +182,12 @@ def test_kernel_void_agg():
 def test_kernel_init_error():
     with pytest.raises(lib.GeoArrowCException):
         lib.CKernel(b"not_a_kernel")
+
+    with pytest.raises(TypeError):
+        lib.CKernel()
+
+    with pytest.raises(TypeError):
+        lib.CKernel(None)
 
 
 def test_builder():
