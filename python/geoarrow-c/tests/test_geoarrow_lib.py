@@ -28,6 +28,9 @@ def test_array_holder():
     assert holder.is_valid() is True
     holder.release()
 
+def test_c_vector_type_empty():
+    empty = lib.CVectorType()
+    assert "Invalid CVectorType" in repr(empty)
 
 def test_c_vector_type():
     type_obj = lib.CVectorType.Make(

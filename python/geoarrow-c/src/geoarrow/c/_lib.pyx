@@ -331,6 +331,10 @@ cdef class CVectorType:
         pass
 
     def __repr__(self):
+        if not self.c_vector_type.valid():
+            msg = self.c_vector_type.error().decode("UTF-8")
+            return f"<Invalid CVectorType: {msg}"
+
         ext_name = self.extension_name
         spherical = self.edge_type == GEOARROW_EDGE_TYPE_SPHERICAL
         interleaved = self.coord_type == GEOARROW_COORD_TYPE_INTERLEAVED
