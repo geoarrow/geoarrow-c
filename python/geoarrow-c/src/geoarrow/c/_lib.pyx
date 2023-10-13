@@ -377,59 +377,77 @@ cdef class CVectorType:
         out.c_vector_type.MoveFrom(c_vector_type)
         return out
 
+    def _assert_valid(self):
+        if not self.c_vector_type.valid():
+            raise ValueError("CVectorType is not valid")
+
     @property
     def id(self):
+        self._assert_valid()
         return self.c_vector_type.id()
 
     @property
     def geometry_type(self):
+        self._assert_valid()
         return self.c_vector_type.geometry_type()
 
     @property
     def dimensions(self):
+        self._assert_valid()
         return self.c_vector_type.dimensions()
 
     @property
     def coord_type(self):
+        self._assert_valid()
         return self.c_vector_type.coord_type()
 
     @property
     def extension_name(self):
+        self._assert_valid()
         return self.c_vector_type.extension_name().decode("UTF-8")
 
     @property
     def extension_metadata(self):
+        self._assert_valid()
         return self.c_vector_type.extension_metadata()
 
     @property
     def edge_type(self):
+        self._assert_valid()
         return self.c_vector_type.edge_type()
 
     @property
     def crs_type(self):
+        self._assert_valid()
         return self.c_vector_type.crs_type()
 
     @property
     def crs(self):
+        self._assert_valid()
         return self.c_vector_type.crs()
 
     def with_geometry_type(self, GeoArrowGeometryType geometry_type):
+        self._assert_valid()
         cdef VectorType ctype = self.c_vector_type.WithGeometryType(geometry_type)
         return CVectorType._move_from_ctype(&ctype)
 
     def with_dimensions(self, GeoArrowDimensions dimensions):
+        self._assert_valid()
         cdef VectorType ctype = self.c_vector_type.WithDimensions(dimensions)
         return CVectorType._move_from_ctype(&ctype)
 
     def with_coord_type(self, GeoArrowCoordType coord_type):
+        self._assert_valid()
         cdef VectorType ctype = self.c_vector_type.WithCoordType(coord_type)
         return CVectorType._move_from_ctype(&ctype)
 
     def with_edge_type(self, GeoArrowEdgeType edge_type):
+        self._assert_valid()
         cdef VectorType ctype = self.c_vector_type.WithEdgeType(edge_type)
         return CVectorType._move_from_ctype(&ctype)
 
     def with_crs(self, string crs, GeoArrowCrsType crs_type):
+        self._assert_valid()
         cdef VectorType ctype = self.c_vector_type.WithCrs(crs, crs_type)
         return CVectorType._move_from_ctype(&ctype)
 
@@ -444,6 +462,7 @@ cdef class CVectorType:
         return self.crs_type == other.crs_type
 
     def to_schema(self):
+        self._assert_valid()
         out = SchemaHolder()
         cdef int result = self.c_vector_type.InitSchema(&out.c_schema)
         if result != GEOARROW_OK:
@@ -451,6 +470,7 @@ cdef class CVectorType:
         return out
 
     def to_storage_schema(self):
+        self._assert_valid()
         out = SchemaHolder()
         cdef int result = self.c_vector_type.InitStorageSchema(&out.c_schema)
         if result != GEOARROW_OK:
