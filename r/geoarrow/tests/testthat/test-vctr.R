@@ -1,5 +1,5 @@
 
-test_that("as_nanoarrow_array_stream() generates an empty stream for empty slice", {
+test_that("geoarrow_vctr to stream generates an empty stream for empty slice", {
   vctr <- new_geoarrow_vctr(list(), na_extension_wkt())
   stream <- nanoarrow::as_nanoarrow_array_stream(vctr)
   schema_out <- stream$get_schema()
@@ -7,7 +7,7 @@ test_that("as_nanoarrow_array_stream() generates an empty stream for empty slice
   expect_identical(nanoarrow::collect_array_stream(stream), list())
 })
 
-test_that("as_nanoarrow_array_stream() generates identical stream for identity slice", {
+test_that("geoarrow_vctr to stream generates identical stream for identity slice", {
   array <- as_geoarrow_array("POINT (0 1)")
   vctr <- new_geoarrow_vctr(list(array), infer_nanoarrow_schema(array))
 
@@ -23,7 +23,59 @@ test_that("as_nanoarrow_array_stream() generates identical stream for identity s
   )
 })
 
+test_that("geoarrow_vctr to stream works for arbitrary slices", {
+  array1 <- as_geoarrow_array(c("POINT (0 1)", "POINT (1 2)", "POINT (2 3)"))
+  array2 <- as_geoarrow_array(
+    c("POINT (4 5)", "POINT (5 6)", "POINT (6 7)", "POINT (7 8")
+  )
+  vctr <- new_geoarrow_vctr(list(array1, array2), infer_nanoarrow_schema(array1))
 
+  chunks16 <- nanoarrow::collect_array_stream(
+    nanoarrow::as_nanoarrow_array_stream(vctr[1:6])
+  )
+  expect_length(chunks16, 2)
+  expect_identical(chunks16[[1]]$offset, 0L)
+  expect_identical(chunks16[[1]]$length, 3L)
+  expect_identical(chunks16[[2]]$offset, 0L)
+  expect_identical(chunks16[[2]]$length, 3L)
+
+  chunks34 <- nanoarrow::collect_array_stream(
+    nanoarrow::as_nanoarrow_array_stream(vctr[3:4])
+  )
+  expect_length(chunks34, 2)
+  expect_identical(chunks34[[1]]$offset, 2L)
+  expect_identical(chunks34[[1]]$length, 1L)
+  expect_identical(chunks34[[2]]$offset, 0L)
+  expect_identical(chunks34[[2]]$length, 1L)
+
+  chunks13 <- nanoarrow::collect_array_stream(
+    nanoarrow::as_nanoarrow_array_stream(vctr[1:3])
+  )
+  expect_length(chunks13, 1)
+  expect_identical(chunks13[[1]]$offset, 0L)
+  expect_identical(chunks13[[1]]$length, 3L)
+
+  chunks46 <- nanoarrow::collect_array_stream(
+    nanoarrow::as_nanoarrow_array_stream(vctr[4:6])
+  )
+  expect_length(chunks46, 1)
+  expect_identical(chunks46[[1]]$offset, 0L)
+  expect_identical(chunks46[[1]]$length, 3L)
+
+  chunks56 <- nanoarrow::collect_array_stream(
+    nanoarrow::as_nanoarrow_array_stream(vctr[5:6])
+  )
+  expect_length(chunks56, 1)
+  expect_identical(chunks56[[1]]$offset, 1L)
+  expect_identical(chunks56[[1]]$length, 2L)
+
+  chunks57 <- nanoarrow::collect_array_stream(
+    nanoarrow::as_nanoarrow_array_stream(vctr[5:7])
+  )
+  expect_length(chunks57, 1)
+  expect_identical(chunks57[[1]]$offset, 1L)
+  expect_identical(chunks57[[1]]$length, 3L)
+})
 
 test_that("slice detector works", {
   expect_identical(
@@ -61,7 +113,7 @@ test_that("chunk resolver works", {
   chunk_offset1 <- 0:10
 
   expect_identical(
-    vctr_resolve_chunk(c(-1L, 10L), chunk_offset1),
+    vctr_resolve_chunk(c(-1L, 11L), chunk_offset1),
     c(NA_integer_, NA_integer_)
   )
 

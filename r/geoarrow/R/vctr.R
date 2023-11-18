@@ -25,6 +25,15 @@ new_geoarrow_vctr <- function(chunks, schema, indices = NULL) {
 }
 
 #' @export
+`[.geoarrow_vctr` <- function(x, i) {
+  attrs <- attributes(x)
+  x <- NextMethod()
+  # Assert slice?
+  attributes(x) <- attrs
+  x
+}
+
+#' @export
 infer_nanoarrow_schema.geoarrow_vctr <- function(x, ...) {
   attr(x, "schema")
 }
@@ -63,21 +72,63 @@ as_nanoarrow_array_stream.geoarrow_vctr <- function(x, ..., schema = NULL) {
   }
 
   # Calculate first and last slice information
-  first_index <- slice[1]
-  last_index <- slice[1] + slice[2]
+  first_index <- slice[1] - 1L
+  end_index <- first_index + slice[2]
+  last_index <- end_index - 1L
   first_chunk_index <- vctr_resolve_chunk(first_index, offsets)
   last_chunk_index <- vctr_resolve_chunk(last_index, offsets)
 
-  first_chunk_offset <- first_index - offsets[first_chunk_index]
-  first_chunk_length <- offsets[first_chunk_index + 1] - first_index
-  last_chunk_offset <- 0
-  last_chunk_length <- last_index - offsets[last_chunk_index]
+  first_chunk_offset <- first_index - offsets[first_chunk_index + 1L]
+  first_chunk_length <- offsets[first_chunk_index + 2L] - first_index
+  last_chunk_offset <- 0L
+  last_chunk_length <- end_index - offsets[last_chunk_index + 1L]
 
   # Calculate first and last slices
+  if (first_chunk_index == last_chunk_index) {
+    batch <- nanoarrow::nanoarrow_array_modify(
+      batches[[first_chunk_index + 1L]],
+      list(
+        offset = first_chunk_offset,
+        length = last_chunk_length - first_chunk_offset
+      )
+    )
 
+    return(
+      nanoarrow::basic_array_stream(
+        list(batch),
+        schema = x_schema,
+        validate = FALSE
+      )
+    )
+  }
+
+  batch1 <- nanoarrow::nanoarrow_array_modify(
+    batches[[first_chunk_index + 1L]],
+    list(
+      offset = first_chunk_offset,
+      length = first_chunk_length
+    )
+  )
+
+  batchn <- nanoarrow::nanoarrow_array_modify(
+    batches[[last_chunk_index + 1L]],
+    list(
+      offset = last_chunk_offset,
+      length = last_chunk_length
+    )
+  )
+
+  seq_mid <- seq_len(last_chunk_index - first_chunk_index - 1)
+  batch_mid <- batches[first_chunk_index + seq_mid]
 
   nanoarrow::basic_array_stream(
-    attr(x, "chunks")
+    c(
+      list(batch1),
+      batch_mid,
+      list(batchn)
+    ),
+    schema = x_schema,
+    validate = FALSE
   )
 }
 

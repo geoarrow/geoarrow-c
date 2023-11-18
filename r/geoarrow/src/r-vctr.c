@@ -45,6 +45,7 @@ static int resolve_chunk(int* sorted_offsets, int index, int start_offset_i,
 SEXP geoarrow_c_vctr_chunk_resolve(SEXP indices_sexp, SEXP offsets_sexp) {
   int* offsets = INTEGER(offsets_sexp);
   int end_offset_i = Rf_length(offsets_sexp) - 1;
+  int last_offset = offsets[end_offset_i];
 
   int n = Rf_length(indices_sexp);
   SEXP chunk_indices_sexp = PROTECT(Rf_allocVector(INTSXP, n));
@@ -57,10 +58,10 @@ SEXP geoarrow_c_vctr_chunk_resolve(SEXP indices_sexp, SEXP offsets_sexp) {
     }
     int index0 = buf[i % 1024];
 
-    if (index0 < 0 || index0 >= n) {
+    if (index0 < 0 || index0 > last_offset) {
       chunk_indices[i] = NA_INTEGER;
     } else {
-      chunk_indices[i] = resolve_chunk(offsets, buf[i % 1024], 0, end_offset_i);
+      chunk_indices[i] = resolve_chunk(offsets, index0, 0, end_offset_i);
     }
   }
 
