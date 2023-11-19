@@ -8,7 +8,7 @@
 static inline int build_inner_offsets(SEXP item, struct GeoArrowBuilder* builder,
                                       int level, int32_t* current_offsets) {
   if (level >= builder->view.n_offsets) {
-    Rf_error("Unexpected level of nesting whilst buliding offset buffers from sfc");
+    Rf_error("Unexpected level of nesting whilst buliding ArrowArray from sfc");
   }
 
   switch (TYPEOF(item)) {
@@ -30,11 +30,29 @@ static inline int build_inner_offsets(SEXP item, struct GeoArrowBuilder* builder
       current_offsets[level] += n;
       NANOARROW_RETURN_NOT_OK(
           GeoArrowBuilderOffsetAppend(builder, level, current_offsets + level, 1));
+
+      int n_col = Rf_ncols(item);
+      double* coords = REAL(item);
+      struct GeoArrowBufferView view;
+      view.data = (uint8_t*)coords;
+      view.size_bytes = n * sizeof(double);
+
+      int first_coord_buffer = 1 + builder->view.n_offsets;
+      for (int i = 0; i < n_col; i++) {
+        int buffer_i = first_coord_buffer + i;
+        if (buffer_i >= builder->view.n_buffers) {
+          Rf_error("Unexpected number of dimensions whilst building ArrowArray from sfc");
+        }
+
+        NANOARROW_RETURN_NOT_OK(
+            GeoArrowBuilderAppendBuffer(builder, first_coord_buffer + i, view));
+        view.data += view.size_bytes;
+      }
       break;
     }
 
     default:
-      Rf_error("Unexpected element whilst building offset buffers from sfc");
+      Rf_error("Unexpected element whilst building ArrowArray from sfc");
   }
 
   return GEOARROW_OK;
@@ -104,13 +122,11 @@ SEXP geoarrow_c_as_nanoarrow_array_sfc(SEXP sfc, SEXP schema_xptr, SEXP array_xp
     Rf_error("build_offsets() failed to allocate memory for offset buffers");
   }
 
-  // Set coordinate buffers
-
   // Build result
-  //   result = GeoArrowBuilderFinish(builder, array, &error);
-  //   if (result != GEOARROW_OK) {
-  //     Rf_error("GeoArrowBuilderFinish() failed: %s", error.message);
-  //   }
+  result = GeoArrowBuilderFinish(builder, array, &error);
+  if (result != GEOARROW_OK) {
+    Rf_error("GeoArrowBuilderFinish() failed: %s", error.message);
+  }
 
   UNPROTECT(1);
   return R_NilValue;
