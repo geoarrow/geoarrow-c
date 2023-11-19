@@ -3,6 +3,7 @@
 S3method(as_geoarrow_array,character)
 S3method(as_geoarrow_array,default)
 S3method(as_geoarrow_array,nanoarrow_array)
+S3method(as_geoarrow_array,sfc)
 S3method(as_geoarrow_array,wk_wkb)
 S3method(as_geoarrow_array,wk_wkt)
 S3method(as_geoarrow_array,wk_xy)
