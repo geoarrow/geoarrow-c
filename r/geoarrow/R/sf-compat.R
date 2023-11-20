@@ -7,13 +7,15 @@ infer_nanoarrow_schema.sfc <- function(x, ...) {
 
 #' @export
 as_geoarrow_array.sfc <- function(x, ..., schema = NULL) {
+  # Let the default method handle custom output schemas
   if (!is.null(schema)) {
-    schema_inferred <- infer_geoarrow_schema(x)
-    parsed <- geoarrow_schema_parse(schema)
-    parsed_inferred <- geoarrow_schema_parse(schema_inferred)
-    stop("Check")
-  } else {
-    schema <- infer_geoarrow_schema(x)
+    return(NextMethod())
+  }
+
+  # Let the default method handle M values (the optimized path doesn't
+  # handle mixed XYZ/XYZM/XYM but can deal with mixed XY and XYZ)
+  if (!is.null(attr(x, "m_range"))) {
+    return(NextMethod())
   }
 
   if (class(x)[1] %in% c("sfc_POINT",
@@ -22,6 +24,7 @@ as_geoarrow_array.sfc <- function(x, ..., schema = NULL) {
                          "sfc_MULTIPOINT",
                          "sfc_MULTILINESTRING",
                          "sfc_MULTIPOLYGON")) {
+    schema <- infer_geoarrow_schema(x)
     array <- nanoarrow::nanoarrow_allocate_array()
     .Call(geoarrow_c_as_nanoarrow_array_sfc, x, schema, array)
     nanoarrow::nanoarrow_array_set_schema(array, schema)
@@ -31,20 +34,7 @@ as_geoarrow_array.sfc <- function(x, ..., schema = NULL) {
   }
 }
 
-# Eventually we can add specializations for as_geoarrow_array() based on
-# st_as_grob(), which is very fast and generates lengths + a column-major
-# matrix full of buffers we can provide views into.
-
-coord_matrix <- function(x) {
-  switch(
-    class(x)[1],
-    "sfc_POINT" = matrix(unlist(x, use.names = FALSE), ncol = length(x)),
-    "sfc_LINESTRING" = ,
-    "sfc_POLYGON" = ,
-    "sfc_MULTIPOINT" = ,
-    "sfc_MULTILINESTRING" = ,
-    "sfc_MULTIPOLYGON" = do.call(rbind, unclass(x)),
-    NULL
-  )
+#' @export
+as_nanoarrow_array.sfc <- function(x, ..., schema = NULL) {
+  as_geoarrow_array.sfc(x, ..., schema = schema)
 }
-
