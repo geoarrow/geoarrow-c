@@ -7,19 +7,19 @@
 
 static inline int build_inner_offsets(SEXP item, struct GeoArrowBuilder* builder,
                                       int level, int32_t* current_offsets) {
-  if (level >= builder->view.n_offsets) {
-    Rf_error("Unexpected level of nesting whilst buliding ArrowArray from sfc");
-  }
-
   switch (TYPEOF(item)) {
     // Level of nesting
     case VECSXP: {
+      if (level >= builder->view.n_offsets) {
+        Rf_error("Unexpected level of nesting whilst buliding ArrowArray from sfc");
+      }
+
       int32_t n = Rf_length(item);
       current_offsets[level] += n;
       NANOARROW_RETURN_NOT_OK(
           GeoArrowBuilderOffsetAppend(builder, level, current_offsets + level, 1));
       for (int32_t i = 0; i < n; i++) {
-        build_inner_offsets(item, builder, level + 1, current_offsets);
+        build_inner_offsets(VECTOR_ELT(item, i), builder, level + 1, current_offsets);
       }
       break;
     }
@@ -40,13 +40,26 @@ static inline int build_inner_offsets(SEXP item, struct GeoArrowBuilder* builder
       int first_coord_buffer = 1 + builder->view.n_offsets;
       for (int i = 0; i < n_col; i++) {
         int buffer_i = first_coord_buffer + i;
-        if (buffer_i >= builder->view.n_buffers) {
-          Rf_error("Unexpected number of dimensions whilst building ArrowArray from sfc");
+        // Omit dimensions in sfc but not in builder
+        if (i >= builder->view.coords.n_values) {
+          break;
         }
 
         NANOARROW_RETURN_NOT_OK(
             GeoArrowBuilderAppendBuffer(builder, first_coord_buffer + i, view));
         view.data += view.size_bytes;
+      }
+
+      // Fill dimensions in builder but not in sfc with nan
+      for (int i = n_col; i < builder->view.coords.n_values; i++) {
+        double nan_dbl = NAN;
+        view.data = (uint8_t*)&nan_dbl;
+        view.size_bytes = sizeof(double);
+        NANOARROW_RETURN_NOT_OK(GeoArrowBuilderReserveBuffer(
+            builder, first_coord_buffer + i, n * sizeof(double)));
+        for (int j = 0; j < n; j++) {
+          GeoArrowBuilderAppendBufferUnsafe(builder, first_coord_buffer + i, view);
+        }
       }
       break;
     }
@@ -95,7 +108,7 @@ static void finalize_builder_xptr(SEXP builder_xptr) {
 
 SEXP geoarrow_c_as_nanoarrow_array_sfc(SEXP sfc, SEXP schema_xptr, SEXP array_xptr) {
   struct ArrowSchema* schema = (struct ArrowSchema*)R_ExternalPtrAddr(schema_xptr);
-  struct ArrowArray* array = (struct ArrowArray*)R_ExternalPtrAddr(schema_xptr);
+  struct ArrowArray* array = (struct ArrowArray*)R_ExternalPtrAddr(array_xptr);
 
   // Use external pointer finalizer to ensure builder is cleaned up
   struct GeoArrowBuilder* builder =

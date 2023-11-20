@@ -24,6 +24,7 @@ as_geoarrow_array.sfc <- function(x, ..., schema = NULL) {
                          "sfc_MULTIPOLYGON")) {
     array <- nanoarrow::nanoarrow_allocate_array()
     .Call(geoarrow_c_as_nanoarrow_array_sfc, x, schema, array)
+    nanoarrow::nanoarrow_array_set_schema(array, schema)
     array
   } else {
     NextMethod()
