@@ -5,8 +5,8 @@
 #include "geoarrow.h"
 #include "nanoarrow.h"
 
-static inline int build_inner_offsets(SEXP item, struct GeoArrowBuilder* builder,
-                                      int level, int32_t* current_offsets) {
+static inline int builder_append_sfg(SEXP item, struct GeoArrowBuilder* builder,
+                                     int level, int32_t* current_offsets) {
   switch (TYPEOF(item)) {
     // Level of nesting
     case VECSXP: {
@@ -19,7 +19,7 @@ static inline int build_inner_offsets(SEXP item, struct GeoArrowBuilder* builder
       NANOARROW_RETURN_NOT_OK(
           GeoArrowBuilderOffsetAppend(builder, level, current_offsets + level, 1));
       for (int32_t i = 0; i < n; i++) {
-        build_inner_offsets(VECTOR_ELT(item, i), builder, level + 1, current_offsets);
+        builder_append_sfg(VECTOR_ELT(item, i), builder, level + 1, current_offsets);
       }
       break;
     }
@@ -31,6 +31,10 @@ static inline int build_inner_offsets(SEXP item, struct GeoArrowBuilder* builder
       NANOARROW_RETURN_NOT_OK(
           GeoArrowBuilderOffsetAppend(builder, level, current_offsets + level, 1));
 
+      if (n == 0) {
+        return GEOARROW_OK;
+      }
+
       int n_col = Rf_ncols(item);
       double* coords = REAL(item);
       struct GeoArrowBufferView view;
@@ -39,7 +43,6 @@ static inline int build_inner_offsets(SEXP item, struct GeoArrowBuilder* builder
 
       int first_coord_buffer = 1 + builder->view.n_offsets;
       for (int i = 0; i < n_col; i++) {
-        int buffer_i = first_coord_buffer + i;
         // Omit dimensions in sfc but not in builder
         if (i >= builder->view.coords.n_values) {
           break;
@@ -71,14 +74,52 @@ static inline int build_inner_offsets(SEXP item, struct GeoArrowBuilder* builder
   return GEOARROW_OK;
 }
 
-static int build_offsets(SEXP sfc, struct GeoArrowBuilder* builder) {
+static inline int builder_append_sfc_point(SEXP sfc, struct GeoArrowBuilder* builder) {
+  R_xlen_t n = Rf_xlength(sfc);
+
+  for (int i = 0; i < builder->view.coords.n_values; i++) {
+    NANOARROW_RETURN_NOT_OK(GeoArrowBuilderCoordsReserve(builder, n));
+  }
+
+  SEXP item_sexp;
+  double* item;
+  int coord_size;
+  for (R_xlen_t i = 0; i < n; i++) {
+    item_sexp = VECTOR_ELT(sfc, i);
+    item = REAL(item_sexp);
+    coord_size = Rf_length(item_sexp);
+    for (int j = 0; j < coord_size; j++) {
+      // Omit dimensions in sfc but not in builder
+      if (j >= builder->view.coords.n_values) {
+        break;
+      }
+
+      builder->view.coords.values[j][i] = item[j];
+    }
+
+    // Fill dimensions in builder but not in sfc with nan
+    for (int j = coord_size; j < builder->view.coords.n_values; j++) {
+      builder->view.coords.values[j][i] = NAN;
+    }
+  }
+
+  builder->view.coords.size_coords = n;
+  builder->view.length = n;
+  return GEOARROW_OK;
+}
+
+static int builder_append_sfc(SEXP sfc, struct GeoArrowBuilder* builder) {
+  if (Rf_inherits(sfc, "sfc_POINT")) {
+    return builder_append_sfc_point(sfc, builder);
+  }
+
   R_xlen_t n = Rf_xlength(sfc);
 
   // Keep track of current last value
   int32_t current_offsets[] = {0, 0, 0};
 
   // Append initial 0 to the offset buffers and reserve memory for their minimum
-  // size.
+  // likely size (might be inaccurate for sfcs with a lot of empties).
   for (int i = 1; i < builder->view.n_offsets; i++) {
     NANOARROW_RETURN_NOT_OK(
         GeoArrowBuilderOffsetAppend(builder, i, current_offsets + i, 1));
@@ -87,7 +128,7 @@ static int build_offsets(SEXP sfc, struct GeoArrowBuilder* builder) {
 
   for (R_xlen_t i = 0; i < n; i++) {
     SEXP item = VECTOR_ELT(sfc, i);
-    NANOARROW_RETURN_NOT_OK(build_inner_offsets(item, builder, 0, current_offsets));
+    NANOARROW_RETURN_NOT_OK(builder_append_sfg(item, builder, 0, current_offsets));
   }
 
   builder->view.length = n;
@@ -130,9 +171,9 @@ SEXP geoarrow_c_as_nanoarrow_array_sfc(SEXP sfc, SEXP schema_xptr, SEXP array_xp
   }
 
   // Build the offset buffers from the various layers of nesting
-  result = build_offsets(sfc, builder);
+  result = builder_append_sfc(sfc, builder);
   if (result != GEOARROW_OK) {
-    Rf_error("build_offsets() failed to allocate memory for offset buffers");
+    Rf_error("builder_append_sfc() failed to allocate memory for offset buffers");
   }
 
   // Build result
