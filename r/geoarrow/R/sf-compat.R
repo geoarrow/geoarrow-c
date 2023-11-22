@@ -34,6 +34,7 @@ as_geoarrow_array.sfc <- function(x, ..., schema = NULL) {
   }
 }
 
+#' @importFrom nanoarrow as_nanoarrow_array
 #' @export
 as_nanoarrow_array.sfc <- function(x, ..., schema = NULL) {
   as_geoarrow_array.sfc(x, ..., schema = schema)
