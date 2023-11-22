@@ -86,7 +86,21 @@ test_that("as_nanoarrow_array() works for mixed sfc", {
     sf::st_linestring()
   )
 
-  array <- as_geoarrow_array(sfc)
+  array <- as_nanoarrow_array(sfc)
+  expect_identical(
+    as.raw(array$buffers[[3]]),
+    unlist(sf::st_as_binary(sfc))
+  )
+})
+
+test_that("as_nanoarrow_array() can use custom schema for sfc", {
+  skip_if_not_installed("sf")
+
+  sfc <- sf::st_sfc(
+    sf::st_point(c(1, 2))
+  )
+
+  array <- as_nanoarrow_array(sfc, schema = na_extension_wkb())
   expect_identical(
     as.raw(array$buffers[[3]]),
     unlist(sf::st_as_binary(sfc))
@@ -101,7 +115,7 @@ test_that("as_nanoarrow_array() works for sfc_POINT", {
     sf::st_point(c(3, 4))
   )
 
-  array <- as_geoarrow_array(sfc)
+  array <- as_nanoarrow_array(sfc)
   expect_identical(
     as.raw(array$children[[1]]$buffers[[2]]),
     as.raw(nanoarrow::as_nanoarrow_buffer(c(1, 3)))
@@ -112,6 +126,52 @@ test_that("as_nanoarrow_array() works for sfc_POINT", {
   )
 })
 
+test_that("as_nanoarrow_array() works for sfc_POINT with mixed XYZ dimensions", {
+  skip_if_not_installed("sf")
+
+  sfc <- sf::st_sfc(
+    sf::st_point(c(1, 2, 3)),
+    sf::st_point(c(4, 5))
+  )
+
+  array <- as_nanoarrow_array(sfc)
+  expect_identical(
+    as.raw(array$children[[1]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(1, 4)))
+  )
+  expect_identical(
+    as.raw(array$children[[2]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(2, 5)))
+  )
+  expect_identical(
+    as.raw(array$children[[3]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(3, NaN)))
+  )
+})
+
+test_that("as_nanoarrow_array() works for sfc_POINT with mixed XYM dimensions", {
+  skip_if_not_installed("sf")
+
+  sfc <- sf::st_sfc(
+    sf::st_point(c(1, 2, 3), dim = "XYM"),
+    sf::st_point(c(4, 5))
+  )
+
+  array <- as_nanoarrow_array(sfc)
+  expect_identical(
+    as.raw(array$children[[1]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(1, 4)))
+  )
+  expect_identical(
+    as.raw(array$children[[2]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(2, 5)))
+  )
+  expect_identical(
+    as.raw(array$children[[3]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(3, NaN)))
+  )
+})
+
 test_that("as_nanoarrow_array() works for sfc_LINESTRING", {
   skip_if_not_installed("sf")
 
@@ -119,7 +179,7 @@ test_that("as_nanoarrow_array() works for sfc_LINESTRING", {
     sf::st_linestring(rbind(c(1, 2), c(3, 4)))
   )
 
-  array <- as_geoarrow_array(sfc)
+  array <- as_nanoarrow_array(sfc)
   expect_identical(
     as.raw(array$children[[1]]$children[[1]]$buffers[[2]]),
     as.raw(nanoarrow::as_nanoarrow_buffer(c(1, 3)))
@@ -130,6 +190,29 @@ test_that("as_nanoarrow_array() works for sfc_LINESTRING", {
   )
 })
 
+test_that("as_nanoarrow_array() works for sfc_LINESTRING with mixed XYZ dimensions", {
+  skip_if_not_installed("sf")
+
+  sfc <- sf::st_sfc(
+    sf::st_linestring(rbind(c(1, 2), c(3, 4))),
+    sf::st_linestring(rbind(c(4, 5, 6), c(7, 8, 9)))
+  )
+
+  array <- as_nanoarrow_array(sfc)
+  expect_identical(
+    as.raw(array$children[[1]]$children[[1]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(1, 3, 4, 7)))
+  )
+  expect_identical(
+    as.raw(array$children[[1]]$children[[2]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(2, 4, 5, 8)))
+  )
+  expect_identical(
+    as.raw(array$children[[1]]$children[[3]]$buffers[[2]]),
+    as.raw(nanoarrow::as_nanoarrow_buffer(c(NaN, NaN, 6, 9)))
+  )
+})
+
 test_that("as_nanoarrow_array() works for sfc_POLYGON", {
   skip_if_not_installed("sf")
 
@@ -137,7 +220,7 @@ test_that("as_nanoarrow_array() works for sfc_POLYGON", {
     sf::st_polygon(list(rbind(c(1, 2), c(3, 4), c(5, 6), c(1, 2))))
   )
 
-  array <- as_geoarrow_array(sfc)
+  array <- as_nanoarrow_array(sfc)
   expect_identical(
     as.raw(array$children[[1]]$children[[1]]$children[[1]]$buffers[[2]]),
     as.raw(nanoarrow::as_nanoarrow_buffer(c(1, 3, 5, 1)))
@@ -155,7 +238,7 @@ test_that("as_nanoarrow_array() works for sfc_MULTIPOINT", {
     sf::st_multipoint(rbind(c(1, 2), c(3, 4)))
   )
 
-  array <- as_geoarrow_array(sfc)
+  array <- as_nanoarrow_array(sfc)
   expect_identical(
     as.raw(array$children[[1]]$children[[1]]$buffers[[2]]),
     as.raw(nanoarrow::as_nanoarrow_buffer(c(1, 3)))
@@ -173,7 +256,7 @@ test_that("as_nanoarrow_array() works for sfc_MULTILINESTRING", {
     sf::st_multilinestring(list(rbind(c(1, 2), c(3, 4), c(5, 6), c(1, 2))))
   )
 
-  array <- as_geoarrow_array(sfc)
+  array <- as_nanoarrow_array(sfc)
   expect_identical(
     as.raw(array$children[[1]]$children[[1]]$children[[1]]$buffers[[2]]),
     as.raw(nanoarrow::as_nanoarrow_buffer(c(1, 3, 5, 1)))
@@ -191,7 +274,7 @@ test_that("as_nanoarrow_array() works for sfc_MULTIPOLYGON", {
     sf::st_multipolygon(list(list(rbind(c(1, 2), c(3, 4), c(5, 6), c(1, 2)))))
   )
 
-  array <- as_geoarrow_array(sfc)
+  array <- as_nanoarrow_array(sfc)
   expect_identical(
     as.raw(array$children[[1]]$children[[1]]$children[[1]]$children[[1]]$buffers[[2]]),
     as.raw(nanoarrow::as_nanoarrow_buffer(c(1, 3, 5, 1)))
