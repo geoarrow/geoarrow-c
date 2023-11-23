@@ -12,18 +12,15 @@ as_geoarrow_array.sfc <- function(x, ..., schema = NULL) {
     return(NextMethod())
   }
 
+  meta <- wk::wk_vector_meta(x)
+
   # Let the default method handle M values (the optimized path doesn't
   # handle mixed XYZ/XYZM/XYM but can deal with mixed XY and XYZ)
-  if (!is.null(attr(x, "m_range"))) {
+  if (meta$has_m) {
     return(NextMethod())
   }
 
-  if (class(x)[1] %in% c("sfc_POINT",
-                         "sfc_LINESTRING",
-                         "sfc_POLYGON",
-                         "sfc_MULTIPOINT",
-                         "sfc_MULTILINESTRING",
-                         "sfc_MULTIPOLYGON")) {
+  if (meta$geometry_type > 0 && meta$geometry_type <= 6) {
     schema <- infer_geoarrow_schema(x)
     array <- nanoarrow::nanoarrow_allocate_array()
     .Call(geoarrow_c_as_nanoarrow_array_sfc, x, schema, array)
