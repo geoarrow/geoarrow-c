@@ -20,7 +20,7 @@ as_geoarrow_array.sfc <- function(x, ..., schema = NULL) {
     return(NextMethod())
   }
 
-  if (meta$geometry_type > 0 && meta$geometry_type <= 6) {
+  if (meta$geometry_type %in% 1:6) {
     schema <- infer_geoarrow_schema(x)
     array <- nanoarrow::nanoarrow_allocate_array()
     .Call(geoarrow_c_as_nanoarrow_array_sfc, x, schema, array)
