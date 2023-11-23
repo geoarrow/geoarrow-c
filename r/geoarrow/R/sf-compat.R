@@ -5,6 +5,34 @@ infer_nanoarrow_schema.sfc <- function(x, ...) {
   infer_geoarrow_schema(x)
 }
 
-# Eventually we can add specializations for as_geoarrow_array() based on
-# st_as_grob(), which is very fast and generates lengths + a column-major
-# matrix full of buffers we can provide views into.
+#' @export
+as_geoarrow_array.sfc <- function(x, ..., schema = NULL) {
+  # Let the default method handle custom output schemas
+  if (!is.null(schema)) {
+    return(NextMethod())
+  }
+
+  meta <- wk::wk_vector_meta(x)
+
+  # Let the default method handle M values (the optimized path doesn't
+  # handle mixed XYZ/XYZM/XYM but can deal with mixed XY and XYZ)
+  if (meta$has_m) {
+    return(NextMethod())
+  }
+
+  if (meta$geometry_type %in% 1:6) {
+    schema <- infer_geoarrow_schema(x)
+    array <- nanoarrow::nanoarrow_allocate_array()
+    .Call(geoarrow_c_as_nanoarrow_array_sfc, x, schema, array)
+    nanoarrow::nanoarrow_array_set_schema(array, schema)
+    array
+  } else {
+    NextMethod()
+  }
+}
+
+#' @importFrom nanoarrow as_nanoarrow_array
+#' @export
+as_nanoarrow_array.sfc <- function(x, ..., schema = NULL) {
+  as_geoarrow_array(x, ..., schema = schema)
+}
