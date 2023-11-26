@@ -1,4 +1,12 @@
 
+test_that("as_geoarrow_vctr() works for basic input", {
+  vctr <- as_geoarrow_vctr(c("POINT (0 1)", "POINT (1 2)"))
+  expect_identical(as.integer(unclass(vctr)), 1:2)
+  expect_identical(as_geoarrow_vctr(vctr), vctr)
+
+  expect_identical(infer_nanoarrow_schema(vctr)$format, "u")
+})
+
 test_that("geoarrow_vctr to stream generates an empty stream for empty slice", {
   vctr <- new_geoarrow_vctr(list(), na_extension_wkt())
   stream <- nanoarrow::as_nanoarrow_array_stream(vctr)
