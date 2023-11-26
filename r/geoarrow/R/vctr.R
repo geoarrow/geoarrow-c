@@ -61,7 +61,7 @@ as_nanoarrow_array_stream.geoarrow_vctr <- function(x, ..., schema = NULL) {
   # Full slice doesn't need slicing logic
   offsets <- attr(x, "offsets")
   batches <- attr(x, "chunks")
-  if (slice[1] == 0 && slice[2] == max(offsets)) {
+  if (slice[1] == 1 && slice[2] == max(offsets)) {
     return(
       nanoarrow::basic_array_stream(
         batches,
@@ -85,12 +85,10 @@ as_nanoarrow_array_stream.geoarrow_vctr <- function(x, ..., schema = NULL) {
 
   # Calculate first and last slices
   if (first_chunk_index == last_chunk_index) {
-    batch <- nanoarrow::nanoarrow_array_modify(
+    batch <- vctr_array_slice(
       batches[[first_chunk_index + 1L]],
-      list(
-        offset = first_chunk_offset,
-        length = last_chunk_length - first_chunk_offset
-      )
+      first_chunk_offset,
+      last_chunk_length - first_chunk_offset
     )
 
     return(
@@ -102,20 +100,16 @@ as_nanoarrow_array_stream.geoarrow_vctr <- function(x, ..., schema = NULL) {
     )
   }
 
-  batch1 <- nanoarrow::nanoarrow_array_modify(
+  batch1 <- vctr_array_slice(
     batches[[first_chunk_index + 1L]],
-    list(
-      offset = first_chunk_offset,
-      length = first_chunk_length
-    )
+    first_chunk_offset,
+    first_chunk_length
   )
 
-  batchn <- nanoarrow::nanoarrow_array_modify(
+  batchn <- vctr_array_slice(
     batches[[last_chunk_index + 1L]],
-    list(
-      offset = last_chunk_offset,
-      length = last_chunk_length
-    )
+    last_chunk_offset,
+    last_chunk_length
   )
 
   seq_mid <- seq_len(last_chunk_index - first_chunk_index - 1)
