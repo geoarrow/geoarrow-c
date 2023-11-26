@@ -19,7 +19,9 @@ option(GEOARROW_CODE_COVERAGE "Enable coverage reporting" OFF)
 option(GEOARROW_USE_FAST_FLOAT "Use fast_float for numeric value parsing" ON)
 option(GEOARROW_USE_RYU "Use ryu for numeric value printing" ON)
 
-add_library(coverage_config INTERFACE)
+if (GEOARROW_BUILD_TESTS)
+  add_library(coverage_config INTERFACE)
+endif()
 
 if(GEOARROW_CODE_COVERAGE)
   target_compile_options(coverage_config INTERFACE -O0 -g --coverage)
