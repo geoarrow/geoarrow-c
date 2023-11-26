@@ -70,47 +70,46 @@ SEXP geoarrow_c_vctr_chunk_resolve(SEXP indices_sexp, SEXP offsets_sexp) {
 }
 
 SEXP geoarrow_c_vctr_as_slice(SEXP indices_sexp) {
-  if (TYPEOF(indices_sexp) == INTSXP) {
-    SEXP slice_sexp = PROTECT(Rf_allocVector(INTSXP, 2));
-    int* slice = INTEGER(slice_sexp);
-
-    int n = Rf_length(indices_sexp);
-    slice[1] = n;
-
-    if (n == 1) {
-      slice[0] = INTEGER_ELT(indices_sexp, 0);
-      UNPROTECT(1);
-      return slice_sexp;
-    } else if (n == 0) {
-      slice[0] = NA_INTEGER;
-      UNPROTECT(1);
-      return slice_sexp;
-    }
-
-    int buf[1024];
-    INTEGER_GET_REGION(indices_sexp, 0, 1024, buf);
-    slice[0] = buf[0];
-
-    int last_value = buf[0];
-    int this_value = 0;
-
-    for (int i = 1; i < n; i++) {
-      if (i % 1024 == 0) {
-        INTEGER_GET_REGION(indices_sexp, i, 1024, buf);
-      }
-
-      this_value = buf[i % 1024];
-      if ((this_value - last_value) != 1) {
-        UNPROTECT(1);
-        return R_NilValue;
-      }
-
-      last_value = this_value;
-    }
-
-    UNPROTECT(1);
-    return slice_sexp;
-  } else {
+  if (TYPEOF(indices_sexp) != INTSXP) {
     return R_NilValue;
   }
+  SEXP slice_sexp = PROTECT(Rf_allocVector(INTSXP, 2));
+  int* slice = INTEGER(slice_sexp);
+
+  int n = Rf_length(indices_sexp);
+  slice[1] = n;
+
+  if (n == 1) {
+    slice[0] = INTEGER_ELT(indices_sexp, 0);
+    UNPROTECT(1);
+    return slice_sexp;
+  } else if (n == 0) {
+    slice[0] = NA_INTEGER;
+    UNPROTECT(1);
+    return slice_sexp;
+  }
+
+  int buf[1024];
+  INTEGER_GET_REGION(indices_sexp, 0, 1024, buf);
+  slice[0] = buf[0];
+
+  int last_value = buf[0];
+  int this_value = 0;
+
+  for (int i = 1; i < n; i++) {
+    if (i % 1024 == 0) {
+      INTEGER_GET_REGION(indices_sexp, i, 1024, buf);
+    }
+
+    this_value = buf[i % 1024];
+    if ((this_value - last_value) != 1) {
+      UNPROTECT(1);
+      return R_NilValue;
+    }
+
+    last_value = this_value;
+  }
+
+  UNPROTECT(1);
+  return slice_sexp;
 }
