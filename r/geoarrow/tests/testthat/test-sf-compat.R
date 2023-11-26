@@ -1,4 +1,17 @@
 
+test_that("st_as_sfc() works for geoarrow_vctr()", {
+  skip_if_not_installed("sf")
+
+  vctr <- as_geoarrow_vctr("POINT (0 1)")
+  expect_identical(sf::st_as_sfc(vctr), sf::st_sfc(sf::st_point(c(0, 1))))
+
+  vctr <- as_geoarrow_vctr(wk::wkt("POINT (0 1)", crs = "OGC:CRS84"))
+  expect_identical(
+    sf::st_as_sfc(vctr),
+    sf::st_sfc(sf::st_point(c(0, 1)), crs = wk::wk_crs_projjson("OGC:CRS84"))
+  )
+})
+
 test_that("infer_nanoarrow_schema() works for mixed sfc objects", {
   skip_if_not_installed("sf")
 

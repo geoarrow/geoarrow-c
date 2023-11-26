@@ -1,4 +1,10 @@
 
+# exported in zzz.R
+st_as_sfc.geoarrow_vctr <- function(x, ...) {
+  sfc <- wk::wk_handle(x, wk::sfc_writer())
+  sf::st_set_crs(sfc, sf::st_crs(wk::wk_crs(x)))
+}
+
 #' @importFrom nanoarrow infer_nanoarrow_schema
 #' @export
 infer_nanoarrow_schema.sfc <- function(x, ...) {
