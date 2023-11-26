@@ -1,4 +1,28 @@
 
+#' @importFrom wk wk_handle
+#' @export
+wk_handle.geoarrow_vctr <- function(handleable, handler, ...) {
+  geoarrow_handle(handleable, handler, size = length(handleable))
+}
+
+#' @importFrom wk wk_crs
+#' @export
+wk_crs.geoarrow_vctr <- function(x) {
+  parsed <- geoarrow_schema_parse(attr(x, "schema"))
+  if (parsed$crs_type == enum$CrsType$NONE) {
+    NULL
+  } else {
+    parsed$crs
+  }
+}
+
+#' @importFrom wk wk_is_geodesic
+#' @export
+wk_is_geodesic.geoarrow_vctr <- function(x) {
+  parsed <- geoarrow_schema_parse(attr(x, "schema"))
+  parsed$edge_type == enum$EdgeType$SPHERICAL
+}
+
 #' @export
 as_geoarrow_array.wk_wkt <- function(x, ..., schema = NULL) {
   if (!is.null(schema)) {
