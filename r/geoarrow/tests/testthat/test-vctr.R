@@ -8,6 +8,18 @@ test_that("as_geoarrow_vctr() works for basic input", {
   expect_identical(wk::as_wkt(vctr), wk::wkt(c("POINT (0 1)", "POINT (1 2)")))
 })
 
+test_that("wk crs/edge getters are implemented for geoarrow_vctr", {
+  x <- as_geoarrow_vctr(wk::wkt(c("POINT (0 1)")))
+  expect_identical(wk::wk_crs(x), NULL)
+  expect_false(wk::wk_is_geodesic(x))
+
+  x <- as_geoarrow_vctr(wk::wkt(c("POINT (0 1)"), crs = "EPSG:1234"))
+  expect_identical(wk::wk_crs(x), "EPSG:1234")
+
+  x <- as_geoarrow_vctr(wk::wkt(c("POINT (0 1)"), geodesic = TRUE))
+  expect_true(wk::wk_is_geodesic(x))
+})
+
 test_that("geoarrow_vctr to stream generates an empty stream for empty slice", {
   vctr <- new_geoarrow_vctr(list(), na_extension_wkt())
   stream <- nanoarrow::as_nanoarrow_array_stream(vctr)
