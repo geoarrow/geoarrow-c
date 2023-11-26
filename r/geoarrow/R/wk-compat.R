@@ -1,4 +1,10 @@
 
+#' @importFrom wk wk_handle
+#' @export
+wk_handle.geoarrow_vctr <- function(x, handler, ...) {
+  geoarrow_handle(x, handler, size = length(x))
+}
+
 #' @export
 as_geoarrow_array.wk_wkt <- function(x, ..., schema = NULL) {
   if (!is.null(schema)) {

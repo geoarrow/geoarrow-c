@@ -5,6 +5,7 @@ test_that("as_geoarrow_vctr() works for basic input", {
   expect_identical(as_geoarrow_vctr(vctr), vctr)
 
   expect_identical(infer_nanoarrow_schema(vctr)$format, "u")
+  expect_identical(wk::as_wkt(vctr), wk::wkt(c("POINT (0 1)", "POINT (1 2)")))
 })
 
 test_that("geoarrow_vctr to stream generates an empty stream for empty slice", {
