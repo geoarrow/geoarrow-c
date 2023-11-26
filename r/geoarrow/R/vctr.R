@@ -41,7 +41,13 @@ new_geoarrow_vctr <- function(chunks, schema, indices = NULL) {
 `[.geoarrow_vctr` <- function(x, i) {
   attrs <- attributes(x)
   x <- NextMethod()
-  # Assert slice?
+
+  if (is.null(vctr_as_slice(x))) {
+    stop(
+      "Can't subset geoarrow_vctr with non-slice (e.g., only i:j indexing is supported)"
+    )
+  }
+
   attributes(x) <- attrs
   x
 }

@@ -98,6 +98,11 @@ test_that("geoarrow_vctr to stream works for arbitrary slices", {
   expect_identical(chunks57[[1]]$length, 3L)
 })
 
+test_that("subsetting a geoarrow_vctr with a non-slice errors", {
+  vctr <- as_geoarrow_vctr("POINT (0 1)")
+  expect_error(vctr[5:1], "Can't subset geoarrow_vctr with non-slice")
+})
+
 test_that("slice detector works", {
   expect_identical(
     vctr_as_slice(logical()),
