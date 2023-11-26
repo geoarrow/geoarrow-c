@@ -1,8 +1,8 @@
 
 #' @importFrom wk wk_handle
 #' @export
-wk_handle.geoarrow_vctr <- function(x, handler, ...) {
-  geoarrow_handle(x, handler, size = length(x))
+wk_handle.geoarrow_vctr <- function(handleable, handler, ...) {
+  geoarrow_handle(handleable, handler, size = length(handleable))
 }
 
 #' @importFrom wk wk_crs
