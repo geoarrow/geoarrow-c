@@ -53,7 +53,65 @@ new_geoarrow_vctr <- function(chunks, schema, indices = NULL) {
 }
 
 #' @export
+`[<-.geoarrow_vctr` <- function(x, i, value) {
+  stop("subset assignment for geoarrow_vctr is not supported")
+}
+
+#' @export
+`[[<-.geoarrow_vctr` <- function(x, i, value) {
+  stop("subset assignment for geoarrow_vctr is not supported")
+}
+
+#' @export
+format.geoarrow_vctr <- function(x, ..., width = NULL, digits = NULL) {
+  if (is.null(width)) {
+    width <- getOption("width", 100L)
+  }
+
+  width <- max(width, 20)
+
+  if (is.null(digits)) {
+    digits <- getOption("digits", 7L)
+  }
+
+  digits <- max(digits, 0)
+
+  formatted_array <- geoarrow_kernel_call_scalar(
+    "format_wkt",
+    x,
+    options = c(
+      max_element_size_bytes = width - 10L,
+      precision = digits
+    ),
+    n = length(attr(x, "chunks"))
+  )
+
+  formatted_chr <- nanoarrow::convert_array_stream(
+    formatted_array,
+    character(),
+    size = length(x)
+  )
+
+  sprintf("<%s>", formatted_chr)
+}
+
+# Because RStudio's viewer uses this, we want to use the potentially abbreviated
+# WKT from the format method
+#' @export
+as.character.geoarrow_vctr <- function(x, ...) {
+  format(x, ...)
+}
+
+#' @export
 infer_nanoarrow_schema.geoarrow_vctr <- function(x, ...) {
+  attr(x, "schema")
+}
+
+# Because zero-length vctrs are R's way of communicating "type", implement
+# as_nanoarrow_schema() here so that it works in places that expect a type
+#' @importFrom nanoarrow as_nanoarrow_schema
+#' @export
+as_nanoarrow_schema.geoarrow_vctr <- function(x, ...) {
   attr(x, "schema")
 }
 
