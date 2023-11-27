@@ -105,3 +105,51 @@ test_that("as_geoarrow_array() for wk generates the correct metadata", {
     sprintf('{"edges":"spherical"}')
   )
 })
+
+test_that("convert_array() works for wkt()", {
+  # Check from exact storage
+  array <- as_geoarrow_array(wk::wkt(c("POINT (0 1)")))
+  expect_identical(
+    convert_array(array, wk::wkt()),
+    wk::wkt(c("POINT (0 1)"))
+  )
+
+  # Check from something that goes through the handler/writer
+  array <- as_geoarrow_array(wk::as_wkb(c("POINT (0 1)")))
+  expect_identical(
+    convert_array(array, wk::wkt()),
+    wk::wkt(c("POINT (0 1)"))
+  )
+})
+
+test_that("convert_array() works for wkb()", {
+  # Check from exact storage
+  array <- as_geoarrow_array(wk::as_wkb(c("POINT (0 1)")))
+  expect_identical(
+    convert_array(array, wk::wkb()),
+    wk::as_wkb(c("POINT (0 1)"))
+  )
+
+  # Check from something that goes through the handler/writer
+  array <- as_geoarrow_array(wk::wkt(c("POINT (0 1)")))
+  expect_identical(
+    convert_array(array, wk::wkb()),
+    wk::as_wkb(c("POINT (0 1)"))
+  )
+})
+
+test_that("convert_array() works for xy()", {
+  # Check from exact storage
+  array <- as_geoarrow_array(wk::xy(0, 1))
+  expect_identical(
+    convert_array(array, wk::xy()),
+    wk::xy(0, 1)
+  )
+
+  # Check from something that goes through the handler/writer
+  array <- as_geoarrow_array(wk::wkt(c("POINT (0 1)")))
+  expect_identical(
+    convert_array(array, wk::xy()),
+    wk::xy(0, 1)
+  )
+})

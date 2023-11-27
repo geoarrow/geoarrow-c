@@ -1,8 +1,14 @@
 
 # exported in zzz.R
-st_as_sfc.geoarrow_vctr <- function(x, ...) {
-  sfc <- wk::wk_handle(x, wk::sfc_writer())
+st_as_sfc.geoarrow_vctr <- function(x, ..., promote_multi = FALSE) {
+  sfc <- wk::wk_handle(x, wk::sfc_writer(promote_multi))
   sf::st_set_crs(sfc, sf::st_crs(wk::wk_crs(x)))
+}
+
+#' @export
+convert_array.sfc <- function(array, to, ..., sfc_promote_multi = FALSE) {
+  vctr <- as_geoarrow_vctr(array)
+  st_as_sfc.geoarrow_vctr(vctr, promote_multi = sfc_promote_multi)
 }
 
 #' @importFrom nanoarrow infer_nanoarrow_schema

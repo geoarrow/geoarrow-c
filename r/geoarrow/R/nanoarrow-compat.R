@@ -18,16 +18,14 @@ infer_nanoarrow_ptype_extension.geoarrow_extension_spec <- function(extension_sp
 #' @export
 convert_array_extension.geoarrow_extension_spec <- function(extension_spec,
                                                             array, to, ...) {
-  if (inherits(to, "geoarrow_vctr")) {
-    as_geoarrow_vctr(array, schema = as_nanoarrow_schema(to))
-  } else {
-    stop(
-      sprintf(
-        "Can't convert geoarrow extension array to object of class '%s'",
-        class(to)[1]
-      )
+  # For the default, this will dispatch to convert_array.geoarrow_vctr().
+  # This gets called if to is a base R type (e.g., integer())
+  stop(
+    sprintf(
+      "Can't convert geoarrow extension array to object of class '%s'",
+      class(to)[1]
     )
-  }
+  )
 }
 
 #' @importFrom nanoarrow as_nanoarrow_array_extension
@@ -35,4 +33,10 @@ convert_array_extension.geoarrow_extension_spec <- function(extension_spec,
 as_nanoarrow_array_extension.geoarrow_extension_spec <- function(
     extension_spec, x, ..., schema = NULL) {
   as_geoarrow_array(x, schema = schema)
+}
+
+#' @importFrom nanoarrow convert_array
+#' @export
+convert_array.geoarrow_vctr <- function(array, to, ...) {
+  as_geoarrow_vctr(array, schema = as_nanoarrow_schema(to))
 }
