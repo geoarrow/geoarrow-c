@@ -28,7 +28,7 @@ test_that("geoarrow_array_from_buffers() works for wkb", {
       wkb
     )
   )
-  vctr <- suppressWarnings(nanoarrow::convert_array(array))
+  vctr <- nanoarrow::convert_array(force_array_storage(array))
   attributes(vctr) <- NULL
   attributes(wkb) <- NULL
   expect_identical(wkb, vctr)
@@ -46,7 +46,7 @@ test_that("geoarrow_array_from_buffers() works for large wkb", {
       wkb
     )
   )
-  vctr <- suppressWarnings(nanoarrow::convert_array(array))
+  vctr <- nanoarrow::convert_array(force_array_storage(array))
   expect_identical(unclass(wkb), as.list(vctr))
 })
 
@@ -60,7 +60,7 @@ test_that("geoarrow_array_from_buffers() works for wkt", {
       wkt
     )
   )
-  vctr <- suppressWarnings(nanoarrow::convert_array(array, character()))
+  vctr <- nanoarrow::convert_array(force_array_storage(array), character())
   expect_identical(wkt, vctr)
 })
 
@@ -76,7 +76,7 @@ test_that("geoarrow_array_from_buffers() works for large wkt", {
       wkt
     )
   )
-  vctr <- suppressWarnings(nanoarrow::convert_array(array, character()))
+  vctr <- nanoarrow::convert_array(force_array_storage(array), character())
   expect_identical(wkt, vctr)
 })
 

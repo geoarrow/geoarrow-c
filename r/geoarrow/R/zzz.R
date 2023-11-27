@@ -1,6 +1,8 @@
 
 # nocov start
 .onLoad <- function(...) {
+  register_geoarrow_extension()
+
   s3_register("sf::st_as_sfc", "geoarrow_vctr")
 }
 
