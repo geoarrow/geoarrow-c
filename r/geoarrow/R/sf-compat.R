@@ -2,7 +2,7 @@
 # exported in zzz.R
 st_as_sfc.geoarrow_vctr <- function(x, ..., promote_multi = FALSE) {
   sfc <- wk::wk_handle(x, wk::sfc_writer(promote_multi))
-  sf::st_set_crs(sfc, sf::st_crs(wk::wk_crs(x)))
+  wk::wk_set_crs(sfc, wk::wk_crs(x))
 }
 
 #' @export
