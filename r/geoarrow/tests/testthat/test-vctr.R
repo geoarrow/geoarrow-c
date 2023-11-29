@@ -15,6 +15,10 @@ test_that("format() works for geoarrow_vctr", {
     format(vctr),
     c("<POINT (0.222222 1.333333)>", "<POINT (1 2)>")
   )
+  expect_identical(
+    as.character(vctr),
+    c("<POINT (0.222222 1.333333)>", "<POINT (1 2)>")
+  )
 
   opts <- options(digits = 5, width = 30)
   on.exit(options(opts))
