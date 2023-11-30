@@ -102,6 +102,20 @@ struct ArrowArrayStream {
 /// \ingroup geoarrow-utility
 #define GEOARROW_OK 0
 
+#define _GEOARROW_CONCAT(x, y) x##y
+#define _GEOARROW_MAKE_NAME(x, y) _GEOARROW_CONCAT(x, y)
+
+#define _GEOARROW_RETURN_NOT_OK_IMPL(NAME, EXPR) \
+  do {                                           \
+    const int NAME = (EXPR);                     \
+    if (NAME) return NAME;                       \
+  } while (0)
+
+/// \brief Macro helper for error handling
+/// \ingroup geoarrow-utility
+#define GEOARROW_RETURN_NOT_OK(EXPR) \
+  _GEOARROW_RETURN_NOT_OK_IMPL(_GEOARROW_MAKE_NAME(errno_status_, __COUNTER__), EXPR)
+
 /// \brief Represents an errno-compatible error code
 /// \ingroup geoarrow-utility
 typedef int GeoArrowErrorCode;
