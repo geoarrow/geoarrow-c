@@ -3,8 +3,8 @@
 #include <R.h>
 #include <Rinternals.h>
 
-#include <vector>
 #include <stdexcept>
+#include <vector>
 
 #include "geoarrow.h"
 #include "nanoarrow.h"
@@ -350,7 +350,7 @@ SEXP geoarrow_handle_stream(SEXP data, wk_handler_t* handler) {
       if (errno_code != 0) {
         const char* error_message = array_stream->get_last_error(array_stream);
         if (error_message != NULL) {
-          Rf_error("[array_stream->get_next] %s", errno_code, error_message);
+          Rf_error("[array_stream->get_next] [%d]: %s", errno_code, error_message);
         } else {
           Rf_error("[array_stream->get_next] failed with code %d", errno_code);
         }

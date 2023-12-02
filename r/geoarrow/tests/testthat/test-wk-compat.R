@@ -105,3 +105,86 @@ test_that("as_geoarrow_array() for wk generates the correct metadata", {
     sprintf('{"edges":"spherical"}')
   )
 })
+
+test_that("convert_array() works for wkt()", {
+  # Check from exact storage
+  array <- as_geoarrow_array(wk::wkt("POINT (0 1)"))
+  expect_identical(
+    convert_array(array, wk::wkt()),
+    wk::wkt("POINT (0 1)")
+  )
+
+  # Check from something that goes through the handler/writer
+  array <- as_geoarrow_array(wk::as_wkb("POINT (0 1)"))
+  expect_identical(
+    convert_array(array, wk::wkt()),
+    wk::wkt("POINT (0 1)")
+  )
+
+  # Check that crs attribute is passed through
+  array <- as_geoarrow_array(wk::wkt("POINT (0 1)", crs = "OGC:CRS84"))
+  expect_identical(
+    convert_array(array, wk::wkt()),
+    wk::wkt("POINT (0 1)", crs = wk::wk_crs_projjson("OGC:CRS84"))
+  )
+
+  # Check that geodesic attribute is passed through
+  array <- as_geoarrow_array(wk::wkt("POINT (0 1)", geodesic = TRUE))
+  expect_identical(
+    convert_array(array, wk::wkt(geodesic = TRUE)),
+    wk::wkt("POINT (0 1)", geodesic = TRUE)
+  )
+})
+
+test_that("convert_array() works for wkb()", {
+  # Check from exact storage
+  array <- as_geoarrow_array(wk::as_wkb(c("POINT (0 1)")))
+  expect_identical(
+    convert_array(array, wk::wkb()),
+    wk::as_wkb(c("POINT (0 1)"))
+  )
+
+  # Check from something that goes through the handler/writer
+  array <- as_geoarrow_array(wk::wkt(c("POINT (0 1)")))
+  expect_identical(
+    convert_array(array, wk::wkb()),
+    wk::as_wkb(c("POINT (0 1)"))
+  )
+
+  # Check that crs attribute is passed through
+  array <- as_geoarrow_array(wk::as_wkb(wk::wkt("POINT (0 1)", crs = "OGC:CRS84")))
+  expect_identical(
+    convert_array(array, wk::wkb()),
+    wk::as_wkb(wk::wkt("POINT (0 1)", crs = wk::wk_crs_projjson("OGC:CRS84")))
+  )
+
+  # Check that geodesic attribute is passed through
+  array <- as_geoarrow_array(wk::as_wkb(wk::wkt("POINT (0 1)", geodesic = TRUE)))
+  expect_identical(
+    convert_array(array, wk::wkb(geodesic = TRUE)),
+    wk::as_wkb(wk::wkt("POINT (0 1)", geodesic = TRUE))
+  )
+})
+
+test_that("convert_array() works for xy()", {
+  # Check from exact storage
+  array <- as_geoarrow_array(wk::xy(0, 1))
+  expect_identical(
+    convert_array(array, wk::xy()),
+    wk::xy(0, 1)
+  )
+
+  # Check from something that goes through the handler/writer
+  array <- as_geoarrow_array(wk::wkt(c("POINT (0 1)")))
+  expect_identical(
+    convert_array(array, wk::xy()),
+    wk::xy(0, 1)
+  )
+
+  # Check that crs attribute is passed through
+  array <- as_geoarrow_array(wk::xy(0, 1, crs = "OGC:CRS84"))
+  expect_identical(
+    convert_array(array, wk::xy()),
+    wk::xy(0, 1, crs = wk::wk_crs_projjson("OGC:CRS84"))
+  )
+})
