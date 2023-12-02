@@ -83,7 +83,7 @@ format.geoarrow_vctr <- function(x, ..., width = NULL, digits = NULL) {
       max_element_size_bytes = width - 10L,
       precision = digits
     ),
-    n = length(attr(x, "chunks"))
+    n = length(attr(x, "chunks", exact = TRUE))
   )
 
   formatted_chr <- nanoarrow::convert_array_stream(
