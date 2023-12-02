@@ -145,7 +145,7 @@ convert_array.wk_wkb <- function(array, to, ...) {
   }
 
   wk::wk_crs(out) <- wk::wk_crs_output(vctr, to)
-  wk::wk_is_geodesic_output(vctr, to)
+  wk::wk_is_geodesic(out) <- wk::wk_is_geodesic_output(vctr, to)
   out
 }
 
