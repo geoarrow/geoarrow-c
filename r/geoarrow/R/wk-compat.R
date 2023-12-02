@@ -8,7 +8,7 @@ wk_handle.geoarrow_vctr <- function(handleable, handler, ...) {
 #' @importFrom wk wk_crs
 #' @export
 wk_crs.geoarrow_vctr <- function(x) {
-  parsed <- geoarrow_schema_parse(attr(x, "schema"))
+  parsed <- geoarrow_schema_parse(attr(x, "schema", exact = TRUE))
   if (parsed$crs_type == enum$CrsType$NONE) {
     NULL
   } else {
@@ -19,7 +19,7 @@ wk_crs.geoarrow_vctr <- function(x) {
 #' @importFrom wk wk_is_geodesic
 #' @export
 wk_is_geodesic.geoarrow_vctr <- function(x) {
-  parsed <- geoarrow_schema_parse(attr(x, "schema"))
+  parsed <- geoarrow_schema_parse(attr(x, "schema", exact = TRUE))
   parsed$edge_type == enum$EdgeType$SPHERICAL
 }
 
@@ -127,6 +127,7 @@ convert_array.wk_wkt <- function(array, to, ...) {
   wk::wk_crs(out) <- wk::wk_crs_output(vctr, to)
   wk::wk_is_geodesic_output(vctr, to)
   wk::wk_is_geodesic(out) <- wk::wk_is_geodesic_output(vctr, to)
+  out
 }
 
 #' @export
