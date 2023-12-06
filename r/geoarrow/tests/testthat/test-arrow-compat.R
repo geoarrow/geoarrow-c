@@ -90,4 +90,10 @@ test_that("as_arrow_array() works for geoarrow_vctr", {
   array <- arrow::as_arrow_array(vctr2, type = na_extension_wkb())
 })
 
+test_that("infer_type() works for geoarrow_vctr", {
+  skip_if_not_installed("arrow")
 
+  vctr <- as_geoarrow_vctr("POINT (0 1)")
+  type <- arrow::infer_type(vctr)
+  expect_identical(type$extension_name(), "geoarrow.wkt")
+})
