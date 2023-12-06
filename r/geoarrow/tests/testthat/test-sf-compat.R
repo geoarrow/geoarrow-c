@@ -12,11 +12,12 @@ test_that("st_as_sfc() works for geoarrow_vctr()", {
   )
 })
 
-test_that("st_as_sfc() and st_as_sf() work for arrow package objects", {
+test_that("arrow package objects can be converted to and from sf objects", {
   skip_if_not_installed("sf")
   skip_if_not_installed("arrow")
 
   sfc <- sf::st_sfc(sf::st_point(c(0, 1)))
+  sf <- sf::st_as_sf(tibble::tibble(geometry = sfc))
   vctr <- as_geoarrow_vctr(wk::wkt("POINT (0 1)"))
   array <- arrow::as_arrow_array(vctr)
   chunked <- arrow::as_chunked_array(array)
@@ -43,6 +44,12 @@ test_that("st_as_sfc() and st_as_sf() work for arrow package objects", {
     sf::st_as_sf(reader),
     sf::st_as_sf(tibble::tibble(geometry = sfc))
   )
+
+  chunked2 <- arrow::as_chunked_array(sfc, type = arrow::as_data_type(na_extension_wkt()))
+  expect_true(chunked2$Equals(chunked))
+
+  array2 <- arrow::as_arrow_array(sfc, type = arrow::as_data_type(na_extension_wkt()))
+  expect_true(array2$Equals(array))
 })
 
 test_that("convert_array() works for sfc", {

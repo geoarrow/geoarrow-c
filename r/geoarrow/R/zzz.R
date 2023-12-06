@@ -13,7 +13,9 @@
   s3_register("sf::st_as_sf", "RecordBatchReader")
   s3_register("sf::st_as_sf", "arrow_dplyr_query")
   s3_register("arrow::as_arrow_array", "geoarrow_vctr")
+  s3_register("arrow::as_arrow_array", "sfc")
   s3_register("arrow::as_chunked_array", "geoarrow_vctr")
+  s3_register("arrow::as_chunked_array", "sfc")
 }
 
 # From the `vctrs` package (this function is intended to be copied

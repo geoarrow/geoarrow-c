@@ -38,6 +38,26 @@ st_as_sf.arrow_dplyr_query <- function(x, ..., promote_multi = FALSE) {
   st_as_sf.ArrowTabular(x, ..., promote_multi = promote_multi)
 }
 
+as_arrow_array.sfc <- function(x, ..., type = NULL) {
+  if (!is.null(type)) {
+    type <- as_nanoarrow_schema(type)
+  }
+
+  arrow::as_arrow_array(as_geoarrow_vctr(x, schema = type))
+}
+
+as_chunked_array.sfc <- function(x, ..., type = NULL) {
+  if (!is.null(type)) {
+    type <- as_nanoarrow_schema(type)
+  }
+
+  arrow::as_chunked_array(as_geoarrow_vctr(x, schema = type))
+}
+
+infer_type.sfc <- function(x, ...) {
+  arrow::as_data_type(nanoarrow::infer_nanoarrow_schema(x))
+}
+
 #' @export
 convert_array.sfc <- function(array, to, ..., sfc_promote_multi = FALSE) {
   vctr <- as_geoarrow_vctr(array)
