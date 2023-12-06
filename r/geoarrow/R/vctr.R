@@ -117,12 +117,17 @@ as_nanoarrow_schema.geoarrow_vctr <- function(x, ...) {
 
 #' @export
 as_geoarrow_array_stream.geoarrow_vctr <- function(x, ..., schema = NULL) {
-  as_nanoarrow_array_stream.geoarrow_vctr(x, ..., schema = NULL)
+  as_nanoarrow_array_stream.geoarrow_vctr(x, ..., schema = schema)
 }
 
 #' @importFrom nanoarrow as_nanoarrow_array_stream
 #' @export
 as_nanoarrow_array_stream.geoarrow_vctr <- function(x, ..., schema = NULL) {
+  if (!is.null(schema)) {
+    stream <- as_nanoarrow_array_stream(x, schema = NULL)
+    return(as_geoarrow_array_stream(stream, schema = schema))
+  }
+
   slice <- vctr_as_slice(x)
   if (is.null(slice)) {
     stop("Can't resolve non-slice geoarrow_vctr to nanoarrow_array_stream")

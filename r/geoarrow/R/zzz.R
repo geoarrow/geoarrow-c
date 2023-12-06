@@ -4,6 +4,8 @@
   register_geoarrow_extension()
 
   s3_register("sf::st_as_sfc", "geoarrow_vctr")
+  s3_register("arrow::as_arrow_array", "geoarrow_vctr")
+  s3_register("arrow::as_chunked_array", "geoarrow_vctr")
 }
 
 # From the `vctrs` package (this function is intended to be copied
