@@ -12,6 +12,39 @@ test_that("st_as_sfc() works for geoarrow_vctr()", {
   )
 })
 
+test_that("st_as_sfc() and st_as_sf() work for arrow package objects", {
+  skip_if_not_installed("sf")
+  skip_if_not_installed("arrow")
+
+  sfc <- sf::st_sfc(sf::st_point(c(0, 1)))
+  vctr <- as_geoarrow_vctr(wk::wkt("POINT (0 1)"))
+  array <- arrow::as_arrow_array(vctr)
+  chunked <- arrow::as_chunked_array(array)
+  table <- arrow::arrow_table(geometry = chunked)
+  dataset <- arrow::InMemoryDataset$create(table)
+  scanner <- arrow::Scanner$create(dataset)
+  reader <- arrow::as_record_batch_reader(table)
+
+  expect_identical(sf::st_as_sfc(array), sfc)
+  expect_identical(sf::st_as_sfc(chunked), sfc)
+  expect_identical(
+    sf::st_as_sf(table),
+    sf::st_as_sf(tibble::tibble(geometry = sfc))
+  )
+  expect_identical(
+    sf::st_as_sf(dataset),
+    sf::st_as_sf(tibble::tibble(geometry = sfc))
+  )
+  expect_identical(
+    sf::st_as_sf(scanner),
+    sf::st_as_sf(tibble::tibble(geometry = sfc))
+  )
+  expect_identical(
+    sf::st_as_sf(reader),
+    sf::st_as_sf(tibble::tibble(geometry = sfc))
+  )
+})
+
 test_that("convert_array() works for sfc", {
   skip_if_not_installed("sf")
 
