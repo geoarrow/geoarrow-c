@@ -50,6 +50,15 @@ test_that("arrow package objects can be converted to and from sf objects", {
 
   array2 <- arrow::as_arrow_array(sfc, type = arrow::as_data_type(na_extension_wkt()))
   expect_true(array2$Equals(array))
+
+  table2 <- arrow::as_arrow_table(
+    sf,
+    schema = arrow::schema(geometry = arrow::as_data_type(na_extension_wkt()))
+  )
+  expect_true(table2$Equals(table))
+
+  sf_inferred <- arrow::infer_type(sfc)
+  expect_identical(sf_inferred$extension_name(), "geoarrow.point")
 })
 
 test_that("convert_array() works for sfc", {

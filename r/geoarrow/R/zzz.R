@@ -16,6 +16,8 @@
   s3_register("arrow::as_arrow_array", "sfc")
   s3_register("arrow::as_chunked_array", "geoarrow_vctr")
   s3_register("arrow::as_chunked_array", "sfc")
+  s3_register("arrow::infer_type", "geoarrow_vctr")
+  s3_register("arrow::infer_type", "sfc")
 }
 
 # From the `vctrs` package (this function is intended to be copied

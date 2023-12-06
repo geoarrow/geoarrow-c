@@ -31,6 +31,10 @@ as_chunked_array.geoarrow_vctr <- function(x, ..., type = NULL) {
   arrow::ChunkedArray$create(!!!arrays, type = type)
 }
 
+infer_type.geoarrow_vctr <- function(x, ...) {
+  arrow::as_data_type(as_nanoarrow_schema(x))
+}
+
 #' @export
 as_geoarrow_array_stream.ChunkedArray <- function(x, ..., schema = NULL) {
   stream <- nanoarrow::basic_array_stream(
