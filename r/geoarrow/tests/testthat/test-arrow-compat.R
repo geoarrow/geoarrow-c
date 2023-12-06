@@ -33,5 +33,5 @@ test_that("as_arrow_array() works for geoarrow_vctr", {
   expect_equal(array$length(), 2)
 
   # Check with a requested type
-  chunked <- arrow::as_arrow_array(vctr2, type = na_extension_wkb())
+  array <- arrow::as_arrow_array(vctr2, type = na_extension_wkb())
 })
