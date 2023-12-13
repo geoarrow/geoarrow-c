@@ -8,7 +8,7 @@ struct GeoArrowArrayReaderPrivate {
   struct GeoArrowWKBReader wkb_reader;
 };
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitWKT(struct GeoArrowArrayView* array_view,
+static GeoArrowErrorCode GeoArrowArrayViewVisitWKT(const struct GeoArrowArrayView* array_view,
                                                    int64_t offset, int64_t length,
                                                    struct GeoArrowWKTReader* reader,
                                                    struct GeoArrowVisitor* v) {
@@ -31,7 +31,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitWKT(struct GeoArrowArrayView* arr
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitWKB(struct GeoArrowArrayView* array_view,
+static GeoArrowErrorCode GeoArrowArrayViewVisitWKB(const struct GeoArrowArrayView* array_view,
                                                    int64_t offset, int64_t length,
                                                    struct GeoArrowWKBReader* reader,
                                                    struct GeoArrowVisitor* v) {
@@ -89,7 +89,7 @@ void GeoArrowArrayReaderReset(struct GeoArrowArrayReader* reader) {
 }
 
 GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
-                                           struct GeoArrowArrayView* array_view,
+                                           const struct GeoArrowArrayView* array_view,
                                            int64_t offset, int64_t length,
                                            struct GeoArrowVisitor* v) {
   struct GeoArrowArrayReaderPrivate* private_data =

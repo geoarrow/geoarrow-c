@@ -86,7 +86,7 @@ GeoArrowErrorCode GeoArrowArrayViewInitFromType(struct GeoArrowArrayView* array_
 }
 
 GeoArrowErrorCode GeoArrowArrayViewInitFromSchema(struct GeoArrowArrayView* array_view,
-                                                  struct ArrowSchema* schema,
+                                                  const struct ArrowSchema* schema,
                                                   struct GeoArrowError* error) {
   NANOARROW_RETURN_NOT_OK(
       GeoArrowSchemaViewInit(&array_view->schema_view, schema, error));
@@ -94,7 +94,7 @@ GeoArrowErrorCode GeoArrowArrayViewInitFromSchema(struct GeoArrowArrayView* arra
 }
 
 static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_view,
-                                             struct ArrowArray* array,
+                                             const struct ArrowArray* array,
                                              struct GeoArrowError* error, int level) {
   // Set offset + length of the array
   array_view->offset[level] = array->offset;
@@ -201,8 +201,8 @@ static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_vie
                                            level + 1);
 }
 
-GeoArrowErrorCode GeoArrowArrayViewSetArraySerialized(
-    struct GeoArrowArrayView* array_view, struct ArrowArray* array,
+static GeoArrowErrorCode GeoArrowArrayViewSetArraySerialized(
+    struct GeoArrowArrayView* array_view, const struct ArrowArray* array,
     struct GeoArrowError* error) {
   array_view->length[0] = array->length;
   array_view->offset[0] = array->offset;
@@ -213,7 +213,7 @@ GeoArrowErrorCode GeoArrowArrayViewSetArraySerialized(
 }
 
 GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view,
-                                            struct ArrowArray* array,
+                                            const struct ArrowArray* array,
                                             struct GeoArrowError* error) {
   switch (array_view->schema_view.type) {
     case GEOARROW_TYPE_WKT:
@@ -231,7 +231,7 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
   return GEOARROW_OK;
 }
 
-static inline void GeoArrowCoordViewUpdate(struct GeoArrowCoordView* src,
+static inline void GeoArrowCoordViewUpdate(const struct GeoArrowCoordView* src,
                                            struct GeoArrowCoordView* dst, int64_t offset,
                                            int64_t length) {
   for (int j = 0; j < dst->n_values; j++) {
@@ -240,7 +240,7 @@ static inline void GeoArrowCoordViewUpdate(struct GeoArrowCoordView* src,
   dst->n_coords = length;
 }
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitPoint(struct GeoArrowArrayView* array_view,
+static GeoArrowErrorCode GeoArrowArrayViewVisitPoint(const struct GeoArrowArrayView* array_view,
                                                      int64_t offset, int64_t length,
                                                      struct GeoArrowVisitor* v) {
   struct GeoArrowCoordView coords = array_view->coords;
@@ -270,7 +270,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitPoint(struct GeoArrowArrayView* a
 }
 
 static GeoArrowErrorCode GeoArrowArrayViewVisitLinestring(
-    struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
+    const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowVisitor* v) {
   struct GeoArrowCoordView coords = array_view->coords;
 
@@ -300,7 +300,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitLinestring(
 }
 
 static GeoArrowErrorCode GeoArrowArrayViewVisitPolygon(
-    struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
+    const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowVisitor* v) {
   struct GeoArrowCoordView coords = array_view->coords;
 
@@ -341,7 +341,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitPolygon(
 }
 
 static GeoArrowErrorCode GeoArrowArrayViewVisitMultipoint(
-    struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
+    const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowVisitor* v) {
   struct GeoArrowCoordView coords = array_view->coords;
 
@@ -376,7 +376,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitMultipoint(
 }
 
 static GeoArrowErrorCode GeoArrowArrayViewVisitMultilinestring(
-    struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
+    const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowVisitor* v) {
   struct GeoArrowCoordView coords = array_view->coords;
 
@@ -418,7 +418,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitMultilinestring(
 }
 
 static GeoArrowErrorCode GeoArrowArrayViewVisitMultipolygon(
-    struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
+    const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowVisitor* v) {
   struct GeoArrowCoordView coords = array_view->coords;
 
@@ -472,7 +472,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitMultipolygon(
   return GEOARROW_OK;
 }
 
-GeoArrowErrorCode GeoArrowArrayViewVisit(struct GeoArrowArrayView* array_view,
+GeoArrowErrorCode GeoArrowArrayViewVisit(const struct GeoArrowArrayView* array_view,
                                          int64_t offset, int64_t length,
                                          struct GeoArrowVisitor* v) {
   switch (array_view->schema_view.geometry_type) {

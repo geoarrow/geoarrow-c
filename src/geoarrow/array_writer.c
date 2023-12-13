@@ -51,7 +51,7 @@ GeoArrowErrorCode GeoArrowArrayWriterInitFromType(struct GeoArrowArrayWriter* wr
 }
 
 GeoArrowErrorCode GeoArrowArrayWriterInitFromSchema(struct GeoArrowArrayWriter* writer,
-                                                    struct ArrowSchema* schema) {
+                                                    const struct ArrowSchema* schema) {
   struct GeoArrowSchemaView schema_view;
   NANOARROW_RETURN_NOT_OK(GeoArrowSchemaViewInit(&schema_view, schema, NULL));
   return GeoArrowArrayWriterInitFromType(writer, schema_view.type);

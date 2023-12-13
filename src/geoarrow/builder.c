@@ -165,7 +165,7 @@ GeoArrowErrorCode GeoArrowBuilderInitFromType(struct GeoArrowBuilder* builder,
 }
 
 GeoArrowErrorCode GeoArrowBuilderInitFromSchema(struct GeoArrowBuilder* builder,
-                                                struct ArrowSchema* schema,
+                                                const struct ArrowSchema* schema,
                                                 struct GeoArrowError* error) {
   memset(builder, 0, sizeof(struct GeoArrowBuilder));
   NANOARROW_RETURN_NOT_OK(
