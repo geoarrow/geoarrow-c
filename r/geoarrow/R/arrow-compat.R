@@ -10,13 +10,17 @@ as_arrow_array.geoarrow_vctr <- function(x, ..., type = NULL) {
 
 as_chunked_array.geoarrow_vctr <- function(x, ..., type = NULL) {
   if (is.null(type)) {
+    schema <- NULL
     type <- arrow::as_data_type(attr(x, "schema", exact = TRUE))
-    chunks <- attr(x, "chunks", exact = TRUE)
   } else {
-    stream <- as_nanoarrow_array_stream(x, schema = as_nanoarrow_schema(type))
-    chunks <- nanoarrow::collect_array_stream(stream, validate = FALSE)
+    schema <- as_nanoarrow_schema(type)
     type <- arrow::as_data_type(type)
   }
+
+  # as_nanoarrow_array_stream() applies the indices if vctr is sliced
+  stream <- as_nanoarrow_array_stream(x, schema = schema)
+  chunks <- nanoarrow::collect_array_stream(stream, validate = FALSE)
+  type <- arrow::as_data_type(type)
 
   schema <- as_nanoarrow_schema(type)
   arrays <- vector("list", length(chunks))
@@ -28,7 +32,7 @@ as_chunked_array.geoarrow_vctr <- function(x, ..., type = NULL) {
     arrays[[i]] <- arrow::Array$import_from_c(tmp_array, tmp_schema)
   }
 
-  arrow::ChunkedArray$create(!!!arrays, type = type)
+  arrow::chunked_array(!!!arrays, type = type)
 }
 
 infer_type.geoarrow_vctr <- function(x, ...) {

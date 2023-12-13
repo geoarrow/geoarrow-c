@@ -13,8 +13,6 @@ test_that("arrow extension type methods return correct values", {
   expect_identical(type$dimensions, "XY")
   expect_identical(type$coord_type, "SEPARATE")
   expect_identical(type$edge_type, "SPHERICAL")
-
-
 })
 
 test_that("arrow extension type method has a reasonable ToString() method", {
@@ -64,6 +62,14 @@ test_that("as_chunked_array() works for geoarrow_vctr", {
   expect_equal(chunked$length(), 1)
   expect_s3_class(chunked$type, "GeometryExtensionType")
   expect_identical(chunked$type$extension_name(), "geoarrow.wkb")
+})
+
+test_that("as_chunked_array() works for a sliced geoarrow_vctr", {
+  skip_if_not_installed("arrow")
+
+  vctr <- as_geoarrow_vctr(wk::xy(1:10, 11:20))[8:10]
+  chunked <- arrow::as_chunked_array(vctr)
+  expect_identical(chunked$length(), 3L)
 })
 
 test_that("as_arrow_array() works for geoarrow_vctr", {
