@@ -1444,7 +1444,7 @@ static int64_t ArrowSchemaTypeToStringInternal(struct ArrowSchemaView* schema_vi
   }
 }
 
-// Helper for bookeeping to emulate sprintf()-like behaviour spread
+// Helper for bookkeeping to emulate sprintf()-like behaviour spread
 // among multiple sprintf calls.
 static inline void ArrowToStringLogChars(char** out, int64_t n_chars_last,
                                          int64_t* n_remaining, int64_t* n_chars) {
@@ -2779,6 +2779,19 @@ ArrowErrorCode ArrowArrayViewSetArray(struct ArrowArrayView* array_view,
   return NANOARROW_OK;
 }
 
+ArrowErrorCode ArrowArrayViewSetArrayMinimal(struct ArrowArrayView* array_view,
+                                             struct ArrowArray* array,
+                                             struct ArrowError* error) {
+  // Extract information from the array into the array view
+  NANOARROW_RETURN_NOT_OK(ArrowArrayViewSetArrayInternal(array_view, array, error));
+
+  // Run default validation. Because we've marked all non-NULL buffers as having unknown
+  // size, validation will also update the buffer sizes as it goes.
+  NANOARROW_RETURN_NOT_OK(ArrowArrayViewValidateMinimal(array_view, error));
+
+  return NANOARROW_OK;
+}
+
 static int ArrowAssertIncreasingInt32(struct ArrowBufferView view,
                                       struct ArrowError* error) {
   if (view.size_bytes <= (int64_t)sizeof(int32_t)) {
@@ -2786,10 +2799,8 @@ static int ArrowAssertIncreasingInt32(struct ArrowBufferView view,
   }
 
   for (int64_t i = 1; i < view.size_bytes / (int64_t)sizeof(int32_t); i++) {
-    int32_t diff = view.data.as_int32[i] - view.data.as_int32[i - 1];
-    if (diff < 0) {
-      ArrowErrorSet(error, "[%ld] Expected element size >= 0 but found element size %ld",
-                    (long)i, (long)diff);
+    if (view.data.as_int32[i] < view.data.as_int32[i - 1]) {
+      ArrowErrorSet(error, "[%ld] Expected element size >= 0", (long)i);
       return EINVAL;
     }
   }
@@ -2804,10 +2815,8 @@ static int ArrowAssertIncreasingInt64(struct ArrowBufferView view,
   }
 
   for (int64_t i = 1; i < view.size_bytes / (int64_t)sizeof(int64_t); i++) {
-    int64_t diff = view.data.as_int64[i] - view.data.as_int64[i - 1];
-    if (diff < 0) {
-      ArrowErrorSet(error, "[%ld] Expected element size >= 0 but found element size %ld",
-                    (long)i, (long)diff);
+    if (view.data.as_int64[i] < view.data.as_int64[i - 1]) {
+      ArrowErrorSet(error, "[%ld] Expected element size >= 0", (long)i);
       return EINVAL;
     }
   }
@@ -3029,8 +3038,9 @@ static void ArrowBasicArrayStreamRelease(struct ArrowArrayStream* array_stream) 
 
 ArrowErrorCode ArrowBasicArrayStreamInit(struct ArrowArrayStream* array_stream,
                                          struct ArrowSchema* schema, int64_t n_arrays) {
-  struct BasicArrayStreamPrivate* private_data = (struct BasicArrayStreamPrivate*)ArrowMalloc(
-      sizeof(struct BasicArrayStreamPrivate));
+  struct BasicArrayStreamPrivate* private_data =
+      (struct BasicArrayStreamPrivate*)ArrowMalloc(
+          sizeof(struct BasicArrayStreamPrivate));
   if (private_data == NULL) {
     return ENOMEM;
   }
