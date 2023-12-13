@@ -17,7 +17,7 @@ test_that("arrow package objects can be converted to and from sf objects", {
   skip_if_not_installed("arrow")
 
   sfc <- sf::st_sfc(sf::st_point(c(0, 1)))
-  sf <- sf::st_as_sf(tibble::tibble(geometry = sfc))
+  sf <- sf::st_as_sf(data.frame(geometry = sfc))
   vctr <- as_geoarrow_vctr(wk::wkt("POINT (0 1)"))
   array <- arrow::as_arrow_array(vctr)
   chunked <- arrow::as_chunked_array(array)
@@ -30,19 +30,19 @@ test_that("arrow package objects can be converted to and from sf objects", {
   expect_identical(sf::st_as_sfc(chunked), sfc)
   expect_identical(
     sf::st_as_sf(table),
-    sf::st_as_sf(tibble::tibble(geometry = sfc))
+    sf
   )
   expect_identical(
     sf::st_as_sf(dataset),
-    sf::st_as_sf(tibble::tibble(geometry = sfc))
+    sf
   )
   expect_identical(
     sf::st_as_sf(scanner),
-    sf::st_as_sf(tibble::tibble(geometry = sfc))
+    sf
   )
   expect_identical(
     sf::st_as_sf(reader),
-    sf::st_as_sf(tibble::tibble(geometry = sfc))
+    sf
   )
 
   chunked2 <- arrow::as_chunked_array(sfc, type = arrow::as_data_type(na_extension_wkt()))

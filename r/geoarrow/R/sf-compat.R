@@ -16,7 +16,8 @@ st_as_sfc.Array <- function(x, ..., promote_multi = FALSE) {
 }
 
 st_as_sf.ArrowTabular <- function(x, ..., promote_multi = FALSE) {
-  df <- tibble::as_tibble(x)
+  # Some Arrow as.data.frame() methods still return tibbles
+  df <- as.data.frame(as.data.frame(x))
   is_geom <- vapply(df, inherits, logical(1), "geoarrow_vctr")
   df[is_geom] <- lapply(df[is_geom], sf::st_as_sfc, promote_multi = promote_multi)
   sf::st_as_sf(df, ...)
