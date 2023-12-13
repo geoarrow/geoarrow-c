@@ -8,10 +8,9 @@ struct GeoArrowArrayReaderPrivate {
   struct GeoArrowWKBReader wkb_reader;
 };
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitWKT(const struct GeoArrowArrayView* array_view,
-                                                   int64_t offset, int64_t length,
-                                                   struct GeoArrowWKTReader* reader,
-                                                   struct GeoArrowVisitor* v) {
+static GeoArrowErrorCode GeoArrowArrayViewVisitWKT(
+    const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
+    struct GeoArrowWKTReader* reader, struct GeoArrowVisitor* v) {
   struct GeoArrowStringView item;
   const int32_t* offset_begin = array_view->offsets[0] + array_view->offset[0] + offset;
 
@@ -31,10 +30,9 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitWKT(const struct GeoArrowArrayVie
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitWKB(const struct GeoArrowArrayView* array_view,
-                                                   int64_t offset, int64_t length,
-                                                   struct GeoArrowWKBReader* reader,
-                                                   struct GeoArrowVisitor* v) {
+static GeoArrowErrorCode GeoArrowArrayViewVisitWKB(
+    const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
+    struct GeoArrowWKBReader* reader, struct GeoArrowVisitor* v) {
   struct GeoArrowBufferView item;
   const int32_t* offset_begin = array_view->offsets[0] + array_view->offset[0] + offset;
 

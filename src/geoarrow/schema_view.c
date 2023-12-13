@@ -121,7 +121,8 @@ static int GeoArrowParsePointStruct(const struct ArrowSchema* schema,
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowParseNestedSchema(const struct ArrowSchema* schema, int n,
+static GeoArrowErrorCode GeoArrowParseNestedSchema(const struct ArrowSchema* schema,
+                                                   int n,
                                                    struct GeoArrowSchemaView* schema_view,
                                                    struct ArrowError* error,
                                                    const char* ext_name) {

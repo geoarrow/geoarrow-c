@@ -240,9 +240,9 @@ static inline void GeoArrowCoordViewUpdate(const struct GeoArrowCoordView* src,
   dst->n_coords = length;
 }
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitPoint(const struct GeoArrowArrayView* array_view,
-                                                     int64_t offset, int64_t length,
-                                                     struct GeoArrowVisitor* v) {
+static GeoArrowErrorCode GeoArrowArrayViewVisitPoint(
+    const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
+    struct GeoArrowVisitor* v) {
   struct GeoArrowCoordView coords = array_view->coords;
 
   for (int64_t i = 0; i < length; i++) {

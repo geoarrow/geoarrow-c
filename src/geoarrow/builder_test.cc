@@ -253,7 +253,8 @@ TEST(BuilderTest, BuilderTestPointDims) {
   EXPECT_EQ(array_out.length, 4);
   EXPECT_EQ(array_out.null_count, 0);
 
-  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT_ZM), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT_ZM),
+            GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
