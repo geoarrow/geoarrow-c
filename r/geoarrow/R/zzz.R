@@ -2,8 +2,22 @@
 # nocov start
 .onLoad <- function(...) {
   register_geoarrow_extension()
+  register_arrow_extension_type_or_set_hook()
 
   s3_register("sf::st_as_sfc", "geoarrow_vctr")
+  s3_register("sf::st_as_sfc", "ChunkedArray")
+  s3_register("sf::st_as_sfc", "Array")
+  s3_register("sf::st_as_sf", "ArrowTabular")
+  s3_register("sf::st_as_sf", "Dataset")
+  s3_register("sf::st_as_sf", "Scanner")
+  s3_register("sf::st_as_sf", "RecordBatchReader")
+  s3_register("sf::st_as_sf", "arrow_dplyr_query")
+  s3_register("arrow::as_arrow_array", "geoarrow_vctr")
+  s3_register("arrow::as_arrow_array", "sfc")
+  s3_register("arrow::as_chunked_array", "geoarrow_vctr")
+  s3_register("arrow::as_chunked_array", "sfc")
+  s3_register("arrow::infer_type", "geoarrow_vctr")
+  s3_register("arrow::infer_type", "sfc")
 }
 
 # From the `vctrs` package (this function is intended to be copied

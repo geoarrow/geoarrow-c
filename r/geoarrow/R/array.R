@@ -318,9 +318,13 @@ as_validity_buffer <- function(x) {
 
 # This really needs a helper in nanoarrow, but for now, we need a way to drop
 # the extension type and convert storage only for testing
-force_array_storage <- function(array) {
-  schema <- infer_nanoarrow_schema(array)
+force_schema_storage <- function(schema) {
   schema$metadata[["ARROW:extension:name"]] <- NULL
+  schema
+}
+
+force_array_storage <- function(array) {
+  schema <- force_schema_storage(infer_nanoarrow_schema(array))
   array_shallow <- nanoarrow::nanoarrow_allocate_array()
   nanoarrow::nanoarrow_pointer_export(array, array_shallow)
   nanoarrow::nanoarrow_array_set_schema(array_shallow, schema, validate = FALSE)
