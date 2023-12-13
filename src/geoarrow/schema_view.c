@@ -6,7 +6,7 @@
 #include "geoarrow.h"
 #include "nanoarrow.h"
 
-static int GeoArrowParsePointFixedSizeList(struct ArrowSchema* schema,
+static int GeoArrowParsePointFixedSizeList(const struct ArrowSchema* schema,
                                            struct GeoArrowSchemaView* schema_view,
                                            struct ArrowError* error,
                                            const char* ext_name) {
@@ -67,7 +67,7 @@ static int GeoArrowParsePointFixedSizeList(struct ArrowSchema* schema,
   return NANOARROW_OK;
 }
 
-static int GeoArrowParsePointStruct(struct ArrowSchema* schema,
+static int GeoArrowParsePointStruct(const struct ArrowSchema* schema,
                                     struct GeoArrowSchemaView* schema_view,
                                     struct ArrowError* error, const char* ext_name) {
   if (schema->n_children < 2 || schema->n_children > 4) {
@@ -121,7 +121,8 @@ static int GeoArrowParsePointStruct(struct ArrowSchema* schema,
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowParseNestedSchema(struct ArrowSchema* schema, int n,
+static GeoArrowErrorCode GeoArrowParseNestedSchema(const struct ArrowSchema* schema,
+                                                   int n,
                                                    struct GeoArrowSchemaView* schema_view,
                                                    struct ArrowError* error,
                                                    const char* ext_name) {
@@ -151,7 +152,7 @@ static GeoArrowErrorCode GeoArrowParseNestedSchema(struct ArrowSchema* schema, i
 }
 
 static GeoArrowErrorCode GeoArrowSchemaViewInitInternal(
-    struct GeoArrowSchemaView* schema_view, struct ArrowSchema* schema,
+    struct GeoArrowSchemaView* schema_view, const struct ArrowSchema* schema,
     struct ArrowSchemaView* na_schema_view, struct ArrowError* na_error) {
   const char* ext_name = na_schema_view->extension_name.data;
   int64_t ext_len = na_schema_view->extension_name.size_bytes;
@@ -244,7 +245,7 @@ static GeoArrowErrorCode GeoArrowSchemaViewInitInternal(
 }
 
 GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
-                                         struct ArrowSchema* schema,
+                                         const struct ArrowSchema* schema,
                                          struct GeoArrowError* error) {
   struct ArrowError* na_error = (struct ArrowError*)error;
   struct ArrowSchemaView na_schema_view;
@@ -260,7 +261,7 @@ GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
 }
 
 GeoArrowErrorCode GeoArrowSchemaViewInitFromStorage(
-    struct GeoArrowSchemaView* schema_view, struct ArrowSchema* schema,
+    struct GeoArrowSchemaView* schema_view, const struct ArrowSchema* schema,
     struct GeoArrowStringView extension_name, struct GeoArrowError* error) {
   struct ArrowError* na_error = (struct ArrowError*)error;
   struct ArrowSchemaView na_schema_view;

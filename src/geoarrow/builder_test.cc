@@ -66,10 +66,13 @@ TEST_P(TypeParameterizedTestFixture, BuilderTestEmpty) {
   struct GeoArrowBuilder builder;
   struct ArrowArray array_out;
   array_out.release = nullptr;
+  GeoArrowError error;
+  error.message[0] = '\0';
   enum GeoArrowType type = GetParam();
 
-  EXPECT_EQ(GeoArrowBuilderInitFromType(&builder, type), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, type), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowBuilderFinish(&builder, &array_out, &error), GEOARROW_OK)
+      << error.message;
   EXPECT_NE(array_out.release, nullptr);
   GeoArrowBuilderReset(&builder);
 
@@ -253,7 +256,8 @@ TEST(BuilderTest, BuilderTestPointDims) {
   EXPECT_EQ(array_out.length, 4);
   EXPECT_EQ(array_out.null_count, 0);
 
-  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT_ZM), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT_ZM),
+            GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;

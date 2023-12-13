@@ -492,7 +492,7 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
 }
 
 GeoArrowErrorCode GeoArrowSchemaSetMetadataFrom(struct ArrowSchema* schema,
-                                                struct ArrowSchema* schema_src) {
+                                                const struct ArrowSchema* schema_src) {
   struct ArrowSchemaView schema_view;
   NANOARROW_RETURN_NOT_OK(ArrowSchemaViewInit(&schema_view, schema_src, NULL));
 

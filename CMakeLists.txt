@@ -1,4 +1,3 @@
-
 message(STATUS "Building using CMake version: ${CMAKE_VERSION}")
 cmake_minimum_required(VERSION 3.14)
 
@@ -7,7 +6,8 @@ if(NOT DEFINED CMAKE_C_STANDARD)
 endif()
 
 set(GEOARROW_VERSION "0.2.0-SNAPSHOT")
-string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" GEOARROW_BASE_VERSION "${GEOARROW_VERSION}")
+string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" GEOARROW_BASE_VERSION
+             "${GEOARROW_VERSION}")
 project(geoarrow VERSION "${GEOARROW_BASE_VERSION}")
 
 set(GEOARROW_VERSION_MAJOR "${geoarrow_VERSION_MAJOR}")
@@ -18,8 +18,17 @@ option(GEOARROW_BUILD_TESTS "Build tests" OFF)
 option(GEOARROW_CODE_COVERAGE "Enable coverage reporting" OFF)
 option(GEOARROW_USE_FAST_FLOAT "Use fast_float for numeric value parsing" ON)
 option(GEOARROW_USE_RYU "Use ryu for numeric value printing" ON)
+option(GEOARROW_NAMESPACE "A prefix for exported symbols" OFF)
+option(GEOARROW_ARROW_STATIC "Use a statically-linked Arrow C++ build when linking tests"
+       OFF)
 
-if (GEOARROW_BUILD_TESTS)
+if(GEOARROW_NAMESPACE)
+  set(GEOARROW_NAMESPACE_DEFINE "#define GEOARROW_NAMESPACE ${GEOARROW_NAMESPACE}")
+else()
+  set(GEOARROW_NAMESPACE_DEFINE "// #define GEOARROW_NAMESPACE YourNamespaceHere")
+endif()
+
+if(GEOARROW_BUILD_TESTS)
   add_library(coverage_config INTERFACE)
 endif()
 
@@ -49,69 +58,68 @@ endif()
 
 configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow_config.h)
 
-add_library(
-  geoarrow
-  src/geoarrow/schema.c
-  src/geoarrow/schema_view.c
-  src/geoarrow/metadata.c
-  src/geoarrow/kernel.c
-  src/geoarrow/builder.c
-  src/geoarrow/array_view.c
-  src/geoarrow/util.c
-  src/geoarrow/visitor.c
-  src/geoarrow/wkb_reader.c
-  src/geoarrow/wkb_writer.c
-  src/geoarrow/wkt_reader.c
-  src/geoarrow/wkt_writer.c
-  src/geoarrow/array_reader.c
-  src/geoarrow/array_writer.c
-  ${GEOARROW_DOUBLE_PARSE_SOURCE}
-  ${GEOARROW_DOUBLE_PRINT_SOURCE}
-  src/geoarrow/nanoarrow.c)
+add_library(geoarrow
+            src/geoarrow/schema.c
+            src/geoarrow/schema_view.c
+            src/geoarrow/metadata.c
+            src/geoarrow/kernel.c
+            src/geoarrow/builder.c
+            src/geoarrow/array_view.c
+            src/geoarrow/util.c
+            src/geoarrow/visitor.c
+            src/geoarrow/wkb_reader.c
+            src/geoarrow/wkb_writer.c
+            src/geoarrow/wkt_reader.c
+            src/geoarrow/wkt_writer.c
+            src/geoarrow/array_reader.c
+            src/geoarrow/array_writer.c
+            ${GEOARROW_DOUBLE_PARSE_SOURCE}
+            ${GEOARROW_DOUBLE_PRINT_SOURCE}
+            src/geoarrow/nanoarrow.c)
 
-target_include_directories(geoarrow PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/geoarrow>
-  $<INSTALL_INTERFACE:include>)
 target_include_directories(geoarrow
-  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
+                           PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/geoarrow>
+                                  $<INSTALL_INTERFACE:include>)
+target_include_directories(geoarrow
+                           PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
 )
-target_compile_definitions(geoarrow PUBLIC
-  "$<$<CONFIG:Debug>:NANOARROW_DEBUG>"
-  "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
+target_compile_definitions(geoarrow PUBLIC "$<$<CONFIG:Debug>:NANOARROW_DEBUG>"
+                                           "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(
-      geoarrow
-      PRIVATE
-      -Wall
-      -Werror
-      -Wextra
-      -Wno-type-limits
-      -Wno-unused-parameter
-      -Wpedantic
-      -Wunused-result)
-  elseif(CMAKE_C_COMPILER_ID STREQUAL "AppleClang" OR
-    CMAKE_C_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(
-      geoarrow
-      PRIVATE
-      -Wall
-      -Werror
-      -Wextra
-      -Wdocumentation
-      -Wno-unused-parameter
-      -Wshorten-64-to-32)
+    target_compile_options(geoarrow
+                           PRIVATE -Wall
+                                   -Werror
+                                   -Wextra
+                                   -Wno-type-limits
+                                   -Wno-unused-parameter
+                                   -Wpedantic
+                                   -Wunused-result)
+  elseif(CMAKE_C_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_C_COMPILER_ID STREQUAL
+                                                      "Clang")
+    target_compile_options(geoarrow
+                           PRIVATE -Wall
+                                   -Werror
+                                   -Wextra
+                                   -Wdocumentation
+                                   -Wno-unused-parameter
+                                   -Wshorten-64-to-32)
   endif()
 endif()
 
 install(TARGETS geoarrow DESTINATION lib)
-install(DIRECTORY src/ DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY src/
+        DESTINATION include
+        FILES_MATCHING
+        PATTERN "*.h")
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/geoarrow_config.h
         DESTINATION include/geoarrow)
 
 if(GEOARROW_BUILD_TESTS)
-  set(MEMORYCHECK_COMMAND_OPTIONS "--leak-check=full --suppressions=${CMAKE_CURRENT_LIST_DIR}/valgrind.supp --error-exitcode=1")
+  set(MEMORYCHECK_COMMAND_OPTIONS
+      "--leak-check=full --suppressions=${CMAKE_CURRENT_LIST_DIR}/valgrind.supp --error-exitcode=1"
+  )
   include(CTest)
   include(FetchContent)
 
@@ -129,30 +137,28 @@ if(GEOARROW_BUILD_TESTS)
     cmake_policy(SET CMP0135 NEW)
   endif()
 
-  if(MSVC)
-    set(gtest_force_shared_crt on)
-    set(NANOARROW_ARROW_TARGET arrow_static)
+  # Give caller the option to link a static version of Arrow C++
+  if(GEOARROW_ARROW_STATIC)
+    set(GEOARROW_ARROW_TARGET arrow_static)
   else()
-    set(NANOARROW_ARROW_TARGET arrow_shared)
+    set(GEOARROW_ARROW_TARGET arrow_shared)
   endif()
 
   # Use an old version of googletest if we have to to support gcc 4.8
-  if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
-    CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "5.0.0")
-    FetchContent_Declare(
-      googletest
-      URL https://github.com/google/googletest/archive/release-1.11.0.zip
-      URL_HASH SHA256=353571c2440176ded91c2de6d6cd88ddd41401d14692ec1f99e35d013feda55a
+  if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_VERSION
+                                                 VERSION_GREATER_EQUAL "5.0.0")
+    fetchcontent_declare(googletest
+                         URL https://github.com/google/googletest/archive/release-1.11.0.zip
+                         URL_HASH SHA256=353571c2440176ded91c2de6d6cd88ddd41401d14692ec1f99e35d013feda55a
     )
   else()
-    FetchContent_Declare(
-      googletest
-      URL https://github.com/google/googletest/archive/release-1.10.0.zip
-      URL_HASH SHA256=94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91
+    fetchcontent_declare(googletest
+                         URL https://github.com/google/googletest/archive/release-1.10.0.zip
+                         URL_HASH SHA256=94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91
     )
   endif()
 
-  FetchContent_MakeAvailable(googletest)
+  fetchcontent_makeavailable(googletest)
 
   enable_testing()
 
@@ -185,7 +191,7 @@ if(GEOARROW_BUILD_TESTS)
   target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main)
   target_link_libraries(builder_test geoarrow gtest_main)
   target_link_libraries(array_view_test geoarrow gtest_main)
-  target_link_libraries(schema_test geoarrow arrow_shared gtest_main)
+  target_link_libraries(schema_test geoarrow ${GEOARROW_ARROW_TARGET} gtest_main)
   target_link_libraries(schema_view_test geoarrow gtest_main)
   target_link_libraries(kernel_test geoarrow gtest_main)
   target_link_libraries(metadata_test geoarrow gtest_main)
@@ -198,7 +204,7 @@ if(GEOARROW_BUILD_TESTS)
   target_link_libraries(array_reader_test geoarrow gtest_main)
   target_link_libraries(array_writer_test geoarrow gtest_main)
   target_link_libraries(wkx_files_test geoarrow gtest_main)
-  target_link_libraries(geoarrow_arrow_test geoarrow arrow_shared gtest_main)
+  target_link_libraries(geoarrow_arrow_test geoarrow ${GEOARROW_ARROW_TARGET} gtest_main)
 
   include(GoogleTest)
   gtest_discover_tests(geoarrow_hpp_test)

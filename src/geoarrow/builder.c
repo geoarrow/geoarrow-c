@@ -165,7 +165,7 @@ GeoArrowErrorCode GeoArrowBuilderInitFromType(struct GeoArrowBuilder* builder,
 }
 
 GeoArrowErrorCode GeoArrowBuilderInitFromSchema(struct GeoArrowBuilder* builder,
-                                                struct ArrowSchema* schema,
+                                                const struct ArrowSchema* schema,
                                                 struct GeoArrowError* error) {
   memset(builder, 0, sizeof(struct GeoArrowBuilder));
   NANOARROW_RETURN_NOT_OK(
@@ -365,6 +365,12 @@ static void GeoArrowSetArrayLengthFromBufferLength(struct GeoArrowSchemaView* sc
   // By luck, buffer index 1 for every array is the one we use to infer the length;
   // however, this is a slightly different formula for each type/depth
   if (res->i != 1) {
+    return;
+  }
+
+  // ...but in all cases, if the size is 0, the length is 0
+  if (size_bytes == 0) {
+    res->array->length = 0;
     return;
   }
 

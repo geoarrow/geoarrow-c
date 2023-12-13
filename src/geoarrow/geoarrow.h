@@ -75,12 +75,12 @@ GeoArrowErrorCode GeoArrowSchemaInitExtension(struct ArrowSchema* schema,
 
 /// \brief Parse an ArrowSchema extension type into a GeoArrowSchemaView
 GeoArrowErrorCode GeoArrowSchemaViewInit(struct GeoArrowSchemaView* schema_view,
-                                         struct ArrowSchema* schema,
+                                         const struct ArrowSchema* schema,
                                          struct GeoArrowError* error);
 
 /// \brief Parse an ArrowSchema storage type into a GeoArrowSchemaView
 GeoArrowErrorCode GeoArrowSchemaViewInitFromStorage(
-    struct GeoArrowSchemaView* schema_view, struct ArrowSchema* schema,
+    struct GeoArrowSchemaView* schema_view, const struct ArrowSchema* schema,
     struct GeoArrowStringView extension_name, struct GeoArrowError* error);
 
 /// \brief Initialize a GeoArrowSchemaView directly from a GeoArrowType identifier
@@ -108,7 +108,7 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
 /// \brief Update extension metadata associated with an existing ArrowSchema
 /// based on the extension metadata of another
 GeoArrowErrorCode GeoArrowSchemaSetMetadataFrom(struct ArrowSchema* schema,
-                                                struct ArrowSchema* schema_src);
+                                                const struct ArrowSchema* schema_src);
 
 /// \brief Unescape a coordinate reference system value
 ///
@@ -138,12 +138,12 @@ GeoArrowErrorCode GeoArrowArrayViewInitFromType(struct GeoArrowArrayView* array_
 
 /// \brief Initialize a GeoArrowArrayView from an ArrowSchema
 GeoArrowErrorCode GeoArrowArrayViewInitFromSchema(struct GeoArrowArrayView* array_view,
-                                                  struct ArrowSchema* schema,
+                                                  const struct ArrowSchema* schema,
                                                   struct GeoArrowError* error);
 
 /// \brief Populate the members of the GeoArrowArrayView from an ArrowArray
 GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view,
-                                            struct ArrowArray* array,
+                                            const struct ArrowArray* array,
                                             struct GeoArrowError* error);
 
 /// @}
@@ -181,7 +181,7 @@ GeoArrowErrorCode GeoArrowBuilderInitFromType(struct GeoArrowBuilder* builder,
 
 /// \brief Initialize memory for a GeoArrowBuilder based on an ArrowSchema
 GeoArrowErrorCode GeoArrowBuilderInitFromSchema(struct GeoArrowBuilder* builder,
-                                                struct ArrowSchema* schema,
+                                                const struct ArrowSchema* schema,
                                                 struct GeoArrowError* error);
 
 /// \brief Reserve additional space for a buffer in a GeoArrowBuilder
@@ -309,7 +309,7 @@ GeoArrowErrorCode GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
 ///
 /// The caller must have initialized the GeoArrowVisitor with the appropriate
 /// writer before calling this function.
-GeoArrowErrorCode GeoArrowArrayViewVisit(struct GeoArrowArrayView* array_view,
+GeoArrowErrorCode GeoArrowArrayViewVisit(const struct GeoArrowArrayView* array_view,
                                          int64_t offset, int64_t length,
                                          struct GeoArrowVisitor* v);
 
@@ -445,7 +445,7 @@ GeoArrowErrorCode GeoArrowArrayReaderInit(struct GeoArrowArrayReader* reader);
 /// The caller must have initialized the GeoArrowVisitor with the appropriate
 /// writer before calling this function.
 GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
-                                           struct GeoArrowArrayView* array_view,
+                                           const struct GeoArrowArrayView* array_view,
                                            int64_t offset, int64_t length,
                                            struct GeoArrowVisitor* v);
 
@@ -469,7 +469,7 @@ GeoArrowErrorCode GeoArrowArrayWriterInitFromType(struct GeoArrowArrayWriter* wr
 /// If GEOARROW_OK is returned, the caller is responsible for calling
 /// GeoArrowWKTWriterReset().
 GeoArrowErrorCode GeoArrowArrayWriterInitFromSchema(struct GeoArrowArrayWriter* writer,
-                                                    struct ArrowSchema* schema);
+                                                    const struct ArrowSchema* schema);
 
 /// \brief Populate a GeoArrowVisitor pointing to this writer
 GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* writer,

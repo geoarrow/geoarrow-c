@@ -52,9 +52,7 @@ class WKXTester {
     wkt_writer_.use_flat_multipoint = use_flat_multipoint;
   }
 
-  void SetPrecision(int precision) {
-    wkt_writer_.precision = precision;
-  }
+  void SetPrecision(int precision) { wkt_writer_.precision = precision; }
 
   std::string LastErrorMessage() { return std::string(error_.message); }
 
