@@ -42,6 +42,7 @@ if(GEOARROW_USE_FAST_FLOAT)
   if(NOT DEFINED CMAKE_CXX_STANDARD)
     set(CMAKE_CXX_STANDARD 11)
   endif()
+
   set(GEOARROW_DOUBLE_PARSE_SOURCE src/geoarrow/double_parse_fast_float.cc)
   set(GEOARROW_USE_FAST_FLOAT_DEFINE "#define GEOARROW_USE_FAST_FLOAT 1")
 else()
@@ -84,13 +85,13 @@ set(GEOARROW_PUBLIC_HEADERS
 
 if(GEOARROW_BUNDLE)
   # Bundle sources + headers, and if building tests, add a target the tests can link against
-
   file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/amalgamation)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/amalgamation)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/amalgamation/geoarrow)
 
   set(GEOARROW_H_TEMP ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/geoarrow.h)
   file(WRITE ${GEOARROW_H_TEMP} "")
+
   foreach(SRC_FILE ${GEOARROW_PUBLIC_HEADERS})
     file(READ ${SRC_FILE} SRC_FILE_CONTENTS)
     file(APPEND ${GEOARROW_H_TEMP} "${SRC_FILE_CONTENTS}")
@@ -113,8 +114,7 @@ if(GEOARROW_BUNDLE)
     file(APPEND ${GEOARROW_C_TEMP} "${SRC_FILE_CONTENTS}")
   endforeach()
 
-
-  # Updates includes for concatenated sources
+  # Update includes for concatenated sources
   foreach(SRC_FILE ${GEOARROW_H_TEMP} ${GEOARROW_C_TEMP})
     file(READ ${SRC_FILE} SRC_FILE_CONTENTS)
     string(REGEX REPLACE "#include \"[a-z_.]+\"" "" SRC_FILE_CONTENTS
@@ -122,10 +122,16 @@ if(GEOARROW_BUNDLE)
     file(WRITE ${SRC_FILE} "${SRC_FILE_CONTENTS}")
   endforeach()
 
-  # Make sure geoarrow.h is included
+  # Make sure geoarrow.h is included from geoarrow.c
   file(READ ${GEOARROW_C_TEMP} SRC_FILE_CONTENTS)
   file(WRITE ${GEOARROW_C_TEMP} "#include \"geoarrow.h\"\n")
   file(APPEND ${GEOARROW_C_TEMP} "${SRC_FILE_CONTENTS}")
+
+  # Copy geoarrow.hpp
+  file(COPY_FILE src/geoarrow/geoarrow.hpp
+       ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/geoarrow.hpp)
+  file(COPY_FILE src/geoarrow/geoarrow_arrow.hpp
+       ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/geoarrow_arrow.hpp)
 
   # If building tests, add the geoarrow target so we can test against it
   if(GEOARROW_BUILD_TESTS)

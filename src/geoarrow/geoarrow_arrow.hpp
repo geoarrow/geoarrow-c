@@ -4,7 +4,6 @@
 #include <arrow/extension_type.h>
 #include <arrow/type.h>
 
-#include "geoarrow.h"
 #include "geoarrow.hpp"
 
 namespace geoarrow {
