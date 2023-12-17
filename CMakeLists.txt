@@ -75,8 +75,6 @@ set(GEOARROW_SOURCES
     src/geoarrow/wkt_writer.c
     src/geoarrow/array_reader.c
     src/geoarrow/array_writer.c
-    ${GEOARROW_DOUBLE_PARSE_SOURCE}
-    ${GEOARROW_DOUBLE_PRINT_SOURCE}
     src/geoarrow/nanoarrow.c)
 
 set(GEOARROW_PUBLIC_HEADERS
@@ -109,7 +107,8 @@ if(GEOARROW_BUNDLE)
 
   file(APPEND ${GEOARROW_C_TEMP} "#pragma GCC diagnostic push")
 
-  foreach(SRC_FILE ${GEOARROW_SOURCES})
+  foreach(SRC_FILE ${GEOARROW_SOURCES} src/geoarrow/double_print.c
+                   src/geoarrow/double_parse_std.c)
     file(READ ${SRC_FILE} SRC_FILE_CONTENTS)
     file(APPEND ${GEOARROW_C_TEMP} "${SRC_FILE_CONTENTS}")
   endforeach()
@@ -149,7 +148,8 @@ if(GEOARROW_BUNDLE)
   endif()
 else()
   # Normal CMake build
-  add_library(geoarrow ${GEOARROW_SOURCES})
+  add_library(geoarrow ${GEOARROW_SOURCES} ${GEOARROW_DOUBLE_PARSE_SOURCE}
+                       ${GEOARROW_DOUBLE_PRINT_SOURCE})
 
   target_include_directories(geoarrow
                              PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/geoarrow>
