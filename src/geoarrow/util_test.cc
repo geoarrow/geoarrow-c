@@ -1,7 +1,7 @@
 
 #include <gtest/gtest.h>
 
-#include "geoarrow.h"
+#include <geoarrow.h>
 
 TEST(BuildIdTest, VersionTest) {
   EXPECT_STREQ(GeoArrowVersion(), GEOARROW_VERSION);

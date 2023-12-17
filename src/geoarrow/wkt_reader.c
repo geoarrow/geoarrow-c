@@ -16,12 +16,12 @@ struct WKTReaderPrivate {
   struct GeoArrowCoordView coord_view;
 };
 
-static inline void AdvanceUnsafe(struct WKTReaderPrivate* s, int64_t n) {
+static inline void GeoArrowWKTAdvanceUnsafe(struct WKTReaderPrivate* s, int64_t n) {
   s->data += n;
   s->size_bytes -= n;
 }
 
-static inline void SkipWhitespace(struct WKTReaderPrivate* s) {
+static inline void GeoArrowWKTSkipWhitespace(struct WKTReaderPrivate* s) {
   while (s->size_bytes > 0) {
     char c = *(s->data);
     if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
@@ -33,7 +33,7 @@ static inline void SkipWhitespace(struct WKTReaderPrivate* s) {
   }
 }
 
-static inline int SkipUntil(struct WKTReaderPrivate* s, const char* items) {
+static inline int GeoArrowWKTSkipUntil(struct WKTReaderPrivate* s, const char* items) {
   int64_t n_items = strlen(items);
   while (s->size_bytes > 0) {
     char c = *(s->data);
@@ -54,8 +54,8 @@ static inline int SkipUntil(struct WKTReaderPrivate* s, const char* items) {
   return 0;
 }
 
-static inline void SkipUntilSep(struct WKTReaderPrivate* s) {
-  SkipUntil(s, " \n\t\r,()");
+static inline void GeoArrowWKTSkipUntilSep(struct WKTReaderPrivate* s) {
+  GeoArrowWKTSkipUntil(s, " \n\t\r,()");
 }
 
 static inline char PeekChar(struct WKTReaderPrivate* s) {
@@ -66,14 +66,14 @@ static inline char PeekChar(struct WKTReaderPrivate* s) {
   }
 }
 
-static inline struct ArrowStringView PeekUntilSep(struct WKTReaderPrivate* s,
-                                                  int max_chars) {
+static inline struct ArrowStringView GeoArrowWKTPeekUntilSep(struct WKTReaderPrivate* s,
+                                                             int max_chars) {
   struct WKTReaderPrivate tmp = *s;
   if (tmp.size_bytes > max_chars) {
     tmp.size_bytes = max_chars;
   }
 
-  SkipUntilSep(&tmp);
+  GeoArrowWKTSkipUntilSep(&tmp);
   struct ArrowStringView out = {s->data, tmp.data - s->data};
   return out;
 }
@@ -85,10 +85,10 @@ static inline void SetParseErrorAuto(const char* expected, struct WKTReaderPriva
   GeoArrowErrorSet(error, "Expected %s at byte %ld", expected, pos);
 }
 
-static inline int AssertChar(struct WKTReaderPrivate* s, char c,
-                             struct GeoArrowError* error) {
+static inline int GeoArrowWKTAssertChar(struct WKTReaderPrivate* s, char c,
+                                        struct GeoArrowError* error) {
   if (s->size_bytes > 0 && s->data[0] == c) {
-    AdvanceUnsafe(s, 1);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
     return GEOARROW_OK;
   } else {
     char expected[4] = {'\'', c, '\'', '\0'};
@@ -97,11 +97,11 @@ static inline int AssertChar(struct WKTReaderPrivate* s, char c,
   }
 }
 
-static inline int AssertWhitespace(struct WKTReaderPrivate* s,
-                                   struct GeoArrowError* error) {
+static inline int GeoArrowWKTAssertWhitespace(struct WKTReaderPrivate* s,
+                                              struct GeoArrowError* error) {
   if (s->size_bytes > 0 && (s->data[0] == ' ' || s->data[0] == '\t' ||
                             s->data[0] == '\r' || s->data[0] == '\n')) {
-    SkipWhitespace(s);
+    GeoArrowWKTSkipWhitespace(s);
     return GEOARROW_OK;
   } else {
     SetParseErrorAuto("whitespace", s, error);
@@ -109,11 +109,11 @@ static inline int AssertWhitespace(struct WKTReaderPrivate* s,
   }
 }
 
-static inline int AssertWordEmpty(struct WKTReaderPrivate* s,
-                                  struct GeoArrowError* error) {
-  struct ArrowStringView word = PeekUntilSep(s, 6);
+static inline int GeoArrowWKTAssertWordEmpty(struct WKTReaderPrivate* s,
+                                             struct GeoArrowError* error) {
+  struct ArrowStringView word = GeoArrowWKTPeekUntilSep(s, 6);
   if (word.size_bytes == 5 && strncmp(word.data, "EMPTY", 5) == 0) {
-    AdvanceUnsafe(s, 5);
+    GeoArrowWKTAdvanceUnsafe(s, 5);
     return GEOARROW_OK;
   }
 
@@ -124,7 +124,7 @@ static inline int AssertWordEmpty(struct WKTReaderPrivate* s,
 static inline int ReadOrdinate(struct WKTReaderPrivate* s, double* out,
                                struct GeoArrowError* error) {
   const char* start = s->data;
-  SkipUntilSep(s);
+  GeoArrowWKTSkipUntilSep(s);
   int result = GeoArrowFromChars(start, s->data, out);
   if (result != GEOARROW_OK) {
     s->size_bytes += s->data - start;
@@ -157,7 +157,7 @@ static inline int ReadCoordinate(struct WKTReaderPrivate* s, struct GeoArrowVisi
   NANOARROW_RETURN_NOT_OK(ReadOrdinate(
       s, (double*)s->coord_view.values[0] + s->coord_view.n_coords, v->error));
   for (int i = 1; i < s->coord_view.n_values; i++) {
-    NANOARROW_RETURN_NOT_OK(AssertWhitespace(s, v->error));
+    NANOARROW_RETURN_NOT_OK(GeoArrowWKTAssertWhitespace(s, v->error));
     NANOARROW_RETURN_NOT_OK(ReadOrdinate(
         s, (double*)s->coord_view.values[i] + s->coord_view.n_coords, v->error));
   }
@@ -168,39 +168,39 @@ static inline int ReadCoordinate(struct WKTReaderPrivate* s, struct GeoArrowVisi
 
 static inline int ReadEmptyOrCoordinates(struct WKTReaderPrivate* s,
                                          struct GeoArrowVisitor* v) {
-  SkipWhitespace(s);
+  GeoArrowWKTSkipWhitespace(s);
   if (PeekChar(s) == '(') {
-    AdvanceUnsafe(s, 1);
-    SkipWhitespace(s);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
+    GeoArrowWKTSkipWhitespace(s);
 
     ResetCoordCache(s);
 
     // Read the first coordinate (there must always be one)
     NANOARROW_RETURN_NOT_OK(ReadCoordinate(s, v));
-    SkipWhitespace(s);
+    GeoArrowWKTSkipWhitespace(s);
 
     // Read the rest of the coordinates
     while (PeekChar(s) != ')') {
-      SkipWhitespace(s);
-      NANOARROW_RETURN_NOT_OK(AssertChar(s, ',', v->error));
-      SkipWhitespace(s);
+      GeoArrowWKTSkipWhitespace(s);
+      NANOARROW_RETURN_NOT_OK(GeoArrowWKTAssertChar(s, ',', v->error));
+      GeoArrowWKTSkipWhitespace(s);
       NANOARROW_RETURN_NOT_OK(ReadCoordinate(s, v));
-      SkipWhitespace(s);
+      GeoArrowWKTSkipWhitespace(s);
     }
 
     NANOARROW_RETURN_NOT_OK(FlushCoordCache(s, v));
 
-    AdvanceUnsafe(s, 1);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
     return GEOARROW_OK;
   }
 
-  return AssertWordEmpty(s, v->error);
+  return GeoArrowWKTAssertWordEmpty(s, v->error);
 }
 
 static inline int ReadMultipointFlat(struct WKTReaderPrivate* s,
                                      struct GeoArrowVisitor* v,
                                      enum GeoArrowDimensions dimensions) {
-  NANOARROW_RETURN_NOT_OK(AssertChar(s, '(', v->error));
+  NANOARROW_RETURN_NOT_OK(GeoArrowWKTAssertChar(s, '(', v->error));
 
   // Read the first coordinate (there must always be one)
   NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POINT, dimensions));
@@ -208,79 +208,79 @@ static inline int ReadMultipointFlat(struct WKTReaderPrivate* s,
   NANOARROW_RETURN_NOT_OK(ReadCoordinate(s, v));
   NANOARROW_RETURN_NOT_OK(FlushCoordCache(s, v));
   NANOARROW_RETURN_NOT_OK(v->geom_end(v));
-  SkipWhitespace(s);
+  GeoArrowWKTSkipWhitespace(s);
 
   // Read the rest of the coordinates
   while (PeekChar(s) != ')') {
-    SkipWhitespace(s);
-    NANOARROW_RETURN_NOT_OK(AssertChar(s, ',', v->error));
-    SkipWhitespace(s);
+    GeoArrowWKTSkipWhitespace(s);
+    NANOARROW_RETURN_NOT_OK(GeoArrowWKTAssertChar(s, ',', v->error));
+    GeoArrowWKTSkipWhitespace(s);
     NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POINT, dimensions));
     ResetCoordCache(s);
     NANOARROW_RETURN_NOT_OK(ReadCoordinate(s, v));
     NANOARROW_RETURN_NOT_OK(FlushCoordCache(s, v));
     NANOARROW_RETURN_NOT_OK(v->geom_end(v));
-    SkipWhitespace(s);
+    GeoArrowWKTSkipWhitespace(s);
   }
 
-  AdvanceUnsafe(s, 1);
+  GeoArrowWKTAdvanceUnsafe(s, 1);
   return GEOARROW_OK;
 }
 
 static inline int ReadEmptyOrPointCoordinate(struct WKTReaderPrivate* s,
                                              struct GeoArrowVisitor* v) {
-  SkipWhitespace(s);
+  GeoArrowWKTSkipWhitespace(s);
   if (PeekChar(s) == '(') {
-    AdvanceUnsafe(s, 1);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
 
-    SkipWhitespace(s);
+    GeoArrowWKTSkipWhitespace(s);
     ResetCoordCache(s);
     NANOARROW_RETURN_NOT_OK(ReadCoordinate(s, v));
     NANOARROW_RETURN_NOT_OK(FlushCoordCache(s, v));
-    SkipWhitespace(s);
-    NANOARROW_RETURN_NOT_OK(AssertChar(s, ')', v->error));
+    GeoArrowWKTSkipWhitespace(s);
+    NANOARROW_RETURN_NOT_OK(GeoArrowWKTAssertChar(s, ')', v->error));
     return GEOARROW_OK;
   }
 
-  return AssertWordEmpty(s, v->error);
+  return GeoArrowWKTAssertWordEmpty(s, v->error);
 }
 
 static inline int ReadPolygon(struct WKTReaderPrivate* s, struct GeoArrowVisitor* v) {
-  SkipWhitespace(s);
+  GeoArrowWKTSkipWhitespace(s);
   if (PeekChar(s) == '(') {
-    AdvanceUnsafe(s, 1);
-    SkipWhitespace(s);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
+    GeoArrowWKTSkipWhitespace(s);
 
     // Read the first ring (there must always be one)
     NANOARROW_RETURN_NOT_OK(v->ring_start(v));
     NANOARROW_RETURN_NOT_OK(ReadEmptyOrCoordinates(s, v));
     NANOARROW_RETURN_NOT_OK(v->ring_end(v));
-    SkipWhitespace(s);
+    GeoArrowWKTSkipWhitespace(s);
 
     // Read the rest of the rings
     while (PeekChar(s) != ')') {
-      SkipWhitespace(s);
-      NANOARROW_RETURN_NOT_OK(AssertChar(s, ',', v->error));
-      SkipWhitespace(s);
+      GeoArrowWKTSkipWhitespace(s);
+      NANOARROW_RETURN_NOT_OK(GeoArrowWKTAssertChar(s, ',', v->error));
+      GeoArrowWKTSkipWhitespace(s);
       NANOARROW_RETURN_NOT_OK(v->ring_start(v));
       NANOARROW_RETURN_NOT_OK(ReadEmptyOrCoordinates(s, v));
       NANOARROW_RETURN_NOT_OK(v->ring_end(v));
-      SkipWhitespace(s);
+      GeoArrowWKTSkipWhitespace(s);
     }
 
-    AdvanceUnsafe(s, 1);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
     return GEOARROW_OK;
   }
 
-  return AssertWordEmpty(s, v->error);
+  return GeoArrowWKTAssertWordEmpty(s, v->error);
 }
 
 static inline int ReadMultipoint(struct WKTReaderPrivate* s, struct GeoArrowVisitor* v,
                                  enum GeoArrowDimensions dimensions) {
-  SkipWhitespace(s);
+  GeoArrowWKTSkipWhitespace(s);
   if (PeekChar(s) == '(') {
-    AdvanceUnsafe(s, 1);
-    SkipWhitespace(s);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
+    GeoArrowWKTSkipWhitespace(s);
 
     // Both MULTIPOINT (1 2, 2 3) and MULTIPOINT ((1 2), (2 3)) have to parse here
     // if it doesn't look like the verbose version, try the flat version
@@ -294,90 +294,90 @@ static inline int ReadMultipoint(struct WKTReaderPrivate* s, struct GeoArrowVisi
     NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POINT, dimensions));
     NANOARROW_RETURN_NOT_OK(ReadEmptyOrPointCoordinate(s, v));
     NANOARROW_RETURN_NOT_OK(v->geom_end(v));
-    SkipWhitespace(s);
+    GeoArrowWKTSkipWhitespace(s);
 
     // Read the rest of the geometries
     while (PeekChar(s) != ')') {
-      SkipWhitespace(s);
-      NANOARROW_RETURN_NOT_OK(AssertChar(s, ',', v->error));
-      SkipWhitespace(s);
+      GeoArrowWKTSkipWhitespace(s);
+      NANOARROW_RETURN_NOT_OK(GeoArrowWKTAssertChar(s, ',', v->error));
+      GeoArrowWKTSkipWhitespace(s);
       NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POINT, dimensions));
       NANOARROW_RETURN_NOT_OK(ReadEmptyOrPointCoordinate(s, v));
       NANOARROW_RETURN_NOT_OK(v->geom_end(v));
-      SkipWhitespace(s);
+      GeoArrowWKTSkipWhitespace(s);
     }
 
-    AdvanceUnsafe(s, 1);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
     return GEOARROW_OK;
   }
 
-  return AssertWordEmpty(s, v->error);
+  return GeoArrowWKTAssertWordEmpty(s, v->error);
 }
 
 static inline int ReadMultilinestring(struct WKTReaderPrivate* s,
                                       struct GeoArrowVisitor* v,
                                       enum GeoArrowDimensions dimensions) {
-  SkipWhitespace(s);
+  GeoArrowWKTSkipWhitespace(s);
   if (PeekChar(s) == '(') {
-    AdvanceUnsafe(s, 1);
-    SkipWhitespace(s);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
+    GeoArrowWKTSkipWhitespace(s);
 
     // Read the first geometry (there must always be one)
     NANOARROW_RETURN_NOT_OK(
         v->geom_start(v, GEOARROW_GEOMETRY_TYPE_LINESTRING, dimensions));
     NANOARROW_RETURN_NOT_OK(ReadEmptyOrCoordinates(s, v));
     NANOARROW_RETURN_NOT_OK(v->geom_end(v));
-    SkipWhitespace(s);
+    GeoArrowWKTSkipWhitespace(s);
 
     // Read the rest of the geometries
     while (PeekChar(s) != ')') {
-      SkipWhitespace(s);
-      NANOARROW_RETURN_NOT_OK(AssertChar(s, ',', v->error));
-      SkipWhitespace(s);
+      GeoArrowWKTSkipWhitespace(s);
+      NANOARROW_RETURN_NOT_OK(GeoArrowWKTAssertChar(s, ',', v->error));
+      GeoArrowWKTSkipWhitespace(s);
       NANOARROW_RETURN_NOT_OK(
           v->geom_start(v, GEOARROW_GEOMETRY_TYPE_LINESTRING, dimensions));
       NANOARROW_RETURN_NOT_OK(ReadEmptyOrCoordinates(s, v));
       NANOARROW_RETURN_NOT_OK(v->geom_end(v));
-      SkipWhitespace(s);
+      GeoArrowWKTSkipWhitespace(s);
     }
 
-    AdvanceUnsafe(s, 1);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
     return GEOARROW_OK;
   }
 
-  return AssertWordEmpty(s, v->error);
+  return GeoArrowWKTAssertWordEmpty(s, v->error);
 }
 
 static inline int ReadMultipolygon(struct WKTReaderPrivate* s, struct GeoArrowVisitor* v,
                                    enum GeoArrowDimensions dimensions) {
-  SkipWhitespace(s);
+  GeoArrowWKTSkipWhitespace(s);
   if (PeekChar(s) == '(') {
-    AdvanceUnsafe(s, 1);
-    SkipWhitespace(s);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
+    GeoArrowWKTSkipWhitespace(s);
 
     // Read the first geometry (there must always be one)
     NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POLYGON, dimensions));
     NANOARROW_RETURN_NOT_OK(ReadPolygon(s, v));
     NANOARROW_RETURN_NOT_OK(v->geom_end(v));
-    SkipWhitespace(s);
+    GeoArrowWKTSkipWhitespace(s);
 
     // Read the rest of the geometries
     while (PeekChar(s) != ')') {
-      SkipWhitespace(s);
-      NANOARROW_RETURN_NOT_OK(AssertChar(s, ',', v->error));
-      SkipWhitespace(s);
+      GeoArrowWKTSkipWhitespace(s);
+      NANOARROW_RETURN_NOT_OK(GeoArrowWKTAssertChar(s, ',', v->error));
+      GeoArrowWKTSkipWhitespace(s);
       NANOARROW_RETURN_NOT_OK(
           v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POLYGON, dimensions));
       NANOARROW_RETURN_NOT_OK(ReadPolygon(s, v));
       NANOARROW_RETURN_NOT_OK(v->geom_end(v));
-      SkipWhitespace(s);
+      GeoArrowWKTSkipWhitespace(s);
     }
 
-    AdvanceUnsafe(s, 1);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
     return GEOARROW_OK;
   }
 
-  return AssertWordEmpty(s, v->error);
+  return GeoArrowWKTAssertWordEmpty(s, v->error);
 }
 
 static inline int ReadTaggedGeometry(struct WKTReaderPrivate* s,
@@ -385,36 +385,36 @@ static inline int ReadTaggedGeometry(struct WKTReaderPrivate* s,
 
 static inline int ReadGeometryCollection(struct WKTReaderPrivate* s,
                                          struct GeoArrowVisitor* v) {
-  SkipWhitespace(s);
+  GeoArrowWKTSkipWhitespace(s);
   if (PeekChar(s) == '(') {
-    AdvanceUnsafe(s, 1);
-    SkipWhitespace(s);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
+    GeoArrowWKTSkipWhitespace(s);
 
     // Read the first geometry (there must always be one)
     NANOARROW_RETURN_NOT_OK(ReadTaggedGeometry(s, v));
-    SkipWhitespace(s);
+    GeoArrowWKTSkipWhitespace(s);
 
     // Read the rest of the geometries
     while (PeekChar(s) != ')') {
-      SkipWhitespace(s);
-      NANOARROW_RETURN_NOT_OK(AssertChar(s, ',', v->error));
-      SkipWhitespace(s);
+      GeoArrowWKTSkipWhitespace(s);
+      NANOARROW_RETURN_NOT_OK(GeoArrowWKTAssertChar(s, ',', v->error));
+      GeoArrowWKTSkipWhitespace(s);
       NANOARROW_RETURN_NOT_OK(ReadTaggedGeometry(s, v));
-      SkipWhitespace(s);
+      GeoArrowWKTSkipWhitespace(s);
     }
 
-    AdvanceUnsafe(s, 1);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
     return GEOARROW_OK;
   }
 
-  return AssertWordEmpty(s, v->error);
+  return GeoArrowWKTAssertWordEmpty(s, v->error);
 }
 
 static inline int ReadTaggedGeometry(struct WKTReaderPrivate* s,
                                      struct GeoArrowVisitor* v) {
-  SkipWhitespace(s);
+  GeoArrowWKTSkipWhitespace(s);
 
-  struct ArrowStringView word = PeekUntilSep(s, 19);
+  struct ArrowStringView word = GeoArrowWKTPeekUntilSep(s, 19);
   enum GeoArrowGeometryType geometry_type;
   if (word.size_bytes == 5 && strncmp(word.data, "POINT", 5) == 0) {
     geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
@@ -435,24 +435,24 @@ static inline int ReadTaggedGeometry(struct WKTReaderPrivate* s,
     return EINVAL;
   }
 
-  AdvanceUnsafe(s, word.size_bytes);
-  SkipWhitespace(s);
+  GeoArrowWKTAdvanceUnsafe(s, word.size_bytes);
+  GeoArrowWKTSkipWhitespace(s);
 
   enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY;
   s->coord_view.n_values = 2;
-  word = PeekUntilSep(s, 3);
+  word = GeoArrowWKTPeekUntilSep(s, 3);
   if (word.size_bytes == 1 && strncmp(word.data, "Z", 1) == 0) {
     dimensions = GEOARROW_DIMENSIONS_XYZ;
     s->coord_view.n_values = 3;
-    AdvanceUnsafe(s, 1);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
   } else if (word.size_bytes == 1 && strncmp(word.data, "M", 1) == 0) {
     dimensions = GEOARROW_DIMENSIONS_XYM;
     s->coord_view.n_values = 3;
-    AdvanceUnsafe(s, 1);
+    GeoArrowWKTAdvanceUnsafe(s, 1);
   } else if (word.size_bytes == 2 && strncmp(word.data, "ZM", 2) == 0) {
     dimensions = GEOARROW_DIMENSIONS_XYZM;
     s->coord_view.n_values = 4;
-    AdvanceUnsafe(s, 2);
+    GeoArrowWKTAdvanceUnsafe(s, 2);
   }
 
   NANOARROW_RETURN_NOT_OK(v->geom_start(v, geometry_type, dimensions));
@@ -524,7 +524,7 @@ GeoArrowErrorCode GeoArrowWKTReaderVisit(struct GeoArrowWKTReader* reader,
   NANOARROW_RETURN_NOT_OK(v->feat_start(v));
   NANOARROW_RETURN_NOT_OK(ReadTaggedGeometry(s, v));
   NANOARROW_RETURN_NOT_OK(v->feat_end(v));
-  SkipWhitespace(s);
+  GeoArrowWKTSkipWhitespace(s);
   if (PeekChar(s) != '\0') {
     SetParseErrorAuto("end of input", s, v->error);
     return EINVAL;

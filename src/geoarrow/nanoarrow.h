@@ -27,7 +27,7 @@
   (NANOARROW_VERSION_MAJOR * 10000 + NANOARROW_VERSION_MINOR * 100 + \
    NANOARROW_VERSION_PATCH)
 
-#include "geoarrow_config.h"
+// #include "geoarrow_config.h"
 
 #endif
 // Licensed to the Apache Software Foundation (ASF) under one

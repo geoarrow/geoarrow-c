@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-#include "geoarrow.h"
+#include <geoarrow.h>
 #include "nanoarrow.h"
 
 TEST(MetadataTest, MetadataTestEmpty) {

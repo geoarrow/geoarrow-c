@@ -1,7 +1,7 @@
 
 #include <gtest/gtest.h>
 
-#include "geoarrow.hpp"
+#include <geoarrow.hpp>
 
 TEST(GeoArrowHppTest, GeoArrowHppTestVectorTypeMakeType) {
   auto type = geoarrow::VectorType::Make(GEOARROW_TYPE_MULTIPOINT);

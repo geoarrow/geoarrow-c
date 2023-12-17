@@ -21,6 +21,7 @@ option(GEOARROW_USE_RYU "Use ryu for numeric value printing" ON)
 option(GEOARROW_NAMESPACE "A prefix for exported symbols" OFF)
 option(GEOARROW_ARROW_STATIC "Use a statically-linked Arrow C++ build when linking tests"
        OFF)
+option(GEOARROW_BUNDLE "Use ON to just bundle the headers/sources" OFF)
 
 if(GEOARROW_NAMESPACE)
   set(GEOARROW_NAMESPACE_DEFINE "#define GEOARROW_NAMESPACE ${GEOARROW_NAMESPACE}")
@@ -58,63 +59,130 @@ endif()
 
 configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow_config.h)
 
-add_library(geoarrow
-            src/geoarrow/schema.c
-            src/geoarrow/schema_view.c
-            src/geoarrow/metadata.c
-            src/geoarrow/kernel.c
-            src/geoarrow/builder.c
-            src/geoarrow/array_view.c
-            src/geoarrow/util.c
-            src/geoarrow/visitor.c
-            src/geoarrow/wkb_reader.c
-            src/geoarrow/wkb_writer.c
-            src/geoarrow/wkt_reader.c
-            src/geoarrow/wkt_writer.c
-            src/geoarrow/array_reader.c
-            src/geoarrow/array_writer.c
-            ${GEOARROW_DOUBLE_PARSE_SOURCE}
-            ${GEOARROW_DOUBLE_PRINT_SOURCE}
-            src/geoarrow/nanoarrow.c)
+set(GEOARROW_SOURCES
+    src/geoarrow/schema.c
+    src/geoarrow/schema_view.c
+    src/geoarrow/metadata.c
+    src/geoarrow/kernel.c
+    src/geoarrow/builder.c
+    src/geoarrow/array_view.c
+    src/geoarrow/util.c
+    src/geoarrow/visitor.c
+    src/geoarrow/wkb_reader.c
+    src/geoarrow/wkb_writer.c
+    src/geoarrow/wkt_reader.c
+    src/geoarrow/wkt_writer.c
+    src/geoarrow/array_reader.c
+    src/geoarrow/array_writer.c
+    ${GEOARROW_DOUBLE_PARSE_SOURCE}
+    ${GEOARROW_DOUBLE_PRINT_SOURCE}
+    src/geoarrow/nanoarrow.c)
 
-target_include_directories(geoarrow
-                           PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/geoarrow>
-                                  $<INSTALL_INTERFACE:include>)
-target_include_directories(geoarrow
-                           PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
-)
-target_compile_definitions(geoarrow PUBLIC "$<$<CONFIG:Debug>:NANOARROW_DEBUG>"
-                                           "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
+set(GEOARROW_PUBLIC_HEADERS
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/geoarrow_config.h src/geoarrow/geoarrow_type.h
+    src/geoarrow/geoarrow.h src/geoarrow/geoarrow_type_inline.h)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(geoarrow
-                           PRIVATE -Wall
-                                   -Werror
-                                   -Wextra
-                                   -Wno-type-limits
-                                   -Wno-unused-parameter
-                                   -Wpedantic
-                                   -Wunused-result)
-  elseif(CMAKE_C_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_C_COMPILER_ID STREQUAL
-                                                      "Clang")
-    target_compile_options(geoarrow
-                           PRIVATE -Wall
-                                   -Werror
-                                   -Wextra
-                                   -Wdocumentation
-                                   -Wno-unused-parameter
-                                   -Wshorten-64-to-32)
+if(GEOARROW_BUNDLE)
+  # Bundle sources + headers, and if building tests, add a target the tests can link against
+
+  file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/amalgamation)
+  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/amalgamation)
+  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/amalgamation/geoarrow)
+
+  set(GEOARROW_H_TEMP ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/geoarrow.h)
+  file(WRITE ${GEOARROW_H_TEMP} "")
+  foreach(SRC_FILE ${GEOARROW_PUBLIC_HEADERS})
+    file(READ ${SRC_FILE} SRC_FILE_CONTENTS)
+    file(APPEND ${GEOARROW_H_TEMP} "${SRC_FILE_CONTENTS}")
+  endforeach()
+
+  set(GEOARROW_C_TEMP ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/geoarrow.c)
+
+  # Special-case nanoarrow.h, because it will contain a lot of unused static inline functions
+  # This could maybe be fixed in nanoarrow with a define for static inline "exports"
+  file(WRITE ${GEOARROW_C_TEMP} "#pragma GCC diagnostic push\n")
+  file(APPEND ${GEOARROW_C_TEMP} "#pragma GCC diagnostic ignored \"-Wunused-function\"\n")
+
+  file(READ src/geoarrow/nanoarrow.h SRC_FILE_CONTENTS)
+  file(APPEND ${GEOARROW_C_TEMP} "${SRC_FILE_CONTENTS}")
+
+  file(APPEND ${GEOARROW_C_TEMP} "#pragma GCC diagnostic push")
+
+  foreach(SRC_FILE ${GEOARROW_SOURCES})
+    file(READ ${SRC_FILE} SRC_FILE_CONTENTS)
+    file(APPEND ${GEOARROW_C_TEMP} "${SRC_FILE_CONTENTS}")
+  endforeach()
+
+
+  # Updates includes for concatenated sources
+  foreach(SRC_FILE ${GEOARROW_H_TEMP} ${GEOARROW_C_TEMP})
+    file(READ ${SRC_FILE} SRC_FILE_CONTENTS)
+    string(REGEX REPLACE "#include \"[a-z_.]+\"" "" SRC_FILE_CONTENTS
+                         "${SRC_FILE_CONTENTS}")
+    file(WRITE ${SRC_FILE} "${SRC_FILE_CONTENTS}")
+  endforeach()
+
+  # Make sure geoarrow.h is included
+  file(READ ${GEOARROW_C_TEMP} SRC_FILE_CONTENTS)
+  file(WRITE ${GEOARROW_C_TEMP} "#include \"geoarrow.h\"\n")
+  file(APPEND ${GEOARROW_C_TEMP} "${SRC_FILE_CONTENTS}")
+
+  # If building tests, add the geoarrow target so we can test against it
+  if(GEOARROW_BUILD_TESTS)
+    add_library(geoarrow ${GEOARROW_C_TEMP})
+
+    target_include_directories(geoarrow
+                               PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/amalgamation/geoarrow>
+                                      $<INSTALL_INTERFACE:include>)
+    target_compile_definitions(geoarrow PUBLIC "$<$<CONFIG:Debug>:NANOARROW_DEBUG>"
+                                               "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
   endif()
+else()
+  # Normal CMake build
+  add_library(geoarrow ${GEOARROW_SOURCES})
+
+  target_include_directories(geoarrow
+                             PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/geoarrow>
+                                    $<INSTALL_INTERFACE:include>)
+  target_include_directories(geoarrow
+                             PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
+  )
+  target_compile_definitions(geoarrow PUBLIC "$<$<CONFIG:Debug>:NANOARROW_DEBUG>"
+                                             "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
+
+  install(DIRECTORY src/
+          DESTINATION include
+          FILES_MATCHING
+          PATTERN "*.h")
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/geoarrow_config.h
+          DESTINATION include/geoarrow)
 endif()
 
-install(TARGETS geoarrow DESTINATION lib)
-install(DIRECTORY src/
-        DESTINATION include
-        FILES_MATCHING
-        PATTERN "*.h")
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/geoarrow_config.h
-        DESTINATION include/geoarrow)
+if(TARGET geoarrow)
+  install(TARGETS geoarrow DESTINATION lib)
+
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+      target_compile_options(geoarrow
+                             PRIVATE -Wall
+                                     -Werror
+                                     -Wextra
+                                     -Wno-type-limits
+                                     -Wno-unused-parameter
+                                     -Wpedantic
+                                     -Wunused-result)
+    elseif(CMAKE_C_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_C_COMPILER_ID STREQUAL
+                                                        "Clang")
+      target_compile_options(geoarrow
+                             PRIVATE -Wall
+                                     -Werror
+                                     -Wextra
+                                     -Wdocumentation
+                                     -Wno-unused-parameter
+                                     -Wshorten-64-to-32)
+    endif()
+  endif()
+endif()
 
 if(GEOARROW_BUILD_TESTS)
   set(MEMORYCHECK_COMMAND_OPTIONS
