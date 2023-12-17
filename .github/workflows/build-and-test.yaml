@@ -17,6 +17,14 @@ jobs:
   build-and-test:
 
     runs-on: ubuntu-latest
+    name: ${{ matrix.config.label }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {label: default-build, cmake_args: "-DCMAKE_BUILD_TYPE=Debug -DGEOARROW_COVERAGE=ON"}
+          - {label: bundled-build, cmake_args: "-DGEOARROW_BUNDLE=ON"}
 
     steps:
       - name: Checkout repo
@@ -38,7 +46,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug  -DGEOARROW_CODE_COVERAGE=ON -DGEOARROW_BUILD_TESTS=ON
+          cmake .. -DGEOARROW_BUILD_TESTS=ON ${{ matrix.config.cmake_args }}
           cmake --build .
 
       - name: Test
@@ -47,10 +55,12 @@ jobs:
           GEOARROW_TESTING_DIR=$GITHUB_WORKSPACE/testing ctest -T test --output-on-failure .
 
       - name: Install lcov
+        if: matrix.config.label == 'default-build'
         run: |
           sudo apt-get install lcov
 
       - name: Calculate coverage
+        if: matrix.config.label == 'default-build'
         run: |
           cd build
           lcov --capture --directory . \
@@ -65,18 +75,19 @@ jobs:
           lcov --list coverage.info
 
       - name: Upload coverage
-        if: success()
+        if: success() && matrix.config.label == 'default-build'
         uses: codecov/codecov-action@v2
         with:
           files: build/coverage.info
 
       - name: Test with memcheck
+        if: matrix.config.label == 'default-build'
         run: |
           cd build
           ctest -T memcheck .
 
       - name: Upload memcheck results
-        if: failure()
+        if: failure() && matrix.config.label == 'default-build'
         uses: actions/upload-artifact@main
         with:
           name: geoarrow-memcheck

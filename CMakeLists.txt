@@ -133,6 +133,10 @@ if(GEOARROW_BUNDLE)
   file(COPY_FILE src/geoarrow/geoarrow_arrow.hpp
        ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/geoarrow_arrow.hpp)
 
+  # "install" means copy the bundled sources to the specified dir. Just
+  # geoarrow.c and geoarrow.h for now.
+  install(FILES ${GEOARROW_H_TEMP} ${GEOARROW_C_TEMP} DESTINATION ".")
+
   # If building tests, add the geoarrow target so we can test against it
   if(GEOARROW_BUILD_TESTS)
     add_library(geoarrow ${GEOARROW_C_TEMP})
