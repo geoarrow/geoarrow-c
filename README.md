@@ -3,7 +3,7 @@
 
 [![Codecov test coverage](https://codecov.io/gh/geoarrow/geoarrow-c/branch/main/graph/badge.svg)](https://app.codecov.io/gh/geoarrow/geoarrow-c?branch=main)
 [![Documentation](https://img.shields.io/badge/Documentation-dev-yellow)](https://geoarrow.github.io/geoarrow-c/dev)
-[![nanoarrow on GitHub](https://img.shields.io/badge/GitHub-apache%2Farrow--nanoarrow-blue)](https://github.com/geoarrow/geoarrow-c)
+[![geoarrow on GitHub](https://img.shields.io/badge/GitHub-geoarrow%2Fgeoarrow--c-blue)](https://github.com/geoarrow/geoarrow-c)
 
 The geoarrow C library is a geospatial type system and generic
 coordinate-shuffling library written in C with bindings in C++,
