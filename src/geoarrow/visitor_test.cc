@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "geoarrow.h"
+#include <geoarrow.h>
 
 TEST(VisitorTest, VisitorTestVoid) {
   struct GeoArrowVisitor v;

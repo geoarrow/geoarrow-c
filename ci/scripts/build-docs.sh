@@ -34,7 +34,16 @@ case $# in
      ;;
 esac
 
+maybe_activate_venv() {
+  # Because CI uses the nanoarrow image where this is defined
+  if [ ! -z "${NANOARROW_PYTHON_VENV}" ]; then
+    source "${NANOARROW_PYTHON_VENV}/bin/activate"
+  fi
+}
+
 main() {
+   maybe_activate_venv
+
    pushd "${TARGET_GEOARROW_DIR}"
 
    # Clean the previous build
