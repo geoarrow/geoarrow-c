@@ -1,4 +1,0 @@
-
-if [ -f bootstrap.R ]; then
-  $R_HOME/bin/Rscript bootstrap.R --vanilla
-fi
