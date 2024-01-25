@@ -54,7 +54,7 @@ TEST(WKTWriterTest, WKTWriterTestOneNull) {
 
   struct ArrowArrayView view;
   ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
-  ArrowArrayViewSetArray(&view, &array, nullptr);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), NANOARROW_OK);
 
   EXPECT_TRUE(ArrowArrayViewIsNull(&view, 0));
 
@@ -92,7 +92,7 @@ TEST(WKTWriterTest, WKTWriterTestOneValidOneNull) {
 
   struct ArrowArrayView view;
   ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
-  ArrowArrayViewSetArray(&view, &array, nullptr);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
 
   EXPECT_FALSE(ArrowArrayViewIsNull(&view, 0));
   EXPECT_TRUE(ArrowArrayViewIsNull(&view, 1));
@@ -196,7 +196,7 @@ TEST_P(GeometryTypeParameterizedTestFixture, WKTWriterTestEmpty) {
 
   struct ArrowArrayView view;
   ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
-  ArrowArrayViewSetArray(&view, &array, nullptr);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
   EXPECT_EQ(std::string(value.data, value.size_bytes),
@@ -275,7 +275,7 @@ TEST(WKTWriterTest, WKTWriterTestPoint) {
 
   struct ArrowArrayView view;
   ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
-  ArrowArrayViewSetArray(&view, &array, nullptr);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
   EXPECT_EQ(std::string(value.data, value.size_bytes), "POINT (1 2)");
@@ -341,7 +341,7 @@ TEST(WKTWriterTest, WKTWriterTestLinestring) {
 
   struct ArrowArrayView view;
   ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
-  ArrowArrayViewSetArray(&view, &array, nullptr);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
   EXPECT_EQ(std::string(value.data, value.size_bytes), "LINESTRING (1 2, 2 3, 3 4, 1 2)");
@@ -401,7 +401,7 @@ TEST(WKTWriterTest, WKTWriterTestPolygon) {
 
   struct ArrowArrayView view;
   ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
-  ArrowArrayViewSetArray(&view, &array, nullptr);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
   EXPECT_EQ(std::string(value.data, value.size_bytes), "POLYGON ((1 2, 2 3, 3 4, 1 2))");
@@ -492,7 +492,7 @@ TEST(WKTWriterTest, WKTWriterTestMultipoint) {
 
   struct ArrowArrayView view;
   ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
-  ArrowArrayViewSetArray(&view, &array, nullptr);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
   EXPECT_EQ(std::string(value.data, value.size_bytes), "MULTIPOINT (1 2)");
@@ -557,7 +557,7 @@ TEST(WKTWriterTest, WKTWriterTestMultilinestring) {
 
   struct ArrowArrayView view;
   ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
-  ArrowArrayViewSetArray(&view, &array, nullptr);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
   EXPECT_EQ(std::string(value.data, value.size_bytes), "MULTILINESTRING ((1 2, 2 3))");
@@ -620,7 +620,7 @@ TEST(WKTWriterTest, WKTWriterTestMultipolygon) {
 
   struct ArrowArrayView view;
   ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
-  ArrowArrayViewSetArray(&view, &array, nullptr);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
   EXPECT_EQ(std::string(value.data, value.size_bytes),
@@ -681,7 +681,7 @@ TEST(WKTWriterTest, WKTWriterTestGeometrycollection) {
 
   struct ArrowArrayView view;
   ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
-  ArrowArrayViewSetArray(&view, &array, nullptr);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
   EXPECT_EQ(std::string(value.data, value.size_bytes),
@@ -719,7 +719,7 @@ TEST(WKTWriterTest, WKTWriterTestStreamingCoords) {
 
   struct ArrowArrayView view;
   ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
-  ArrowArrayViewSetArray(&view, &array, nullptr);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
   EXPECT_EQ(std::string(value.data, value.size_bytes), "LINESTRING (1 2, 2 3, 1 2, 2 3)");
@@ -758,7 +758,7 @@ TEST(WKTWriterTest, WKTWriterTestMaxFeatLen) {
 
   struct ArrowArrayView view;
   ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
-  ArrowArrayViewSetArray(&view, &array, nullptr);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
 
   struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
   EXPECT_EQ(std::string(value.data, value.size_bytes), "LINEST");

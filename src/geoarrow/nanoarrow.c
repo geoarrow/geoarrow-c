@@ -28,7 +28,7 @@ const char* ArrowNanoarrowVersion(void) { return NANOARROW_VERSION; }
 
 int ArrowNanoarrowVersionInt(void) { return NANOARROW_VERSION_INT; }
 
-int ArrowErrorSet(struct ArrowError* error, const char* fmt, ...) {
+ArrowErrorCode ArrowErrorSet(struct ArrowError* error, const char* fmt, ...) {
   if (error == NULL) {
     return NANOARROW_OK;
   }
@@ -46,14 +46,6 @@ int ArrowErrorSet(struct ArrowError* error, const char* fmt, ...) {
     return ERANGE;
   } else {
     return NANOARROW_OK;
-  }
-}
-
-const char* ArrowErrorMessage(struct ArrowError* error) {
-  if (error == NULL) {
-    return "";
-  } else {
-    return error->message;
   }
 }
 
@@ -200,11 +192,15 @@ void ArrowFree(void* ptr) { free(ptr); }
 static uint8_t* ArrowBufferAllocatorMallocReallocate(
     struct ArrowBufferAllocator* allocator, uint8_t* ptr, int64_t old_size,
     int64_t new_size) {
+  NANOARROW_UNUSED(allocator);
+  NANOARROW_UNUSED(old_size);
   return (uint8_t*)ArrowRealloc(ptr, new_size);
 }
 
 static void ArrowBufferAllocatorMallocFree(struct ArrowBufferAllocator* allocator,
                                            uint8_t* ptr, int64_t size) {
+  NANOARROW_UNUSED(allocator);
+  NANOARROW_UNUSED(size);
   ArrowFree(ptr);
 }
 
@@ -218,6 +214,10 @@ struct ArrowBufferAllocator ArrowBufferAllocatorDefault(void) {
 static uint8_t* ArrowBufferAllocatorNeverReallocate(
     struct ArrowBufferAllocator* allocator, uint8_t* ptr, int64_t old_size,
     int64_t new_size) {
+  NANOARROW_UNUSED(allocator);
+  NANOARROW_UNUSED(ptr);
+  NANOARROW_UNUSED(old_size);
+  NANOARROW_UNUSED(new_size);
   return NULL;
 }
 
@@ -255,7 +255,7 @@ struct ArrowBufferAllocator ArrowBufferDeallocator(
 
 #include "nanoarrow.h"
 
-static void ArrowSchemaRelease(struct ArrowSchema* schema) {
+static void ArrowSchemaReleaseInternal(struct ArrowSchema* schema) {
   if (schema->format != NULL) ArrowFree((void*)schema->format);
   if (schema->name != NULL) ArrowFree((void*)schema->name);
   if (schema->metadata != NULL) ArrowFree((void*)schema->metadata);
@@ -267,7 +267,7 @@ static void ArrowSchemaRelease(struct ArrowSchema* schema) {
     for (int64_t i = 0; i < schema->n_children; i++) {
       if (schema->children[i] != NULL) {
         if (schema->children[i]->release != NULL) {
-          schema->children[i]->release(schema->children[i]);
+          ArrowSchemaRelease(schema->children[i]);
         }
 
         ArrowFree(schema->children[i]);
@@ -282,7 +282,7 @@ static void ArrowSchemaRelease(struct ArrowSchema* schema) {
   // release() callback.
   if (schema->dictionary != NULL) {
     if (schema->dictionary->release != NULL) {
-      schema->dictionary->release(schema->dictionary);
+      ArrowSchemaRelease(schema->dictionary);
     }
 
     ArrowFree(schema->dictionary);
@@ -404,7 +404,7 @@ void ArrowSchemaInit(struct ArrowSchema* schema) {
   schema->children = NULL;
   schema->dictionary = NULL;
   schema->private_data = NULL;
-  schema->release = &ArrowSchemaRelease;
+  schema->release = &ArrowSchemaReleaseInternal;
 }
 
 ArrowErrorCode ArrowSchemaSetType(struct ArrowSchema* schema, enum ArrowType type) {
@@ -440,7 +440,7 @@ ArrowErrorCode ArrowSchemaInitFromType(struct ArrowSchema* schema, enum ArrowTyp
 
   int result = ArrowSchemaSetType(schema, type);
   if (result != NANOARROW_OK) {
-    schema->release(schema);
+    ArrowSchemaRelease(schema);
     return result;
   }
 
@@ -722,7 +722,7 @@ ArrowErrorCode ArrowSchemaDeepCopy(const struct ArrowSchema* schema,
 
   int result = ArrowSchemaSetFormat(schema_out, schema->format);
   if (result != NANOARROW_OK) {
-    schema_out->release(schema_out);
+    ArrowSchemaRelease(schema_out);
     return result;
   }
 
@@ -730,26 +730,26 @@ ArrowErrorCode ArrowSchemaDeepCopy(const struct ArrowSchema* schema,
 
   result = ArrowSchemaSetName(schema_out, schema->name);
   if (result != NANOARROW_OK) {
-    schema_out->release(schema_out);
+    ArrowSchemaRelease(schema_out);
     return result;
   }
 
   result = ArrowSchemaSetMetadata(schema_out, schema->metadata);
   if (result != NANOARROW_OK) {
-    schema_out->release(schema_out);
+    ArrowSchemaRelease(schema_out);
     return result;
   }
 
   result = ArrowSchemaAllocateChildren(schema_out, schema->n_children);
   if (result != NANOARROW_OK) {
-    schema_out->release(schema_out);
+    ArrowSchemaRelease(schema_out);
     return result;
   }
 
   for (int64_t i = 0; i < schema->n_children; i++) {
     result = ArrowSchemaDeepCopy(schema->children[i], schema_out->children[i]);
     if (result != NANOARROW_OK) {
-      schema_out->release(schema_out);
+      ArrowSchemaRelease(schema_out);
       return result;
     }
   }
@@ -757,13 +757,13 @@ ArrowErrorCode ArrowSchemaDeepCopy(const struct ArrowSchema* schema,
   if (schema->dictionary != NULL) {
     result = ArrowSchemaAllocateDictionary(schema_out);
     if (result != NANOARROW_OK) {
-      schema_out->release(schema_out);
+      ArrowSchemaRelease(schema_out);
       return result;
     }
 
     result = ArrowSchemaDeepCopy(schema->dictionary, schema_out->dictionary);
     if (result != NANOARROW_OK) {
-      schema_out->release(schema_out);
+      ArrowSchemaRelease(schema_out);
       return result;
     }
   }
@@ -845,8 +845,7 @@ static ArrowErrorCode ArrowSchemaViewParse(struct ArrowSchemaView* schema_view,
     // decimal
     case 'd':
       if (format[1] != ':' || format[2] == '\0') {
-        ArrowErrorSet(error, "Expected ':precision,scale[,bitwidth]' following 'd'",
-                      format + 3);
+        ArrowErrorSet(error, "Expected ':precision,scale[,bitwidth]' following 'd'");
         return EINVAL;
       }
 
@@ -1191,13 +1190,15 @@ static ArrowErrorCode ArrowSchemaViewValidateNChildren(
   for (int64_t i = 0; i < schema_view->schema->n_children; i++) {
     child = schema_view->schema->children[i];
     if (child == NULL) {
-      ArrowErrorSet(error, "Expected valid schema at schema->children[%d] but found NULL",
-                    i);
+      ArrowErrorSet(error,
+                    "Expected valid schema at schema->children[%ld] but found NULL",
+                    (long)i);
       return EINVAL;
     } else if (child->release == NULL) {
       ArrowErrorSet(
           error,
-          "Expected valid schema at schema->children[%d] but found a released schema", i);
+          "Expected valid schema at schema->children[%ld] but found a released schema",
+          (long)i);
       return EINVAL;
     }
   }
@@ -1365,8 +1366,7 @@ ArrowErrorCode ArrowSchemaViewInit(struct ArrowSchemaView* schema_view,
   }
 
   const char* format_end_out;
-  ArrowErrorCode result =
-      ArrowSchemaViewParse(schema_view, format, &format_end_out, error);
+  int result = ArrowSchemaViewParse(schema_view, format, &format_end_out, error);
 
   if (result != NANOARROW_OK) {
     if (error != NULL) {
@@ -1409,10 +1409,12 @@ ArrowErrorCode ArrowSchemaViewInit(struct ArrowSchemaView* schema_view,
 
   schema_view->extension_name = ArrowCharView(NULL);
   schema_view->extension_metadata = ArrowCharView(NULL);
-  ArrowMetadataGetValue(schema->metadata, ArrowCharView("ARROW:extension:name"),
-                        &schema_view->extension_name);
-  ArrowMetadataGetValue(schema->metadata, ArrowCharView("ARROW:extension:metadata"),
-                        &schema_view->extension_metadata);
+  NANOARROW_RETURN_NOT_OK(ArrowMetadataGetValue(schema->metadata,
+                                                ArrowCharView("ARROW:extension:name"),
+                                                &schema_view->extension_name));
+  NANOARROW_RETURN_NOT_OK(ArrowMetadataGetValue(schema->metadata,
+                                                ArrowCharView("ARROW:extension:metadata"),
+                                                &schema_view->extension_metadata));
 
   return NANOARROW_OK;
 }
@@ -1600,7 +1602,9 @@ int64_t ArrowMetadataSizeOf(const char* metadata) {
   struct ArrowMetadataReader reader;
   struct ArrowStringView key;
   struct ArrowStringView value;
-  ArrowMetadataReaderInit(&reader, metadata);
+  if (ArrowMetadataReaderInit(&reader, metadata) != NANOARROW_OK) {
+    return 0;
+  }
 
   int64_t size = sizeof(int32_t);
   while (ArrowMetadataReaderRead(&reader, &key, &value) == NANOARROW_OK) {
@@ -1616,7 +1620,7 @@ static ArrowErrorCode ArrowMetadataGetValueInternal(const char* metadata,
   struct ArrowMetadataReader reader;
   struct ArrowStringView existing_key;
   struct ArrowStringView existing_value;
-  ArrowMetadataReaderInit(&reader, metadata);
+  NANOARROW_RETURN_NOT_OK(ArrowMetadataReaderInit(&reader, metadata));
 
   while (ArrowMetadataReaderRead(&reader, &existing_key, &existing_value) ==
          NANOARROW_OK) {
@@ -1643,7 +1647,10 @@ ArrowErrorCode ArrowMetadataGetValue(const char* metadata, struct ArrowStringVie
 
 char ArrowMetadataHasKey(const char* metadata, struct ArrowStringView key) {
   struct ArrowStringView value = ArrowCharView(NULL);
-  ArrowMetadataGetValue(metadata, key, &value);
+  if (ArrowMetadataGetValue(metadata, key, &value) != NANOARROW_OK) {
+    return 0;
+  }
+
   return value.data != NULL;
 }
 
@@ -1780,7 +1787,7 @@ ArrowErrorCode ArrowMetadataBuilderRemove(struct ArrowBuffer* buffer,
 
 #include "nanoarrow.h"
 
-static void ArrowArrayRelease(struct ArrowArray* array) {
+static void ArrowArrayReleaseInternal(struct ArrowArray* array) {
   // Release buffers held by this array
   struct ArrowArrayPrivateData* private_data =
       (struct ArrowArrayPrivateData*)array->private_data;
@@ -1798,7 +1805,7 @@ static void ArrowArrayRelease(struct ArrowArray* array) {
     for (int64_t i = 0; i < array->n_children; i++) {
       if (array->children[i] != NULL) {
         if (array->children[i]->release != NULL) {
-          array->children[i]->release(array->children[i]);
+          ArrowArrayRelease(array->children[i]);
         }
 
         ArrowFree(array->children[i]);
@@ -1813,7 +1820,7 @@ static void ArrowArrayRelease(struct ArrowArray* array) {
   // release() callback.
   if (array->dictionary != NULL) {
     if (array->dictionary->release != NULL) {
-      array->dictionary->release(array->dictionary);
+      ArrowArrayRelease(array->dictionary);
     }
 
     ArrowFree(array->dictionary);
@@ -1891,7 +1898,7 @@ ArrowErrorCode ArrowArrayInitFromType(struct ArrowArray* array,
   array->buffers = NULL;
   array->children = NULL;
   array->dictionary = NULL;
-  array->release = &ArrowArrayRelease;
+  array->release = &ArrowArrayReleaseInternal;
   array->private_data = NULL;
 
   struct ArrowArrayPrivateData* private_data =
@@ -1913,7 +1920,7 @@ ArrowErrorCode ArrowArrayInitFromType(struct ArrowArray* array,
 
   int result = ArrowArraySetStorageType(array, storage_type);
   if (result != NANOARROW_OK) {
-    array->release(array);
+    ArrowArrayRelease(array);
     return result;
   }
 
@@ -1938,7 +1945,7 @@ ArrowErrorCode ArrowArrayInitFromArrayView(struct ArrowArray* array,
   if (array_view->n_children > 0) {
     result = ArrowArrayAllocateChildren(array, array_view->n_children);
     if (result != NANOARROW_OK) {
-      array->release(array);
+      ArrowArrayRelease(array);
       return result;
     }
 
@@ -1946,7 +1953,7 @@ ArrowErrorCode ArrowArrayInitFromArrayView(struct ArrowArray* array,
       result =
           ArrowArrayInitFromArrayView(array->children[i], array_view->children[i], error);
       if (result != NANOARROW_OK) {
-        array->release(array);
+        ArrowArrayRelease(array);
         return result;
       }
     }
@@ -1955,14 +1962,14 @@ ArrowErrorCode ArrowArrayInitFromArrayView(struct ArrowArray* array,
   if (array_view->dictionary != NULL) {
     result = ArrowArrayAllocateDictionary(array);
     if (result != NANOARROW_OK) {
-      array->release(array);
+      ArrowArrayRelease(array);
       return result;
     }
 
     result =
         ArrowArrayInitFromArrayView(array->dictionary, array_view->dictionary, error);
     if (result != NANOARROW_OK) {
-      array->release(array);
+      ArrowArrayRelease(array);
       return result;
     }
   }
@@ -2174,7 +2181,7 @@ static ArrowErrorCode ArrowArrayFinalizeBuffers(struct ArrowArray* array) {
     case NANOARROW_TYPE_LARGE_BINARY:
     case NANOARROW_TYPE_LARGE_STRING:
       if (ArrowArrayBuffer(array, 2)->data == NULL) {
-        ArrowBufferAppendUInt8(ArrowArrayBuffer(array, 2), 0);
+        NANOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt8(ArrowArrayBuffer(array, 2), 0));
       }
       break;
     default:
@@ -2344,8 +2351,8 @@ ArrowErrorCode ArrowArrayViewInitFromSchema(struct ArrowArrayView* array_view,
     }
 
     memset(array_view->union_type_id_map, -1, 256);
-    int8_t n_type_ids = _ArrowParseUnionTypeIds(schema_view.union_type_ids,
-                                                array_view->union_type_id_map + 128);
+    int32_t n_type_ids = _ArrowParseUnionTypeIds(schema_view.union_type_ids,
+                                                 array_view->union_type_id_map + 128);
     for (int8_t child_index = 0; child_index < n_type_ids; child_index++) {
       int8_t type_id = array_view->union_type_id_map[128 + child_index];
       array_view->union_type_id_map[type_id] = child_index;
@@ -2910,7 +2917,7 @@ static int ArrowArrayViewValidateFull(struct ArrowArrayView* array_view,
             error,
             "[%ld] Expected union offset for child id %d to be between 0 and %ld but "
             "found offset value %ld",
-            (long)i, (int)child_id, (long)child_length, offset);
+            (long)i, (int)child_id, (long)child_length, (long)offset);
         return EINVAL;
       }
     }
@@ -2923,8 +2930,8 @@ static int ArrowArrayViewValidateFull(struct ArrowArrayView* array_view,
 
   // Dictionary valiation not implemented
   if (array_view->dictionary != NULL) {
-    ArrowErrorSet(error, "Validation for dictionary-encoded arrays is not implemented");
-    return ENOTSUP;
+    NANOARROW_RETURN_NOT_OK(ArrowArrayViewValidateFull(array_view->dictionary, error));
+    // TODO: validate the indices
   }
 
   return NANOARROW_OK;
@@ -3007,6 +3014,7 @@ static int ArrowBasicArrayStreamGetNext(struct ArrowArrayStream* array_stream,
 
 static const char* ArrowBasicArrayStreamGetLastError(
     struct ArrowArrayStream* array_stream) {
+  NANOARROW_UNUSED(array_stream);
   return NULL;
 }
 
@@ -3019,12 +3027,12 @@ static void ArrowBasicArrayStreamRelease(struct ArrowArrayStream* array_stream) 
       (struct BasicArrayStreamPrivate*)array_stream->private_data;
 
   if (private_data->schema.release != NULL) {
-    private_data->schema.release(&private_data->schema);
+    ArrowSchemaRelease(&private_data->schema);
   }
 
   for (int64_t i = 0; i < private_data->n_arrays; i++) {
     if (private_data->arrays[i].release != NULL) {
-      private_data->arrays[i].release(&private_data->arrays[i]);
+      ArrowArrayRelease(&private_data->arrays[i]);
     }
   }
 
