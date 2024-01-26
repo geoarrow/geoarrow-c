@@ -6,6 +6,10 @@ for f in nanoarrow.h nanoarrow.c; do
 done
 
 sed -i.bak \
-  -e 's|// #define NANOARROW_NAMESPACE YourNamespaceHere|#include "geoarrow_config.h"|' \
+  -e 's|// #define NANOARROW_NAMESPACE YourNamespaceHere|// When testing we use nanoarrow.h, but geoarrow_config.h will not exist in bundled\
+// mode. In the tests we just have to make sure geoarrow.h is always included first.\
+#if !defined(GEOARROW_CONFIG_H_INCLUDED)\
+#include "geoarrow_config.h"\
+#endif|' \
   src/geoarrow/nanoarrow.h
 rm src/geoarrow/nanoarrow.h.bak

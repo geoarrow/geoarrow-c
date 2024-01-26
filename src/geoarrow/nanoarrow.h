@@ -27,7 +27,11 @@
   (NANOARROW_VERSION_MAJOR * 10000 + NANOARROW_VERSION_MINOR * 100 + \
    NANOARROW_VERSION_PATCH)
 
+// When testing we use nanoarrow.h, but geoarrow_config.h will not exist in bundled
+// mode. In the tests we just have to make sure geoarrow.h is always included first.
+#if !defined(GEOARROW_CONFIG_H_INCLUDED)
 #include "geoarrow_config.h"
+#endif
 
 #endif
 // Licensed to the Apache Software Foundation (ASF) under one
