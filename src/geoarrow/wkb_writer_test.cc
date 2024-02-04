@@ -29,7 +29,7 @@ TEST(WKBWriterTest, WKBWriterTestOneNull) {
 
   struct ArrowArrayView view;
   ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
-  ArrowArrayViewSetArray(&view, &array, nullptr);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
 
   EXPECT_TRUE(ArrowArrayViewIsNull(&view, 0));
 

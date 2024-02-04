@@ -488,7 +488,8 @@ static ArrowErrorCode box_finish(struct GeoArrowVisitorKernelPrivate* private_da
   int64_t length = private_data->box2d_private.values[0].size_bytes / sizeof(double);
 
   for (int i = 0; i < 4; i++) {
-    ArrowArraySetBuffer(tmp.children[i], 1, &private_data->box2d_private.values[i]);
+    NANOARROW_RETURN_NOT_OK(
+        ArrowArraySetBuffer(tmp.children[i], 1, &private_data->box2d_private.values[i]));
     tmp.children[i]->length = length;
   }
 
