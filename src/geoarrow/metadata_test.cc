@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include <geoarrow.h>
+#include <sys/errno.h>
 #include "nanoarrow.h"
 
 TEST(MetadataTest, MetadataTestEmpty) {
@@ -98,6 +99,16 @@ TEST(MetadataTest, MetadataTestReadJSONParsing) {
   metadata.data = "{}";
   metadata.size_bytes = 2;
   EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK);
+
+  // Incomplete 'null'
+  metadata.data = "{\"key\": n";
+  metadata.size_bytes = strlen(metadata.data);
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), EINVAL);
+
+  // Enough characters but not actually 'null'
+  metadata.data = "{\"key\": nincompoop}";
+  metadata.size_bytes = strlen(metadata.data);
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), EINVAL);
 }
 
 TEST(MetadataTest, MetadataTestReadJSON) {
@@ -132,6 +143,11 @@ TEST(MetadataTest, MetadataTestReadJSON) {
   EXPECT_EQ(metadata_view.edge_type, GEOARROW_EDGE_TYPE_PLANAR);
   EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_NONE);
   EXPECT_EQ(metadata_view.crs.size_bytes, 0);
+
+  const char* json_crs_invalid = "{\"crs\":[]}";
+  metadata.data = json_crs_invalid;
+  metadata.size_bytes = strlen(json_crs_invalid);
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), EINVAL);
 
   const char* json_edges_none = "{\"edges\":null}";
   metadata.data = json_edges_none;
