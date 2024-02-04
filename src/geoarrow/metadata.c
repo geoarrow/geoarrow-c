@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include "geoarrow_type.h"
 #include "nanoarrow.h"
 
 #include "geoarrow.h"
@@ -274,6 +275,12 @@ static GeoArrowErrorCode ParseJSONMetadata(struct GeoArrowMetadataView* metadata
     if (k.size_bytes == 7 && strncmp(k.data, "\"edges\"", 7) == 0) {
       if (v.size_bytes == 11 && strncmp(v.data, "\"spherical\"", 11) == 0) {
         metadata_view->edge_type = GEOARROW_EDGE_TYPE_SPHERICAL;
+      } else if (v.size_bytes == 8 && strncmp(v.data, "\"planar\"", 8) == 0) {
+        metadata_view->edge_type = GEOARROW_EDGE_TYPE_PLANAR;
+      } else if (v.data[0] == 'n') {
+        metadata_view->edge_type = GEOARROW_EDGE_TYPE_PLANAR;
+      } else {
+        return EINVAL;
       }
     } else if (k.size_bytes == 5 && strncmp(k.data, "\"crs\"", 5) == 0) {
       if (v.data[0] == '{') {

@@ -21,3 +21,4 @@ out/
 CMakeUserPresets.json
 .vscode
 .Rproj.user
+.cache

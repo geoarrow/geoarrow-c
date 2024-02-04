@@ -132,6 +132,34 @@ TEST(MetadataTest, MetadataTestReadJSON) {
   EXPECT_EQ(metadata_view.edge_type, GEOARROW_EDGE_TYPE_PLANAR);
   EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_NONE);
   EXPECT_EQ(metadata_view.crs.size_bytes, 0);
+
+  const char* json_edges_none = "{\"edges\":null}";
+  metadata.data = json_edges_none;
+  metadata.size_bytes = strlen(json_edges_none);
+
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK);
+  EXPECT_EQ(metadata_view.edge_type, GEOARROW_EDGE_TYPE_PLANAR);
+  EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_NONE);
+  EXPECT_EQ(metadata_view.crs.size_bytes, 0);
+
+  const char* json_edges_planar = "{\"edges\":\"planar\"}";
+  metadata.data = json_edges_planar;
+  metadata.size_bytes = strlen(json_edges_planar);
+
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK);
+  EXPECT_EQ(metadata_view.edge_type, GEOARROW_EDGE_TYPE_PLANAR);
+  EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_NONE);
+  EXPECT_EQ(metadata_view.crs.size_bytes, 0);
+
+  const char* json_edges_invalid = "{\"edges\":\"unsupported value\"}";
+  metadata.data = json_edges_invalid;
+  metadata.size_bytes = strlen(json_edges_invalid);
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), EINVAL);
+
+  const char* json_edges_invalid_type = "{\"edges\":true}";
+  metadata.data = json_edges_invalid_type;
+  metadata.size_bytes = strlen(json_edges_invalid_type);
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), EINVAL);
 }
 
 TEST(MetadataTest, MetadataTestSetMetadata) {
