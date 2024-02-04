@@ -2,7 +2,6 @@
 #include <errno.h>
 #include <stdio.h>
 
-#include "geoarrow_type.h"
 #include "nanoarrow.h"
 
 #include "geoarrow.h"
@@ -112,7 +111,6 @@ static int SkipUntil(struct ArrowStringView* s, const char* items) {
 
 static GeoArrowErrorCode FindNull(struct ArrowStringView* s,
                                   struct ArrowStringView* out) {
-
   if (s->size_bytes < 4) {
     return EINVAL;
   }

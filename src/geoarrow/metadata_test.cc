@@ -4,7 +4,6 @@
 #include <gtest/gtest.h>
 
 #include <geoarrow.h>
-#include <sys/errno.h>
 #include "nanoarrow.h"
 
 TEST(MetadataTest, MetadataTestEmpty) {
