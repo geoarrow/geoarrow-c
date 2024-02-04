@@ -123,6 +123,15 @@ TEST(MetadataTest, MetadataTestReadJSON) {
   EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_UNKNOWN);
   EXPECT_EQ(std::string(metadata_view.crs.data, metadata_view.crs.size_bytes),
             "\"a string\"");
+
+  const char* json_crs_none = "{\"crs\":null}";
+  metadata.data = json_crs_none;
+  metadata.size_bytes = strlen(json_crs_none);
+
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK);
+  EXPECT_EQ(metadata_view.edge_type, GEOARROW_EDGE_TYPE_PLANAR);
+  EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_NONE);
+  EXPECT_EQ(metadata_view.crs.size_bytes, 0);
 }
 
 TEST(MetadataTest, MetadataTestSetMetadata) {

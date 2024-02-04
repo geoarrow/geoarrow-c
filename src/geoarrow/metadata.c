@@ -109,6 +109,24 @@ static int SkipUntil(struct ArrowStringView* s, const char* items) {
   return 0;
 }
 
+static GeoArrowErrorCode FindNull(struct ArrowStringView* s,
+                                  struct ArrowStringView* out) {
+
+  if (s->size_bytes < 4) {
+    return EINVAL;
+  }
+
+  if (strncmp(s->data, "null", 4) != 0) {
+    return EINVAL;
+  }
+
+  out->data = s->data;
+  out->size_bytes = 4;
+  s->size_bytes -= 4;
+  s->data += 4;
+  return GEOARROW_OK;
+}
+
 static GeoArrowErrorCode FindString(struct ArrowStringView* s,
                                     struct ArrowStringView* out) {
   out->data = s->data;
@@ -245,8 +263,12 @@ static GeoArrowErrorCode ParseJSONMetadata(struct GeoArrowMetadataView* metadata
       case '\"':
         NANOARROW_RETURN_NOT_OK(FindString(s, &v));
         break;
-      default:
+      case 'n':
+        NANOARROW_RETURN_NOT_OK(FindNull(s, &v));
         break;
+      default:
+        // e.g., a number or boolean
+        return EINVAL;
     }
 
     if (k.size_bytes == 7 && strncmp(k.data, "\"edges\"", 7) == 0) {
@@ -256,14 +278,17 @@ static GeoArrowErrorCode ParseJSONMetadata(struct GeoArrowMetadataView* metadata
     } else if (k.size_bytes == 5 && strncmp(k.data, "\"crs\"", 5) == 0) {
       if (v.data[0] == '{') {
         metadata_view->crs_type = GEOARROW_CRS_TYPE_PROJJSON;
+        metadata_view->crs.data = v.data;
+        metadata_view->crs.size_bytes = v.size_bytes;
       } else if (v.data[0] == '\"') {
         metadata_view->crs_type = GEOARROW_CRS_TYPE_UNKNOWN;
+        metadata_view->crs.data = v.data;
+        metadata_view->crs.size_bytes = v.size_bytes;
+      } else if (v.data[0] == 'n') {
+        metadata_view->crs_type = GEOARROW_CRS_TYPE_NONE;
       } else {
         return EINVAL;
       }
-
-      metadata_view->crs.data = v.data;
-      metadata_view->crs.size_bytes = v.size_bytes;
     }
 
     SkipUntil(s, ",}");
