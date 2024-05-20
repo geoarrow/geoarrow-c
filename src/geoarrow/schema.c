@@ -156,6 +156,13 @@ GeoArrowErrorCode GeoArrowSchemaInitExtension(struct ArrowSchema* schema,
     return result;
   }
 
+  result = ArrowMetadataBuilderAppend(
+      &metadata, ArrowCharView("ARROW:extension:metadata"), ArrowCharView("{}"));
+  if (result != NANOARROW_OK) {
+    ArrowBufferReset(&metadata);
+    return result;
+  }
+
   result = GeoArrowSchemaInit(schema, type);
   if (result != NANOARROW_OK) {
     ArrowBufferReset(&metadata);
