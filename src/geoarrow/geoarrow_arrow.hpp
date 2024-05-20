@@ -90,8 +90,6 @@ class VectorExtensionType : public arrow::ExtensionType {
 
   std::string Serialize() const override { return type_.extension_metadata(); }
 
-  std::string ToString() const override { return arrow::ExtensionType::ToString(); }
-
   const VectorType& GeoArrowType() const { return type_; }
 
   arrow::Result<std::shared_ptr<VectorExtensionType>> WithGeometryType(
