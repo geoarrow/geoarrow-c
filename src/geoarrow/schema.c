@@ -15,8 +15,7 @@ static GeoArrowErrorCode GeoArrowSchemaInitCoordFixedSizeList(struct ArrowSchema
   NANOARROW_RETURN_NOT_OK(ArrowSchemaSetName(schema->children[0], dims));
   NANOARROW_RETURN_NOT_OK(ArrowSchemaSetType(schema->children[0], NANOARROW_TYPE_DOUBLE));
 
-  // Set this type and its child non-nullable
-  schema->flags = 0;
+  // Set child field non-nullable
   schema->children[0]->flags = 0;
 
   return GEOARROW_OK;
@@ -36,9 +35,6 @@ static GeoArrowErrorCode GeoArrowSchemaInitCoordStruct(struct ArrowSchema* schem
     // Set child non-nullable
     schema->children[i]->flags = 0;
   }
-
-  // Set this type non-nullable
-  schema->flags = 0;
 
   return GEOARROW_OK;
 }
@@ -63,6 +59,10 @@ static GeoArrowErrorCode GeoArrowSchemaInitListOf(struct ArrowSchema* schema,
     NANOARROW_RETURN_NOT_OK(GeoArrowSchemaInitListOf(schema->children[0], coord_type,
                                                      dims, n - 1, child_names + 1));
     NANOARROW_RETURN_NOT_OK(ArrowSchemaSetName(schema->children[0], child_names[0]));
+
+    // Set child field non-nullable
+    schema->children[0]->flags = 0;
+
     return NANOARROW_OK;
   }
 }
@@ -130,6 +130,7 @@ GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowTy
         default:
           return EINVAL;
       }
+      break;
 
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
       NANOARROW_RETURN_NOT_OK(
@@ -155,9 +156,6 @@ GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowTy
     default:
       return ENOTSUP;
   }
-
-  // Outer schema is always nullable
-  schema->flags = ARROW_FLAG_NULLABLE;
 
   return NANOARROW_OK;
 }
