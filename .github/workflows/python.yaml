@@ -51,6 +51,8 @@ jobs:
       - name: Coverage (geoarrow-c)
         if: success() && matrix.python-version == '3.12'
         run: |
+          pip install setuptools Cython
+
           pushd python/geoarrow-c
 
           # Build with Cython + gcc coverage options
