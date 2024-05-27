@@ -98,7 +98,10 @@ def test_c_vector_type():
 
     pa_type = pa.DataType._import_from_c(schema._addr())
     pa_type_expected = pa.struct(
-        [pa.field("x", pa.float64()), pa.field("y", pa.float64())]
+        [
+            pa.field("x", pa.float64(), nullable=False),
+            pa.field("y", pa.float64(), nullable=False),
+        ]
     )
 
     # Depending on how the tests are run, the extension type might be
