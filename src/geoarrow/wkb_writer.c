@@ -1,6 +1,6 @@
 
-#include <string.h>
 #include <limits.h>
+#include <string.h>
 
 #include "nanoarrow.h"
 
