@@ -1,5 +1,6 @@
 
 #include <string.h>
+#include <limits.h>
 
 #include "nanoarrow.h"
 
@@ -99,7 +100,10 @@ static int ring_start_wkb(struct GeoArrowVisitor* v) {
 static int coords_wkb(struct GeoArrowVisitor* v, const struct GeoArrowCoordView* coords) {
   struct WKBWriterPrivate* private = (struct WKBWriterPrivate*)v->private_data;
   NANOARROW_RETURN_NOT_OK(WKBWriterCheckLevel(private));
+
+  NANOARROW_DCHECK(coords->n_coords <= UINT32_MAX);
   private->size[private->level] += coords->n_coords;
+
   NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(
       &private->values, coords->n_values * coords->n_coords * sizeof(double)));
   for (int64_t i = 0; i < coords->n_coords; i++) {
