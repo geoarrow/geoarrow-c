@@ -11,7 +11,7 @@ Python bindings for geoarrow are available on PyPI and can be installed with:
 pip install geoarrow-c
 ```
 
-You can install a developement version with:
+You can install a development version with:
 
 ```bash
 python -m pip install "git+https://github.com/geoarrow/geoarrow-c.git#egg=geoarrow-c&subdirectory=python/geoarrow-c"

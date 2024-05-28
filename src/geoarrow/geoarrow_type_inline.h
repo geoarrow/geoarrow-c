@@ -444,7 +444,7 @@ static inline GeoArrowErrorCode GeoArrowBuilderCoordsReserve(
 
       return GEOARROW_OK;
     default:
-      // Beacuse there is no include <errno.h> here yet
+      // Because there is no include <errno.h> here yet
       return -1;
   }
 }

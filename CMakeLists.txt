@@ -177,19 +177,22 @@ if(TARGET geoarrow)
                              PRIVATE -Wall
                                      -Werror
                                      -Wextra
-                                     -Wno-type-limits
-                                     -Wno-unused-parameter
                                      -Wpedantic
-                                     -Wunused-result)
+                                     -Wno-type-limits
+                                     -Wmaybe-uninitialized
+                                     -Wunused-result
+                                     -Wconversion
+                                     -Wno-sign-conversion)
     elseif(CMAKE_C_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_C_COMPILER_ID STREQUAL
                                                         "Clang")
       target_compile_options(geoarrow
                              PRIVATE -Wall
                                      -Werror
                                      -Wextra
+                                     -Wpedantic
                                      -Wdocumentation
-                                     -Wno-unused-parameter
-                                     -Wshorten-64-to-32)
+                                     -Wconversion
+                                     -Wno-sign-conversion)
     endif()
   endif()
 endif()

@@ -28,7 +28,8 @@ TEST(WKXFilesTest, WKXFilesTestFiles) {
       continue;
     }
 
-    // Some values from nc.wkt don't round trip exactly because of double precision printing
+    // Some values from nc.wkt don't round trip exactly because of double precision
+    // printing
     if (path.substr(path.size() - 6, path.size()) == "nc.wkt") {
       continue;
     }

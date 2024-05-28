@@ -7,8 +7,7 @@
 
 static int32_t kZeroInt32 = 0;
 
-static int GeoArrowArrayViewInitInternal(struct GeoArrowArrayView* array_view,
-                                         struct GeoArrowError* error) {
+static int GeoArrowArrayViewInitInternal(struct GeoArrowArrayView* array_view) {
   switch (array_view->schema_view.geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_POINT:
       array_view->n_offsets = 0;
@@ -82,7 +81,7 @@ static int GeoArrowArrayViewInitInternal(struct GeoArrowArrayView* array_view,
 GeoArrowErrorCode GeoArrowArrayViewInitFromType(struct GeoArrowArrayView* array_view,
                                                 enum GeoArrowType type) {
   NANOARROW_RETURN_NOT_OK(GeoArrowSchemaViewInitFromType(&array_view->schema_view, type));
-  return GeoArrowArrayViewInitInternal(array_view, NULL);
+  return GeoArrowArrayViewInitInternal(array_view);
 }
 
 GeoArrowErrorCode GeoArrowArrayViewInitFromSchema(struct GeoArrowArrayView* array_view,
@@ -90,7 +89,7 @@ GeoArrowErrorCode GeoArrowArrayViewInitFromSchema(struct GeoArrowArrayView* arra
                                                   struct GeoArrowError* error) {
   NANOARROW_RETURN_NOT_OK(
       GeoArrowSchemaViewInit(&array_view->schema_view, schema, error));
-  return GeoArrowArrayViewInitInternal(array_view, error);
+  return GeoArrowArrayViewInitInternal(array_view);
 }
 
 static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_view,
@@ -202,8 +201,7 @@ static int GeoArrowArrayViewSetArrayInternal(struct GeoArrowArrayView* array_vie
 }
 
 static GeoArrowErrorCode GeoArrowArrayViewSetArraySerialized(
-    struct GeoArrowArrayView* array_view, const struct ArrowArray* array,
-    struct GeoArrowError* error) {
+    struct GeoArrowArrayView* array_view, const struct ArrowArray* array) {
   array_view->length[0] = array->length;
   array_view->offset[0] = array->offset;
 
@@ -218,8 +216,7 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
   switch (array_view->schema_view.type) {
     case GEOARROW_TYPE_WKT:
     case GEOARROW_TYPE_WKB:
-      NANOARROW_RETURN_NOT_OK(
-          GeoArrowArrayViewSetArraySerialized(array_view, array, error));
+      NANOARROW_RETURN_NOT_OK(GeoArrowArrayViewSetArraySerialized(array_view, array));
       break;
     default:
       NANOARROW_RETURN_NOT_OK(

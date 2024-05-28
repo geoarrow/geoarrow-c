@@ -15,7 +15,7 @@
 // metadata specification instead of JSON. To help with the transition, this
 // bit of code parses the original metadata format.
 static GeoArrowErrorCode GeoArrowMetadataViewInitDeprecated(
-    struct GeoArrowMetadataView* metadata_view, struct GeoArrowError* error) {
+    struct GeoArrowMetadataView* metadata_view) {
   const char* metadata = metadata_view->metadata.data;
   int32_t pos_max = (int32_t)metadata_view->metadata.size_bytes;
   int32_t pos = 0;
@@ -353,7 +353,7 @@ GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata
   }
 
   if (metadata.size_bytes >= 4 && metadata.data[0] != '{') {
-    if (GeoArrowMetadataViewInitDeprecated(metadata_view, error) == GEOARROW_OK) {
+    if (GeoArrowMetadataViewInitDeprecated(metadata_view) == GEOARROW_OK) {
       return GEOARROW_OK;
     }
   }

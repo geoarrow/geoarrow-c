@@ -38,4 +38,4 @@ int GeoArrowd2sexp_buffered_n(double f, uint32_t precision, char* result);
 }
 #endif
 
-#endif // RYU_H
+#endif  // RYU_H
