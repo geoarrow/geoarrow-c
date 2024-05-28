@@ -358,9 +358,9 @@ static int finish_push_batch_as_geoarrow(
 // input. EMPTY values are not counted as any particular geometry type;
 // however, note that POINTs as represented in WKB or GeoArrow cannot be
 // EMPTY and this kernel does not check for the convention of EMPTY as
-// all coordinates == nan. This is mosty to facilitate choosing an appropriate destination
-// type (e.g., point, linestring, etc.). This visitor is not exposed as a standalone
-// visitor in the geoarrow.h header.
+// all coordinates == nan. This is mostly to facilitate choosing an appropriate
+// destination type (e.g., point, linestring, etc.). This visitor is not exposed as a
+// standalone visitor in the geoarrow.h header.
 //
 // The internals use GeoArrowDimensions * 8 + GeoArrowGeometryType as the
 // "key" for a given combination. This gives an integer between 0 and 39.

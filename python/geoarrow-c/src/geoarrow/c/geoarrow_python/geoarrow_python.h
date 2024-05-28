@@ -7,14 +7,15 @@
 #include "geoarrow.h"
 
 static void PyGeoArrowBufferFree(uint8_t* ptr, int64_t size, void* private_data) {
-  // Aquire the GIL? This buffer very well maybe freed from another thread.
+  // Acquire the GIL? This buffer very well maybe freed from another thread.
   PyObject* obj = (PyObject*)private_data;
   Py_DECREF(obj);
 }
 
-static GeoArrowErrorCode GeoArrowBuilderSetPyBuffer(struct GeoArrowBuilder* builder, int64_t i, PyObject* obj,
+static GeoArrowErrorCode GeoArrowBuilderSetPyBuffer(struct GeoArrowBuilder* builder,
+                                                    int64_t i, PyObject* obj,
                                                     const void* ptr, int64_t size) {
-  // Aquire the GIL? Or maybe not since this should never be initialized from antying
+  // Acquire the GIL? Or maybe not since this should never be initialized from antying
   // that isn't a cython <PyObject*> cast.
   GeoArrowBufferView view;
   view.data = (const uint8_t*)ptr;

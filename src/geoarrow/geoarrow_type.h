@@ -128,7 +128,7 @@ struct GeoArrowError {
 /// \ingroup geoarrow-utility
 struct GeoArrowStringView {
   /// \brief Pointer to the beginning of the string. May be NULL if size_bytes is 0.
-  /// there is no requirement that the strig is null-terminated.
+  /// there is no requirement that the string is null-terminated.
   const char* data;
 
   /// \brief The size of the string in bytes
@@ -416,10 +416,10 @@ struct GeoArrowArrayView {
   /// \brief Pointers to the beginning of each offset buffer
   const int32_t* offsets[3];
 
-  /// \brief The first offset value in each offset bufer
+  /// \brief The first offset value in each offset buffer
   int32_t first_offset[3];
 
-  /// \brief The last offset value in each offset bufer
+  /// \brief The last offset value in each offset buffer
   int32_t last_offset[3];
 
   /// \brief For serialized types, a pointer to the start of the data buffer
@@ -563,7 +563,7 @@ struct GeoArrowKernel {
 
   /// \brief Compute the final result
   ///
-  /// For aggreate kernels, compute the result based on previous batches.
+  /// For aggregate kernels, compute the result based on previous batches.
   /// In theory, aggregate kernels should allow more than one call to
   /// finish; however, this is not tested in any existing code.
   int (*finish)(struct GeoArrowKernel* kernel, struct ArrowArray* out,

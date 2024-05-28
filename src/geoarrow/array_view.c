@@ -216,8 +216,7 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
   switch (array_view->schema_view.type) {
     case GEOARROW_TYPE_WKT:
     case GEOARROW_TYPE_WKB:
-      NANOARROW_RETURN_NOT_OK(
-          GeoArrowArrayViewSetArraySerialized(array_view, array));
+      NANOARROW_RETURN_NOT_OK(GeoArrowArrayViewSetArraySerialized(array_view, array));
       break;
     default:
       NANOARROW_RETURN_NOT_OK(

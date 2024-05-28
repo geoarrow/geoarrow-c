@@ -100,7 +100,7 @@ int64_t GeoArrowMetadataSerialize(const struct GeoArrowMetadataView* metadata_vi
 GeoArrowErrorCode GeoArrowSchemaSetMetadata(
     struct ArrowSchema* schema, const struct GeoArrowMetadataView* metadata_view);
 
-/// \brief Deprecated function used for backward compatability with very early
+/// \brief Deprecated function used for backward compatibility with very early
 /// versions of geoarrow
 GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
     struct ArrowSchema* schema, const struct GeoArrowMetadataView* metadata_view);

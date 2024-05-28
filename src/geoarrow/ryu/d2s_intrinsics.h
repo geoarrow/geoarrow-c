@@ -39,11 +39,13 @@ typedef __uint128_t uint128_t;
 
 #include <intrin.h>
 
-static inline uint64_t umul128(const uint64_t a, const uint64_t b, uint64_t* const productHi) {
+static inline uint64_t umul128(const uint64_t a, const uint64_t b,
+                               uint64_t* const productHi) {
   return _umul128(a, b, productHi);
 }
 
-static inline uint64_t shiftright128(const uint64_t lo, const uint64_t hi, const uint32_t dist) {
+static inline uint64_t shiftright128(const uint64_t lo, const uint64_t hi,
+                                     const uint32_t dist) {
   // For the __shiftright128 intrinsic, the shift value is always
   // modulo 64.
   // In the current implementation of the double-precision version
@@ -53,12 +55,13 @@ static inline uint64_t shiftright128(const uint64_t lo, const uint64_t hi, const
   // Check this here in case a future change requires larger shift
   // values. In this case this function needs to be adjusted.
   assert(dist < 64);
-  return __shiftright128(lo, hi, (unsigned char) dist);
+  return __shiftright128(lo, hi, (unsigned char)dist);
 }
 
-#else // defined(HAS_64_BIT_INTRINSICS)
+#else  // defined(HAS_64_BIT_INTRINSICS)
 
-static inline uint64_t umul128(const uint64_t a, const uint64_t b, uint64_t* const productHi) {
+static inline uint64_t umul128(const uint64_t a, const uint64_t b,
+                               uint64_t* const productHi) {
   // The casts here help MSVC to avoid calls to the __allmul library function.
   const uint32_t aLo = (uint32_t)a;
   const uint32_t aHi = (uint32_t)(a >> 32);
@@ -88,7 +91,8 @@ static inline uint64_t umul128(const uint64_t a, const uint64_t b, uint64_t* con
   return pLo;
 }
 
-static inline uint64_t shiftright128(const uint64_t lo, const uint64_t hi, const uint32_t dist) {
+static inline uint64_t shiftright128(const uint64_t lo, const uint64_t hi,
+                                     const uint32_t dist) {
   // We don't need to handle the case dist >= 64 here (see above).
   assert(dist < 64);
 #if defined(RYU_OPTIMIZE_SIZE) || !defined(RYU_32_BIT_PLATFORM)
@@ -101,7 +105,7 @@ static inline uint64_t shiftright128(const uint64_t lo, const uint64_t hi, const
 #endif
 }
 
-#endif // defined(HAS_64_BIT_INTRINSICS)
+#endif  // defined(HAS_64_BIT_INTRINSICS)
 
 #if defined(RYU_32_BIT_PLATFORM)
 
@@ -160,43 +164,33 @@ static inline uint32_t mod1e9(const uint64_t x) {
   // We can also simplify (uint32_t) (1000000000 * div1e9(x)).
   // We can truncate before multiplying instead of after, as multiplying
   // the highest 32 bits of div1e9(x) can't affect the lowest 32 bits.
-  return ((uint32_t) x) - 1000000000 * ((uint32_t) div1e9(x));
+  return ((uint32_t)x) - 1000000000 * ((uint32_t)div1e9(x));
 }
 
-#else // defined(RYU_32_BIT_PLATFORM)
+#else  // defined(RYU_32_BIT_PLATFORM)
 
-static inline uint64_t div5(const uint64_t x) {
-  return x / 5;
-}
+static inline uint64_t div5(const uint64_t x) { return x / 5; }
 
-static inline uint64_t div10(const uint64_t x) {
-  return x / 10;
-}
+static inline uint64_t div10(const uint64_t x) { return x / 10; }
 
-static inline uint64_t div100(const uint64_t x) {
-  return x / 100;
-}
+static inline uint64_t div100(const uint64_t x) { return x / 100; }
 
-static inline uint64_t div1e8(const uint64_t x) {
-  return x / 100000000;
-}
+static inline uint64_t div1e8(const uint64_t x) { return x / 100000000; }
 
-static inline uint64_t div1e9(const uint64_t x) {
-  return x / 1000000000;
-}
+static inline uint64_t div1e9(const uint64_t x) { return x / 1000000000; }
 
 static inline uint32_t mod1e9(const uint64_t x) {
-  return (uint32_t) (x - 1000000000 * div1e9(x));
+  return (uint32_t)(x - 1000000000 * div1e9(x));
 }
 
-#endif // defined(RYU_32_BIT_PLATFORM)
+#endif  // defined(RYU_32_BIT_PLATFORM)
 
 static inline uint32_t pow5Factor(uint64_t value) {
   uint32_t count = 0;
   for (;;) {
     assert(value != 0);
     const uint64_t q = div5(value);
-    const uint32_t r = ((uint32_t) value) - 5 * ((uint32_t) q);
+    const uint32_t r = ((uint32_t)value) - 5 * ((uint32_t)q);
     if (r != 0) {
       break;
     }
@@ -219,4 +213,4 @@ static inline bool multipleOfPowerOf2(const uint64_t value, const uint32_t p) {
   return (value & ((1ull << p) - 1)) == 0;
 }
 
-#endif // RYU_D2S_INTRINSICS_H
+#endif  // RYU_D2S_INTRINSICS_H

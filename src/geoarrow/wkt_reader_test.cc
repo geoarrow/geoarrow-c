@@ -26,7 +26,7 @@ TEST(WKTReaderTest, WKTReaderTestPoint) {
   EXPECT_WKT_ROUNDTRIP(tester, "POINT M (0 1 3)");
   EXPECT_WKT_ROUNDTRIP(tester, "POINT ZM (0 1 2 3)");
 
-  // Extra whitespace is OK; no whitepsace after POINT is OK
+  // Extra whitespace is OK; no whitespace after POINT is OK
   EXPECT_EQ(tester.AsWKT(" POINT(0    1) "), "POINT (0 1)");
 
   EXPECT_THROW(tester.AsWKT("POINT A"), WKXTestException);

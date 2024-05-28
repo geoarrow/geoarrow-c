@@ -143,7 +143,7 @@ static GeoArrowErrorCode GeoArrowBuilderInitInternal(struct GeoArrowBuilder* bui
     return result;
   }
 
-  // Initalize one empty coordinate for the visitor pattern
+  // Initialize one empty coordinate for the visitor pattern
   memcpy(private->empty_coord_values, kEmptyPointCoords, 4 * sizeof(double));
   private->empty_coord.values[0] = private->empty_coord_values;
   private->empty_coord.values[1] = private->empty_coord_values + 1;

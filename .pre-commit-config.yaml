@@ -21,20 +21,10 @@ repos:
     hooks:
     - id: black
       types_or: [pyi, python]
-  - repo: https://github.com/PyCQA/flake8
-    rev: 4.0.1
-    hooks:
-    - id: flake8
-      types_or: [python]
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.12.0
-    hooks:
-    - id: isort
-      types_or: [python]
-      exclude: "__init__.py$"
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.5
     hooks:
-    -   id: codespell
-        types_or: [rst, markdown, c, c++]
-        additional_dependencies: [tomli]
+    - id: codespell
+      types_or: [rst, markdown, c, c++]
+      additional_dependencies: [tomli]
+      exclude: "src/geoarrow/ryu/d2s_intrinsics.h"

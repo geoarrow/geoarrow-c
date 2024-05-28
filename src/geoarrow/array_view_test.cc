@@ -848,7 +848,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultiLinestringWithOffset) {
   ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
 
-  // First null wont be used because of offset
+  // First null won't be used because of offset
   ASSERT_EQ(ArrowArrayAppendNull(&array, 2), GEOARROW_OK);
 
   // First ring won't be used because we will set the offset 1
@@ -1032,7 +1032,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultipolygonWithOffsets) {
   // First NULL won't be used because of offset
   ASSERT_EQ(ArrowArrayAppendNull(&array, 2), GEOARROW_OK);
 
-  // Empty polygon that will be skipped becasue of offset
+  // Empty polygon that will be skipped because of offset
   ASSERT_EQ(ArrowArrayAppendEmpty(array.children[0], 1), GEOARROW_OK);
 
   ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
