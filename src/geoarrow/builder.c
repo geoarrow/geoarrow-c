@@ -488,6 +488,8 @@ static int feat_start_point(struct GeoArrowVisitor* v) {
 static int geom_start_point(struct GeoArrowVisitor* v,
                             enum GeoArrowGeometryType geometry_type,
                             enum GeoArrowDimensions dimensions) {
+  NANOARROW_UNUSED(geometry_type);
+
   // level++, geometry type, dimensions, reset size
   // validate dimensions, maybe against some options that indicate
   // error for mismatch, fill, or drop behaviour
@@ -497,7 +499,10 @@ static int geom_start_point(struct GeoArrowVisitor* v,
   return GEOARROW_OK;
 }
 
-static int ring_start_point(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
+static int ring_start_point(struct GeoArrowVisitor* v) {
+  NANOARROW_UNUSED(v);
+  return GEOARROW_OK;
+}
 
 static int coords_point(struct GeoArrowVisitor* v,
                         const struct GeoArrowCoordView* coords) {
@@ -508,9 +513,15 @@ static int coords_point(struct GeoArrowVisitor* v,
                                      coords->n_coords);
 }
 
-static int ring_end_point(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
+static int ring_end_point(struct GeoArrowVisitor* v) {
+  NANOARROW_UNUSED(v);
+  return GEOARROW_OK;
+}
 
-static int geom_end_point(struct GeoArrowVisitor* v) { return GEOARROW_OK; }
+static int geom_end_point(struct GeoArrowVisitor* v) {
+  NANOARROW_UNUSED(v);
+  return GEOARROW_OK;
+}
 
 static int null_feat_point(struct GeoArrowVisitor* v) {
   struct GeoArrowBuilder* builder = (struct GeoArrowBuilder*)v->private_data;

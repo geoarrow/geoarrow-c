@@ -175,21 +175,24 @@ if(TARGET geoarrow)
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
       target_compile_options(geoarrow
                              PRIVATE -Wall
-                                     -Werror
-                                     -Wextra
-                                     -Wno-type-limits
-                                     -Wno-unused-parameter
-                                     -Wpedantic
-                                     -Wunused-result)
+                             -Werror
+                             -Wextra
+                             -Wpedantic
+                             -Wno-type-limits
+                             -Wmaybe-uninitialized
+                             -Wunused-result
+                             -Wconversion
+                             -Wno-sign-conversion)
     elseif(CMAKE_C_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_C_COMPILER_ID STREQUAL
                                                         "Clang")
       target_compile_options(geoarrow
                              PRIVATE -Wall
-                                     -Werror
-                                     -Wextra
-                                     -Wdocumentation
-                                     -Wno-unused-parameter
-                                     -Wshorten-64-to-32)
+                             -Werror
+                             -Wextra
+                             -Wpedantic
+                             -Wdocumentation
+                             -Wconversion
+                             -Wno-sign-conversion)
     endif()
   endif()
 endif()
