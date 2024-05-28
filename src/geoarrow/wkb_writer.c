@@ -102,7 +102,7 @@ static int coords_wkb(struct GeoArrowVisitor* v, const struct GeoArrowCoordView*
   NANOARROW_RETURN_NOT_OK(WKBWriterCheckLevel(private));
 
   NANOARROW_DCHECK(coords->n_coords <= UINT32_MAX);
-  private->size[private->level] += coords->n_coords;
+  private->size[private->level] += (uint32_t)coords->n_coords;
 
   NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(
       &private->values, coords->n_values * coords->n_coords * sizeof(double)));
