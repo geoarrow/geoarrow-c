@@ -30,8 +30,9 @@ main() {
 #endif|' \
     src/geoarrow/nanoarrow.h
   rm src/geoarrow/nanoarrow.h.bak
-}
 
-# git clone https://github.com/paleolimbot/nanoarrow
+  clang-format -i src/geoarrow/nanoarrow.h
+  clang-format -i src/geoarrow/nanoarrow.c
+}
 
 main
