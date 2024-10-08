@@ -21,7 +21,7 @@
 #define NANOARROW_VERSION_MAJOR 0
 #define NANOARROW_VERSION_MINOR 6
 #define NANOARROW_VERSION_PATCH 0
-#define NANOARROW_VERSION "0.6.0-SNAPSHOT"
+#define NANOARROW_VERSION "0.6.0"
 
 #define NANOARROW_VERSION_INT                                        \
   (NANOARROW_VERSION_MAJOR * 10000 + NANOARROW_VERSION_MINOR * 100 + \
@@ -3750,7 +3750,6 @@ static inline ArrowErrorCode ArrowArrayFinishElement(struct ArrowArray* array) {
         }
       }
       break;
-      return NANOARROW_OK;
     default:
       return EINVAL;
   }
