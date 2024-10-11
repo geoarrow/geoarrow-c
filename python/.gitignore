@@ -18,6 +18,7 @@
 
 geoarrow-c/src/geoarrow/c/geoarrow
 geoarrow-c/src/geoarrow/c/_lib.cpp
+geoarrow-c/src/geoarrow/c/_version.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
