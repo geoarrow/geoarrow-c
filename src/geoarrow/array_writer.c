@@ -57,6 +57,34 @@ GeoArrowErrorCode GeoArrowArrayWriterInitFromSchema(struct GeoArrowArrayWriter* 
   return GeoArrowArrayWriterInitFromType(writer, schema_view.type);
 }
 
+GeoArrowErrorCode GeoArrowArrayWriterSetPrecision(struct GeoArrowArrayWriter* writer,
+                                                  int precision) {
+  struct GeoArrowArrayWriterPrivate* private_data =
+      (struct GeoArrowArrayWriterPrivate*)writer->private_data;
+
+  if (private_data->type != GEOARROW_TYPE_WKT &&
+      private_data->type != GEOARROW_TYPE_LARGE_WKT) {
+    return EINVAL;
+  }
+
+  private_data->wkt_writer.precision = precision;
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowArrayWriterSetFlatMultipoint(struct GeoArrowArrayWriter* writer,
+                                                       int flat_multipoint) {
+  struct GeoArrowArrayWriterPrivate* private_data =
+      (struct GeoArrowArrayWriterPrivate*)writer->private_data;
+
+  if (private_data->type != GEOARROW_TYPE_WKT &&
+      private_data->type != GEOARROW_TYPE_LARGE_WKT) {
+    return EINVAL;
+  }
+
+  private_data->wkt_writer.use_flat_multipoint = flat_multipoint;
+  return GEOARROW_OK;
+}
+
 GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* writer,
                                                  struct GeoArrowVisitor* v) {
   struct GeoArrowArrayWriterPrivate* private_data =
