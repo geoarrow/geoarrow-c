@@ -322,8 +322,9 @@ struct GeoArrowWKTWriter {
   /// \brief The number of significant digits to include in the output (default: 16)
   int precision;
 
-  /// \brief Set to 0 to use the verbose (but still technically valid) MULTIPOINT
-  /// representation (i.e., MULTIPOINT((0 1), (2 3))).
+  /// \brief Set to 0 to use the verbose (but more valid) MULTIPOINT
+  /// representation (i.e., MULTIPOINT((0 1), (2 3)))). Defaults to 1 (because
+  /// this was the default GEOS behaviour at the time this was written).
   int use_flat_multipoint;
 
   /// \brief Constrain the maximum size of each element in the returned array
@@ -478,6 +479,14 @@ GeoArrowErrorCode GeoArrowArrayWriterInitFromSchema(struct GeoArrowArrayWriter* 
 /// The default precision value is 16. See GeoArrowWKTWriter for details.
 GeoArrowErrorCode GeoArrowArrayWriterSetPrecision(struct GeoArrowArrayWriter* writer,
                                                   int precision);
+
+/// \brief Set the MULTIPOINT output mode when writing to WKT
+///
+/// Returns EINVAL if the writer is not writing to WKT. Must be called before
+/// GeoArrowArrayWriterInitVisitor(). The default value is 1. See GeoArrowWKTWriter for
+/// details.
+GeoArrowErrorCode GeoArrowArrayWriterSetFlatMultipoint(struct GeoArrowArrayWriter* writer,
+                                                       int flat_multipoint);
 
 /// \brief Populate a GeoArrowVisitor pointing to this writer
 GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* writer,

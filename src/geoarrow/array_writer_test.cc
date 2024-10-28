@@ -51,6 +51,18 @@ TEST(ArrayWriterTest, ArrayWriterTestWKT) {
   ASSERT_EQ(memcmp(array.buffers[2], answer, strlen(answer)), 0);
   array.release(&array);
 
+  ASSERT_EQ(GeoArrowArrayWriterSetFlatMultipoint(&writer, false), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayWriterInitVisitor(&writer, &v), GEOARROW_OK);
+  tester.ReadWKT("MULTIPOINT ((30 10))", &v);
+
+  ASSERT_EQ(GeoArrowArrayWriterFinish(&writer, &array, NULL), GEOARROW_OK);
+  ASSERT_EQ(array.length, 1);
+  ASSERT_EQ(array.n_buffers, 3);
+  ASSERT_EQ(array.n_children, 0);
+  answer = "MULTIPOINT ((30 10))";
+  ASSERT_EQ(memcmp(array.buffers[2], answer, strlen(answer)), 0);
+  array.release(&array);
+
   GeoArrowArrayWriterReset(&writer);
 }
 
@@ -62,8 +74,9 @@ TEST(ArrayWriterTest, ArrayWriterTestWKB) {
   GeoArrowVisitorInitVoid(&v);
   ASSERT_EQ(GeoArrowArrayWriterInitVisitor(&writer, &v), GEOARROW_OK);
 
-  // Can't set precision for non-WKT type
+  // Can't set WKT options for non-WKT type
   ASSERT_EQ(GeoArrowArrayWriterSetPrecision(&writer, 3), EINVAL);
+  ASSERT_EQ(GeoArrowArrayWriterSetFlatMultipoint(&writer, false), EINVAL);
 
   struct ArrowArray array;
   ASSERT_EQ(GeoArrowArrayWriterFinish(&writer, &array, NULL), GEOARROW_OK);
