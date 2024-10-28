@@ -28,7 +28,7 @@ GeoArrowErrorCode GeoArrowArrayWriterInitFromType(struct GeoArrowArrayWriter* wr
   memset(private_data, 0, sizeof(struct GeoArrowArrayWriterPrivate));
 
   // Default options
-  private_data->wkt_precision = -1;
+  private_data->wkt_precision = 16;
 
   int result;
   switch (type) {
