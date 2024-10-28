@@ -10,6 +10,9 @@ struct GeoArrowArrayWriterPrivate {
   struct GeoArrowWKBWriter wkb_writer;
   struct GeoArrowBuilder builder;
   enum GeoArrowType type;
+
+  // Options
+  int wkt_precision;
 };
 
 GeoArrowErrorCode GeoArrowArrayWriterInitFromType(struct GeoArrowArrayWriter* writer,
@@ -23,6 +26,9 @@ GeoArrowErrorCode GeoArrowArrayWriterInitFromType(struct GeoArrowArrayWriter* wr
   }
 
   memset(private_data, 0, sizeof(struct GeoArrowArrayWriterPrivate));
+
+  // Default options
+  private_data->wkt_precision = -1;
 
   int result;
   switch (type) {
@@ -57,6 +63,20 @@ GeoArrowErrorCode GeoArrowArrayWriterInitFromSchema(struct GeoArrowArrayWriter* 
   return GeoArrowArrayWriterInitFromType(writer, schema_view.type);
 }
 
+GeoArrowErrorCode GeoArrowArrayWriterSetPrecision(struct GeoArrowArrayWriter* writer,
+                                                  int precision) {
+  struct GeoArrowArrayWriterPrivate* private_data =
+      (struct GeoArrowArrayWriterPrivate*)writer->private_data;
+
+  if (private_data->type != GEOARROW_TYPE_WKT &&
+      private_data->type != GEOARROW_TYPE_LARGE_WKT) {
+    return EINVAL;
+  }
+
+  private_data->wkt_precision = precision;
+  return GEOARROW_OK;
+}
+
 GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* writer,
                                                  struct GeoArrowVisitor* v) {
   struct GeoArrowArrayWriterPrivate* private_data =
@@ -64,6 +84,7 @@ GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* wri
 
   switch (private_data->type) {
     case GEOARROW_TYPE_WKT:
+      private_data->wkt_writer.precision = private_data->wkt_precision;
       GeoArrowWKTWriterInitVisitor(&private_data->wkt_writer, v);
       return GEOARROW_OK;
     case GEOARROW_TYPE_WKB:

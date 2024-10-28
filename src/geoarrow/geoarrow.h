@@ -471,6 +471,15 @@ GeoArrowErrorCode GeoArrowArrayWriterInitFromType(struct GeoArrowArrayWriter* wr
 GeoArrowErrorCode GeoArrowArrayWriterInitFromSchema(struct GeoArrowArrayWriter* writer,
                                                     const struct ArrowSchema* schema);
 
+/// \brief Set the precision to use for array writers writing to WKT
+///
+/// Returns EINVAL for precision values that are not valid or if the writer
+/// is not writing to WKT. Must be called before GeoArrowArrayWriterInitVisitor().
+/// A precision value of -1 indicates that the largest precision that will roundtrip
+/// an ordinate value will be used. The default precision value is -1.
+GeoArrowErrorCode GeoArrowArrayWriterSetPrecision(struct GeoArrowArrayWriter* writer,
+                                                  int precision);
+
 /// \brief Populate a GeoArrowVisitor pointing to this writer
 GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* writer,
                                                  struct GeoArrowVisitor* v);
