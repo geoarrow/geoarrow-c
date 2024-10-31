@@ -29,8 +29,8 @@ std::array<double, 4> CalculateBoundsGeneric(struct GeoArrowCoordView* coords,
 }
 
 std::array<double, 4> CalculateBoundsOptimized(struct GeoArrowCoordView* coords,
-                                                int64_t n_coords,
-                                                enum GeoArrowCoordType coord_type) {
+                                               int64_t n_coords,
+                                               enum GeoArrowCoordType coord_type) {
   double xmin = std::numeric_limits<double>::infinity();
   double xmax = -std::numeric_limits<double>::infinity();
   double ymin = std::numeric_limits<double>::infinity();
