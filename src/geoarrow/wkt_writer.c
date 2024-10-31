@@ -157,11 +157,14 @@ static int coords_wkt(struct GeoArrowVisitor* v, const struct GeoArrowCoordView*
   // Use a heuristic to estimate the number of characters we are about to write
   // to avoid more then one allocation for this call. This is normally substantially
   // less than the theoretical amount.
-  int64_t max_chars_estimated = (n_coords * 2) +  // space + comma after coordinate
-                                (n_coords * (n_dims - 1)) +  // spaces between ordinates
-                                // precision + decimal + estimate of normal
-                                // digits to the left of the decimal
-                                ((private->precision + 1 + 8) * n_coords * n_dims);
+  int64_t max_chars_estimated =
+      (n_coords * 2) +             // space + comma after coordinate
+      (n_coords * (n_dims - 1)) +  // spaces between ordinates
+      // precision + decimal + estimate of normal
+      // digits to the left of the decimal
+      ((private->precision + 1 + 8) * n_coords * n_dims) +
+      // Ensure that the last reserve() call doesn't trigger an allocation
+      max_chars_per_coord_theoretical;
   NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(&private->values, max_chars_estimated));
 
   // Write the first coordinate, possibly with a leading comma if there was
@@ -177,6 +180,9 @@ static int coords_wkt(struct GeoArrowVisitor* v, const struct GeoArrowCoordView*
   }
 
   // Actually write the first coordinate (no leading comma)
+  // Reserve the theoretical ammount for each coordinate because we need this to guarantee
+  // that there won't be a segfault when writing a coordinate. This probably results in
+  // a few dozen bytes of of overallocation.
   NANOARROW_RETURN_NOT_OK(
       ArrowBufferReserve(&private->values, max_chars_per_coord_theoretical));
   WKTWriterWriteDoubleUnsafe(private, GEOARROW_COORD_VIEW_VALUE(coords, 0, 0));
@@ -293,7 +299,14 @@ void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
   GeoArrowVisitorInitVoid(v);
 
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
-  private->precision = writer->precision;
+
+  // Clamp writer->precision to a specific range of valid values
+  if (writer->precision < 0 || writer->precision > 16) {
+    private->precision = 16;
+  } else {
+    private->precision = writer->precision;
+  }
+
   private->use_flat_multipoint = writer->use_flat_multipoint;
   private->max_element_size_bytes = writer->max_element_size_bytes;
 
