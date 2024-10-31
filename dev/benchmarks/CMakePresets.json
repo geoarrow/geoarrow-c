@@ -1,0 +1,29 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        },
+        {
+            "name": "local",
+            "displayName": "local",
+            "description": "Uses the geoarrow C sources from this checkout.",
+            "inherits": [
+                "base"
+            ],
+            "cacheVariables": {
+                "GEOARROW_BENCHMARK_SOURCE_URL": "${sourceDir}/../.."
+            }
+        }
+    ]
+}
