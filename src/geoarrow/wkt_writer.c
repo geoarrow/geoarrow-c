@@ -154,7 +154,7 @@ static int coords_wkt(struct GeoArrowVisitor* v, const struct GeoArrowCoordView*
       // GeoArrowPrintDouble might require up to 40 accessible bytes per call
       (40 * n_dims);
 
-  // Use a heuristic to esimate the number of characters we are about to write
+  // Use a heuristic to estimate the number of characters we are about to write
   // to avoid more then one allocation for this call. This is normally substantially
   // less than the theoretical amount.
   int64_t max_chars_estimated = (n_coords * 2) +  // space + comma after coordinate

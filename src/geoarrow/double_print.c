@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 
-
 #if defined(GEOARROW_USE_RYU) && GEOARROW_USE_RYU
 
 #include "ryu/ryu.h"
