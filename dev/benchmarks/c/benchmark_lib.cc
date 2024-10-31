@@ -89,3 +89,65 @@ std::array<double, 4> CalculateBoundsLoopThenIf(struct GeoArrowCoordView* coords
 
   return {xmin, xmax, ymin, ymax};
 }
+
+std::array<double, 2> CalculateCentroidGeneric(struct GeoArrowCoordView* coords,
+                                               int64_t n_coords) {
+  double xsum = 0;
+  double ysum = 0;
+
+  double x, y;
+  for (int64_t i = 0; i < n_coords; i++) {
+    xsum += GEOARROW_COORD_VIEW_VALUE(coords, i, 0);
+    ysum += GEOARROW_COORD_VIEW_VALUE(coords, i, 1);
+  }
+
+  return {xsum / n_coords, ysum / n_coords};
+}
+
+std::array<double, 2> CalculateCentroidOptimized(struct GeoArrowCoordView* coords,
+                                                 int64_t n_coords,
+                                                 enum GeoArrowCoordType coord_type) {
+  double xsum = 0;
+  double ysum = 0;
+
+  if (coord_type == GEOARROW_COORD_TYPE_SEPARATE) {
+    // This version exploits that we can do this one element at a time
+    const double* xs = coords->values[0];
+    const double* ys = coords->values[1];
+    for (int64_t i = 0; i < n_coords; i++) {
+      xsum += xs[i];
+      ysum += ys[i];
+    }
+  } else {
+    int n_dims = coords->n_values;
+    const double* xs = coords->values[0];
+    const double* ys = xs + 1;
+    for (int64_t i = 0; i < n_coords; i++) {
+      int64_t offset = i * n_dims;
+      xsum += xs[offset];
+      ysum += ys[offset];
+    }
+  }
+
+  return {xsum / n_coords, ysum / n_coords};
+}
+
+std::array<double, 2> CalculateCentroidLoopThenIf(struct GeoArrowCoordView* coords,
+                                                  int64_t n_coords,
+                                                  enum GeoArrowCoordType coord_type) {
+  double xsum = 0;
+  double ysum = 0;
+
+  int n_dims = coords->n_values;
+  for (int64_t i = 0; i < n_coords; i++) {
+    if (coord_type == GEOARROW_COORD_TYPE_SEPARATE) {
+      xsum += coords->values[0][i];
+      ysum += coords->values[1][i];
+    } else {
+      xsum += coords->values[0][i * n_dims];
+      xsum += coords->values[0][i * n_dims + 1];
+    }
+  }
+
+  return {xsum / n_coords, ysum / n_coords};
+}

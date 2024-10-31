@@ -31,7 +31,10 @@ static const int64_t kNumItemsPrettyBig = 100000000;
 
 enum CoordAccessStrategy { GENERIC, OPTIMIZED, LOOP_THEN_IF };
 
-template <enum GeoArrowType type, enum CoordAccessStrategy strategy>
+enum Operation { BOUNDS, CENTROID };
+
+template <enum Operation operation, enum GeoArrowType type,
+          enum CoordAccessStrategy strategy>
 static void ArrayViewBounds2DPoint(benchmark::State& state) {
   struct GeoArrowArrayView view;
   GeoArrowArrayViewInitFromType(&view, type);
@@ -66,28 +69,55 @@ static void ArrayViewBounds2DPoint(benchmark::State& state) {
     }
   }
 
-  std::array<double, 4> bounds{};
-  switch (strategy) {
-    case GENERIC:
-      for (auto _ : state) {
-        bounds = CalculateBoundsGeneric(&view.coords, n_coords);
-        benchmark::DoNotOptimize(bounds);
-      }
-      break;
-    case OPTIMIZED:
-      for (auto _ : state) {
-        bounds =
-            CalculateBoundsOptimized(&view.coords, n_coords, view.schema_view.coord_type);
-        benchmark::DoNotOptimize(bounds);
-      }
-      break;
-    case LOOP_THEN_IF:
-      for (auto _ : state) {
-        bounds = CalculateBoundsLoopThenIf(&view.coords, n_coords,
-                                           view.schema_view.coord_type);
-        benchmark::DoNotOptimize(bounds);
-      }
-      break;
+  if (operation == BOUNDS) {
+    std::array<double, 4> bounds{};
+    switch (strategy) {
+      case GENERIC:
+        for (auto _ : state) {
+          bounds = CalculateBoundsGeneric(&view.coords, n_coords);
+          benchmark::DoNotOptimize(bounds);
+        }
+        break;
+      case OPTIMIZED:
+        for (auto _ : state) {
+          bounds = CalculateBoundsOptimized(&view.coords, n_coords,
+                                            view.schema_view.coord_type);
+          benchmark::DoNotOptimize(bounds);
+        }
+        break;
+      case LOOP_THEN_IF:
+        for (auto _ : state) {
+          bounds = CalculateBoundsLoopThenIf(&view.coords, n_coords,
+                                             view.schema_view.coord_type);
+          benchmark::DoNotOptimize(bounds);
+        }
+        break;
+    }
+
+  } else if (operation == CENTROID) {
+    std::array<double, 2> centroid{};
+    switch (strategy) {
+      case GENERIC:
+        for (auto _ : state) {
+          centroid = CalculateCentroidGeneric(&view.coords, n_coords);
+          benchmark::DoNotOptimize(centroid);
+        }
+        break;
+      case OPTIMIZED:
+        for (auto _ : state) {
+          centroid = CalculateCentroidOptimized(&view.coords, n_coords,
+                                                view.schema_view.coord_type);
+          benchmark::DoNotOptimize(centroid);
+        }
+        break;
+      case LOOP_THEN_IF:
+        for (auto _ : state) {
+          centroid = CalculateCentroidLoopThenIf(&view.coords, n_coords,
+                                                 view.schema_view.coord_type);
+          benchmark::DoNotOptimize(centroid);
+        }
+        break;
+    }
   }
 
   state.SetItemsProcessed(n_coords * state.iterations());
@@ -97,9 +127,17 @@ static void ArrayViewBounds2DPoint(benchmark::State& state) {
   //             << std::endl;
 }
 
-BENCHMARK(ArrayViewBounds2DPoint<GEOARROW_TYPE_POINT, GENERIC>);
-BENCHMARK(ArrayViewBounds2DPoint<GEOARROW_TYPE_POINT, LOOP_THEN_IF>);
-BENCHMARK(ArrayViewBounds2DPoint<GEOARROW_TYPE_POINT, OPTIMIZED>);
-BENCHMARK(ArrayViewBounds2DPoint<GEOARROW_TYPE_INTERLEAVED_POINT, GENERIC>);
-BENCHMARK(ArrayViewBounds2DPoint<GEOARROW_TYPE_INTERLEAVED_POINT, LOOP_THEN_IF>);
-BENCHMARK(ArrayViewBounds2DPoint<GEOARROW_TYPE_INTERLEAVED_POINT, OPTIMIZED>);
+BENCHMARK(ArrayViewBounds2DPoint<BOUNDS, GEOARROW_TYPE_POINT, GENERIC>);
+BENCHMARK(ArrayViewBounds2DPoint<BOUNDS, GEOARROW_TYPE_POINT, LOOP_THEN_IF>);
+BENCHMARK(ArrayViewBounds2DPoint<BOUNDS, GEOARROW_TYPE_POINT, OPTIMIZED>);
+BENCHMARK(ArrayViewBounds2DPoint<BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT, GENERIC>);
+BENCHMARK(ArrayViewBounds2DPoint<BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT, LOOP_THEN_IF>);
+BENCHMARK(ArrayViewBounds2DPoint<BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT, OPTIMIZED>);
+
+BENCHMARK(ArrayViewBounds2DPoint<CENTROID, GEOARROW_TYPE_POINT, GENERIC>);
+BENCHMARK(ArrayViewBounds2DPoint<CENTROID, GEOARROW_TYPE_POINT, LOOP_THEN_IF>);
+BENCHMARK(ArrayViewBounds2DPoint<CENTROID, GEOARROW_TYPE_POINT, OPTIMIZED>);
+BENCHMARK(ArrayViewBounds2DPoint<CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT, GENERIC>);
+BENCHMARK(
+    ArrayViewBounds2DPoint<CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT, LOOP_THEN_IF>);
+BENCHMARK(ArrayViewBounds2DPoint<CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT, OPTIMIZED>);
