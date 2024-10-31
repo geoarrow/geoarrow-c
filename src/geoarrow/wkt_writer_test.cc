@@ -1,4 +1,7 @@
 
+#include <cmath>
+#include <cstring>
+
 #include <gtest/gtest.h>
 
 #include <geoarrow.h>
@@ -35,6 +38,50 @@ TEST(WKTWriterTest, WKTWriterTestBasic) {
   struct GeoArrowWKTWriter writer;
   GeoArrowWKTWriterInit(&writer);
   GeoArrowWKTWriterReset(&writer);
+}
+
+int64_t GeoArrowPrintDouble(double f, uint32_t precision, char* result);
+
+TEST(WKTWriterTest, WKTWriterTestPrintDouble) {
+  // No more than 40 character should ever be written to the output buffer
+  std::array<char, 40> out{};
+
+  int64_t n_chars = GeoArrowPrintDouble(1e17, 16, out.data());
+  EXPECT_EQ(std::string(out.data(), n_chars), "100000000000000000");
+
+  std::memset(out.data(), 0, sizeof(out));
+  n_chars = GeoArrowPrintDouble(-1e17, 16, out.data());
+  EXPECT_EQ(std::string(out.data(), n_chars), "-100000000000000000");
+
+  std::memset(out.data(), 0, sizeof(out));
+  n_chars = GeoArrowPrintDouble(std::numeric_limits<double>::max(), 16, out.data());
+  EXPECT_EQ(std::string(out.data(), n_chars), "1.7976931348623157e+308");
+
+  std::memset(out.data(), 0, sizeof(out));
+  n_chars = GeoArrowPrintDouble(std::numeric_limits<double>::lowest(), 16, out.data());
+  EXPECT_EQ(std::string(out.data(), n_chars), "-1.7976931348623157e+308");
+
+  // Check that our definition of precision is definitely digits after the decimal point
+  n_chars = GeoArrowPrintDouble(123.456, 3, out.data());
+  EXPECT_EQ(std::string(out.data(), n_chars), "123.456");
+
+  std::memset(out.data(), 0, sizeof(out));
+  n_chars = GeoArrowPrintDouble(-234.567, 3, out.data());
+  EXPECT_EQ(std::string(out.data(), n_chars), "-234.567");
+
+  // ...and that implementations strip trailing zeroes
+  n_chars = GeoArrowPrintDouble(123.456, 4, out.data());
+  EXPECT_EQ(std::string(out.data(), n_chars), "123.456");
+
+  std::memset(out.data(), 0, sizeof(out));
+  n_chars = GeoArrowPrintDouble(-234.567, 4, out.data());
+  EXPECT_EQ(std::string(out.data(), n_chars), "-234.567");
+
+  // ryu and snprintf() serialize the last few decimal places differently
+  std::memset(out.data(), 0, sizeof(out));
+  n_chars = GeoArrowPrintDouble(M_PI * 100, 16, out.data());
+  EXPECT_GE(n_chars, 17);
+  EXPECT_EQ(std::string(out.data(), 17), "314.1592653589793");
 }
 
 TEST(WKTWriterTest, WKTWriterTestOneNull) {
