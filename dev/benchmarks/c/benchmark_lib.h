@@ -15,13 +15,12 @@ std::array<double, 4> CalculateBoundsLoopThenIf(struct GeoArrowCoordView* coords
                                                 enum GeoArrowCoordType coord_type);
 
 std::array<double, 2> CalculateCentroidGeneric(struct GeoArrowCoordView* coords,
-                                             int64_t n_coords);
+                                               int64_t n_coords);
 
 std::array<double, 2> CalculateCentroidOptimized(struct GeoArrowCoordView* coords,
-                                               int64_t n_coords,
-                                               enum GeoArrowCoordType coord_type);
+                                                 int64_t n_coords,
+                                                 enum GeoArrowCoordType coord_type);
 
 std::array<double, 2> CalculateCentroidLoopThenIf(struct GeoArrowCoordView* coords,
-                                                int64_t n_coords,
-                                                enum GeoArrowCoordType coord_type);
-
+                                                  int64_t n_coords,
+                                                  enum GeoArrowCoordType coord_type);

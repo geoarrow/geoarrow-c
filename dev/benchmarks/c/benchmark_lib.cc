@@ -37,15 +37,14 @@ std::array<double, 4> CalculateBoundsOptimized(struct GeoArrowCoordView* coords,
   double ymax = -std::numeric_limits<double>::infinity();
 
   if (coord_type == GEOARROW_COORD_TYPE_SEPARATE) {
-    // This version exploits that we can do this one element at a time
     const double* xs = coords->values[0];
     const double* ys = coords->values[1];
-    auto minmax_x = std::minmax_element(xs, xs + n_coords);
-    auto minmax_y = std::minmax_element(ys, ys + n_coords);
-    xmin = *minmax_x.first;
-    xmax = *minmax_x.second;
-    ymin = *minmax_y.first;
-    ymax = *minmax_y.second;
+    for (int64_t i = 0; i < n_coords; i++) {
+      xmin = MIN(xmin, xs[i]);
+      xmax = MAX(xmax, xs[i]);
+      ymin = MIN(ymin, ys[i]);
+      ymax = MAX(ymax, ys[i]);
+    }
   } else {
     int n_dims = coords->n_values;
     const double* xs = coords->values[0];
