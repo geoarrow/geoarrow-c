@@ -180,7 +180,7 @@ static int coords_wkt(struct GeoArrowVisitor* v, const struct GeoArrowCoordView*
   }
 
   // Actually write the first coordinate (no leading comma)
-  // Reserve the theoretical ammount for each coordinate because we need this to guarantee
+  // Reserve the theoretical amount for each coordinate because we need this to guarantee
   // that there won't be a segfault when writing a coordinate. This probably results in
   // a few dozen bytes of of overallocation.
   NANOARROW_RETURN_NOT_OK(
