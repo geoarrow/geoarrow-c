@@ -1,4 +1,6 @@
 
+#include <cstring>
+
 #include <gtest/gtest.h>
 
 #include <geoarrow.h>
