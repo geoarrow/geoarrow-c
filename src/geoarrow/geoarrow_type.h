@@ -194,6 +194,11 @@ enum GeoArrowType {
   GEOARROW_TYPE_MULTILINESTRING_ZM = 3005,
   GEOARROW_TYPE_MULTIPOLYGON_ZM = 3006,
 
+  GEOARROW_TYPE_BOX = 990,
+  GEOARROW_TYPE_BOX_Z = 1990,
+  GEOARROW_TYPE_BOX_M = 2990,
+  GEOARROW_TYPE_BOX_ZM = 3990,
+
   GEOARROW_TYPE_INTERLEAVED_POINT = 10001,
   GEOARROW_TYPE_INTERLEAVED_LINESTRING = 10002,
   GEOARROW_TYPE_INTERLEAVED_POLYGON = 10003,
@@ -217,7 +222,8 @@ enum GeoArrowType {
   GEOARROW_TYPE_INTERLEAVED_POLYGON_ZM = 13003,
   GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZM = 13004,
   GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_ZM = 13005,
-  GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM = 13006
+  GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM = 13006,
+
 };
 
 /// \brief Geometry type identifiers supported by GeoArrow
@@ -233,7 +239,8 @@ enum GeoArrowGeometryType {
   GEOARROW_GEOMETRY_TYPE_MULTIPOINT = 4,
   GEOARROW_GEOMETRY_TYPE_MULTILINESTRING = 5,
   GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON = 6,
-  GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION = 7
+  GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION = 7,
+  GEOARROW_GEOMETRY_TYPE_BOX = 990
 };
 
 /// \brief Dimension combinations supported by GeoArrow
@@ -349,7 +356,7 @@ struct GeoArrowCoordView {
   ///
   /// May be NULL if n_coords is 0. For interleaved coordinates, these
   /// will point to the first n_values elements of the same buffer.
-  const double* values[4];
+  const double* values[8];
 
   /// \brief The number of coordinates in this view
   int64_t n_coords;
@@ -371,7 +378,7 @@ struct GeoArrowCoordView {
 /// from a pointer to this view.
 struct GeoArrowWritableCoordView {
   /// \brief Pointers to the beginning of each coordinate buffer
-  double* values[4];
+  double* values[8];
 
   /// \brief The number of coordinates in this view
   int64_t size_coords;
@@ -445,7 +452,7 @@ struct GeoArrowWritableArrayView {
   int32_t n_offsets;
 
   /// \brief Views into writable memory managed by the GeoArrowBuilder
-  struct GeoArrowWritableBufferView buffers[8];
+  struct GeoArrowWritableBufferView buffers[9];
 
   /// \brief View of writable coordinate memory managed by the GeoArrowBuilder
   struct GeoArrowWritableCoordView coords;
