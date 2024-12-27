@@ -73,6 +73,43 @@ TEST(SchemaTest, SchemaTestInitSchemaWKT) {
   EXPECT_TRUE(maybe_type_large.ValueUnsafe()->Equals(large_utf8()));
 }
 
+TEST(SchemaTest, SchemaTestInitSchemaBox) {
+  struct ArrowSchema schema;
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_BOX), GEOARROW_OK);
+  auto maybe_type = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type.status());
+  std::shared_ptr<DataType> expected =
+      struct_({field("xmin", float64(), false), field("ymin", float64(), false),
+               field("xmax", float64(), false), field("ymax", float64(), false)});
+  EXPECT_TRUE(maybe_type.ValueUnsafe()->Equals(expected));
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_BOX_Z), GEOARROW_OK);
+  auto maybe_type_z = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type_z.status());
+  expected = struct_({field("xmin", float64(), false), field("ymin", float64(), false),
+                      field("zmin", float64(), false), field("xmax", float64(), false),
+                      field("ymax", float64(), false), field("zmax", float64(), false)});
+  EXPECT_TRUE(maybe_type_z.ValueUnsafe()->Equals(expected));
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_BOX_M), GEOARROW_OK);
+  auto maybe_type_m = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type_m.status());
+  expected = struct_({field("xmin", float64(), false), field("ymin", float64(), false),
+                      field("mmin", float64(), false), field("xmax", float64(), false),
+                      field("ymax", float64(), false), field("mmax", float64(), false)});
+  EXPECT_TRUE(maybe_type_m.ValueUnsafe()->Equals(expected));
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_BOX_ZM), GEOARROW_OK);
+  auto maybe_type_zm = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type_zm.status());
+  expected = struct_({field("xmin", float64(), false), field("ymin", float64(), false),
+                      field("zmin", float64(), false), field("mmin", float64(), false),
+                      field("xmax", float64(), false), field("ymax", float64(), false),
+                      field("zmax", float64(), false), field("mmax", float64(), false)});
+  EXPECT_TRUE(maybe_type_zm.ValueUnsafe()->Equals(expected));
+}
+
 TEST(SchemaTest, SchemaTestInitSchemaPoint) {
   struct ArrowSchema schema;
 
