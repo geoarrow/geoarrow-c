@@ -30,12 +30,12 @@ else()
 endif()
 
 if(GEOARROW_BUILD_TESTS)
-  add_library(coverage_config INTERFACE)
+  add_library(geoarrow_coverage_config INTERFACE)
 endif()
 
 if(GEOARROW_CODE_COVERAGE)
-  target_compile_options(coverage_config INTERFACE -O0 -g --coverage)
-  target_link_options(coverage_config INTERFACE --coverage)
+  target_compile_options(geoarrow_coverage_config INTERFACE -O0 -g --coverage)
+  target_link_options(geoarrow_coverage_config INTERFACE --coverage)
 endif()
 
 if(GEOARROW_USE_FAST_FLOAT)
@@ -147,7 +147,7 @@ if(GEOARROW_BUNDLE)
     target_compile_definitions(geoarrow PUBLIC "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
     target_link_libraries(geoarrow
                           PRIVATE nanoarrow::nanoarrow
-                          PUBLIC coverage_config)
+                          PUBLIC geoarrow_coverage_config)
   endif()
 else()
   # Normal CMake build
@@ -163,7 +163,7 @@ else()
   target_compile_definitions(geoarrow PUBLIC "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
   target_link_libraries(geoarrow
                         PRIVATE nanoarrow::nanoarrow
-                        PUBLIC coverage_config)
+                        PUBLIC geoarrow_coverage_config)
 
   install(DIRECTORY src/
           DESTINATION include
