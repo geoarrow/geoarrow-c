@@ -4,6 +4,7 @@
 #include "nanoarrow/nanoarrow.h"
 
 struct GeoArrowArrayReaderPrivate {
+  struct GeoArrowArrayView array_view;
   struct GeoArrowWKTReader wkt_reader;
   struct GeoArrowWKBReader wkb_reader;
 };
@@ -52,7 +53,20 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitWKB(
   return GEOARROW_OK;
 }
 
-GeoArrowErrorCode GeoArrowArrayReaderInit(struct GeoArrowArrayReader* reader) {
+static GeoArrowErrorCode GeoArrowArrayReaderInitInternal(
+    struct GeoArrowArrayReaderPrivate* private_data) {
+  switch (private_data->array_view.schema_view.type) {
+    case GEOARROW_TYPE_WKT:
+      return GeoArrowWKTReaderInit(&private_data->wkt_reader);
+    case GEOARROW_TYPE_WKB:
+      return GeoArrowWKBReaderInit(&private_data->wkb_reader);
+    default:
+      return GEOARROW_OK;
+  }
+}
+
+GeoArrowErrorCode GeoArrowArrayReaderInitFromType(struct GeoArrowArrayReader* reader,
+                                                  enum GeoArrowType type) {
   struct GeoArrowArrayReaderPrivate* private_data =
       (struct GeoArrowArrayReaderPrivate*)ArrowMalloc(
           sizeof(struct GeoArrowArrayReaderPrivate));
@@ -61,16 +75,46 @@ GeoArrowErrorCode GeoArrowArrayReaderInit(struct GeoArrowArrayReader* reader) {
     return ENOMEM;
   }
 
-  int result = GeoArrowWKTReaderInit(&private_data->wkt_reader);
+  memset(private_data, 0, sizeof(struct GeoArrowArrayReaderPrivate));
+  int result = GeoArrowArrayViewInitFromType(&private_data->array_view, type);
   if (result != GEOARROW_OK) {
     ArrowFree(private_data);
     return result;
   }
 
-  result = GeoArrowWKBReaderInit(&private_data->wkb_reader);
+  result = GeoArrowArrayReaderInitInternal(private_data);
   if (result != GEOARROW_OK) {
-    GeoArrowWKTReaderReset(&private_data->wkt_reader);
     ArrowFree(private_data);
+    return result;
+  }
+
+  reader->private_data = private_data;
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowArrayReaderInitFromSchema(struct GeoArrowArrayReader* reader,
+                                                    struct ArrowSchema* schema,
+                                                    struct GeoArrowError* error) {
+  struct GeoArrowArrayReaderPrivate* private_data =
+      (struct GeoArrowArrayReaderPrivate*)ArrowMalloc(
+          sizeof(struct GeoArrowArrayReaderPrivate));
+
+  if (private_data == NULL) {
+    GeoArrowErrorSet(error, "Failed to allocate GeoArrowArrayReaderPrivate");
+    return ENOMEM;
+  }
+
+  memset(private_data, 0, sizeof(struct GeoArrowArrayReaderPrivate));
+  int result = GeoArrowArrayViewInitFromSchema(&private_data->array_view, schema, error);
+  if (result != GEOARROW_OK) {
+    ArrowFree(private_data);
+    return result;
+  }
+
+  result = GeoArrowArrayReaderInitInternal(private_data);
+  if (result != GEOARROW_OK) {
+    ArrowFree(private_data);
+    GeoArrowErrorSet(error, "GeoArrowArrayReaderInitInternal() failed");
     return result;
   }
 
@@ -81,26 +125,47 @@ GeoArrowErrorCode GeoArrowArrayReaderInit(struct GeoArrowArrayReader* reader) {
 void GeoArrowArrayReaderReset(struct GeoArrowArrayReader* reader) {
   struct GeoArrowArrayReaderPrivate* private_data =
       (struct GeoArrowArrayReaderPrivate*)reader->private_data;
-  GeoArrowWKBReaderReset(&private_data->wkb_reader);
-  GeoArrowWKTReaderReset(&private_data->wkt_reader);
+
+  if (private_data->wkb_reader.private_data != NULL) {
+    GeoArrowWKBReaderReset(&private_data->wkb_reader);
+  }
+
+  if (private_data->wkt_reader.private_data != NULL) {
+    GeoArrowWKTReaderReset(&private_data->wkt_reader);
+  }
+
   ArrowFree(reader->private_data);
+  reader->private_data = NULL;
+}
+
+GeoArrowErrorCode GeoArrowArrayReaderSetArray(struct GeoArrowArrayReader* reader,
+                                              const struct ArrowArray* array,
+                                              struct GeoArrowError* error) {
+  NANOARROW_DCHECK(reader != NULL);
+  NANOARROW_DCHECK(array != NULL);
+  struct GeoArrowArrayReaderPrivate* private_data =
+      (struct GeoArrowArrayReaderPrivate*)reader->private_data;
+  NANOARROW_DCHECK(private_data != NULL);
+
+  GEOARROW_RETURN_NOT_OK(
+      GeoArrowArrayViewSetArray(&private_data->array_view, array, error));
+  return GEOARROW_OK;
 }
 
 GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
-                                           const struct GeoArrowArrayView* array_view,
                                            int64_t offset, int64_t length,
                                            struct GeoArrowVisitor* v) {
   struct GeoArrowArrayReaderPrivate* private_data =
       (struct GeoArrowArrayReaderPrivate*)reader->private_data;
 
-  switch (array_view->schema_view.type) {
+  switch (private_data->array_view.schema_view.type) {
     case GEOARROW_TYPE_WKT:
-      return GeoArrowArrayViewVisitWKT(array_view, offset, length,
+      return GeoArrowArrayViewVisitWKT(&private_data->array_view, offset, length,
                                        &private_data->wkt_reader, v);
     case GEOARROW_TYPE_WKB:
-      return GeoArrowArrayViewVisitWKB(array_view, offset, length,
+      return GeoArrowArrayViewVisitWKB(&private_data->array_view, offset, length,
                                        &private_data->wkb_reader, v);
     default:
-      return GeoArrowArrayViewVisit(array_view, offset, length, v);
+      return GeoArrowArrayViewVisit(&private_data->array_view, offset, length, v);
   }
 }

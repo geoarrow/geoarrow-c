@@ -121,7 +121,6 @@ struct GeoArrowVisitorKernelPrivate {
   struct GeoArrowVisitor v;
   int visit_by_feature;
   struct GeoArrowArrayReader reader;
-  struct GeoArrowArrayView array_view;
   struct GeoArrowArrayWriter writer;
   struct GeoArrowWKTWriter wkt_writer;
   struct GeoArrowGeometryTypesVisitorPrivate geometry_types_private;
@@ -194,11 +193,10 @@ static int kernel_push_batch(struct GeoArrowKernel* kernel, struct ArrowArray* a
       (struct GeoArrowVisitorKernelPrivate*)kernel->private_data;
 
   NANOARROW_RETURN_NOT_OK(
-      GeoArrowArrayViewSetArray(&private_data->array_view, array, error));
+      GeoArrowArrayReaderSetArray(&private_data->reader, array, error));
 
   private_data->v.error = error;
-  NANOARROW_RETURN_NOT_OK(GeoArrowArrayReaderVisit(&private_data->reader,
-                                                   &private_data->array_view, 0,
+  NANOARROW_RETURN_NOT_OK(GeoArrowArrayReaderVisit(&private_data->reader, 0,
                                                    array->length, &private_data->v));
 
   return private_data->finish_push_batch(private_data, out, error);
@@ -211,13 +209,12 @@ static int kernel_push_batch_by_feature(struct GeoArrowKernel* kernel,
       (struct GeoArrowVisitorKernelPrivate*)kernel->private_data;
 
   NANOARROW_RETURN_NOT_OK(
-      GeoArrowArrayViewSetArray(&private_data->array_view, array, error));
+      GeoArrowArrayReaderSetArray(&private_data->reader, array, error));
 
   private_data->v.error = error;
   int result;
   for (int64_t i = 0; i < array->length; i++) {
-    result = GeoArrowArrayReaderVisit(&private_data->reader, &private_data->array_view, i,
-                                      1, &private_data->v);
+    result = GeoArrowArrayReaderVisit(&private_data->reader, i, 1, &private_data->v);
 
     if (result == EAGAIN) {
       NANOARROW_RETURN_NOT_OK(private_data->v.feat_end(&private_data->v));
@@ -244,14 +241,13 @@ static int kernel_visitor_start(struct GeoArrowKernel* kernel, struct ArrowSchem
     case GEOARROW_TYPE_LARGE_WKT:
       return EINVAL;
     default:
-      NANOARROW_RETURN_NOT_OK(GeoArrowArrayReaderInit(&private_data->reader));
+      NANOARROW_RETURN_NOT_OK(
+          GeoArrowArrayReaderInitFromSchema(&private_data->reader, schema, error));
       if (private_data->visit_by_feature) {
         kernel->push_batch = &kernel_push_batch_by_feature;
       } else {
         kernel->push_batch = &kernel_push_batch;
       }
-      NANOARROW_RETURN_NOT_OK(
-          GeoArrowArrayViewInitFromType(&private_data->array_view, schema_view.type));
       break;
   }
 
