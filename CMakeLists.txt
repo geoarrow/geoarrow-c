@@ -108,16 +108,6 @@ if(GEOARROW_BUNDLE)
 
   set(GEOARROW_C_TEMP ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/geoarrow.c)
 
-  # Special-case nanoarrow.h, because it will contain a lot of unused static inline functions
-  # This could maybe be fixed in nanoarrow with a define for static inline "exports"
-  file(WRITE ${GEOARROW_C_TEMP} "#pragma GCC diagnostic push\n")
-  file(APPEND ${GEOARROW_C_TEMP} "#pragma GCC diagnostic ignored \"-Wunused-function\"\n")
-
-  file(READ src/geoarrow/nanoarrow.h SRC_FILE_CONTENTS)
-  file(APPEND ${GEOARROW_C_TEMP} "${SRC_FILE_CONTENTS}")
-
-  file(APPEND ${GEOARROW_C_TEMP} "#pragma GCC diagnostic push")
-
   foreach(SRC_FILE ${GEOARROW_SOURCES} src/geoarrow/double_print.c
                    src/geoarrow/double_parse_std.c)
     file(READ ${SRC_FILE} SRC_FILE_CONTENTS)
@@ -280,7 +270,8 @@ if(GEOARROW_BUILD_TESTS)
   endif()
 
   target_link_libraries(geoarrow_hpp_test geoarrow gtest_main)
-  target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main nanoarrow::nanoarrow)
+  target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main
+                        nanoarrow::nanoarrow)
   target_link_libraries(builder_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(array_view_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(schema_test geoarrow ${GEOARROW_ARROW_TARGET} gtest_main)
