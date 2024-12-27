@@ -61,15 +61,11 @@ endif()
 configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow_config.h)
 
 if(NOT TARGET nanoarrow::nanoarrow)
-  include(FetchContent)
-
-  set(GEOARROW_NANOARROW_TARGET_VERSION "0.6.0")
-  fetchcontent_declare(nanoarrow
-                       URL "https://www.apache.org/dyn/closer.lua?action=download&filename=arrow/apache-arrow-nanoarrow-${GEOARROW_NANOARROW_TARGET_VERSION}/apache-arrow-nanoarrow-${GEOARROW_NANOARROW_TARGET_VERSION}.tar.gz"
-                           "https://github.com/apache/arrow-nanoarrow/releases/download/apache-arrow-nanoarrow-${GEOARROW_NANOARROW_TARGET_VERSION}/apache-arrow-nanoarrow-${GEOARROW_NANOARROW_TARGET_VERSION}.tar.gz"
-                       URL_HASH SHA256=e4a02ac51002ad1875bf09317e70adb959005fad52b240ff59f73b970fa485d1
-  )
-  fetchcontent_makeavailable(nanoarrow)
+  add_library(nanoarrow STATIC EXCLUDE_FROM_ALL src/geoarrow/nanoarrow/nanoarrow.c)
+  target_include_directories(nanoarrow PUBLIC src/geoarrow)
+  add_library(nanoarrow::nanoarrow ALIAS nanoarrow)
+  target_compile_definitions(nanoarrow PUBLIC "$<$<CONFIG:Debug>:NANOARROW_DEBUG>"
+                                              NANOARROW_NAMESPACE=${GEOARROW_NAMESPACE})
 endif()
 
 set(GEOARROW_SOURCES
