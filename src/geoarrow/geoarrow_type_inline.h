@@ -67,6 +67,8 @@ static inline const char* GeoArrowExtensionNameFromType(enum GeoArrowType type) 
 
   int geometry_type = GeoArrowGeometryTypeFromType(type);
   switch (geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_BOX:
+      return "geoarrow.box";
     case GEOARROW_GEOMETRY_TYPE_POINT:
       return "geoarrow.point";
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
