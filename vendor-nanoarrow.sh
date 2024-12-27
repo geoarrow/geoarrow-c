@@ -13,12 +13,12 @@ main() {
   tar --strip-components 1 -C "$SCRATCH" -xf "$tarball"
 
   # Remove previous bundle
-  rm -rf src/vendor/nanoarrow
+  rm -rf src/geoarrow/nanoarrow
 
   # Build the bundle
   python "${SCRATCH}/ci/scripts/bundle.py" \
-      --include-output-dir=src/vendor \
-      --source-output-dir=src/vendor/nanoarrow
+      --include-output-dir=src/geoarrow \
+      --source-output-dir=src/geoarrow/nanoarrow
 }
 
 main

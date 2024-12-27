@@ -44,6 +44,11 @@ sources += [
     if f.endswith(".c")
 ]
 
+sources += [
+    f"src/geoarrow/c/geoarrow/nanoarrow/{f}"
+    for f in os.listdir(os.path.join(vendor_dir, "nanoarrow"))
+    if f.endswith(".c")
+]
 
 # Workaround because setuptools has no easy way to mix C and C++ sources
 # if extra flags are required (e.g., -std=c++11 like we need here).
@@ -86,7 +91,11 @@ setup(
             sources=["src/geoarrow/c/_lib.pyx"] + sources,
             extra_compile_args=["-std=c++11"] + extra_compile_args,
             extra_link_args=[] + extra_link_args,
-            define_macros=[] + extra_define_macros,
+            define_macros=[
+                ("GEOARROW_NAMESPACE", "GeoArrowPythonPkg"),
+                ("NANOARROW_NAMESPACE", "GeoArrowPythonPkg"),
+            ]
+            + extra_define_macros,
         )
     ],
     cmdclass={"build_ext": build_ext_subclass},

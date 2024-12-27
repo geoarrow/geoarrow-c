@@ -35,9 +35,12 @@ if __name__ == "__main__":
     )
     vendor_source_files += glob.glob(os.path.join(vendor_source_dir, "ryu/*.h"))
     vendor_source_files += glob.glob(os.path.join(vendor_source_dir, "ryu/*.c"))
+    vendor_source_files += glob.glob(os.path.join(vendor_source_dir, "nanoarrow/*.h"))
+    vendor_source_files += glob.glob(os.path.join(vendor_source_dir, "nanoarrow/*.c"))
 
     os.mkdir(vendor_dir)
     os.mkdir(os.path.join(vendor_dir, "ryu"))
+    os.mkdir(os.path.join(vendor_dir, "nanoarrow"))
     for source_file in vendor_source_files:
         dst_file = source_file.replace(os.path.join(vendor_source_dir, ""), "")
         shutil.copyfile(source_file, os.path.join(vendor_dir, dst_file))
