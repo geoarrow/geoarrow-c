@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 #include <geoarrow.h>
-#include "nanoarrow.h"
+#include "nanoarrow/nanoarrow.h"
 
 #include "wkx_testing.hpp"
 
@@ -758,7 +758,8 @@ TEST_P(WKTRoundtripParameterizedTestFixture, BuilderTestWKTRoundtrip) {
   array_out.release(&array_out);
 }
 
-#define WKT_PAIR(a, b) std::pair<std::string, enum GeoArrowType> { a, b }
+#define WKT_PAIR(a, b) \
+  std::pair<std::string, enum GeoArrowType> { a, b }
 
 INSTANTIATE_TEST_SUITE_P(
     BuilderTest, WKTRoundtripParameterizedTestFixture,

@@ -4,7 +4,7 @@
 
 #include "geoarrow.h"
 
-#include "nanoarrow.h"
+#include "nanoarrow/nanoarrow.h"
 
 #define EWKB_Z_BIT 0x80000000
 #define EWKB_M_BIT 0x40000000

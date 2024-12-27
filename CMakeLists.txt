@@ -60,6 +60,18 @@ endif()
 
 configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow_config.h)
 
+if(NOT TARGET nanoarrow::nanoarrow)
+  include(FetchContent)
+
+  set(GEOARROW_NANOARROW_TARGET_VERSION "0.6.0")
+  fetchcontent_declare(nanoarrow
+                       URL "https://www.apache.org/dyn/closer.lua?action=download&filename=arrow/apache-arrow-nanoarrow-${GEOARROW_NANOARROW_TARGET_VERSION}/apache-arrow-nanoarrow-${GEOARROW_NANOARROW_TARGET_VERSION}.tar.gz"
+                           "https://github.com/apache/arrow-nanoarrow/releases/download/apache-arrow-nanoarrow-${GEOARROW_NANOARROW_TARGET_VERSION}/apache-arrow-nanoarrow-${GEOARROW_NANOARROW_TARGET_VERSION}.tar.gz"
+                       URL_HASH SHA256=e4a02ac51002ad1875bf09317e70adb959005fad52b240ff59f73b970fa485d1
+  )
+  fetchcontent_makeavailable(nanoarrow)
+endif()
+
 set(GEOARROW_SOURCES
     src/geoarrow/schema.c
     src/geoarrow/schema_view.c
@@ -74,8 +86,7 @@ set(GEOARROW_SOURCES
     src/geoarrow/wkt_reader.c
     src/geoarrow/wkt_writer.c
     src/geoarrow/array_reader.c
-    src/geoarrow/array_writer.c
-    src/geoarrow/nanoarrow.c)
+    src/geoarrow/array_writer.c)
 
 set(GEOARROW_PUBLIC_HEADERS
     ${CMAKE_CURRENT_BINARY_DIR}/generated/geoarrow_config.h src/geoarrow/geoarrow_type.h
@@ -141,10 +152,10 @@ if(GEOARROW_BUNDLE)
     add_library(geoarrow ${GEOARROW_C_TEMP})
 
     target_include_directories(geoarrow
-                               PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/amalgamation/geoarrow>
-                                      $<INSTALL_INTERFACE:include>)
-    target_compile_definitions(geoarrow PUBLIC "$<$<CONFIG:Debug>:NANOARROW_DEBUG>"
-                                               "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
+                               PUBLIC "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/amalgamation/geoarrow>"
+                                      "$<INSTALL_INTERFACE:include>")
+    target_compile_definitions(geoarrow PUBLIC "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
+    target_link_libraries(geoarrow PRIVATE nanoarrow::nanoarrow)
   endif()
 else()
   # Normal CMake build
@@ -152,13 +163,13 @@ else()
                        ${GEOARROW_DOUBLE_PRINT_SOURCE})
 
   target_include_directories(geoarrow
-                             PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/geoarrow>
-                                    $<INSTALL_INTERFACE:include>)
+                             PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/geoarrow>"
+                                    "$<INSTALL_INTERFACE:include>")
   target_include_directories(geoarrow
                              PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
   )
-  target_compile_definitions(geoarrow PUBLIC "$<$<CONFIG:Debug>:NANOARROW_DEBUG>"
-                                             "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
+  target_compile_definitions(geoarrow PUBLIC "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
+  target_link_libraries(geoarrow PRIVATE nanoarrow::nanoarrow)
 
   install(DIRECTORY src/
           DESTINATION include
@@ -269,22 +280,22 @@ if(GEOARROW_BUILD_TESTS)
   endif()
 
   target_link_libraries(geoarrow_hpp_test geoarrow gtest_main)
-  target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main)
-  target_link_libraries(builder_test geoarrow gtest_main)
-  target_link_libraries(array_view_test geoarrow gtest_main)
+  target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main nanoarrow::nanoarrow)
+  target_link_libraries(builder_test geoarrow gtest_main nanoarrow::nanoarrow)
+  target_link_libraries(array_view_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(schema_test geoarrow ${GEOARROW_ARROW_TARGET} gtest_main)
-  target_link_libraries(schema_view_test geoarrow gtest_main)
-  target_link_libraries(kernel_test geoarrow gtest_main)
-  target_link_libraries(metadata_test geoarrow gtest_main)
+  target_link_libraries(schema_view_test geoarrow gtest_main nanoarrow::nanoarrow)
+  target_link_libraries(kernel_test geoarrow gtest_main nanoarrow::nanoarrow)
+  target_link_libraries(metadata_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(visitor_test geoarrow gtest_main)
   target_link_libraries(util_test geoarrow gtest_main)
-  target_link_libraries(wkb_reader_test geoarrow gtest_main)
-  target_link_libraries(wkb_writer_test geoarrow gtest_main)
-  target_link_libraries(wkt_reader_test geoarrow gtest_main)
-  target_link_libraries(wkt_writer_test geoarrow gtest_main)
-  target_link_libraries(array_reader_test geoarrow gtest_main)
-  target_link_libraries(array_writer_test geoarrow gtest_main)
-  target_link_libraries(wkx_files_test geoarrow gtest_main)
+  target_link_libraries(wkb_reader_test geoarrow gtest_main nanoarrow::nanoarrow)
+  target_link_libraries(wkb_writer_test geoarrow gtest_main nanoarrow::nanoarrow)
+  target_link_libraries(wkt_reader_test geoarrow gtest_main nanoarrow::nanoarrow)
+  target_link_libraries(wkt_writer_test geoarrow gtest_main nanoarrow::nanoarrow)
+  target_link_libraries(array_reader_test geoarrow gtest_main nanoarrow::nanoarrow)
+  target_link_libraries(array_writer_test geoarrow gtest_main nanoarrow::nanoarrow)
+  target_link_libraries(wkx_files_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(geoarrow_arrow_test geoarrow ${GEOARROW_ARROW_TARGET} gtest_main)
 
   include(GoogleTest)

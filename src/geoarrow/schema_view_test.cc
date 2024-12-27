@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <geoarrow.h>
-#include "nanoarrow.h"
+#include "nanoarrow/nanoarrow.h"
 
 TEST(SchemaViewTest, SchemaViewTestInitFromUninitialized) {
   struct GeoArrowSchemaView schema_view;

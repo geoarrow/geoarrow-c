@@ -1,7 +1,7 @@
 
 #include "geoarrow.h"
 
-#include "nanoarrow.h"
+#include "nanoarrow/nanoarrow.h"
 
 struct GeoArrowArrayReaderPrivate {
   struct GeoArrowWKTReader wkt_reader;

@@ -2,7 +2,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "nanoarrow.h"
+#include "nanoarrow/nanoarrow.h"
 
 #include "geoarrow.h"
 
@@ -67,16 +67,11 @@ static GeoArrowErrorCode GeoArrowSchemaInitListOf(struct ArrowSchema* schema,
   }
 }
 
-#define CHILD_NAMES_LINESTRING \
-  (const char*[]) { "vertices" }
-#define CHILD_NAMES_POLYGON \
-  (const char*[]) { "rings", "vertices" }
-#define CHILD_NAMES_MULTIPOINT \
-  (const char*[]) { "points" }
-#define CHILD_NAMES_MULTILINESTRING \
-  (const char*[]) { "linestrings", "vertices" }
-#define CHILD_NAMES_MULTIPOLYGON \
-  (const char*[]) { "polygons", "rings", "vertices" }
+#define CHILD_NAMES_LINESTRING (const char*[]){"vertices"}
+#define CHILD_NAMES_POLYGON (const char*[]){"rings", "vertices"}
+#define CHILD_NAMES_MULTIPOINT (const char*[]){"points"}
+#define CHILD_NAMES_MULTILINESTRING (const char*[]){"linestrings", "vertices"}
+#define CHILD_NAMES_MULTIPOLYGON (const char*[]){"polygons", "rings", "vertices"}
 
 GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowType type) {
   schema->release = NULL;

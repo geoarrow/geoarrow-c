@@ -329,13 +329,9 @@ class VectorArray {
     array_view_.schema_view.type = GEOARROW_TYPE_UNINITIALIZED;
   }
 
-  struct ArrowArray* get() {
-    return &array_;
-  }
+  struct ArrowArray* get() { return &array_; }
 
-  struct ArrowArray* operator->() {
-    return &array_;
-  }
+  struct ArrowArray* operator->() { return &array_; }
 
   void reset() {
     if (array_.release != nullptr) {
