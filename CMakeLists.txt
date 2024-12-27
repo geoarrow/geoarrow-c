@@ -145,7 +145,9 @@ if(GEOARROW_BUNDLE)
                                PUBLIC "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/amalgamation/geoarrow>"
                                       "$<INSTALL_INTERFACE:include>")
     target_compile_definitions(geoarrow PUBLIC "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
-    target_link_libraries(geoarrow PRIVATE nanoarrow::nanoarrow)
+    target_link_libraries(geoarrow
+                          PRIVATE nanoarrow::nanoarrow
+                          PUBLIC coverage_config)
   endif()
 else()
   # Normal CMake build
@@ -159,7 +161,9 @@ else()
                              PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
   )
   target_compile_definitions(geoarrow PUBLIC "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
-  target_link_libraries(geoarrow PRIVATE nanoarrow::nanoarrow)
+  target_link_libraries(geoarrow
+                        PRIVATE nanoarrow::nanoarrow
+                        PUBLIC coverage_config)
 
   install(DIRECTORY src/
           DESTINATION include
@@ -262,12 +266,6 @@ if(GEOARROW_BUILD_TESTS)
   add_executable(array_writer_test src/geoarrow/array_writer_test.cc)
   add_executable(wkx_files_test src/geoarrow/wkx_files_test.cc)
   add_executable(geoarrow_arrow_test src/geoarrow/geoarrow_arrow_test.cc)
-
-  if(GEOARROW_CODE_COVERAGE)
-    target_compile_options(coverage_config INTERFACE -O0 -g --coverage)
-    target_link_options(coverage_config INTERFACE --coverage)
-    target_link_libraries(geoarrow coverage_config)
-  endif()
 
   target_link_libraries(geoarrow_hpp_test geoarrow gtest_main)
   target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main
