@@ -12,25 +12,13 @@ main() {
   wget -O "$tarball" "$repo_url/archive/$commit_sha.tar.gz"
   tar --strip-components 1 -C "$SCRATCH" -xf "$tarball"
 
+  # Remove previous bundle
+  rm -rf src/geoarrow/nanoarrow
+
   # Build the bundle
   python "${SCRATCH}/ci/scripts/bundle.py" \
       --include-output-dir=src/geoarrow \
-      --source-output-dir=src/geoarrow \
-      --header-namespace=
-
-  rm src/geoarrow/nanoarrow.hpp
-
-  sed -i.bak \
-    -e 's|// #define NANOARROW_NAMESPACE YourNamespaceHere|// When testing we use nanoarrow.h, but geoarrow_config.h will not exist in bundled\
-// mode. In the tests we just have to make sure geoarrow.h is always included first.\
-#if !defined(GEOARROW_CONFIG_H_INCLUDED)\
-#include "geoarrow_config.h"\
-#endif|' \
-    src/geoarrow/nanoarrow.h
-  rm src/geoarrow/nanoarrow.h.bak
-
-  clang-format -i src/geoarrow/nanoarrow.h
-  clang-format -i src/geoarrow/nanoarrow.c
+      --source-output-dir=src/geoarrow/nanoarrow
 }
 
 main

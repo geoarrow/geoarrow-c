@@ -3,7 +3,7 @@
 
 #include "geoarrow.h"
 
-#include "nanoarrow.h"
+#include "nanoarrow/nanoarrow.h"
 
 static int32_t kZeroInt32 = 0;
 

@@ -6,7 +6,7 @@
 #include <vector>
 
 #include <geoarrow.h>
-#include "nanoarrow.h"
+#include "nanoarrow/nanoarrow.h"
 
 class WKXTestException : public std::exception {
  public:
@@ -227,13 +227,9 @@ class TestCoords {
     setup_view();
   }
 
-  struct GeoArrowCoordView* view() {
-    return &coord_view_;
-  }
+  struct GeoArrowCoordView* view() { return &coord_view_; }
 
-  struct GeoArrowWritableCoordView* writable_view() {
-    return &writable_coord_view_;
-  }
+  struct GeoArrowWritableCoordView* writable_view() { return &writable_coord_view_; }
 
   const std::vector<std::vector<double>>& storage() { return storage_; }
 

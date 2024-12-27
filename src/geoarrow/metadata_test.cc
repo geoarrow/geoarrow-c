@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 
 #include <geoarrow.h>
-#include "nanoarrow.h"
+#include "nanoarrow/nanoarrow.h"
 
 TEST(MetadataTest, MetadataTestEmpty) {
   struct GeoArrowMetadataView metadata_view;

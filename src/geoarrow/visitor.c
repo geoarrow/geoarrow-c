@@ -2,7 +2,7 @@
 #include <stddef.h>
 
 #include "geoarrow.h"
-#include "nanoarrow.h"
+#include "nanoarrow/nanoarrow.h"
 
 static int feat_start_void(struct GeoArrowVisitor* v) {
   NANOARROW_UNUSED(v);

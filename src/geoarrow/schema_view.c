@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "geoarrow.h"
-#include "nanoarrow.h"
+#include "nanoarrow/nanoarrow.h"
 
 static int GeoArrowParsePointFixedSizeList(const struct ArrowSchema* schema,
                                            struct GeoArrowSchemaView* schema_view,

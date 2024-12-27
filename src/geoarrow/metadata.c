@@ -2,7 +2,7 @@
 #include <errno.h>
 #include <stdio.h>
 
-#include "nanoarrow.h"
+#include "nanoarrow/nanoarrow.h"
 
 #include "geoarrow.h"
 
