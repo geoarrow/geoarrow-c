@@ -440,18 +440,31 @@ struct GeoArrowArrayReader {
   void* private_data;
 };
 
-/// \brief Initialize the memory of a GeoArrowArrayReader
+/// \brief Initialize a GeoArrowArrayReader from a GeoArrowType
 ///
 /// If GEOARROW_OK is returned, the caller is responsible for calling
 /// GeoArrowArrayReaderReset().
-GeoArrowErrorCode GeoArrowArrayReaderInit(struct GeoArrowArrayReader* reader);
+GeoArrowErrorCode GeoArrowArrayReaderInitFromType(struct GeoArrowArrayReader* reader,
+                                                  enum GeoArrowType type);
+
+/// \brief Initialize a GeoArrowArrayReader from an ArrowSchema
+///
+/// If GEOARROW_OK is returned, the caller is responsible for calling
+/// GeoArrowArrayReaderReset().
+GeoArrowErrorCode GeoArrowArrayReaderInitFromSchema(struct GeoArrowArrayReader* reader,
+                                                    struct ArrowSchema* schema,
+                                                    struct GeoArrowError* error);
+
+/// \brief Set a GeoArrowArray to read
+GeoArrowErrorCode GeoArrowArrayReaderSetArray(struct GeoArrowArrayReader* reader,
+                                              const struct ArrowArray* array,
+                                              struct GeoArrowError* error);
 
 /// \brief Visit a GeoArrowArray
 ///
 /// The caller must have initialized the GeoArrowVisitor with the appropriate
 /// writer before calling this function.
 GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
-                                           const struct GeoArrowArrayView* array_view,
                                            int64_t offset, int64_t length,
                                            struct GeoArrowVisitor* v);
 
