@@ -53,8 +53,6 @@
 #include <stdint.h>
 #include <string.h>
 
-
-
 #if defined(NANOARROW_DEBUG) && !defined(NANOARROW_PRINT_AND_DIE)
 #include <stdio.h>
 #include <stdlib.h>
@@ -1050,8 +1048,6 @@ static inline void ArrowDecimalSetBytes(struct ArrowDecimal* decimal,
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-
-
 
 // If using CMake, optionally pass -DNANOARROW_NAMESPACE=MyNamespace which will set this
 // define in nanoarrow_config.h. If not, you can optionally #define NANOARROW_NAMESPACE
@@ -2260,8 +2256,6 @@ ArrowErrorCode ArrowBasicArrayStreamValidate(const struct ArrowArrayStream* arra
 
 // Inline function definitions
 
-
-
 #ifdef __cplusplus
 }
 #endif
@@ -2290,8 +2284,6 @@ ArrowErrorCode ArrowBasicArrayStreamValidate(const struct ArrowArrayStream* arra
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
-
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -3016,9 +3008,6 @@ static inline void ArrowBitmapReset(struct ArrowBitmap* bitmap) {
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
-
-
-
 
 #ifdef __cplusplus
 extern "C" {
