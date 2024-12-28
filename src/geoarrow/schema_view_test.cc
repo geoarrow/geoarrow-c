@@ -158,6 +158,11 @@ TEST(SchemaViewTest, SchemaViewTestInitInterleavedGuessDims) {
   good_schema.release(&good_schema);
 }
 
+TEST(SchemaViewTest, SchemaViewTestInitInvalidBox) {
+  // TODO
+  ASSERT_TRUE(false);
+}
+
 TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {
   struct ArrowSchema good_schema;
   struct ArrowSchema bad_schema;
