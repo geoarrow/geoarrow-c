@@ -173,6 +173,11 @@ static int GeoArrowParseBoxChild(const struct ArrowSchema* schema, char* dim,
 static int GeoArrowParseBox(const struct ArrowSchema* schema,
                             struct GeoArrowSchemaView* schema_view,
                             struct ArrowError* error) {
+  if (strcmp(schema->format, "+s") != 0) {
+    ArrowErrorSet(error, "Expected struct storage for 'geoarrow.box'");
+    return EINVAL;
+  }
+
   switch (schema->n_children) {
     case 4:
     case 6:

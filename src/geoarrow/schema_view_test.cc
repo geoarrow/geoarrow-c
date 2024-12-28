@@ -159,8 +159,66 @@ TEST(SchemaViewTest, SchemaViewTestInitInterleavedGuessDims) {
 }
 
 TEST(SchemaViewTest, SchemaViewTestInitInvalidBox) {
-  // TODO
-  ASSERT_TRUE(false);
+  struct ArrowSchema good_schema;
+  struct ArrowSchema bad_schema;
+  struct GeoArrowSchemaView schema_view;
+  struct GeoArrowError error;
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_BOX), GEOARROW_OK);
+
+  // Bad storage type
+  ASSERT_EQ(ArrowSchemaInitFromType(&bad_schema, NANOARROW_TYPE_INT32), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message, "Expected struct storage for 'geoarrow.box'");
+  ArrowSchemaRelease(&bad_schema);
+
+  // Wrong number of children
+  ASSERT_EQ(ArrowSchemaInitFromType(&bad_schema, NANOARROW_TYPE_STRUCT), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Expected 4, 6, or 8 children for extension 'geoarrow.box' but got 0");
+  ArrowSchemaRelease(&bad_schema);
+
+  // Column with incorrect child name length
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[0], "name too long"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message, "Expected box child 0 to have exactly four characters");
+  ArrowSchemaRelease(&bad_schema);
+
+  // Column without 'min' suffix
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[0], "xkat"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message, "Expected box child 0 to have suffix 'min' but got 'xkat'");
+  ArrowSchemaRelease(&bad_schema);
+
+  // Invalid dimensions
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[0], "jmin"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Expected dimensions 'xy', 'xyz', 'xym', or 'xyzm' for extension "
+               "'geoarrow.box' but found 'jy'");
+  ArrowSchemaRelease(&bad_schema);
+
+  // Column without 'max' suffix
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[2], "xkat"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message, "Expected box child 2 to have suffix 'max' but got 'xkat'");
+  ArrowSchemaRelease(&bad_schema);
+
+  // Non-matching dimensions for max
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[2], "jmax"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(
+      error.message,
+      "Expected box child 0 name to match name for dimension 'xmin' but got 'jmax'");
+  ArrowSchemaRelease(&bad_schema);
 }
 
 TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {
