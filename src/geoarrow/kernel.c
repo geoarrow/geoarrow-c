@@ -473,15 +473,7 @@ static int kernel_finish_unique_geometry_types_agg(struct GeoArrowKernel* kernel
 // This visitor is not exposed as a standalone visitor in the geoarrow.h header.
 
 static ArrowErrorCode schema_box(struct ArrowSchema* schema) {
-  ArrowSchemaInit(schema);
-  NANOARROW_RETURN_NOT_OK(ArrowSchemaSetTypeStruct(schema, 4));
-  const char* names[] = {"xmin", "xmax", "ymin", "ymax"};
-  for (int i = 0; i < 4; i++) {
-    NANOARROW_RETURN_NOT_OK(
-        ArrowSchemaSetType(schema->children[i], NANOARROW_TYPE_DOUBLE));
-    NANOARROW_RETURN_NOT_OK(ArrowSchemaSetName(schema->children[i], names[i]));
-  }
-
+  NANOARROW_RETURN_NOT_OK(GeoArrowSchemaInitExtension(schema, GEOARROW_TYPE_BOX));
   return GEOARROW_OK;
 }
 
@@ -500,9 +492,9 @@ static ArrowErrorCode box_flush(struct GeoArrowVisitorKernelPrivate* private_dat
   NANOARROW_RETURN_NOT_OK(ArrowBufferAppendDouble(
       &private_data->box2d_private.values[0], private_data->box2d_private.min_values[0]));
   NANOARROW_RETURN_NOT_OK(ArrowBufferAppendDouble(
-      &private_data->box2d_private.values[1], private_data->box2d_private.max_values[0]));
+      &private_data->box2d_private.values[1], private_data->box2d_private.min_values[1]));
   NANOARROW_RETURN_NOT_OK(ArrowBufferAppendDouble(
-      &private_data->box2d_private.values[2], private_data->box2d_private.min_values[1]));
+      &private_data->box2d_private.values[2], private_data->box2d_private.max_values[0]));
   NANOARROW_RETURN_NOT_OK(ArrowBufferAppendDouble(
       &private_data->box2d_private.values[3], private_data->box2d_private.max_values[1]));
 

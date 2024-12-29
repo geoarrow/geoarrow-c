@@ -675,15 +675,15 @@ TEST(KernelTest, KernelTestBox) {
   ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array_out1, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[0], 0), 0);
-  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[1], 0), 3);
-  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[2], 0), -1);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[1], 0), -1);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[2], 0), 3);
   EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[3], 0), 10);
 
   EXPECT_TRUE(ArrowArrayViewIsNull(&array_view, 1));
 
   EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[0], 2), 20);
-  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[1], 2), 21);
-  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[2], 2), -40);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[1], 2), -40);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[2], 2), 21);
   EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[3], 2), 5);
 
   ArrowArrayViewReset(&array_view);
@@ -735,8 +735,8 @@ TEST(KernelTest, KernelTestBoxAgg) {
   ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array_out1, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[0], 0), 0);
-  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[1], 0), 21);
-  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[2], 0), -40);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[1], 0), -40);
+  EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[2], 0), 21);
   EXPECT_EQ(ArrowArrayViewGetDoubleUnsafe(array_view.children[3], 0), 10);
 
   ArrowArrayViewReset(&array_view);
