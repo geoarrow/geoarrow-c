@@ -219,6 +219,8 @@ TEST(SchemaViewTest, SchemaViewTestInitInvalidBox) {
       error.message,
       "Expected box child 0 name to match name for dimension 'xmin' but got 'jmax'");
   ArrowSchemaRelease(&bad_schema);
+
+  ArrowSchemaRelease(&good_schema);
 }
 
 TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {
