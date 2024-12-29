@@ -509,10 +509,84 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitMultipolygon(
   return GEOARROW_OK;
 }
 
+static GeoArrowErrorCode GeoArrowArrayViewVisitBox(
+    const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
+    struct GeoArrowVisitor* v) {
+  // We aren't going to attempt Z, M, or ZM boxes since there is no canonical
+  // way to do this (maybe only if the non-XY dimensions are constant?).
+  if (array_view->schema_view.dimensions != GEOARROW_DIMENSIONS_XY) {
+    GeoArrowErrorSet(v->error, "Can't visit box with non-XY dimensions");
+    return ENOTSUP;
+  }
+
+  // These are the polygon coords and the arrays to back them
+  struct GeoArrowCoordView poly_coords;
+  memset(&poly_coords, 0, sizeof(struct GeoArrowCoordView));
+
+  int n_dim = array_view->coords.n_values / 2;
+  double x[5];
+  double y[5];
+  poly_coords.n_values = n_dim;
+  poly_coords.n_coords = 5;
+  poly_coords.coords_stride = 1;
+  poly_coords.values[0] = x;
+  poly_coords.values[1] = y;
+
+  // index into each box coord's values[] for each polygon coordinate
+  int box_coord_poly_map_x[] = {0, n_dim, n_dim, 0, 0};
+  int box_coord_poly_map_y[] = {1, 1, n_dim + 1, n_dim + 1, 1};
+
+  for (int64_t i = 0; i < length; i++) {
+    int64_t raw_offset = array_view->offset[0] + offset + i;
+    NANOARROW_RETURN_NOT_OK(v->feat_start(v));
+    if (!array_view->validity_bitmap ||
+        ArrowBitGet(array_view->validity_bitmap, raw_offset)) {
+      // Check for empty dimensions
+      int n_empty_dims = 0;
+      for (int i = 0; i < n_dim; i++) {
+        double dim_min = GEOARROW_COORD_VIEW_VALUE(&array_view->coords, raw_offset, i);
+        double dim_max =
+            GEOARROW_COORD_VIEW_VALUE(&array_view->coords, raw_offset, n_dim + i);
+        n_empty_dims += dim_min > dim_max;
+      }
+
+      NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POLYGON,
+                                            array_view->schema_view.dimensions));
+
+      // If any dimension has a negative range, we consider the polygon empty
+      // (i.e., there are no points for which...)
+      if (n_empty_dims == 0) {
+        // Populate the polygon coordinates
+        for (int i = 0; i < 5; i++) {
+          x[i] = GEOARROW_COORD_VIEW_VALUE(&array_view->coords, raw_offset,
+                                           box_coord_poly_map_x[i]);
+          y[i] = GEOARROW_COORD_VIEW_VALUE(&array_view->coords, raw_offset,
+                                           box_coord_poly_map_y[i]);
+        }
+
+        // Call the visitor
+        NANOARROW_RETURN_NOT_OK(v->ring_start(v));
+        NANOARROW_RETURN_NOT_OK(v->coords(v, &poly_coords));
+        NANOARROW_RETURN_NOT_OK(v->ring_end(v));
+      }
+
+      NANOARROW_RETURN_NOT_OK(v->geom_end(v));
+    } else {
+      NANOARROW_RETURN_NOT_OK(v->null_feat(v));
+    }
+
+    NANOARROW_RETURN_NOT_OK(v->feat_end(v));
+  }
+
+  return GEOARROW_OK;
+}
+
 GeoArrowErrorCode GeoArrowArrayViewVisit(const struct GeoArrowArrayView* array_view,
                                          int64_t offset, int64_t length,
                                          struct GeoArrowVisitor* v) {
   switch (array_view->schema_view.geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_BOX:
+      return GeoArrowArrayViewVisitBox(array_view, offset, length, v);
     case GEOARROW_GEOMETRY_TYPE_POINT:
       return GeoArrowArrayViewVisitPoint(array_view, offset, length, v);
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:

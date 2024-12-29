@@ -1,4 +1,6 @@
 
+#include <cmath>
+
 #include <gtest/gtest.h>
 
 #include <geoarrow.h>
@@ -174,7 +176,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidBox) {
   struct ArrowArray array;
   enum GeoArrowType type = GEOARROW_TYPE_BOX;
 
-  // Build the array for [BOX (0 1 => 2 3), null]
+  // Build the array for [BOX (0 1 => 2 3), BOX EMPTY, null]
   ASSERT_EQ(GeoArrowSchemaInit(&schema, type), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
@@ -184,6 +186,13 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidBox) {
   ASSERT_EQ(ArrowArrayAppendDouble(array.children[2], 2), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayAppendDouble(array.children[3], 3), GEOARROW_OK);
   ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], INFINITY), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[1], INFINITY), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[2], -INFINITY), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[3], -INFINITY), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
+
   ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
 
   ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
@@ -194,23 +203,30 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidBox) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
 
   // Check its contents
-  EXPECT_EQ(array_view.length[0], 2);
+  EXPECT_EQ(array_view.length[0], 3);
   EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
-  EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 1));
+  EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 1));
+  EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 2));
   EXPECT_EQ(array_view.coords.n_values, 4);
-  EXPECT_EQ(array_view.coords.n_coords, 2);
+  EXPECT_EQ(array_view.coords.n_coords, 3);
   EXPECT_EQ(array_view.coords.values[0][0], 0);
   EXPECT_EQ(array_view.coords.values[1][0], 1);
   EXPECT_EQ(array_view.coords.values[2][0], 2);
   EXPECT_EQ(array_view.coords.values[3][0], 3);
 
-  // WKXTester tester;
-  // EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-  //           GEOARROW_OK);
-  // auto values = tester.WKTValues("<null value>");
-  // ASSERT_EQ(values.size(), 2);
-  // EXPECT_EQ(values[0], "POINT (30 10)");
-  // EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(array_view.coords.values[0][1], INFINITY);
+  EXPECT_EQ(array_view.coords.values[1][1], INFINITY);
+  EXPECT_EQ(array_view.coords.values[2][1], -INFINITY);
+  EXPECT_EQ(array_view.coords.values[3][1], -INFINITY);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "POLYGON ((0 1, 2 1, 2 3, 0 3, 0 1))");
+  EXPECT_EQ(values[1], "POLYGON EMPTY");
+  EXPECT_EQ(values[2], "<null value>");
 
   schema.release(&schema);
   array.release(&array);
