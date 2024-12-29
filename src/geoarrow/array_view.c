@@ -9,6 +9,7 @@ static int32_t kZeroInt32 = 0;
 
 static int GeoArrowArrayViewInitInternal(struct GeoArrowArrayView* array_view) {
   switch (array_view->schema_view.geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_BOX:
     case GEOARROW_GEOMETRY_TYPE_POINT:
       array_view->n_offsets = 0;
       break;
@@ -58,6 +59,10 @@ static int GeoArrowArrayViewInitInternal(struct GeoArrowArrayView* array_view) {
       break;
   }
 
+  if (array_view->schema_view.geometry_type == GEOARROW_GEOMETRY_TYPE_BOX) {
+    array_view->coords.n_values *= 2;
+  }
+
   switch (array_view->schema_view.coord_type) {
     case GEOARROW_COORD_TYPE_SEPARATE:
       array_view->coords.coords_stride = 1;
@@ -71,15 +76,12 @@ static int GeoArrowArrayViewInitInternal(struct GeoArrowArrayView* array_view) {
       break;
   }
 
-  for (int i = 0; i < 4; i++) {
-    array_view->coords.values[i] = NULL;
-  }
-
   return GEOARROW_OK;
 }
 
 GeoArrowErrorCode GeoArrowArrayViewInitFromType(struct GeoArrowArrayView* array_view,
                                                 enum GeoArrowType type) {
+  memset(array_view, 0, sizeof(struct GeoArrowArrayView));
   NANOARROW_RETURN_NOT_OK(GeoArrowSchemaViewInitFromType(&array_view->schema_view, type));
   return GeoArrowArrayViewInitInternal(array_view);
 }
@@ -87,6 +89,7 @@ GeoArrowErrorCode GeoArrowArrayViewInitFromType(struct GeoArrowArrayView* array_
 GeoArrowErrorCode GeoArrowArrayViewInitFromSchema(struct GeoArrowArrayView* array_view,
                                                   const struct ArrowSchema* schema,
                                                   struct GeoArrowError* error) {
+  memset(array_view, 0, sizeof(struct GeoArrowArrayView));
   NANOARROW_RETURN_NOT_OK(
       GeoArrowSchemaViewInit(&array_view->schema_view, schema, error));
   return GeoArrowArrayViewInitInternal(array_view);
@@ -210,6 +213,36 @@ static GeoArrowErrorCode GeoArrowArrayViewSetArraySerialized(
   return GEOARROW_OK;
 }
 
+static GeoArrowErrorCode GeoArrowArrayViewSetArrayBox(
+    struct GeoArrowArrayView* array_view, const struct ArrowArray* array,
+    struct GeoArrowError* error) {
+  array_view->length[0] = array->length;
+  array_view->offset[0] = array->offset;
+
+  if (array->n_children != array_view->coords.n_values) {
+    GeoArrowErrorSet(error,
+                     "Unexpected number of children for box array struct"
+                     "in GeoArrowArrayViewSetArray()");
+    return EINVAL;
+  }
+
+  // Set the coord pointers to the data buffer of each child (applying
+  // offset before assigning the pointer)
+  for (int32_t i = 0; i < array_view->coords.n_values; i++) {
+    if (array->children[i]->n_buffers != 2) {
+      ArrowErrorSet((struct ArrowError*)error,
+                    "Unexpected number of buffers for struct coordinate array child "
+                    "in GeoArrowArrayViewSetArray()");
+      return EINVAL;
+    }
+
+    array_view->coords.values[i] =
+        ((const double*)array->children[i]->buffers[1]) + array->children[i]->offset;
+  }
+
+  return GEOARROW_OK;
+}
+
 GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view,
                                             const struct ArrowArray* array,
                                             struct GeoArrowError* error) {
@@ -217,6 +250,12 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
     case GEOARROW_TYPE_WKT:
     case GEOARROW_TYPE_WKB:
       NANOARROW_RETURN_NOT_OK(GeoArrowArrayViewSetArraySerialized(array_view, array));
+      break;
+    case GEOARROW_TYPE_BOX:
+    case GEOARROW_TYPE_BOX_Z:
+    case GEOARROW_TYPE_BOX_M:
+    case GEOARROW_TYPE_BOX_ZM:
+      NANOARROW_RETURN_NOT_OK(GeoArrowArrayViewSetArrayBox(array_view, array, error));
       break;
     default:
       NANOARROW_RETURN_NOT_OK(
