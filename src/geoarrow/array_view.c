@@ -218,6 +218,7 @@ static GeoArrowErrorCode GeoArrowArrayViewSetArrayBox(
     struct GeoArrowError* error) {
   array_view->length[0] = array->length;
   array_view->offset[0] = array->offset;
+  array_view->coords.n_coords = array->length;
 
   if (array->n_children != array_view->coords.n_values) {
     GeoArrowErrorSet(error,

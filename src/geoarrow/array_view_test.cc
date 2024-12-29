@@ -169,6 +169,53 @@ TEST(ArrayViewTest, ArrayViewTestSetInterleavedArrayErrors) {
                "GeoArrowArrayViewSetArray()");
 }
 
+TEST(ArrayViewTest, ArrayViewTestSetArrayValidBox) {
+  struct ArrowSchema schema;
+  struct ArrowArray array;
+  enum GeoArrowType type = GEOARROW_TYPE_BOX;
+
+  // Build the array for [BOX (0 1 => 2 3), null]
+  ASSERT_EQ(GeoArrowSchemaInit(&schema, type), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], 0), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[1], 1), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[2], 2), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[3], 3), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
+
+  // Set the array view
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+
+  // Check its contents
+  EXPECT_EQ(array_view.length[0], 2);
+  EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
+  EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 1));
+  EXPECT_EQ(array_view.coords.n_values, 4);
+  EXPECT_EQ(array_view.coords.n_coords, 2);
+  EXPECT_EQ(array_view.coords.values[0][0], 0);
+  EXPECT_EQ(array_view.coords.values[1][0], 1);
+  EXPECT_EQ(array_view.coords.values[2][0], 2);
+  EXPECT_EQ(array_view.coords.values[3][0], 3);
+
+  // WKXTester tester;
+  // EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
+  //           GEOARROW_OK);
+  // auto values = tester.WKTValues("<null value>");
+  // ASSERT_EQ(values.size(), 2);
+  // EXPECT_EQ(values[0], "POINT (30 10)");
+  // EXPECT_EQ(values[1], "<null value>");
+
+  schema.release(&schema);
+  array.release(&array);
+}
+
 TEST(ArrayViewTest, ArrayViewTestSetArrayValidPoint) {
   struct ArrowSchema schema;
   struct ArrowArray array;
