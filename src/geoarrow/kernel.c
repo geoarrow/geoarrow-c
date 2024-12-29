@@ -472,8 +472,20 @@ static int kernel_finish_unique_geometry_types_agg(struct GeoArrowKernel* kernel
 // Calculate bounding box values by feature or as an aggregate.
 // This visitor is not exposed as a standalone visitor in the geoarrow.h header.
 
-static ArrowErrorCode schema_box(struct ArrowSchema* schema) {
+static ArrowErrorCode schema_box(struct ArrowSchema* schema,
+                                 struct GeoArrowStringView extension_metadata,
+                                 struct GeoArrowError* error) {
+  struct GeoArrowMetadataView metadata;
+  NANOARROW_RETURN_NOT_OK(GeoArrowMetadataViewInit(&metadata, extension_metadata, error));
+
+  // This bounder only works for planar edges
+  if (metadata.edge_type != GEOARROW_EDGE_TYPE_PLANAR) {
+    GeoArrowErrorSet(error, "box kernel does not support non-planar edges");
+    return EINVAL;
+  }
+
   NANOARROW_RETURN_NOT_OK(GeoArrowSchemaInitExtension(schema, GEOARROW_TYPE_BOX));
+  NANOARROW_RETURN_NOT_OK(GeoArrowSchemaSetMetadata(schema, &metadata));
   return GEOARROW_OK;
 }
 
@@ -604,7 +616,6 @@ static int feat_end_box(struct GeoArrowVisitor* v) {
 static int finish_start_box_agg(struct GeoArrowVisitorKernelPrivate* private_data,
                                 struct ArrowSchema* schema, const char* options,
                                 struct ArrowSchema* out, struct GeoArrowError* error) {
-  NANOARROW_UNUSED(schema);
   NANOARROW_UNUSED(options);
   NANOARROW_UNUSED(error);
 
@@ -617,14 +628,9 @@ static int finish_start_box_agg(struct GeoArrowVisitorKernelPrivate* private_dat
   private_data->box2d_private.min_values[1] = INFINITY;
   private_data->box2d_private.feat_null = 0;
 
-  struct ArrowSchema tmp;
-  int result = schema_box(&tmp);
-  if (result != GEOARROW_OK) {
-    tmp.release(&tmp);
-    return result;
-  }
-
-  ArrowSchemaMove(&tmp, out);
+  struct GeoArrowSchemaView schema_view;
+  NANOARROW_RETURN_NOT_OK(GeoArrowSchemaViewInit(&schema_view, schema, error));
+  NANOARROW_RETURN_NOT_OK(schema_box(out, schema_view.extension_metadata, error));
   return GEOARROW_OK;
 }
 
@@ -641,7 +647,6 @@ static int kernel_finish_box_agg(struct GeoArrowKernel* kernel, struct ArrowArra
 static int finish_start_box(struct GeoArrowVisitorKernelPrivate* private_data,
                             struct ArrowSchema* schema, const char* options,
                             struct ArrowSchema* out, struct GeoArrowError* error) {
-  NANOARROW_UNUSED(schema);
   NANOARROW_UNUSED(options);
   NANOARROW_UNUSED(error);
 
@@ -651,14 +656,9 @@ static int finish_start_box(struct GeoArrowVisitorKernelPrivate* private_data,
   private_data->v.feat_end = &feat_end_box;
   private_data->v.private_data = private_data;
 
-  struct ArrowSchema tmp;
-  int result = schema_box(&tmp);
-  if (result != GEOARROW_OK) {
-    tmp.release(&tmp);
-    return result;
-  }
-
-  ArrowSchemaMove(&tmp, out);
+  struct GeoArrowSchemaView schema_view;
+  NANOARROW_RETURN_NOT_OK(GeoArrowSchemaViewInit(&schema_view, schema, error));
+  NANOARROW_RETURN_NOT_OK(schema_box(out, schema_view.extension_metadata, error));
   return GEOARROW_OK;
 }
 
