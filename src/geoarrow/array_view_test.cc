@@ -29,8 +29,15 @@ TEST_P(TypeParameterizedTestFixture, ArrayViewTestInitType) {
   EXPECT_EQ(array_view.validity_bitmap, nullptr);
   EXPECT_EQ(array_view.n_offsets, kNumOffsets[array_view.schema_view.geometry_type]);
   EXPECT_EQ(array_view.coords.n_coords, 0);
-  EXPECT_EQ(array_view.coords.n_values,
-            kNumDimensions[array_view.schema_view.dimensions]);
+
+  if (array_view.schema_view.geometry_type == GEOARROW_GEOMETRY_TYPE_BOX) {
+    EXPECT_EQ(array_view.coords.n_values,
+              kNumDimensions[array_view.schema_view.dimensions] * 2);
+
+  } else {
+    EXPECT_EQ(array_view.coords.n_values,
+              kNumDimensions[array_view.schema_view.dimensions]);
+  }
 
   if (array_view.schema_view.coord_type == GEOARROW_COORD_TYPE_SEPARATE) {
     EXPECT_EQ(array_view.coords.coords_stride, 1);
@@ -73,6 +80,8 @@ TEST_P(TypeParameterizedTestFixture, ArrayViewTestInitEmptyArray) {
 INSTANTIATE_TEST_SUITE_P(
     ArrayViewTest, TypeParameterizedTestFixture,
     ::testing::Values(
+        GEOARROW_TYPE_BOX, GEOARROW_TYPE_BOX_Z, GEOARROW_TYPE_BOX_M, GEOARROW_TYPE_BOX_ZM,
+
         GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING, GEOARROW_TYPE_POLYGON,
         GEOARROW_TYPE_MULTIPOINT, GEOARROW_TYPE_MULTILINESTRING,
         GEOARROW_TYPE_MULTIPOLYGON,
