@@ -751,7 +751,7 @@ TEST(KernelTest, KernelTestBoxMetadata) {
   struct ArrowSchema schema_in;
   struct ArrowSchema schema_out;
 
-  struct GeoArrowMetadataView metadata_in{};
+  struct GeoArrowMetadataView metadata_in {};
   struct GeoArrowMetadataView metadata_out;
 
   ASSERT_EQ(GeoArrowSchemaInitExtension(&schema_in, GEOARROW_TYPE_WKT), GEOARROW_OK);
