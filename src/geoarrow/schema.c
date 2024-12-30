@@ -25,8 +25,10 @@ static GeoArrowErrorCode GeoArrowSchemaInitCoordStruct(struct ArrowSchema* schem
                                                        const char* dims) {
   int64_t n_dims = strlen(dims);
   char dim_name[] = {'\0', '\0'};
+
   NANOARROW_RETURN_NOT_OK(ArrowSchemaInitFromType(schema, NANOARROW_TYPE_STRUCT));
   NANOARROW_RETURN_NOT_OK(ArrowSchemaAllocateChildren(schema, n_dims));
+
   for (int64_t i = 0; i < n_dims; i++) {
     dim_name[0] = dims[i];
     NANOARROW_RETURN_NOT_OK(
@@ -34,6 +36,35 @@ static GeoArrowErrorCode GeoArrowSchemaInitCoordStruct(struct ArrowSchema* schem
     NANOARROW_RETURN_NOT_OK(ArrowSchemaSetName(schema->children[i], dim_name));
     // Set child non-nullable
     schema->children[i]->flags = 0;
+  }
+
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowSchemaInitRect(struct ArrowSchema* schema,
+                                                const char* dims) {
+  int64_t n_dims = strlen(dims);
+  char dim_name_min[] = {'\0', 'm', 'i', 'n', '\0'};
+  char dim_name_max[] = {'\0', 'm', 'a', 'x', '\0'};
+
+  NANOARROW_RETURN_NOT_OK(ArrowSchemaInitFromType(schema, NANOARROW_TYPE_STRUCT));
+  NANOARROW_RETURN_NOT_OK(ArrowSchemaAllocateChildren(schema, n_dims * 2));
+
+  for (int64_t i = 0; i < n_dims; i++) {
+    dim_name_min[0] = dims[i];
+    NANOARROW_RETURN_NOT_OK(
+        ArrowSchemaInitFromType(schema->children[i], NANOARROW_TYPE_DOUBLE));
+    NANOARROW_RETURN_NOT_OK(ArrowSchemaSetName(schema->children[i], dim_name_min));
+
+    dim_name_max[0] = dims[i];
+    NANOARROW_RETURN_NOT_OK(
+        ArrowSchemaInitFromType(schema->children[n_dims + i], NANOARROW_TYPE_DOUBLE));
+    NANOARROW_RETURN_NOT_OK(
+        ArrowSchemaSetName(schema->children[n_dims + i], dim_name_max));
+
+    // Set children non-nullable
+    schema->children[i]->flags = 0;
+    schema->children[i + n_dims]->flags = 0;
   }
 
   return GEOARROW_OK;
@@ -119,6 +150,16 @@ GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowTy
   }
 
   switch (geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_BOX:
+      switch (coord_type) {
+        case GEOARROW_COORD_TYPE_SEPARATE:
+          NANOARROW_RETURN_NOT_OK(GeoArrowSchemaInitRect(schema, dims));
+          break;
+        default:
+          return EINVAL;
+      }
+      break;
+
     case GEOARROW_GEOMETRY_TYPE_POINT:
       switch (coord_type) {
         case GEOARROW_COORD_TYPE_SEPARATE:

@@ -91,6 +91,8 @@ INSTANTIATE_TEST_SUITE_P(
         GEOARROW_TYPE_WKB, GEOARROW_TYPE_LARGE_WKB, GEOARROW_TYPE_WKT,
         GEOARROW_TYPE_LARGE_WKT,
 
+        GEOARROW_TYPE_BOX, GEOARROW_TYPE_BOX_Z, GEOARROW_TYPE_BOX_M, GEOARROW_TYPE_BOX_ZM,
+
         GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING, GEOARROW_TYPE_POLYGON,
         GEOARROW_TYPE_MULTIPOINT, GEOARROW_TYPE_MULTILINESTRING,
         GEOARROW_TYPE_MULTIPOLYGON,
@@ -154,6 +156,78 @@ TEST(SchemaViewTest, SchemaViewTestInitInterleavedGuessDims) {
   EXPECT_EQ(schema_view.dimensions, GEOARROW_DIMENSIONS_XYZM);
   good_schema2.release(&good_schema2);
   good_schema.release(&good_schema);
+}
+
+TEST(SchemaViewTest, SchemaViewTestInitInvalidBox) {
+  struct ArrowSchema good_schema;
+  struct ArrowSchema bad_schema;
+  struct GeoArrowSchemaView schema_view;
+  struct GeoArrowError error;
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&good_schema, GEOARROW_TYPE_BOX), GEOARROW_OK);
+
+  // Bad storage type
+  ASSERT_EQ(ArrowSchemaInitFromType(&bad_schema, NANOARROW_TYPE_INT32), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message, "Expected struct storage for 'geoarrow.box'");
+  ArrowSchemaRelease(&bad_schema);
+
+  // Wrong number of children
+  ASSERT_EQ(ArrowSchemaInitFromType(&bad_schema, NANOARROW_TYPE_STRUCT), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetMetadata(&bad_schema, good_schema.metadata), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Expected 4, 6, or 8 children for extension 'geoarrow.box' but got 0");
+  ArrowSchemaRelease(&bad_schema);
+
+  // Column with incorrect child name length
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[0], "name too long"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message, "Expected box child 0 to have exactly four characters");
+  ArrowSchemaRelease(&bad_schema);
+
+  // Column without 'min' suffix
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[0], "xkat"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message, "Expected box child 0 to have suffix 'min' but got 'xkat'");
+  ArrowSchemaRelease(&bad_schema);
+
+  // Invalid dimensions
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[0], "jmin"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Expected dimensions 'xy', 'xyz', 'xym', or 'xyzm' for extension "
+               "'geoarrow.box' but found 'jy'");
+  ArrowSchemaRelease(&bad_schema);
+
+  // Column without 'max' suffix
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[2], "xkat"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message, "Expected box child 2 to have suffix 'max' but got 'xkat'");
+  ArrowSchemaRelease(&bad_schema);
+
+  // Non-matching dimensions for max
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetName(bad_schema.children[2], "jmax"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(
+      error.message,
+      "Expected box child 0 name to match name for dimension 'xmin' but got 'jmax'");
+  ArrowSchemaRelease(&bad_schema);
+
+  // Column with invalid storage type
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetFormat(bad_schema.children[0], "f"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message, "Expected box child 0 to have storage type of double");
+  ArrowSchemaRelease(&bad_schema);
+
+  ArrowSchemaRelease(&good_schema);
 }
 
 TEST(SchemaViewTest, SchemaViewTestInitInvalidPoint) {

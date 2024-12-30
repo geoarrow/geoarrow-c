@@ -58,6 +58,15 @@ TEST(GeoArrowHppTest, GeoArrowHppTestVectorTypeModify) {
   EXPECT_EQ(new_type.edge_type(), GEOARROW_EDGE_TYPE_PLANAR);
 }
 
+TEST(GeoArrowHppTest, GeoArrowHppTestVectorTypeModifyBox) {
+  EXPECT_EQ(geoarrow::Box().XYZ().id(), GEOARROW_TYPE_BOX_Z);
+  EXPECT_EQ(geoarrow::Box().XYM().id(), GEOARROW_TYPE_BOX_M);
+  EXPECT_EQ(geoarrow::Box().XYZM().id(), GEOARROW_TYPE_BOX_ZM);
+  EXPECT_EQ(geoarrow::Box().XYZ().XY().id(), GEOARROW_TYPE_BOX);
+
+  EXPECT_FALSE(geoarrow::Box().WithCoordType(GEOARROW_COORD_TYPE_INTERLEAVED).valid());
+}
+
 TEST(GeoArrowHppTest, GeoArrowHppTestVectorTypeModifyXYZM) {
   EXPECT_EQ(geoarrow::Point().XYZ().id(), GEOARROW_TYPE_POINT_Z);
   EXPECT_EQ(geoarrow::Point().XYM().id(), GEOARROW_TYPE_POINT_M);

@@ -1,4 +1,6 @@
 
+#include <cmath>
+
 #include <gtest/gtest.h>
 
 #include <geoarrow.h>
@@ -27,8 +29,15 @@ TEST_P(TypeParameterizedTestFixture, ArrayViewTestInitType) {
   EXPECT_EQ(array_view.validity_bitmap, nullptr);
   EXPECT_EQ(array_view.n_offsets, kNumOffsets[array_view.schema_view.geometry_type]);
   EXPECT_EQ(array_view.coords.n_coords, 0);
-  EXPECT_EQ(array_view.coords.n_values,
-            kNumDimensions[array_view.schema_view.dimensions]);
+
+  if (array_view.schema_view.geometry_type == GEOARROW_GEOMETRY_TYPE_BOX) {
+    EXPECT_EQ(array_view.coords.n_values,
+              kNumDimensions[array_view.schema_view.dimensions] * 2);
+
+  } else {
+    EXPECT_EQ(array_view.coords.n_values,
+              kNumDimensions[array_view.schema_view.dimensions]);
+  }
 
   if (array_view.schema_view.coord_type == GEOARROW_COORD_TYPE_SEPARATE) {
     EXPECT_EQ(array_view.coords.coords_stride, 1);
@@ -71,6 +80,8 @@ TEST_P(TypeParameterizedTestFixture, ArrayViewTestInitEmptyArray) {
 INSTANTIATE_TEST_SUITE_P(
     ArrayViewTest, TypeParameterizedTestFixture,
     ::testing::Values(
+        GEOARROW_TYPE_BOX, GEOARROW_TYPE_BOX_Z, GEOARROW_TYPE_BOX_M, GEOARROW_TYPE_BOX_ZM,
+
         GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING, GEOARROW_TYPE_POLYGON,
         GEOARROW_TYPE_MULTIPOINT, GEOARROW_TYPE_MULTILINESTRING,
         GEOARROW_TYPE_MULTIPOLYGON,
@@ -106,9 +117,29 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayErrors) {
   struct GeoArrowArrayView array_view;
   struct GeoArrowError error;
   struct ArrowArray array;
+  struct ArrowArray dummy_childx;
+  struct ArrowArray* children[] = {&dummy_childx, &dummy_childx, &dummy_childx,
+                                   &dummy_childx};
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_BOX), GEOARROW_OK);
+  array.offset = 0;
+  array.n_children = 1;
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Unexpected number of children for box array struct in "
+               "GeoArrowArrayViewSetArray()");
+
+  array.n_children = 4;
+  array.children = reinterpret_cast<struct ArrowArray**>(children);
+  dummy_childx.n_buffers = 1;
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Unexpected number of buffers for box array child in "
+               "GeoArrowArrayViewSetArray()");
 
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT), GEOARROW_OK);
-
+  array.n_children = 0;
+  array.children = nullptr;
   array.offset = 0;
   array.n_children = 1;
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
@@ -116,9 +147,6 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayErrors) {
                "Unexpected number of children for struct coordinate array in "
                "GeoArrowArrayViewSetArray()");
 
-  struct ArrowArray dummy_childx;
-  struct ArrowArray dummy_childy;
-  struct ArrowArray* children[] = {&dummy_childx, &dummy_childy};
   array.n_children = 2;
   array.children = reinterpret_cast<struct ArrowArray**>(children);
   dummy_childx.n_buffers = 1;
@@ -167,6 +195,85 @@ TEST(ArrayViewTest, ArrayViewTestSetInterleavedArrayErrors) {
   EXPECT_STREQ(error.message,
                "Unexpected number of buffers for interleaved coordinate array child in "
                "GeoArrowArrayViewSetArray()");
+}
+
+TEST(ArrayViewTest, ArrayViewTestSetArrayValidBox) {
+  struct ArrowSchema schema;
+  struct ArrowArray array;
+  enum GeoArrowType type = GEOARROW_TYPE_BOX;
+
+  // Build the array for [BOX (0 1 => 2 3), BOX EMPTY, null]
+  ASSERT_EQ(GeoArrowSchemaInit(&schema, type), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], 0), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[1], 1), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[2], 2), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[3], 3), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[0], INFINITY), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[1], INFINITY), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[2], -INFINITY), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayAppendDouble(array.children[3], -INFINITY), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
+
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
+
+  // Set the array view
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+
+  // Check its contents
+  EXPECT_EQ(array_view.length[0], 3);
+  EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 0));
+  EXPECT_TRUE(ArrowBitGet(array_view.validity_bitmap, 1));
+  EXPECT_FALSE(ArrowBitGet(array_view.validity_bitmap, 2));
+  EXPECT_EQ(array_view.coords.n_values, 4);
+  EXPECT_EQ(array_view.coords.n_coords, 3);
+  EXPECT_EQ(array_view.coords.values[0][0], 0);
+  EXPECT_EQ(array_view.coords.values[1][0], 1);
+  EXPECT_EQ(array_view.coords.values[2][0], 2);
+  EXPECT_EQ(array_view.coords.values[3][0], 3);
+
+  EXPECT_EQ(array_view.coords.values[0][1], INFINITY);
+  EXPECT_EQ(array_view.coords.values[1][1], INFINITY);
+  EXPECT_EQ(array_view.coords.values[2][1], -INFINITY);
+  EXPECT_EQ(array_view.coords.values[3][1], -INFINITY);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "POLYGON ((0 1, 2 1, 2 3, 0 3, 0 1))");
+  EXPECT_EQ(values[1], "POLYGON EMPTY");
+  EXPECT_EQ(values[2], "<null value>");
+
+  schema.release(&schema);
+  array.release(&array);
+}
+
+TEST(ArrayViewTest, ArrayViewTestSetArrayValidBoxNonXY) {
+  struct ArrowSchema schema;
+  struct ArrowArray array;
+  struct GeoArrowError error;
+
+  ASSERT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_BOX_Z), GEOARROW_OK);
+  struct GeoArrowArrayView array_view;
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_BOX_Z), GEOARROW_OK);
+
+  struct GeoArrowVisitor v;
+  GeoArrowVisitorInitVoid(&v);
+  v.error = &error;
+  ASSERT_EQ(GeoArrowArrayViewVisit(&array_view, 0, 0, &v), ENOTSUP);
+  ASSERT_STREQ(error.message, "Can't visit box with non-XY dimensions");
+
+  ArrowSchemaRelease(&schema);
 }
 
 TEST(ArrayViewTest, ArrayViewTestSetArrayValidPoint) {

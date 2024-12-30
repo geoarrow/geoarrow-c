@@ -27,26 +27,18 @@ static inline enum GeoArrowGeometryType GeoArrowGeometryTypeFromType(
       break;
   }
 
-  int type_int = type;
-
-  if (type_int >= GEOARROW_TYPE_INTERLEAVED_POINT) {
-    type_int -= 10000;
+  int geometry_type = (int)type;
+  if (geometry_type >= GEOARROW_TYPE_INTERLEAVED_POINT) {
+    geometry_type -= 10000;
   }
 
-  if (type_int >= 4000) {
-    type_int -= 4000;
-  } else if (type_int >= 3000) {
-    type_int -= 3000;
-  } else if (type_int >= 2000) {
-    type_int -= 2000;
-  } else if (type_int >= 1000) {
-    type_int -= 1000;
-  }
-
-  if (type_int > 6 || type_int < 1) {
-    return GEOARROW_GEOMETRY_TYPE_GEOMETRY;
+  geometry_type = (int)geometry_type % 1000;
+  if (geometry_type == GEOARROW_GEOMETRY_TYPE_BOX) {
+    return GEOARROW_GEOMETRY_TYPE_BOX;
+  } else if (geometry_type <= 6 && geometry_type >= 1) {
+    return (enum GeoArrowGeometryType)geometry_type;
   } else {
-    return (enum GeoArrowGeometryType)type_int;
+    return GEOARROW_GEOMETRY_TYPE_GEOMETRY;
   }
 }
 
@@ -67,6 +59,8 @@ static inline const char* GeoArrowExtensionNameFromType(enum GeoArrowType type) 
 
   int geometry_type = GeoArrowGeometryTypeFromType(type);
   switch (geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_BOX:
+      return "geoarrow.box";
     case GEOARROW_GEOMETRY_TYPE_POINT:
       return "geoarrow.point";
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
@@ -99,21 +93,19 @@ static inline enum GeoArrowDimensions GeoArrowDimensionsFromType(enum GeoArrowTy
       break;
   }
 
-  int geometry_type = GeoArrowGeometryTypeFromType(type);
-  int type_int = type;
-  type_int -= geometry_type;
-  if (type_int > 5000) {
+  int type_int = (int)type;
+  if (type_int >= GEOARROW_TYPE_INTERLEAVED_POINT) {
     type_int -= 10000;
   }
 
-  switch (type_int) {
+  switch (type_int / 1000) {
     case 0:
       return GEOARROW_DIMENSIONS_XY;
-    case 1000:
+    case 1:
       return GEOARROW_DIMENSIONS_XYZ;
-    case 2000:
+    case 2:
       return GEOARROW_DIMENSIONS_XYM;
-    case 3000:
+    case 3:
       return GEOARROW_DIMENSIONS_XYZM;
     default:
       return GEOARROW_DIMENSIONS_UNKNOWN;
@@ -145,6 +137,9 @@ static inline enum GeoArrowType GeoArrowMakeType(enum GeoArrowGeometryType geome
   } else if (dimensions == GEOARROW_DIMENSIONS_UNKNOWN) {
     return GEOARROW_TYPE_UNINITIALIZED;
   } else if (coord_type == GEOARROW_COORD_TYPE_UNKNOWN) {
+    return GEOARROW_TYPE_UNINITIALIZED;
+  } else if (geometry_type == GEOARROW_GEOMETRY_TYPE_BOX &&
+             coord_type != GEOARROW_COORD_TYPE_SEPARATE) {
     return GEOARROW_TYPE_UNINITIALIZED;
   }
 

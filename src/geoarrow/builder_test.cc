@@ -90,6 +90,8 @@ TEST_P(TypeParameterizedTestFixture, BuilderTestEmpty) {
 INSTANTIATE_TEST_SUITE_P(
     BuilderTest, TypeParameterizedTestFixture,
     ::testing::Values(
+        GEOARROW_TYPE_BOX, GEOARROW_TYPE_BOX_Z, GEOARROW_TYPE_BOX_M, GEOARROW_TYPE_BOX_ZM,
+
         GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING, GEOARROW_TYPE_POLYGON,
         GEOARROW_TYPE_MULTIPOINT, GEOARROW_TYPE_MULTILINESTRING,
         GEOARROW_TYPE_MULTIPOLYGON,
@@ -839,6 +841,52 @@ INSTANTIATE_TEST_SUITE_P(
 
         // Comment to keep the last line on its own
         ));
+
+TEST(BuilderTest, BuilerTestSetBuffersBox) {
+  struct GeoArrowBuilder builder;
+  struct ArrowArray array_out;
+
+  // Build the array for [BOX (0 1 2 3), null, null]
+  std::vector<uint8_t> is_valid = {0b00000001};
+  std::vector<double> xmins = {0, 0, 0};
+  std::vector<double> ymins = {1, 0, 0};
+  std::vector<double> xmaxs = {2, 0, 0};
+  std::vector<double> ymaxs = {3, 0, 0};
+
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_BOX), GEOARROW_OK);
+
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 0, MakeBufferView(is_valid)),
+            GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 1, MakeBufferView(xmins)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 2, MakeBufferView(ymins)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 3, MakeBufferView(xmaxs)), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowBuilderAppendBuffer(&builder, 4, MakeBufferView(ymaxs)), GEOARROW_OK);
+
+  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowBuilderReset(&builder);
+
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.children[0]->length, 3);
+  EXPECT_EQ(array_out.children[1]->length, 3);
+  EXPECT_EQ(array_out.children[2]->length, 3);
+  EXPECT_EQ(array_out.children[3]->length, 3);
+
+  struct GeoArrowArrayView array_view;
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_BOX), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  WKXTester tester;
+  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
+            GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "POLYGON ((0 1, 2 1, 2 3, 0 3, 0 1))");
+  EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(values[2], "<null value>");
+
+  array_out.release(&array_out);
+}
 
 TEST(BuilderTest, BuilerTestSetBuffersPoint) {
   struct GeoArrowBuilder builder;
