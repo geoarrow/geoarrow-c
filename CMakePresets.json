@@ -9,7 +9,9 @@
         {
             "name": "default",
             "displayName": "Default Config",
-            "cacheVariables": {}
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
         },
         {
             "name": "default-with-tests",

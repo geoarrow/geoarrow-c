@@ -100,20 +100,19 @@ int64_t GeoArrowMetadataSerialize(const struct GeoArrowMetadataView* metadata_vi
 GeoArrowErrorCode GeoArrowSchemaSetMetadata(
     struct ArrowSchema* schema, const struct GeoArrowMetadataView* metadata_view);
 
-/// \brief Deprecated function used for backward compatibility with very early
-/// versions of geoarrow
-GeoArrowErrorCode GeoArrowSchemaSetMetadataDeprecated(
-    struct ArrowSchema* schema, const struct GeoArrowMetadataView* metadata_view);
-
 /// \brief Update extension metadata associated with an existing ArrowSchema
 /// based on the extension metadata of another
 GeoArrowErrorCode GeoArrowSchemaSetMetadataFrom(struct ArrowSchema* schema,
                                                 const struct ArrowSchema* schema_src);
 
+/// \brief Set a GeoArrowMetadatView with the Crs definition of OGC:CRS84,
+/// the most commonly used CRS definition for longitude/latitude.
+void GeoArrowMetadataSetLonLat(struct GeoArrowMetadataView* metadata_view);
+
 /// \brief Unescape a coordinate reference system value
 ///
 /// The crs member of the GeoArrowMetadataView is a view into the extension metadata;
-/// however, in some cases this will be a quoted string (i.e., `"EPSG:4326"`) and in
+/// however, in some cases this will be a quoted string (i.e., `"OGC:CRS84"`) and in
 /// others it will be a JSON object (i.e., PROJJSON like
 /// `{"some key": "some value", ..}`). When passing this string elsewhere, you will
 /// almost always want the quoted value to be unescaped (i.e., the JSON string value),

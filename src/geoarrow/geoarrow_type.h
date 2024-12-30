@@ -2,7 +2,6 @@
 #ifndef GEOARROW_GEOARROW_TYPES_H_INCLUDED
 #define GEOARROW_GEOARROW_TYPES_H_INCLUDED
 
-#include <stddef.h>
 #include <stdint.h>
 
 #include "geoarrow_config.h"
@@ -270,7 +269,10 @@ enum GeoArrowEdgeType { GEOARROW_EDGE_TYPE_PLANAR, GEOARROW_EDGE_TYPE_SPHERICAL 
 enum GeoArrowCrsType {
   GEOARROW_CRS_TYPE_NONE,
   GEOARROW_CRS_TYPE_UNKNOWN,
-  GEOARROW_CRS_TYPE_PROJJSON
+  GEOARROW_CRS_TYPE_PROJJSON,
+  GEOARROW_CRS_TYPE_WKT2_2019,
+  GEOARROW_CRS_TYPE_AUTHORITY_CODE,
+  GEOARROW_CRS_TYPE_SRID
 };
 
 /// \brief Parsed view of an ArrowSchema representation of a GeoArrowType
