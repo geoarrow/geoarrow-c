@@ -655,11 +655,10 @@ TEST(KernelTest, KernelTestBox) {
 
   EXPECT_EQ(GeoArrowKernelInit(&kernel, "box", nullptr), GEOARROW_OK);
   EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
-  EXPECT_STREQ(schema_out.format, "+s");
-  EXPECT_EQ(schema_out.n_children, 4);
-  for (int i = 0; i < schema_out.n_children; i++) {
-    EXPECT_STREQ(schema_out.children[i]->format, "g");
-  }
+
+  struct GeoArrowSchemaView schema_view;
+  ASSERT_EQ(GeoArrowSchemaViewInit(&schema_view, &schema_out, &error), GEOARROW_OK);
+  EXPECT_EQ(schema_view.type, GEOARROW_TYPE_BOX);
 
   EXPECT_EQ(kernel.push_batch(&kernel, &array_in, &array_out1, &error), GEOARROW_OK);
   EXPECT_EQ(kernel.finish(&kernel, nullptr, &error), GEOARROW_OK);
@@ -715,11 +714,10 @@ TEST(KernelTest, KernelTestBoxAgg) {
 
   EXPECT_EQ(GeoArrowKernelInit(&kernel, "box_agg", nullptr), GEOARROW_OK);
   EXPECT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
-  EXPECT_STREQ(schema_out.format, "+s");
-  EXPECT_EQ(schema_out.n_children, 4);
-  for (int i = 0; i < schema_out.n_children; i++) {
-    EXPECT_STREQ(schema_out.children[i]->format, "g");
-  }
+
+  struct GeoArrowSchemaView schema_view;
+  ASSERT_EQ(GeoArrowSchemaViewInit(&schema_view, &schema_out, &error), GEOARROW_OK);
+  EXPECT_EQ(schema_view.type, GEOARROW_TYPE_BOX);
 
   EXPECT_EQ(kernel.push_batch(&kernel, &array_in, nullptr, &error), GEOARROW_OK);
   EXPECT_EQ(kernel.finish(&kernel, &array_out1, &error), GEOARROW_OK);
@@ -744,4 +742,38 @@ TEST(KernelTest, KernelTestBoxAgg) {
   schema_out.release(&schema_out);
   array_in.release(&array_in);
   array_out1.release(&array_out1);
+}
+
+TEST(KernelTest, KernelTestBoxMetadata) {
+  struct GeoArrowKernel kernel;
+  struct GeoArrowError error;
+
+  struct ArrowSchema schema_in;
+  struct ArrowSchema schema_out;
+
+  struct GeoArrowMetadataView metadata_in{};
+  struct GeoArrowMetadataView metadata_out;
+
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&schema_in, GEOARROW_TYPE_WKT), GEOARROW_OK);
+  metadata_in.crs.data = "EPSG:1234";
+  metadata_in.crs.size_bytes = 9;
+  metadata_in.crs_type = GEOARROW_CRS_TYPE_UNKNOWN;
+  ASSERT_EQ(GeoArrowSchemaSetMetadata(&schema_in, &metadata_in), GEOARROW_OK);
+
+  ASSERT_EQ(GeoArrowKernelInit(&kernel, "box", nullptr), GEOARROW_OK);
+  ASSERT_EQ(kernel.start(&kernel, &schema_in, nullptr, &schema_out, &error), GEOARROW_OK);
+
+  struct GeoArrowSchemaView schema_view;
+  ASSERT_EQ(GeoArrowSchemaViewInit(&schema_view, &schema_out, &error), GEOARROW_OK);
+  EXPECT_EQ(schema_view.type, GEOARROW_TYPE_BOX);
+
+  ASSERT_EQ(
+      GeoArrowMetadataViewInit(&metadata_out, schema_view.extension_metadata, &error),
+      GEOARROW_OK);
+  ASSERT_EQ(std::string(metadata_out.crs.data, metadata_out.crs.size_bytes),
+            "\"EPSG:1234\"");
+
+  ArrowSchemaRelease(&schema_in);
+  ArrowSchemaRelease(&schema_out);
+  kernel.release(&kernel);
 }
