@@ -105,6 +105,10 @@ GeoArrowErrorCode GeoArrowSchemaSetMetadata(
 GeoArrowErrorCode GeoArrowSchemaSetMetadataFrom(struct ArrowSchema* schema,
                                                 const struct ArrowSchema* schema_src);
 
+/// \brief Set a GeoArrowMetadatView with the Crs definition of OGC:CRS84,
+/// the most commonly used CRS definition for longitude/latitude.
+void GeoArrowMetadataSetLonLat(struct GeoArrowMetadataView* metadata_view);
+
 /// \brief Unescape a coordinate reference system value
 ///
 /// The crs member of the GeoArrowMetadataView is a view into the extension metadata;

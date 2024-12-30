@@ -331,81 +331,159 @@ GeoArrowErrorCode GeoArrowMetadataViewInit(struct GeoArrowMetadataView* metadata
   return GeoArrowMetadataViewInitJSON(metadata_view, error);
 }
 
-static GeoArrowErrorCode GeoArrowMetadataSerializeInternal(
-    const struct GeoArrowMetadataView* metadata_view, struct ArrowBuffer* buffer) {
-  NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "{", 1));
+static int GeoArrowMetadataCrsNeedsEscape(struct GeoArrowStringView crs) {
+  return (crs.size_bytes == 0) || (*crs.data != '{' && *crs.data != '"');
+}
 
-  int needs_leading_comma = 0;
-  const char* spherical_edges_json = "\"edges\":\"spherical\"";
-  switch (metadata_view->edge_type) {
-    case GEOARROW_EDGE_TYPE_SPHERICAL:
-      NANOARROW_RETURN_NOT_OK(
-          ArrowBufferAppend(buffer, spherical_edges_json, strlen(spherical_edges_json)));
-      needs_leading_comma = 1;
-      break;
-    default:
-      break;
+static int64_t GeoArrowMetadataCalculateSerializedSize(
+    const struct GeoArrowMetadataView* metadata_view) {
+  const int64_t kSizeOuterBraces = 2;
+  const int64_t kSizeQuotes = 2;
+  const int64_t kSizeColon = 1;
+  const int64_t kSizeComma = 1;
+  const int64_t kSizeEdgesKey = 5 + kSizeQuotes + kSizeColon;
+  const int64_t kSizeCrsTypeKey = 8 + kSizeQuotes + kSizeColon;
+  const int64_t kSizeCrsKey = 3 + kSizeQuotes + kSizeColon;
+
+  int n_keys = 0;
+  int64_t size_out = 0;
+  size_out += kSizeOuterBraces;
+
+  if (metadata_view->edge_type != GEOARROW_EDGE_TYPE_PLANAR) {
+    n_keys += 1;
+    size_out += kSizeEdgesKey + kSizeQuotes +
+                strlen(GeoArrowEdgeTypeString(metadata_view->edge_type));
   }
 
-  if (metadata_view->crs_type != GEOARROW_CRS_TYPE_NONE && needs_leading_comma) {
-    NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, ",", 1));
+  if (metadata_view->crs_type != GEOARROW_CRS_TYPE_UNKNOWN &&
+      metadata_view->crs_type != GEOARROW_CRS_TYPE_NONE) {
+    n_keys += 1;
+    size_out += kSizeCrsTypeKey + kSizeQuotes +
+                strlen(GeoArrowCrsTypeString(metadata_view->crs_type));
   }
 
   if (metadata_view->crs_type != GEOARROW_CRS_TYPE_NONE) {
-    const char* crs_json_prefix = "\"crs\":";
-    NANOARROW_RETURN_NOT_OK(
-        ArrowBufferAppend(buffer, crs_json_prefix, strlen(crs_json_prefix)));
-  }
+    n_keys += 1;
+    size_out += kSizeCrsKey;
 
-  if (metadata_view->crs_type == GEOARROW_CRS_TYPE_PROJJSON) {
-    NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, metadata_view->crs.data,
-                                              metadata_view->crs.size_bytes));
-  } else if (metadata_view->crs_type == GEOARROW_CRS_TYPE_UNKNOWN) {
-    // Escape quotes in the string if the string does not start with '"'
-    if (metadata_view->crs.size_bytes > 0 && metadata_view->crs.data[0] == '\"') {
-      NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, metadata_view->crs.data,
-                                                metadata_view->crs.size_bytes));
-    } else {
-      NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\"", 1));
+    if (GeoArrowMetadataCrsNeedsEscape(metadata_view->crs)) {
+      size_out += kSizeQuotes + metadata_view->crs.size_bytes;
       for (int64_t i = 0; i < metadata_view->crs.size_bytes; i++) {
-        char c = metadata_view->crs.data[i];
-        if (c == '\"') {
-          NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\\", 1));
-        }
-        NANOARROW_RETURN_NOT_OK(ArrowBufferAppendInt8(buffer, c));
+        char val = metadata_view->crs.data[i];
+        size_out += val == '\\' || val == '"';
       }
-      NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "\"", 1));
+    } else {
+      size_out += metadata_view->crs.size_bytes;
     }
   }
 
-  NANOARROW_RETURN_NOT_OK(ArrowBufferAppend(buffer, "}", 1));
-  return GEOARROW_OK;
+  if (n_keys > 1) {
+    size_out += kSizeComma * (n_keys - 1);
+  }
+
+  return size_out;
+}
+
+static void GeoArrowWriteStringView(struct ArrowStringView sv, char** out) {
+  if (sv.size_bytes == 0) {
+    return;
+  }
+
+  memcpy(*out, sv.data, sv.size_bytes);
+  (*out) += sv.size_bytes;
+}
+
+static void GeoArrowWriteString(const char* value, char** out) {
+  GeoArrowWriteStringView(ArrowCharView(value), out);
+}
+
+static int64_t GeoArrowMetadataSerializeInternal(
+    const struct GeoArrowMetadataView* metadata_view, char* out) {
+  const struct ArrowStringView kEdgesKey = ArrowCharView("\"edges\":");
+  const struct ArrowStringView kCrsTypeKey = ArrowCharView("\"crs_type\":");
+  const struct ArrowStringView kCrsKey = ArrowCharView("\"crs\":");
+
+  char* out_initial = out;
+  int n_keys = 0;
+
+  *out++ = '{';
+
+  if (metadata_view->edge_type != GEOARROW_EDGE_TYPE_PLANAR) {
+    n_keys += 1;
+    GeoArrowWriteStringView(kEdgesKey, &out);
+    *out++ = '"';
+    GeoArrowWriteString(GeoArrowEdgeTypeString(metadata_view->edge_type), &out);
+    *out++ = '"';
+  }
+
+  if (metadata_view->crs_type != GEOARROW_CRS_TYPE_UNKNOWN &&
+      metadata_view->crs_type != GEOARROW_CRS_TYPE_NONE) {
+    if (n_keys > 0) {
+      *out++ = ',';
+    }
+
+    n_keys += 1;
+    GeoArrowWriteStringView(kCrsTypeKey, &out);
+    *out++ = '"';
+    GeoArrowWriteString(GeoArrowCrsTypeString(metadata_view->crs_type), &out);
+    *out++ = '"';
+  }
+
+  if (metadata_view->crs_type != GEOARROW_CRS_TYPE_NONE) {
+    if (n_keys > 0) {
+      *out++ = ',';
+    }
+
+    n_keys += 1;
+    GeoArrowWriteStringView(kCrsKey, &out);
+
+    if (GeoArrowMetadataCrsNeedsEscape(metadata_view->crs)) {
+      *out++ = '"';
+      for (int64_t i = 0; i < metadata_view->crs.size_bytes; i++) {
+        char val = metadata_view->crs.data[i];
+        if (val == '"') {
+          *out++ = '\\';
+        }
+
+        *out++ = val;
+      }
+      *out++ = '"';
+    } else {
+      struct ArrowStringView sv;
+      sv.data = metadata_view->crs.data;
+      sv.size_bytes = metadata_view->crs.size_bytes;
+      GeoArrowWriteStringView(sv, &out);
+    }
+  }
+
+  *out++ = '}';
+  return out - out_initial;
 }
 
 static GeoArrowErrorCode GeoArrowSchemaSetMetadataInternal(
     struct ArrowSchema* schema, const struct GeoArrowMetadataView* metadata_view) {
-  struct ArrowBuffer buffer;
-  ArrowBufferInit(&buffer);
-
-  int result = GeoArrowMetadataSerializeInternal(metadata_view, &buffer);
-  if (result != GEOARROW_OK) {
-    ArrowBufferReset(&buffer);
-    return result;
+  int64_t metadata_size = GeoArrowMetadataCalculateSerializedSize(metadata_view);
+  char* metadata = (char*)ArrowMalloc(metadata_size);
+  if (metadata == NULL) {
+    return ENOMEM;
   }
 
+  int64_t chars_written = GeoArrowMetadataSerializeInternal(metadata_view, metadata);
+  NANOARROW_DCHECK(chars_written == metadata_size);
+
   struct ArrowBuffer existing_buffer;
-  result = ArrowMetadataBuilderInit(&existing_buffer, schema->metadata);
+  int result = ArrowMetadataBuilderInit(&existing_buffer, schema->metadata);
   if (result != GEOARROW_OK) {
-    ArrowBufferReset(&buffer);
+    ArrowFree(metadata);
     return result;
   }
 
   struct ArrowStringView value;
-  value.data = (const char*)buffer.data;
-  value.size_bytes = buffer.size_bytes;
+  value.data = metadata;
+  value.size_bytes = metadata_size;
   result = ArrowMetadataBuilderSet(&existing_buffer,
                                    ArrowCharView("ARROW:extension:metadata"), value);
-  ArrowBufferReset(&buffer);
+  ArrowFree(metadata);
   if (result != GEOARROW_OK) {
     ArrowBufferReset(&existing_buffer);
     return result;
@@ -418,38 +496,18 @@ static GeoArrowErrorCode GeoArrowSchemaSetMetadataInternal(
 
 int64_t GeoArrowMetadataSerialize(const struct GeoArrowMetadataView* metadata_view,
                                   char* out, int64_t n) {
-  struct ArrowBuffer buffer;
-  ArrowBufferInit(&buffer);
-  int result = ArrowBufferReserve(&buffer, n);
-  if (result != GEOARROW_OK) {
-    ArrowBufferReset(&buffer);
-    return -1;
+  int64_t metadata_size = GeoArrowMetadataCalculateSerializedSize(metadata_view);
+  if (metadata_size <= n) {
+    int64_t chars_written = GeoArrowMetadataSerializeInternal(metadata_view, out);
+    NANOARROW_DCHECK(chars_written == metadata_size);
   }
 
-  result = GeoArrowMetadataSerializeInternal(metadata_view, &buffer);
-  if (result != GEOARROW_OK) {
-    ArrowBufferReset(&buffer);
-    return -1;
+  // If there is room, write the null terminator
+  if (metadata_size < n) {
+    out[metadata_size] = '\0';
   }
 
-  int64_t size_needed = buffer.size_bytes;
-  int64_t n_copy;
-  if (n >= size_needed) {
-    n_copy = size_needed;
-  } else {
-    n_copy = n;
-  }
-
-  if (n_copy > 0) {
-    memcpy(out, buffer.data, n_copy);
-  }
-
-  if (n > size_needed) {
-    out[size_needed] = '\0';
-  }
-
-  ArrowBufferReset(&buffer);
-  return size_needed;
+  return metadata_size;
 }
 
 GeoArrowErrorCode GeoArrowSchemaSetMetadata(
@@ -517,4 +575,39 @@ int64_t GeoArrowUnescapeCrs(struct GeoArrowStringView crs, char* out, int64_t n)
   }
 
   return out_i;
+}
+
+static const char* kCrsWgs84 =
+    "{\"type\":\"GeographicCRS\",\"name\":\"WGS 84 "
+    "(CRS84)\",\"datum_ensemble\":{\"name\":\"World Geodetic System 1984 "
+    "ensemble\",\"members\":[{\"name\":\"World Geodetic System 1984 "
+    "(Transit)\",\"id\":{\"authority\":\"EPSG\",\"code\":1166}},{\"name\":\"World "
+    "Geodetic System 1984 "
+    "(G730)\",\"id\":{\"authority\":\"EPSG\",\"code\":1152}},{\"name\":\"World Geodetic "
+    "System 1984 "
+    "(G873)\",\"id\":{\"authority\":\"EPSG\",\"code\":1153}},{\"name\":\"World Geodetic "
+    "System 1984 "
+    "(G1150)\",\"id\":{\"authority\":\"EPSG\",\"code\":1154}},{\"name\":\"World Geodetic "
+    "System 1984 "
+    "(G1674)\",\"id\":{\"authority\":\"EPSG\",\"code\":1155}},{\"name\":\"World Geodetic "
+    "System 1984 "
+    "(G1762)\",\"id\":{\"authority\":\"EPSG\",\"code\":1156}},{\"name\":\"World Geodetic "
+    "System 1984 "
+    "(G2139)\",\"id\":{\"authority\":\"EPSG\",\"code\":1309}}],\"ellipsoid\":{\"name\":"
+    "\"WGS "
+    "84\",\"semi_major_axis\":6378137,\"inverse_flattening\":298.257223563},\"accuracy\":"
+    "\"2.0\",\"id\":{\"authority\":\"EPSG\",\"code\":6326}},\"coordinate_system\":{"
+    "\"subtype\":\"ellipsoidal\",\"axis\":[{\"name\":\"Geodetic "
+    "longitude\",\"abbreviation\":\"Lon\",\"direction\":\"east\",\"unit\":\"degree\"},{"
+    "\"name\":\"Geodetic "
+    "latitude\",\"abbreviation\":\"Lat\",\"direction\":\"north\",\"unit\":\"degree\"}]},"
+    "\"scope\":\"Not "
+    "known.\",\"area\":\"World.\",\"bbox\":{\"south_latitude\":-90,\"west_longitude\":-"
+    "180,\"north_latitude\":90,\"east_longitude\":180},\"id\":{\"authority\":\"OGC\","
+    "\"code\":\"CRS84\"}}";
+
+void GeoArrowMetadataSetLonLat(struct GeoArrowMetadataView* metadata_view) {
+  metadata_view->crs.data = kCrsWgs84;
+  metadata_view->crs.size_bytes = strlen(kCrsWgs84);
+  metadata_view->crs_type = GEOARROW_CRS_TYPE_PROJJSON;
 }
