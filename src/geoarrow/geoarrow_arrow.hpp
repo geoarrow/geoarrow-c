@@ -32,7 +32,7 @@ class VectorExtensionType : public arrow::ExtensionType {
     auto maybe_arrow_type = arrow::ImportType(&schema);
     ARROW_RETURN_NOT_OK(maybe_arrow_type);
 
-    auto geoarrow_type = VectorType::Make(type, metadata);
+    auto geoarrow_type = GeometryDataType::Make(type, metadata);
     if (!geoarrow_type.valid()) {
       return arrow::Status::Invalid(geoarrow_type.error());
     }
@@ -79,7 +79,8 @@ class VectorExtensionType : public arrow::ExtensionType {
     struct GeoArrowError error;
     ARROW_RETURN_NOT_OK(ExportType(*storage_type, &schema));
 
-    auto geoarrow_type = VectorType::Make(&schema, extension_name_, serialized_data);
+    auto geoarrow_type =
+        GeometryDataType::Make(&schema, extension_name_, serialized_data);
     if (!geoarrow_type.valid()) {
       return arrow::Status::Invalid(geoarrow_type.error());
     }
@@ -90,7 +91,7 @@ class VectorExtensionType : public arrow::ExtensionType {
 
   std::string Serialize() const override { return type_.extension_metadata(); }
 
-  const VectorType& GeoArrowType() const { return type_; }
+  const GeometryDataType& GeoArrowType() const { return type_; }
 
   arrow::Result<std::shared_ptr<VectorExtensionType>> WithGeometryType(
       enum GeoArrowGeometryType geometry_type) {
@@ -123,11 +124,11 @@ class VectorExtensionType : public arrow::ExtensionType {
   }
 
  private:
-  VectorType type_;
+  GeometryDataType type_;
   std::string extension_name_;
 
   VectorExtensionType(const std::shared_ptr<arrow::DataType>& storage_type,
-                      const VectorType& type)
+                      const GeometryDataType& type)
       : arrow::ExtensionType(storage_type),
         type_(type),
         extension_name_(type.extension_name()) {}
