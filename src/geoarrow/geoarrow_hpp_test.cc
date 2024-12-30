@@ -3,7 +3,7 @@
 
 #include <geoarrow.hpp>
 
-TEST(GeoArrowHppTest, GeoArrowHppTestGeometryDataTypeMakeType) {
+TEST(GeoArrowHppTest, GeometryDataTypeMakeType) {
   auto type = geoarrow::GeometryDataType::Make(GEOARROW_TYPE_MULTIPOINT);
   ASSERT_TRUE(type.valid());
   EXPECT_EQ(type.extension_name(), "geoarrow.multipoint");
@@ -17,7 +17,7 @@ TEST(GeoArrowHppTest, GeoArrowHppTestGeometryDataTypeMakeType) {
   EXPECT_EQ(type.crs(), "");
 }
 
-TEST(GeoArrowHppTest, GeoArrowHppTestGeometryDataTypeModify) {
+TEST(GeoArrowHppTest, GeometryDataTypeModify) {
   auto type = geoarrow::GeometryDataType::Make(GEOARROW_TYPE_MULTIPOINT);
   ASSERT_TRUE(type.valid());
 
@@ -58,7 +58,7 @@ TEST(GeoArrowHppTest, GeoArrowHppTestGeometryDataTypeModify) {
   EXPECT_EQ(new_type.edge_type(), GEOARROW_EDGE_TYPE_PLANAR);
 }
 
-TEST(GeoArrowHppTest, GeoArrowHppTestGeometryDataTypeModifyBox) {
+TEST(GeoArrowHppTest, GeometryDataTypeModifyBox) {
   EXPECT_EQ(geoarrow::Box().XYZ().id(), GEOARROW_TYPE_BOX_Z);
   EXPECT_EQ(geoarrow::Box().XYM().id(), GEOARROW_TYPE_BOX_M);
   EXPECT_EQ(geoarrow::Box().XYZM().id(), GEOARROW_TYPE_BOX_ZM);
@@ -67,35 +67,35 @@ TEST(GeoArrowHppTest, GeoArrowHppTestGeometryDataTypeModifyBox) {
   EXPECT_FALSE(geoarrow::Box().WithCoordType(GEOARROW_COORD_TYPE_INTERLEAVED).valid());
 }
 
-TEST(GeoArrowHppTest, GeoArrowHppTestGeometryDataTypeModifyXYZM) {
+TEST(GeoArrowHppTest, GeometryDataTypeModifyXYZM) {
   EXPECT_EQ(geoarrow::Point().XYZ().id(), GEOARROW_TYPE_POINT_Z);
   EXPECT_EQ(geoarrow::Point().XYM().id(), GEOARROW_TYPE_POINT_M);
   EXPECT_EQ(geoarrow::Point().XYZM().id(), GEOARROW_TYPE_POINT_ZM);
   EXPECT_EQ(geoarrow::Point().XYZ().XY().id(), GEOARROW_TYPE_POINT);
 }
 
-TEST(GeoArrowHppTest, GeoArrowHppTestGeometryDataTypeModifyMultipoint) {
+TEST(GeoArrowHppTest, GeometryDataTypeModifyMultipoint) {
   EXPECT_EQ(geoarrow::Point().Multi().id(), GEOARROW_TYPE_MULTIPOINT);
   EXPECT_EQ(geoarrow::Point().Multi().Multi().id(), GEOARROW_TYPE_MULTIPOINT);
   EXPECT_EQ(geoarrow::Point().Simple().id(), GEOARROW_TYPE_POINT);
   EXPECT_EQ(geoarrow::Point().Multi().Simple().id(), GEOARROW_TYPE_POINT);
 }
 
-TEST(GeoArrowHppTest, GeoArrowHppTestGeometryDataTypeModifyMultilinestring) {
+TEST(GeoArrowHppTest, GeometryDataTypeModifyMultilinestring) {
   EXPECT_EQ(geoarrow::Linestring().Multi().id(), GEOARROW_TYPE_MULTILINESTRING);
   EXPECT_EQ(geoarrow::Linestring().Multi().Multi().id(), GEOARROW_TYPE_MULTILINESTRING);
   EXPECT_EQ(geoarrow::Linestring().Simple().id(), GEOARROW_TYPE_LINESTRING);
   EXPECT_EQ(geoarrow::Linestring().Multi().Simple().id(), GEOARROW_TYPE_LINESTRING);
 }
 
-TEST(GeoArrowHppTest, GeoArrowHppTestGeometryDataTypeModifyMultipolygon) {
+TEST(GeoArrowHppTest, GeometryDataTypeModifyMultipolygon) {
   EXPECT_EQ(geoarrow::Polygon().Multi().id(), GEOARROW_TYPE_MULTIPOLYGON);
   EXPECT_EQ(geoarrow::Polygon().Multi().Multi().id(), GEOARROW_TYPE_MULTIPOLYGON);
   EXPECT_EQ(geoarrow::Polygon().Simple().id(), GEOARROW_TYPE_POLYGON);
   EXPECT_EQ(geoarrow::Polygon().Multi().Simple().id(), GEOARROW_TYPE_POLYGON);
 }
 
-TEST(GeoArrowHppTest, GeoArrowHppTestTypeConstructors) {
+TEST(GeoArrowHppTest, TypeConstructors) {
   EXPECT_EQ(geoarrow::Wkb().id(), GEOARROW_TYPE_WKB);
   EXPECT_EQ(geoarrow::Wkt().id(), GEOARROW_TYPE_WKT);
   EXPECT_EQ(geoarrow::Point().id(), GEOARROW_TYPE_POINT);
@@ -103,7 +103,7 @@ TEST(GeoArrowHppTest, GeoArrowHppTestTypeConstructors) {
   EXPECT_EQ(geoarrow::Polygon().id(), GEOARROW_TYPE_POLYGON);
 }
 
-TEST(GeoArrowHppTest, GeoArrowHppTestModifyInvalid) {
+TEST(GeoArrowHppTest, ModifyInvalid) {
   auto invalid = geoarrow::GeometryDataType::Invalid();
   EXPECT_FALSE(invalid.WithGeometryType(GEOARROW_GEOMETRY_TYPE_GEOMETRY).valid());
   EXPECT_FALSE(invalid.WithDimensions(GEOARROW_DIMENSIONS_XY).valid());
@@ -111,7 +111,7 @@ TEST(GeoArrowHppTest, GeoArrowHppTestModifyInvalid) {
   EXPECT_FALSE(invalid.WithCrs("abcd1234").valid());
 }
 
-TEST(GeoArrowHppTest, GeoArrowHppTestVectorArray) {
+TEST(GeoArrowHppTest, VectorArray) {
   geoarrow::VectorArray array(geoarrow::GeometryDataType::Invalid("some message"));
   EXPECT_FALSE(array.valid());
   EXPECT_EQ(array.error(), "some message");
@@ -122,7 +122,7 @@ TEST(GeoArrowHppTest, GeoArrowHppTestVectorArray) {
   EXPECT_EQ(array2.error(), "VectorArray is released");
 }
 
-TEST(GeoArrowHppTest, GeoArrowHppTestArrayFromVectors) {
+TEST(GeoArrowHppTest, ArrayFromVectors) {
   auto array =
       geoarrow::ArrayFromVectors(geoarrow::Point(), {{1, 2, 3, 4}, {5, 6, 7, 8}});
 
