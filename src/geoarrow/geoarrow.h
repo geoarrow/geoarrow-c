@@ -112,7 +112,7 @@ void GeoArrowMetadataSetLonLat(struct GeoArrowMetadataView* metadata_view);
 /// \brief Unescape a coordinate reference system value
 ///
 /// The crs member of the GeoArrowMetadataView is a view into the extension metadata;
-/// however, in some cases this will be a quoted string (i.e., `"EPSG:4326"`) and in
+/// however, in some cases this will be a quoted string (i.e., `"OGC:CRS84"`) and in
 /// others it will be a JSON object (i.e., PROJJSON like
 /// `{"some key": "some value", ..}`). When passing this string elsewhere, you will
 /// almost always want the quoted value to be unescaped (i.e., the JSON string value),
