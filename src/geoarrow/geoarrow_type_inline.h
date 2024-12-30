@@ -78,6 +78,40 @@ static inline const char* GeoArrowExtensionNameFromType(enum GeoArrowType type) 
   }
 }
 
+/// \brief Returns a string representation of a GeoArrowEdgeType
+/// \ingroup geoarrow-schema
+static inline const char* GeoArrowEdgeTypeString(enum GeoArrowEdgeType edge_type) {
+  switch (edge_type) {
+    case GEOARROW_EDGE_TYPE_PLANAR:
+      return "planar";
+    case GEOARROW_EDGE_TYPE_SPHERICAL:
+      return "spherical";
+    default:
+      return "";
+  }
+}
+
+/// \brief Returns a string representation of a GeoArrowCrsType
+/// \ingroup geoarrow-schema
+static inline const char* GeoArrowCrsTypeString(enum GeoArrowCrsType crs_type) {
+  switch (crs_type) {
+    case GEOARROW_CRS_TYPE_NONE:
+      return "none";
+    case GEOARROW_CRS_TYPE_UNKNOWN:
+      return "unknown";
+    case GEOARROW_CRS_TYPE_PROJJSON:
+      return "projjson";
+    case GEOARROW_CRS_TYPE_WKT2_2019:
+      return "wkt2:2019";
+    case GEOARROW_CRS_TYPE_AUTHORITY_CODE:
+      return "authority_code";
+    case GEOARROW_CRS_TYPE_SRID:
+      return "srid";
+    default:
+      return "";
+  }
+}
+
 /// \brief Extract GeoArrowDimensions from a GeoArrowType
 /// \ingroup geoarrow-schema
 static inline enum GeoArrowDimensions GeoArrowDimensionsFromType(enum GeoArrowType type) {
