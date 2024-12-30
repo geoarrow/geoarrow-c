@@ -71,18 +71,34 @@ TEST(MetadataTest, MetadataTestReadJSONParsing) {
   EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), EINVAL);
 }
 
+void TestValidJSONMetadata(const std::string& json, enum GeoArrowEdgeType edge_type,
+                           enum GeoArrowCrsType crs_type, const std::string& crs) {
+  struct GeoArrowError error {};
+  struct GeoArrowMetadataView metadata_view {};
+
+  struct GeoArrowStringView metadata;
+  metadata.data = json.data();
+  metadata.size_bytes = static_cast<int64_t>(json.size());
+
+  ASSERT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK)
+      << error.message;
+  EXPECT_EQ(metadata_view.edge_type, edge_type);
+  EXPECT_EQ(metadata_view.crs_type, crs_type);
+  EXPECT_EQ(std::string(metadata_view.crs.data, metadata_view.crs.size_bytes), crs);
+}
+
 TEST(MetadataTest, MetadataTestReadJSON) {
   struct GeoArrowError error;
   struct GeoArrowMetadataView metadata_view;
   struct GeoArrowStringView metadata;
 
-  const char* json_crs_projjson = "{\"edges\":\"spherical\",\"crs\":{}}";
-  metadata.data = json_crs_projjson;
-  metadata.size_bytes = strlen(json_crs_projjson);
+  const char* json_crs_spherical = "{\"edges\":\"spherical\",\"crs\":{}}";
+  metadata.data = json_crs_spherical;
+  metadata.size_bytes = strlen(json_crs_spherical);
 
   EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK);
   EXPECT_EQ(metadata_view.edge_type, GEOARROW_EDGE_TYPE_SPHERICAL);
-  EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_PROJJSON);
+  EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_UNKNOWN);
   EXPECT_EQ(std::string(metadata_view.crs.data, metadata_view.crs.size_bytes), "{}");
 
   const char* json_crs_unknown = "{\"crs\":\"a string\"}";
@@ -95,7 +111,36 @@ TEST(MetadataTest, MetadataTestReadJSON) {
   EXPECT_EQ(std::string(metadata_view.crs.data, metadata_view.crs.size_bytes),
             "\"a string\"");
 
+  const char* json_crs_projjson = R"({"crs": {}, "crs_type": "projjson"})";
+  metadata.data = json_crs_projjson;
+  metadata.size_bytes = strlen(json_crs_projjson);
+
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK);
+  EXPECT_EQ(metadata_view.edge_type, GEOARROW_EDGE_TYPE_PLANAR);
+  EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_PROJJSON);
+  EXPECT_EQ(std::string(metadata_view.crs.data, metadata_view.crs.size_bytes), "{}");
+
+  const char* json_crs_wkt2 = R"({"crs": {}, "crs_type": "wkt2:2019"})";
+  metadata.data = json_crs_wkt2;
+  metadata.size_bytes = strlen(json_crs_wkt2);
+
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK);
+  EXPECT_EQ(metadata_view.edge_type, GEOARROW_EDGE_TYPE_PLANAR);
+  EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_WKT2_2019);
+  EXPECT_EQ(std::string(metadata_view.crs.data, metadata_view.crs.size_bytes), "{}");
+
   const char* json_crs_none = "{\"crs\":null}";
+  metadata.data = json_crs_none;
+  metadata.size_bytes = strlen(json_crs_none);
+
+  EXPECT_EQ(GeoArrowMetadataViewInit(&metadata_view, metadata, &error), GEOARROW_OK);
+  EXPECT_EQ(metadata_view.edge_type, GEOARROW_EDGE_TYPE_PLANAR);
+  EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_NONE);
+  EXPECT_EQ(metadata_view.crs.size_bytes, 0);
+
+  // If the crs_type was specified but the crs was unset, we should still get
+  // CRS_TYPE_NONE.
+  const char* json_crs_none_with_type = R"({"crs":null, "crs_type": "projjson"})";
   metadata.data = json_crs_none;
   metadata.size_bytes = strlen(json_crs_none);
 

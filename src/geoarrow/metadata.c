@@ -227,16 +227,40 @@ static GeoArrowErrorCode ParseJSONMetadata(struct GeoArrowMetadataView* metadata
       }
     } else if (k.size_bytes == 5 && strncmp(k.data, "\"crs\"", 5) == 0) {
       if (v.data[0] == '{') {
-        metadata_view->crs_type = GEOARROW_CRS_TYPE_PROJJSON;
         metadata_view->crs.data = v.data;
         metadata_view->crs.size_bytes = v.size_bytes;
+        if (metadata_view->crs_type == GEOARROW_CRS_TYPE_NONE) {
+          metadata_view->crs_type = GEOARROW_CRS_TYPE_UNKNOWN;
+        }
       } else if (v.data[0] == '\"') {
-        metadata_view->crs_type = GEOARROW_CRS_TYPE_UNKNOWN;
         metadata_view->crs.data = v.data;
         metadata_view->crs.size_bytes = v.size_bytes;
+        if (metadata_view->crs_type == GEOARROW_CRS_TYPE_NONE) {
+          metadata_view->crs_type = GEOARROW_CRS_TYPE_UNKNOWN;
+        }
       } else if (v.data[0] == 'n') {
+        // A null explicitly un-sets the CRS
         metadata_view->crs_type = GEOARROW_CRS_TYPE_NONE;
       } else {
+        // Reject an unknown JSON type
+        return EINVAL;
+      }
+    } else if (k.size_bytes == 10 && strncmp(k.data, "\"crs_type\"", 10) == 0) {
+      if (v.data[0] == '\"') {
+        if (v.size_bytes == 10 && strncmp(k.data, "\"projjson\"", 10)) {
+          metadata_view->crs_type = GEOARROW_CRS_TYPE_PROJJSON;
+        } else if (v.size_bytes == 11 && strncmp(k.data, "\"wkt2:2019\"", 11)) {
+          metadata_view->crs_type = GEOARROW_CRS_TYPE_WKT2_2019;
+        } else if (v.size_bytes == 16 && strncmp(k.data, "\"authority_code\"", 16)) {
+          metadata_view->crs_type = GEOARROW_CRS_TYPE_AUTHORITY_CODE;
+        } else if (v.size_bytes == 6 && strncmp(k.data, "\"srid\"", 6)) {
+          metadata_view->crs_type = GEOARROW_CRS_TYPE_SRID;
+        } else {
+          // Accept unrecognized string values but ignore them
+          metadata_view->crs_type = GEOARROW_CRS_TYPE_UNKNOWN;
+        }
+      } else {
+        // Reject values that are not a string
         return EINVAL;
       }
     }
@@ -279,6 +303,13 @@ static GeoArrowErrorCode GeoArrowMetadataViewInitJSON(
         "Expected JSON object with no trailing characters but found trailing '%.*s'",
         (int)s.size_bytes, s.data);
     return EINVAL;
+  }
+
+  // Do one final canonicalization: it is possible that the crs_type was set
+  // but the crs was not. If this is the case, we need to unset the crs_type to
+  // NONE.
+  if (metadata_view->crs.size_bytes == 0) {
+    metadata_view->crs_type = GEOARROW_CRS_TYPE_NONE;
   }
 
   return GEOARROW_OK;
