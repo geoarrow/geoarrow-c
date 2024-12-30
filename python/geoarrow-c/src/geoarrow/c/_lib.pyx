@@ -125,6 +125,9 @@ cdef extern from "geoarrow_type.h":
         GEOARROW_CRS_TYPE_NONE
         GEOARROW_CRS_TYPE_UNKNOWN
         GEOARROW_CRS_TYPE_PROJJSON
+        GEOARROW_CRS_TYPE_WKT2_2019
+        GEOARROW_CRS_TYPE_AUTHORITY_CODE
+        GEOARROW_CRS_TYPE_SRID
 
     struct GeoArrowError:
         char message[1024]

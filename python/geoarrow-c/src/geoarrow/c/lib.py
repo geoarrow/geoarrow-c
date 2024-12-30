@@ -119,3 +119,9 @@ class CrsType:
     UNKNOWN = _lib.GEOARROW_CRS_TYPE_UNKNOWN
     #: The CRS value is a PROJJSON-encoded string
     PROJJSON = _lib.GEOARROW_CRS_TYPE_PROJJSON
+    #: The CRS value is a WKT:2019-encoded string
+    WKT2_2019 = _lib.GEOARROW_CRS_TYPE_WKT2_2019
+    #: The CRS value is a authority:code-encoded string
+    AUTHORITY_CODE = _lib.GEOARROW_CRS_TYPE_AUTHORITY_CODE
+    #: The CRS value is an opaque producer-defined identifier
+    SRID = _lib.GEOARROW_CRS_TYPE_SRID
