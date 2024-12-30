@@ -22,7 +22,7 @@ struct BuilderPrivate {
   // Depending on what exactly is being built, these pointers
   // might be NULL.
   struct ArrowBitmap* validity;
-  struct ArrowBuffer* buffers[8];
+  struct ArrowBuffer* buffers[9];
 
   // Fields to keep track of state when using the visitor pattern
   int visitor_initialized;
@@ -389,6 +389,7 @@ static void GeoArrowSetArrayLengthFromBufferLength(struct GeoArrowSchemaView* sc
 
   int coord_level;
   switch (schema_view->geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_BOX:
     case GEOARROW_GEOMETRY_TYPE_POINT:
       coord_level = 0;
       break;
@@ -448,6 +449,7 @@ static void GeoArrowSetCoordContainerLength(struct GeoArrowBuilder* builder) {
   }
 
   switch (builder->view.schema_view.geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_BOX:
     case GEOARROW_GEOMETRY_TYPE_POINT:
       private
       ->array.length = private->array.children[0]->length / scale;
