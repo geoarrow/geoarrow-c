@@ -258,6 +258,24 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidBox) {
   array.release(&array);
 }
 
+TEST(ArrayViewTest, ArrayViewTestSetArrayValidBoxNonXY) {
+  struct ArrowSchema schema;
+  struct ArrowArray array;
+  struct GeoArrowError error;
+
+  ASSERT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_BOX_Z), GEOARROW_OK);
+  struct GeoArrowArrayView array_view;
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_BOX_Z), GEOARROW_OK);
+
+  struct GeoArrowVisitor v;
+  GeoArrowVisitorInitVoid(&v);
+  v.error = &error;
+  ASSERT_EQ(GeoArrowArrayViewVisit(&array_view, 0, 0, &v), ENOTSUP);
+  ASSERT_STREQ(error.message, "Can't visit box with non-XY dimensions");
+
+  ArrowSchemaRelease(&schema);
+}
+
 TEST(ArrayViewTest, ArrayViewTestSetArrayValidPoint) {
   struct ArrowSchema schema;
   struct ArrowArray array;

@@ -220,6 +220,13 @@ TEST(SchemaViewTest, SchemaViewTestInitInvalidBox) {
       "Expected box child 0 name to match name for dimension 'xmin' but got 'jmax'");
   ArrowSchemaRelease(&bad_schema);
 
+  // Column with invalid storage type
+  ASSERT_EQ(ArrowSchemaDeepCopy(&good_schema, &bad_schema), GEOARROW_OK);
+  ASSERT_EQ(ArrowSchemaSetFormat(bad_schema.children[0], "f"), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowSchemaViewInit(&schema_view, &bad_schema, &error), EINVAL);
+  EXPECT_STREQ(error.message, "Expected box child 0 to have storage type of double");
+  ArrowSchemaRelease(&bad_schema);
+
   ArrowSchemaRelease(&good_schema);
 }
 
