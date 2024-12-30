@@ -38,6 +38,8 @@ class GeometryType:
     MULTIPOLYGON = _lib.GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON
     #: Geometrycollection geometry type
     GEOMETRYCOLLECTION = _lib.GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION
+    #: Box geometry type
+    BOX = _lib.GEOARROW_GEOMETRY_TYPE_BOX
 
 
 class Dimensions:
