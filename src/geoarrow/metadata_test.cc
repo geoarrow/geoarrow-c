@@ -305,3 +305,23 @@ TEST(MetadataTest, MetadataTestUnescapeCRS) {
   EXPECT_EQ(std::string(out, strlen(crs_quoted_unescaped)), crs_quoted_unescaped);
   EXPECT_EQ(out[strlen(crs_quoted_unescaped)], '\0');
 }
+
+TEST(MetadataTest, MetadataTestCRSLonLat) {
+  struct GeoArrowMetadataView metadata_view {};
+  GeoArrowMetadataSetLonLat(&metadata_view);
+  EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_PROJJSON);
+  ASSERT_EQ(metadata_view.crs.size_bytes, 1255);
+
+  int64_t metadata_size = GeoArrowMetadataSerialize(&metadata_view, nullptr, 0);
+  std::vector<char> metadata(metadata_size);
+  GeoArrowMetadataSerialize(&metadata_view, metadata.data(), metadata_size);
+
+  // Make sure we can serialize + deserialize a big complex nested CRS value
+  struct GeoArrowMetadataView metadata_view2 {};
+  ASSERT_EQ(GeoArrowMetadataViewInit(
+                &metadata_view2, {metadata.data(), static_cast<int64_t>(metadata.size())},
+                nullptr),
+            GEOARROW_OK);
+  ASSERT_EQ(std::string(metadata_view2.crs.data, metadata_view2.crs.size_bytes),
+            std::string(metadata_view.crs.data, metadata_view.crs.size_bytes));
+}
