@@ -138,6 +138,9 @@ static inline enum GeoArrowType GeoArrowMakeType(enum GeoArrowGeometryType geome
     return GEOARROW_TYPE_UNINITIALIZED;
   } else if (coord_type == GEOARROW_COORD_TYPE_UNKNOWN) {
     return GEOARROW_TYPE_UNINITIALIZED;
+  } else if (geometry_type == GEOARROW_GEOMETRY_TYPE_BOX &&
+             coord_type != GEOARROW_COORD_TYPE_SEPARATE) {
+    return GEOARROW_TYPE_UNINITIALIZED;
   }
 
   int type_int = (dimensions - 1) * 1000 + (coord_type - 1) * 10000 + geometry_type;
