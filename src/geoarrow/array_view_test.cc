@@ -117,9 +117,29 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayErrors) {
   struct GeoArrowArrayView array_view;
   struct GeoArrowError error;
   struct ArrowArray array;
+  struct ArrowArray dummy_childx;
+  struct ArrowArray* children[] = {&dummy_childx, &dummy_childx, &dummy_childx,
+                                   &dummy_childx};
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_BOX), GEOARROW_OK);
+  array.offset = 0;
+  array.n_children = 1;
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Unexpected number of children for box array struct in "
+               "GeoArrowArrayViewSetArray()");
+
+  array.n_children = 4;
+  array.children = reinterpret_cast<struct ArrowArray**>(children);
+  dummy_childx.n_buffers = 1;
+  EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
+  EXPECT_STREQ(error.message,
+               "Unexpected number of buffers for box array child in "
+               "GeoArrowArrayViewSetArray()");
 
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT), GEOARROW_OK);
-
+  array.n_children = 0;
+  array.children = nullptr;
   array.offset = 0;
   array.n_children = 1;
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, &error), EINVAL);
@@ -127,9 +147,6 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayErrors) {
                "Unexpected number of children for struct coordinate array in "
                "GeoArrowArrayViewSetArray()");
 
-  struct ArrowArray dummy_childx;
-  struct ArrowArray dummy_childy;
-  struct ArrowArray* children[] = {&dummy_childx, &dummy_childy};
   array.n_children = 2;
   array.children = reinterpret_cast<struct ArrowArray**>(children);
   dummy_childx.n_buffers = 1;

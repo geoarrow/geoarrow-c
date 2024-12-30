@@ -222,7 +222,7 @@ static GeoArrowErrorCode GeoArrowArrayViewSetArrayBox(
 
   if (array->n_children != array_view->coords.n_values) {
     GeoArrowErrorSet(error,
-                     "Unexpected number of children for box array struct"
+                     "Unexpected number of children for box array struct "
                      "in GeoArrowArrayViewSetArray()");
     return EINVAL;
   }
@@ -232,7 +232,7 @@ static GeoArrowErrorCode GeoArrowArrayViewSetArrayBox(
   for (int32_t i = 0; i < array_view->coords.n_values; i++) {
     if (array->children[i]->n_buffers != 2) {
       ArrowErrorSet((struct ArrowError*)error,
-                    "Unexpected number of buffers for struct coordinate array child "
+                    "Unexpected number of buffers for box array child "
                     "in GeoArrowArrayViewSetArray()");
       return EINVAL;
     }
