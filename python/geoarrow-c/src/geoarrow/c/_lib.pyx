@@ -220,14 +220,14 @@ cdef extern from "geoarrow_python.h":
 
 cdef extern from "geoarrow.hpp" namespace "geoarrow":
     cdef cppclass GeometryDataType:
-        GeometryDataType() except +
-        GeometryDataType(const GeometryDataType& x) except +
+        GeometryDataType() except +ValueError
+        GeometryDataType(const GeometryDataType& x) except +ValueError
         void MoveFrom(GeometryDataType* other)
 
         bool valid()
         string error()
-        string extension_name() except +
-        string extension_metadata() except +
+        string extension_name() except +ValueError
+        string extension_metadata() except +ValueError
         GeoArrowType id()
         GeoArrowGeometryType geometry_type()
         GeoArrowDimensions dimensions()
@@ -237,27 +237,27 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
         GeoArrowCrsType crs_type()
         string crs()
 
-        GeometryDataType WithGeometryType(GeoArrowGeometryType geometry_type) except +
-        GeometryDataType WithCoordType(GeoArrowCoordType coord_type) except +
-        GeometryDataType WithDimensions(GeoArrowDimensions dimensions) except +
-        GeometryDataType WithEdgeType(GeoArrowEdgeType edge_type) except +
-        GeometryDataType WithCrs(const string& crs, GeoArrowCrsType crs_type) except +
+        GeometryDataType WithGeometryType(GeoArrowGeometryType geometry_type) except +ValueError
+        GeometryDataType WithCoordType(GeoArrowCoordType coord_type) except +ValueError
+        GeometryDataType WithDimensions(GeoArrowDimensions dimensions) except +ValueError
+        GeometryDataType WithEdgeType(GeoArrowEdgeType edge_type) except +ValueError
+        GeometryDataType WithCrs(const string& crs, GeoArrowCrsType crs_type) except +ValueError
 
-        GeoArrowErrorCode InitSchema(ArrowSchema* schema) except +
-        GeoArrowErrorCode InitStorageSchema(ArrowSchema* schema) except +
+        GeoArrowErrorCode InitSchema(ArrowSchema* schema) except +ValueError
+        GeoArrowErrorCode InitStorageSchema(ArrowSchema* schema) except +ValueError
 
         @staticmethod
         GeometryDataType Make0 "Make"(GeoArrowGeometryType geometry_type,
                                 GeoArrowDimensions dimensions,
                                 GeoArrowCoordType coord_type,
-                                const string& metadata) except +
+                                const string& metadata) except +ValueError
 
         @staticmethod
-        GeometryDataType Make1 "Make"(ArrowSchema* schema) except +
+        GeometryDataType Make1 "Make"(ArrowSchema* schema) except +ValueError
 
         @staticmethod
         GeometryDataType Make2 "Make"(ArrowSchema* schema, const string& extension_name,
-                                const string& metadata) except +
+                                const string& metadata) except +ValueError
 
 
 class GeoArrowCException(RuntimeError):

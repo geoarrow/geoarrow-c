@@ -42,7 +42,7 @@
 
 namespace geoarrow {
 
-class Exception : std::exception {
+class Exception : public std::exception {
  public:
   std::string message;
 
@@ -53,20 +53,18 @@ class Exception : std::exception {
   const char* what() const noexcept override { return message.c_str(); }
 };
 
-class ErrnoException : Exception {
+class ErrnoException : public Exception {
  public:
   GeoArrowErrorCode code{};
 
   ErrnoException(GeoArrowErrorCode code, const std::string& msg, GeoArrowError* error)
       : code(code) {
-    if (error == nullptr) {
+    if (error != nullptr) {
       message = msg + ": \n" + error->message;
     } else {
       message = msg;
     }
   }
-
-  const char* what() const noexcept override { return message.c_str(); }
 };
 
 class GeometryDataType {
