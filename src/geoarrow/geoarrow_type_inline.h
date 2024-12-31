@@ -78,6 +78,40 @@ static inline const char* GeoArrowExtensionNameFromType(enum GeoArrowType type) 
   }
 }
 
+/// \brief Returns a string representation of a GeoArrowDimensions
+/// \ingroup geoarrow-schema
+static inline const char* GeoArrowDimensionsString(enum GeoArrowDimensions dimensions) {
+  switch (dimensions) {
+    case GEOARROW_DIMENSIONS_UNKNOWN:
+      return "unknown";
+    case GEOARROW_DIMENSIONS_XY:
+      return "xy";
+    case GEOARROW_DIMENSIONS_XYZ:
+      return "xyz";
+    case GEOARROW_DIMENSIONS_XYM:
+      return "xym";
+    case GEOARROW_DIMENSIONS_XYZM:
+      return "xyzm";
+    default:
+      return "<not valid>";
+  }
+}
+
+/// \brief Returns a string representation of a GeoArrowCoordType
+/// \ingroup geoarrow-schema
+static inline const char* GeoArrowCoordTypeString(enum GeoArrowCoordType dimensions) {
+  switch (dimensions) {
+    case GEOARROW_COORD_TYPE_UNKNOWN:
+      return "unknown";
+    case GEOARROW_COORD_TYPE_SEPARATE:
+      return "separate";
+    case GEOARROW_COORD_TYPE_INTERLEAVED:
+      return "interleaved";
+    default:
+      return "<not valid>";
+  }
+}
+
 /// \brief Returns a string representation of a GeoArrowEdgeType
 /// \ingroup geoarrow-schema
 static inline const char* GeoArrowEdgeTypeString(enum GeoArrowEdgeType edge_type) {
@@ -87,7 +121,7 @@ static inline const char* GeoArrowEdgeTypeString(enum GeoArrowEdgeType edge_type
     case GEOARROW_EDGE_TYPE_SPHERICAL:
       return "spherical";
     default:
-      return "";
+      return "<not valid>";
   }
 }
 
@@ -108,7 +142,7 @@ static inline const char* GeoArrowCrsTypeString(enum GeoArrowCrsType crs_type) {
     case GEOARROW_CRS_TYPE_SRID:
       return "srid";
     default:
-      return "";
+      return "<not valid>";
   }
 }
 
@@ -186,6 +220,8 @@ static inline enum GeoArrowType GeoArrowMakeType(enum GeoArrowGeometryType geome
 static inline const char* GeoArrowGeometryTypeString(
     enum GeoArrowGeometryType geometry_type) {
   switch (geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_GEOMETRY:
+      return "GEOMETRY";
     case GEOARROW_GEOMETRY_TYPE_POINT:
       return "POINT";
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
@@ -200,8 +236,10 @@ static inline const char* GeoArrowGeometryTypeString(
       return "MULTIPOLYGON";
     case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
       return "GEOMETRYCOLLECTION";
+    case GEOARROW_GEOMETRY_TYPE_BOX:
+      return "BOX";
     default:
-      return NULL;
+      return "<not valid>";
   }
 }
 

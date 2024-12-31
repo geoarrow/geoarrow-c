@@ -46,7 +46,7 @@ class Exception : public std::exception {
  public:
   std::string message;
 
-  Exception(){};
+  Exception() = default;
 
   explicit Exception(const std::string& msg) : message(msg){};
 
@@ -79,7 +79,7 @@ class GeometryDataType {
     metadata_view_.crs.data = crs_.data();
   }
 
-  GeometryDataType& operator=(GeometryDataType other) {
+  GeometryDataType& operator=(const GeometryDataType& other) {
     this->schema_view_ = other.schema_view_;
     this->metadata_view_ = other.metadata_view_;
     this->crs_ = other.crs_;
@@ -88,12 +88,11 @@ class GeometryDataType {
     return *this;
   }
 
-  GeometryDataType(const GeometryDataType&& other)
-      : schema_view_(other.schema_view_),
-        metadata_view_(other.metadata_view_),
-        crs_(std::move(other.crs_)),
-        error_(std::move(other.error_)) {
-    metadata_view_.crs.data = crs_.data();
+  GeometryDataType(GeometryDataType&& other) { MoveFrom(&other); }
+
+  GeometryDataType& operator=(GeometryDataType&& other) {
+    MoveFrom(&other);
+    return *this;
   }
 
   void MoveFrom(GeometryDataType* other) {
@@ -102,6 +101,9 @@ class GeometryDataType {
     error_ = std::move(other->error_);
     crs_ = std::move(other->crs_);
     metadata_view_.crs.data = crs_.data();
+
+    std::memset(&other->schema_view_, 0, sizeof(struct GeoArrowSchemaView));
+    std::memset(&other->metadata_view_, 0, sizeof(struct GeoArrowMetadataView));
   }
 
   /// \brief Make a GeometryDataType from a geometry type, dimensions, and coordinate
@@ -111,12 +113,29 @@ class GeometryDataType {
       enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY,
       enum GeoArrowCoordType coord_type = GEOARROW_COORD_TYPE_SEPARATE,
       const std::string& metadata = "") {
-    return Make(GeoArrowMakeType(geometry_type, dimensions, coord_type), metadata);
+    enum GeoArrowType type = GeoArrowMakeType(geometry_type, dimensions, coord_type);
+    if (type == GEOARROW_TYPE_UNINITIALIZED) {
+      throw ::geoarrow::Exception(
+          std::string("Combination of geometry type/dimensions/coord type not valid: ") +
+          GeoArrowGeometryTypeString(geometry_type) + "/" +
+          GeoArrowDimensionsString(dimensions) + "/" +
+          GeoArrowCoordTypeString(coord_type));
+    }
+
+    return Make(type, metadata);
   }
 
   /// \brief Make a GeometryDataType from a type identifier and optional extension
   /// metadata.
   static GeometryDataType Make(enum GeoArrowType type, const std::string& metadata = "") {
+    switch (type) {
+      case GEOARROW_TYPE_UNINITIALIZED:
+        throw Exception(
+            "Can't construct GeometryDataType from GEOARROW_TYPE_UNINITIALIZED");
+      default:
+        break;
+    }
+
     GeoArrowError error{};
     GeoArrowSchemaView schema_view;
     GEOARROW_THROW_NOT_OK(nullptr, GeoArrowSchemaViewInitFromType(&schema_view, type));
@@ -132,7 +151,7 @@ class GeometryDataType {
   /// \brief Make a GeometryDataType from an ArrowSchema extension type
   ///
   /// The caller retains ownership of schema.
-  static GeometryDataType Make(struct ArrowSchema* schema) {
+  static GeometryDataType Make(const struct ArrowSchema* schema) {
     GeoArrowError error{};
     GeoArrowSchemaView schema_view{};
     GEOARROW_THROW_NOT_OK(&error, GeoArrowSchemaViewInit(&schema_view, schema, &error));

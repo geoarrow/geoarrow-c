@@ -17,6 +17,14 @@ TEST(GeoArrowHppTest, GeometryDataTypeMakeType) {
   EXPECT_EQ(type.crs(), "");
 }
 
+TEST(GeoArrowHppTest, GeometryDataTypeMakeTypeErrors) {
+  EXPECT_THROW(geoarrow::GeometryDataType::Make(nullptr), geoarrow::ErrnoException);
+  EXPECT_THROW(geoarrow::GeometryDataType::Make(GEOARROW_TYPE_UNINITIALIZED),
+               geoarrow::Exception);
+  EXPECT_THROW(geoarrow::GeometryDataType::Make(GEOARROW_TYPE_POINT, "foofyfoofyfoofy"),
+               geoarrow::ErrnoException);
+}
+
 TEST(GeoArrowHppTest, GeometryDataTypeModify) {
   auto type = geoarrow::GeometryDataType::Make(GEOARROW_TYPE_MULTIPOINT);
   ASSERT_TRUE(type.valid());
@@ -64,7 +72,8 @@ TEST(GeoArrowHppTest, GeometryDataTypeModifyBox) {
   EXPECT_EQ(geoarrow::Box().XYZM().id(), GEOARROW_TYPE_BOX_ZM);
   EXPECT_EQ(geoarrow::Box().XYZ().XY().id(), GEOARROW_TYPE_BOX);
 
-  EXPECT_FALSE(geoarrow::Box().WithCoordType(GEOARROW_COORD_TYPE_INTERLEAVED).valid());
+  EXPECT_THROW(geoarrow::Box().WithCoordType(GEOARROW_COORD_TYPE_INTERLEAVED),
+               geoarrow::Exception);
 }
 
 TEST(GeoArrowHppTest, GeometryDataTypeModifyXYZM) {

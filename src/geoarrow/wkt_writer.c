@@ -79,12 +79,13 @@ static int geom_start_wkt(struct GeoArrowVisitor* v,
 
   if (private->level == 0 || private->geometry_type[private->level - 1] ==
                                  GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION) {
-    const char* geometry_type_name = GeoArrowGeometryTypeString(geometry_type);
-    if (geometry_type_name == NULL) {
+    if (geometry_type < GEOARROW_GEOMETRY_TYPE_POINT ||
+        geometry_type > GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION) {
       GeoArrowErrorSet(v->error, "WKTWriter::geom_start(): Unexpected `geometry_type`");
       return EINVAL;
     }
 
+    const char* geometry_type_name = GeoArrowGeometryTypeString(geometry_type);
     NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, geometry_type_name));
 
     switch (dimensions) {
