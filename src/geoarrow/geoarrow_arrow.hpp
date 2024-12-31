@@ -39,14 +39,12 @@ class GeometryExtensionType : public ::arrow::ExtensionType {
       return ::arrow::Status::Invalid(geoarrow_type.error());
     }
 
-    return std::make_shared<GeometryExtensionType>(maybe_arrow_type.ValueUnsafe(),
-                                                   geoarrow_type);
+    return FromStorageAndType(maybe_arrow_type.ValueUnsafe(), geoarrow_type);
   }
 
   static ::arrow::Status RegisterAll() {
     for (const auto& ext_name : all_ext_names()) {
-      auto dummy_type =
-          std::make_shared<GeometryExtensionType>(::arrow::null(), ext_name);
+      auto dummy_type = DummyType(ext_name);
       ARROW_RETURN_NOT_OK(::arrow::RegisterExtensionType(dummy_type));
     }
 
@@ -87,7 +85,7 @@ class GeometryExtensionType : public ::arrow::ExtensionType {
       return ::arrow::Status::Invalid(geoarrow_type.error());
     }
 
-    return std::make_shared<GeometryExtensionType>(storage_type, geoarrow_type);
+    return FromStorageAndType(storage_type, geoarrow_type);
   }
 
   std::string Serialize() const override { return type_.extension_metadata(); }
@@ -96,37 +94,44 @@ class GeometryExtensionType : public ::arrow::ExtensionType {
 
   ::arrow::Result<std::shared_ptr<GeometryExtensionType>> WithGeometryType(
       enum GeoArrowGeometryType geometry_type) {
-    return std::make_shared<GeometryExtensionType>(storage_type(),
-                                                   type_.WithGeometryType(geometry_type));
+    return FromStorageAndType(storage_type(), type_.WithGeometryType(geometry_type));
   }
 
   ::arrow::Result<std::shared_ptr<GeometryExtensionType>> WithCoordType(
       enum GeoArrowCoordType coord_type) const {
-    return std::make_shared<GeometryExtensionType>(storage_type(),
-                                                   type_.WithCoordType(coord_type));
+    return FromStorageAndType(storage_type(), type_.WithCoordType(coord_type));
   }
 
   ::arrow::Result<std::shared_ptr<GeometryExtensionType>> WithDimensions(
       enum GeoArrowDimensions dimensions) const {
-    return std::make_shared<GeometryExtensionType>(storage_type(),
-                                                   type_.WithDimensions(dimensions));
+    return FromStorageAndType(storage_type(), type_.WithDimensions(dimensions));
   }
 
   ::arrow::Result<std::shared_ptr<GeometryExtensionType>> WithEdgeType(
       enum GeoArrowEdgeType edge_type) {
-    return std::make_shared<GeometryExtensionType>(storage_type(),
-                                                   type_.WithEdgeType(edge_type));
+    return FromStorageAndType(storage_type(), type_.WithEdgeType(edge_type));
   }
 
   ::arrow::Result<std::shared_ptr<GeometryExtensionType>> WithCrs(
       const std::string& crs, enum GeoArrowCrsType crs_type = GEOARROW_CRS_TYPE_UNKNOWN) {
-    return std::make_shared<GeometryExtensionType>(storage_type(),
-                                                   type_.WithCrs(crs, crs_type));
+    return FromStorageAndType(storage_type(), type_.WithCrs(crs, crs_type));
   }
 
  private:
   GeometryDataType type_;
   std::string extension_name_;
+
+  static std::shared_ptr<GeometryExtensionType> FromStorageAndType(
+      const std::shared_ptr<::arrow::DataType>& storage_type,
+      const GeometryDataType& type) {
+    return std::shared_ptr<GeometryExtensionType>(
+        new GeometryExtensionType(storage_type, type));
+  }
+
+  static std::shared_ptr<GeometryExtensionType> DummyType(std::string extension_name) {
+    return std::shared_ptr<GeometryExtensionType>(
+        new GeometryExtensionType(::arrow::null(), extension_name));
+  }
 
   GeometryExtensionType(const std::shared_ptr<::arrow::DataType>& storage_type,
                         const GeometryDataType& type)
