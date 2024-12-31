@@ -349,6 +349,58 @@ class GeometryDataType {
     return out_str;
   }
 
+  std::string ToString(size_t max_crs_size = 40) const {
+    if (id() == GEOARROW_TYPE_UNINITIALIZED) {
+      return "<Uninitialized GeometryDataType>";
+    }
+
+    std::string ext_name = extension_name();
+    bool planar = edge_type() == GEOARROW_EDGE_TYPE_PLANAR;
+    bool interleaved = coord_type() == GEOARROW_COORD_TYPE_INTERLEAVED;
+
+    std::string dims;
+    switch (dimensions()) {
+      case GEOARROW_DIMENSIONS_UNKNOWN:
+      case GEOARROW_DIMENSIONS_XY:
+        break;
+      default:
+        dims = std::string("_") +
+               std::string(GeoArrowDimensionsString(dimensions())).substr(2);
+        break;
+    }
+
+    std::string type_prefix;
+    if (!planar && interleaved) {
+      type_prefix = std::string(GeoArrowEdgeTypeString(edge_type())) + " interleaved ";
+    } else if (!planar) {
+      type_prefix = std::string(GeoArrowEdgeTypeString(edge_type())) + " ";
+    } else if (interleaved) {
+      type_prefix = "interleaved ";
+    }
+
+    std::string crs_suffix;
+    switch (crs_type()) {
+      case GEOARROW_CRS_TYPE_NONE:
+        break;
+      case GEOARROW_CRS_TYPE_UNKNOWN:
+        crs_suffix = crs();
+        break;
+      default:
+        crs_suffix = std::string(GeoArrowCrsTypeString(crs_type())) + ":" + crs();
+        break;
+    }
+
+    if (!crs_suffix.empty()) {
+      crs_suffix = std::string("<") + crs_suffix + ">";
+    }
+
+    if (crs_suffix.size() >= max_crs_size) {
+      crs_suffix = crs_suffix.substr(0, max_crs_size - 4) + "...>";
+    }
+
+    return type_prefix + ext_name + crs_suffix;
+  }
+
  private:
   struct GeoArrowSchemaView schema_view_ {};
   struct GeoArrowMetadataView metadata_view_ {};

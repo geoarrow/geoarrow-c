@@ -234,6 +234,7 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
         GeoArrowEdgeType edge_type()
         GeoArrowCrsType crs_type()
         string crs()
+        string ToString()
 
         GeometryDataType WithGeometryType(GeoArrowGeometryType geometry_type) except +ValueError
         GeometryDataType WithCoordType(GeoArrowCoordType coord_type) except +ValueError
@@ -339,39 +340,7 @@ cdef class CGeometryDataType:
         if self.c_vector_type.id() == GEOARROW_TYPE_UNINITIALIZED:
             return "<Uninitialized CGeometryDataType>"
 
-        ext_name = self.extension_name
-        spherical = self.edge_type == GEOARROW_EDGE_TYPE_SPHERICAL
-        interleaved = self.coord_type == GEOARROW_COORD_TYPE_INTERLEAVED
-
-        if self.dimensions == GEOARROW_DIMENSIONS_XYZM:
-            dims = '_zm'
-        elif self.dimensions == GEOARROW_DIMENSIONS_XYZ:
-            dims = '_z'
-        elif self.dimensions == GEOARROW_DIMENSIONS_XYM:
-            dims = '_m'
-        else:
-            dims = ''
-
-        if spherical and interleaved:
-            type_prefix = 'spherical interleaved '
-        elif spherical:
-            type_prefix = 'spherical '
-        elif interleaved:
-            type_prefix = 'interleaved '
-        else:
-            type_prefix = ''
-
-        if self.crs_type == GEOARROW_CRS_TYPE_PROJJSON:
-            crs = f' <PROJJSON:{self.crs.decode("UTF-8")}>'
-        elif self.crs_type == GEOARROW_CRS_TYPE_UNKNOWN:
-            crs = f' <{self.crs.decode("UTF-8")}>'
-        else:
-            crs = ''
-
-        if len(crs) > 40:
-            crs = crs[:36] + '...>'
-
-        return f'{type_prefix}{ext_name}{dims}{crs}'
+        return self.c_vector_type.ToString().decode()
 
     @staticmethod
     cdef _move_from_ctype(GeometryDataType* c_vector_type):

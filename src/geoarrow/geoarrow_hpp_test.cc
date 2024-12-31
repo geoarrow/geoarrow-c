@@ -123,6 +123,7 @@ TEST(GeoArrowHppTest, GeometryDataTypeModifyErrors) {
 }
 
 TEST(GeoArrowHppTest, SerializedAccessors) {
+  EXPECT_EQ(geoarrow::Wkt().geometry_type(), GEOARROW_GEOMETRY_TYPE_GEOMETRY);
   EXPECT_EQ(geoarrow::Wkt().coord_type(), GEOARROW_COORD_TYPE_UNKNOWN);
   EXPECT_EQ(geoarrow::Wkt().dimensions(), GEOARROW_DIMENSIONS_UNKNOWN);
   EXPECT_EQ(geoarrow::Wkt().num_dimensions(), -1);
