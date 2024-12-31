@@ -226,8 +226,8 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
 
         bool valid()
         string error()
-        string extension_name()
-        string extension_metadata()
+        string extension_name() except +
+        string extension_metadata() except +
         GeoArrowType id()
         GeoArrowGeometryType geometry_type()
         GeoArrowDimensions dimensions()
@@ -237,27 +237,27 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
         GeoArrowCrsType crs_type()
         string crs()
 
-        GeometryDataType WithGeometryType(GeoArrowGeometryType geometry_type)
-        GeometryDataType WithCoordType(GeoArrowCoordType coord_type)
-        GeometryDataType WithDimensions(GeoArrowDimensions dimensions)
-        GeometryDataType WithEdgeType(GeoArrowEdgeType edge_type)
-        GeometryDataType WithCrs(const string& crs, GeoArrowCrsType crs_type)
+        GeometryDataType WithGeometryType(GeoArrowGeometryType geometry_type) except +
+        GeometryDataType WithCoordType(GeoArrowCoordType coord_type) except +
+        GeometryDataType WithDimensions(GeoArrowDimensions dimensions) except +
+        GeometryDataType WithEdgeType(GeoArrowEdgeType edge_type) except +
+        GeometryDataType WithCrs(const string& crs, GeoArrowCrsType crs_type) except +
 
-        GeoArrowErrorCode InitSchema(ArrowSchema* schema)
-        GeoArrowErrorCode InitStorageSchema(ArrowSchema* schema)
+        GeoArrowErrorCode InitSchema(ArrowSchema* schema) except +
+        GeoArrowErrorCode InitStorageSchema(ArrowSchema* schema) except +
 
         @staticmethod
         GeometryDataType Make0 "Make"(GeoArrowGeometryType geometry_type,
                                 GeoArrowDimensions dimensions,
                                 GeoArrowCoordType coord_type,
-                                const string& metadata)
+                                const string& metadata) except +
 
         @staticmethod
-        GeometryDataType Make1 "Make"(ArrowSchema* schema)
+        GeometryDataType Make1 "Make"(ArrowSchema* schema) except +
 
         @staticmethod
         GeometryDataType Make2 "Make"(ArrowSchema* schema, const string& extension_name,
-                                const string& metadata)
+                                const string& metadata) except +
 
 
 class GeoArrowCException(RuntimeError):
