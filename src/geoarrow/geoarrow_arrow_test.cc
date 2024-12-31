@@ -37,6 +37,21 @@ TEST(ArrowTest, ArrowTestExtensionType) {
   EXPECT_TRUE(type->Equals(type2));
 }
 
+TEST(ArrowTest, ArrowTestExtensionTypeError) {
+  auto maybe_type = GeometryExtensionType::Make(GEOARROW_TYPE_UNINITIALIZED);
+  ASSERT_FALSE(maybe_type.ok());
+  EXPECT_EQ(maybe_type.status().ToStringWithoutContextLines(),
+            "Invalid: Can't construct GeometryDataType from GEOARROW_TYPE_UNINITIALIZED");
+
+  maybe_type =
+      GeometryExtensionType::Make(GEOARROW_GEOMETRY_TYPE_BOX, GEOARROW_DIMENSIONS_XY,
+                                  GEOARROW_COORD_TYPE_INTERLEAVED);
+  ASSERT_FALSE(maybe_type.ok());
+  EXPECT_EQ(maybe_type.status().ToStringWithoutContextLines(),
+            "Invalid: Combination of geometry type/dimensions/coord type not valid: "
+            "BOX/xy/interleaved");
+}
+
 TEST(ArrowTest, ArrowTestExtensionTypeDeserialize) {
   auto maybe_type = GeometryExtensionType::Make(GEOARROW_TYPE_MULTIPOINT);
   ASSERT_ARROW_OK(maybe_type.status());

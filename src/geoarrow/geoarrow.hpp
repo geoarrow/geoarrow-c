@@ -66,6 +66,26 @@ class ErrnoException : public Exception {
   }
 };
 
+namespace internal {
+struct SchemaHolder {
+  struct ArrowSchema schema {};
+  ~SchemaHolder() {
+    if (schema.release != nullptr) {
+      schema.release(&schema);
+    }
+  }
+};
+
+struct ArrayHolder {
+  struct ArrowArray array {};
+  ~ArrayHolder() {
+    if (array.release != nullptr) {
+      array.release(&array);
+    }
+  }
+};
+}  // namespace internal
+
 class GeometryDataType {
  public:
   GeometryDataType() = default;
@@ -382,8 +402,8 @@ class ArrayReader {
   void SetArray(struct ArrowArray* array) {
     struct GeoArrowError error {};
     GEOARROW_THROW_NOT_OK(&error, GeoArrowArrayReaderSetArray(&reader_, array, &error));
-    if (array_.release != nullptr) {
-      array_.release(&array_);
+    if (array_.array.release != nullptr) {
+      array_.array.release(&array_.array);
     }
 
     std::memcpy(&array_, array, sizeof(struct ArrowArray));
@@ -398,7 +418,7 @@ class ArrayReader {
 
  private:
   struct GeoArrowArrayReader reader_ {};
-  struct ArrowArray array_ {};
+  internal::ArrayHolder array_;
 };
 
 class ArrayBuilder {

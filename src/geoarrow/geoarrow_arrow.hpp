@@ -20,26 +20,35 @@ class GeometryExtensionType : public ::arrow::ExtensionType {
       enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY,
       enum GeoArrowCoordType coord_type = GEOARROW_COORD_TYPE_SEPARATE,
       const std::string& metadata = "") {
-    return Make(GeoArrowMakeType(geometry_type, dimensions, coord_type), metadata);
+    try {
+      auto geoarrow_type =
+          GeometryDataType::Make(geometry_type, dimensions, coord_type, metadata);
+      return Make(geoarrow_type, metadata);
+    } catch (Exception& e) {
+      return ::arrow::Status::Invalid(e.what());
+    }
   }
 
   static ::arrow::Result<std::shared_ptr<GeometryExtensionType>> Make(
       enum GeoArrowType type, const std::string& metadata = "") {
-    struct ArrowSchema schema;
-    int result = GeoArrowSchemaInit(&schema, type);
-    if (result != GEOARROW_OK) {
-      return ::arrow::Status::Invalid("Invalid input GeoArrow type");
+    try {
+      auto geoarrow_type = GeometryDataType::Make(type);
+      return Make(std::move(geoarrow_type), metadata);
+    } catch (Exception& e) {
+      return ::arrow::Status::Invalid(e.what());
     }
+  }
 
-    auto maybe_arrow_type = ::arrow::ImportType(&schema);
-    ARROW_RETURN_NOT_OK(maybe_arrow_type);
-
-    auto geoarrow_type = GeometryDataType::Make(type, metadata);
-    if (!geoarrow_type.valid()) {
-      return ::arrow::Status::Invalid(geoarrow_type.error());
+  static ::arrow::Result<std::shared_ptr<GeometryExtensionType>> Make(
+      GeometryDataType type, const std::string& metadata = "") {
+    try {
+      internal::SchemaHolder schema{};
+      type.InitStorageSchema(&schema.schema);
+      ARROW_ASSIGN_OR_RAISE(auto storage_type, ::arrow::ImportType(&schema.schema));
+      return FromStorageAndType(storage_type, std::move(type));
+    } catch (Exception& e) {
+      return ::arrow::Status::Invalid(e.what());
     }
-
-    return FromStorageAndType(maybe_arrow_type.ValueUnsafe(), geoarrow_type);
   }
 
   static ::arrow::Status RegisterAll() {
@@ -75,17 +84,17 @@ class GeometryExtensionType : public ::arrow::ExtensionType {
   ::arrow::Result<std::shared_ptr<::arrow::DataType>> Deserialize(
       std::shared_ptr<::arrow::DataType> storage_type,
       const std::string& serialized_data) const override {
-    struct ArrowSchema schema;
+    internal::SchemaHolder schema;
     struct GeoArrowError error;
-    ARROW_RETURN_NOT_OK(ExportType(*storage_type, &schema));
+    ARROW_RETURN_NOT_OK(ExportType(*storage_type, &schema.schema));
 
-    auto geoarrow_type =
-        GeometryDataType::Make(&schema, extension_name_, serialized_data);
-    if (!geoarrow_type.valid()) {
-      return ::arrow::Status::Invalid(geoarrow_type.error());
+    try {
+      auto geoarrow_type =
+          GeometryDataType::Make(&schema.schema, extension_name_, serialized_data);
+      return FromStorageAndType(storage_type, geoarrow_type);
+    } catch (::geoarrow::Exception& e) {
+      return ::arrow::Status::Invalid(e.what());
     }
-
-    return FromStorageAndType(storage_type, geoarrow_type);
   }
 
   std::string Serialize() const override { return type_.extension_metadata(); }
