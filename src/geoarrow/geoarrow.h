@@ -451,7 +451,7 @@ GeoArrowErrorCode GeoArrowArrayReaderInitFromType(struct GeoArrowArrayReader* re
 /// If GEOARROW_OK is returned, the caller is responsible for calling
 /// GeoArrowArrayReaderReset().
 GeoArrowErrorCode GeoArrowArrayReaderInitFromSchema(struct GeoArrowArrayReader* reader,
-                                                    struct ArrowSchema* schema,
+                                                    const struct ArrowSchema* schema,
                                                     struct GeoArrowError* error);
 
 /// \brief Set a GeoArrowArray to read

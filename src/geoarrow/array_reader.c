@@ -93,7 +93,7 @@ GeoArrowErrorCode GeoArrowArrayReaderInitFromType(struct GeoArrowArrayReader* re
 }
 
 GeoArrowErrorCode GeoArrowArrayReaderInitFromSchema(struct GeoArrowArrayReader* reader,
-                                                    struct ArrowSchema* schema,
+                                                    const struct ArrowSchema* schema,
                                                     struct GeoArrowError* error) {
   struct GeoArrowArrayReaderPrivate* private_data =
       (struct GeoArrowArrayReaderPrivate*)ArrowMalloc(
