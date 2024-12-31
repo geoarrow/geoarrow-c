@@ -3,9 +3,9 @@
 #define GEOARROW_HPP_INCLUDED
 
 #include <cerrno>
+#include <cstring>
 #include <exception>
 #include <string>
-#include <vector>
 
 #include "geoarrow.h"
 
@@ -391,6 +391,12 @@ class ArrayReader {
     array->release = nullptr;
   }
 
+  GeoArrowErrorCode Visit(struct GeoArrowVisitor* visitor, int64_t offset, int64_t length,
+                          struct GeoArrowError* error = nullptr) {
+    visitor->error = error;
+    return GeoArrowArrayReaderVisit(&reader_, offset, length, visitor);
+  }
+
  private:
   struct GeoArrowArrayReader reader_ {};
   struct ArrowArray array_ {};
@@ -428,7 +434,7 @@ class ArrayBuilder {
 class BufferArrayBuilder : public ArrayBuilder {
  public:
   explicit BufferArrayBuilder(enum GeoArrowType type) : ArrayBuilder(type){};
-  explicit BufferArrayBuilder(const GeometryDataType& type) : ArrayBuilder(type.id()) {}
+  explicit BufferArrayBuilder(const GeometryDataType& type) : ArrayBuilder(type) {}
   explicit BufferArrayBuilder(const ArrowSchema* schema) : ArrayBuilder(schema) {}
 
   template <typename T>
@@ -459,6 +465,37 @@ class BufferArrayBuilder : public ArrayBuilder {
                                        nullptr);
     }
   }
+};
+
+class ArrayWriter {
+ public:
+  explicit ArrayWriter(GeoArrowType type) {
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayWriterInitFromType(&writer_, type));
+  }
+
+  explicit ArrayWriter(const GeometryDataType& type) : ArrayWriter(type.id()) {}
+
+  explicit ArrayWriter(const ArrowSchema* schema) {
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayWriterInitFromSchema(&writer_, schema));
+  }
+
+  ~ArrayWriter() {
+    if (writer_.private_data != nullptr) {
+      GeoArrowArrayWriterReset(&writer_);
+    }
+  }
+
+  struct GeoArrowVisitor* visitor() {
+    if (visitor_.coords == nullptr) {
+      GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayWriterInitVisitor(&writer_, &visitor_));
+    }
+
+    return &visitor_;
+  }
+
+ private:
+  struct GeoArrowArrayWriter writer_ {};
+  struct GeoArrowVisitor visitor_ {};
 };
 
 static inline GeometryDataType Wkb() { return GeometryDataType::Make(GEOARROW_TYPE_WKB); }
