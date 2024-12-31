@@ -30,6 +30,7 @@ TEST(ArrowTest, ArrowTestExtensionType) {
   EXPECT_EQ(type->GeoArrowType().edge_type(), GEOARROW_EDGE_TYPE_PLANAR);
   EXPECT_EQ(type->GeoArrowType().crs_type(), GEOARROW_CRS_TYPE_NONE);
   EXPECT_EQ(type->GeoArrowType().crs(), "");
+  EXPECT_EQ(type->ToString(), "GeometryExtensionType(geoarrow.multipoint)");
 
   auto maybe_type2 = GeometryExtensionType::Make(GEOARROW_GEOMETRY_TYPE_MULTIPOINT);
   ASSERT_ARROW_OK(maybe_type.status());

@@ -76,6 +76,10 @@ class GeometryExtensionType : public ::arrow::ExtensionType {
            storage_type()->Equals(other.storage_type());
   }
 
+  std::string ToString(bool show_metadata = false) const override {
+    return std::string("GeometryExtensionType(") + type_.ToString() + ")";
+  }
+
   std::shared_ptr<::arrow::Array> MakeArray(
       std::shared_ptr<::arrow::ArrayData> data) const override {
     return nullptr;
