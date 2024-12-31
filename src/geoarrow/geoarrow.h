@@ -467,6 +467,13 @@ GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
                                            int64_t offset, int64_t length,
                                            struct GeoArrowVisitor* v);
 
+/// \brief Get a GeoArrowArrayView
+///
+/// If there is a GeoArrowArrayView underlying this GeoArrowArrayReader, returns
+/// a pointer to it (or NULL otherwise).
+const struct GeoArrowArrayView* GeoArrowArrayReaderArrayView(
+    struct GeoArrowArrayReader* reader);
+
 /// \brief Free resources held by a GeoArrowArrayReader
 void GeoArrowArrayReaderReset(struct GeoArrowArrayReader* reader);
 

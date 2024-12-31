@@ -484,6 +484,24 @@ class BufferArrayBuilder : public ArrayBuilder {
                                        nullptr);
     }
   }
+
+  template <typename T>
+  void AppendToBuffer(int64_t i, const T& obj) {
+    GEOARROW_THROW_NOT_OK(
+        nullptr, GeoArrowBuilderAppendBuffer(&builder_, i, internal::BufferView(obj)));
+  }
+
+  template <typename T>
+  void AppendToOffsetBuffer(int64_t i, const T& obj) {
+    GEOARROW_THROW_NOT_OK(
+        nullptr, GeoArrowBuilderAppendBuffer(&builder_, i, internal::BufferView(obj)));
+  }
+
+  void AppendCoords(const GeoArrowCoordView* coords, enum GeoArrowDimensions dimensions,
+                    int64_t offset, int64_t length) {
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowBuilderCoordsAppend(
+                                       &builder_, coords, dimensions, offset, length));
+  }
 };
 
 class ArrayWriter {
@@ -491,9 +509,7 @@ class ArrayWriter {
   explicit ArrayWriter(GeoArrowType type) {
     GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayWriterInitFromType(&writer_, type));
   }
-
   explicit ArrayWriter(const GeometryDataType& type) : ArrayWriter(type.id()) {}
-
   explicit ArrayWriter(const ArrowSchema* schema) {
     GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayWriterInitFromSchema(&writer_, schema));
   }
@@ -502,6 +518,15 @@ class ArrayWriter {
     if (writer_.private_data != nullptr) {
       GeoArrowArrayWriterReset(&writer_);
     }
+  }
+
+  void SetPrecision(int precision) {
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayWriterSetPrecision(&writer_, precision));
+  }
+
+  void SetFlatMultipoint(bool flat_multipoint) {
+    GEOARROW_THROW_NOT_OK(nullptr,
+                          GeoArrowArrayWriterSetPrecision(&writer_, flat_multipoint));
   }
 
   struct GeoArrowVisitor* visitor() {

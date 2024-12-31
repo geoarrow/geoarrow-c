@@ -169,3 +169,14 @@ GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
       return GeoArrowArrayViewVisit(&private_data->array_view, offset, length, v);
   }
 }
+
+const struct GeoArrowArrayView* GeoArrowArrayReaderArrayView(
+    struct GeoArrowArrayReader* reader) {
+  NANOARROW_DCHECK(reader->private_data != NULL);
+  struct GeoArrowArrayReaderPrivate* private_data =
+      (struct GeoArrowArrayReaderPrivate*)reader->private_data;
+  NANOARROW_DCHECK(private_data != NULL);
+
+  // Currently all the types supported by the reader can be viewed
+  return &private_data->array_view;
+}
