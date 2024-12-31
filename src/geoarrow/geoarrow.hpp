@@ -5,6 +5,7 @@
 #include <cstring>
 #include <exception>
 #include <string>
+#include <vector>
 
 #include "geoarrow.h"
 
@@ -369,13 +370,22 @@ class GeometryDataType {
         break;
     }
 
+    std::vector<std::string> modifiers;
+    if (id() == GEOARROW_TYPE_LARGE_WKT || id() == GEOARROW_TYPE_LARGE_WKB) {
+      modifiers.push_back("large");
+    }
+
+    if (edge_type() != GEOARROW_EDGE_TYPE_PLANAR) {
+      modifiers.push_back(GeoArrowEdgeTypeString(edge_type()));
+    }
+
+    if (coord_type() == GEOARROW_COORD_TYPE_INTERLEAVED) {
+      modifiers.push_back("interleaved");
+    }
+
     std::string type_prefix;
-    if (!planar && interleaved) {
-      type_prefix = std::string(GeoArrowEdgeTypeString(edge_type())) + " interleaved ";
-    } else if (!planar) {
-      type_prefix = std::string(GeoArrowEdgeTypeString(edge_type())) + " ";
-    } else if (interleaved) {
-      type_prefix = "interleaved ";
+    for (const auto& modifier : modifiers) {
+      type_prefix += modifier + " ";
     }
 
     std::string crs_suffix;
@@ -398,7 +408,7 @@ class GeometryDataType {
       crs_suffix = crs_suffix.substr(0, max_crs_size - 4) + "...>";
     }
 
-    return type_prefix + ext_name + crs_suffix;
+    return type_prefix + ext_name + dims + crs_suffix;
   }
 
  private:

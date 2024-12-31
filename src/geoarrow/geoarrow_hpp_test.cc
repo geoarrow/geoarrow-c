@@ -136,3 +136,44 @@ TEST(GeoArrowHppTest, TypeConstructors) {
   EXPECT_EQ(geoarrow::Linestring().id(), GEOARROW_TYPE_LINESTRING);
   EXPECT_EQ(geoarrow::Polygon().id(), GEOARROW_TYPE_POLYGON);
 }
+
+TEST(GeoArrowHppTest, SerializedToString) {
+  EXPECT_EQ(geoarrow::Wkt().ToString(), "geoarrow.wkt");
+  EXPECT_EQ(geoarrow::Wkb().ToString(), "geoarrow.wkb");
+  EXPECT_EQ(geoarrow::GeometryDataType::Make(GEOARROW_TYPE_LARGE_WKT).ToString(),
+            "large geoarrow.wkt");
+  EXPECT_EQ(geoarrow::GeometryDataType::Make(GEOARROW_TYPE_LARGE_WKB).ToString(),
+            "large geoarrow.wkb");
+}
+
+TEST(GeoArrowHppTest, NativeToString) {
+  EXPECT_EQ(geoarrow::Point().ToString(), "geoarrow.point");
+  EXPECT_EQ(geoarrow::Linestring().ToString(), "geoarrow.linestring");
+  EXPECT_EQ(geoarrow::Polygon().ToString(), "geoarrow.polygon");
+  EXPECT_EQ(geoarrow::Point().Multi().ToString(), "geoarrow.multipoint");
+  EXPECT_EQ(geoarrow::Linestring().Multi().ToString(), "geoarrow.multilinestring");
+  EXPECT_EQ(geoarrow::Polygon().Multi().ToString(), "geoarrow.multipolygon");
+}
+
+TEST(GeoArrowHppTest, InterleavedToString) {
+  EXPECT_EQ(geoarrow::Point().WithCoordType(GEOARROW_COORD_TYPE_INTERLEAVED).ToString(),
+            "interleaved geoarrow.point");
+}
+
+TEST(GeoArrowHppTest, NonPlanarToString) {
+  EXPECT_EQ(geoarrow::Linestring().WithEdgeType(GEOARROW_EDGE_TYPE_SPHERICAL).ToString(),
+            "spherical geoarrow.linestring");
+}
+
+TEST(GeoArrowHppTest, DimensionsToString) {
+  EXPECT_EQ(geoarrow::Point().XY().ToString(), "geoarrow.point");
+  EXPECT_EQ(geoarrow::Point().XYZ().ToString(), "geoarrow.point_z");
+  EXPECT_EQ(geoarrow::Point().XYM().ToString(), "geoarrow.point_m");
+  EXPECT_EQ(geoarrow::Point().XYZM().ToString(), "geoarrow.point_zm");
+}
+
+TEST(GeoArrowHppTest, CRSToString) {
+  EXPECT_EQ(geoarrow::Wkt().WithCrs("foofy").ToString(), "geoarrow.wkt<foofy>");
+  EXPECT_EQ(geoarrow::Wkt().WithCrsLonLat().ToString(),
+            R"(geoarrow.wkt<projjson:{"type":"GeographicCRS","n...>)");
+}
