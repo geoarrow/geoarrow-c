@@ -2,7 +2,6 @@
 #ifndef GEOARROW_HPP_INCLUDED
 #define GEOARROW_HPP_INCLUDED
 
-#include <cerrno>
 #include <cstring>
 #include <exception>
 #include <string>
@@ -69,13 +68,12 @@ class ErrnoException : public Exception {
 
 class GeometryDataType {
  public:
-  GeometryDataType() : GeometryDataType("") {}
+  GeometryDataType() = default;
 
   GeometryDataType(const GeometryDataType& other)
       : schema_view_(other.schema_view_),
         metadata_view_(other.metadata_view_),
-        crs_(other.crs_),
-        error_(other.error_) {
+        crs_(other.crs_) {
     metadata_view_.crs.data = crs_.data();
   }
 
@@ -83,7 +81,6 @@ class GeometryDataType {
     this->schema_view_ = other.schema_view_;
     this->metadata_view_ = other.metadata_view_;
     this->crs_ = other.crs_;
-    this->error_ = other.error_;
     this->metadata_view_.crs.data = this->crs_.data();
     return *this;
   }
@@ -98,7 +95,6 @@ class GeometryDataType {
   void MoveFrom(GeometryDataType* other) {
     schema_view_ = other->schema_view_;
     metadata_view_ = other->metadata_view_;
-    error_ = std::move(other->error_);
     crs_ = std::move(other->crs_);
     metadata_view_.crs.data = crs_.data();
 
@@ -256,33 +252,26 @@ class GeometryDataType {
     }
   }
 
-  GeoArrowErrorCode InitSchema(struct ArrowSchema* schema_out) const {
-    if (!valid()) {
-      return EINVAL;
-    }
-
-    int result = GeoArrowSchemaInitExtension(schema_out, schema_view_.type);
-    if (result != GEOARROW_OK) {
-      return result;
-    }
-
-    return GeoArrowSchemaSetMetadata(schema_out, &metadata_view_);
+  void InitSchema(struct ArrowSchema* schema_out) const {
+    GEOARROW_THROW_NOT_OK(nullptr,
+                          GeoArrowSchemaInitExtension(schema_out, schema_view_.type));
+    GEOARROW_THROW_NOT_OK(nullptr,
+                          GeoArrowSchemaSetMetadata(schema_out, &metadata_view_));
   }
 
-  GeoArrowErrorCode InitStorageSchema(struct ArrowSchema* schema_out) const {
-    if (!valid()) {
-      return EINVAL;
-    }
-
-    return GeoArrowSchemaInit(schema_out, schema_view_.type);
+  void InitStorageSchema(struct ArrowSchema* schema_out) const {
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowSchemaInit(schema_out, schema_view_.type));
   }
-
-  bool valid() const { return schema_view_.type != GEOARROW_TYPE_UNINITIALIZED; }
-
-  std::string error() const { return error_; }
 
   std::string extension_name() const {
-    return GeoArrowExtensionNameFromType(schema_view_.type);
+    const char* name = GeoArrowExtensionNameFromType(schema_view_.type);
+    if (name == NULL) {
+      throw ::geoarrow::Exception(
+          std::string("Extension name not available for type with id ") +
+          std::to_string(schema_view_.type));
+    }
+
+    return name;
   }
 
   std::string extension_metadata() const {
@@ -331,19 +320,12 @@ class GeometryDataType {
   }
 
  private:
-  struct GeoArrowSchemaView schema_view_;
-  struct GeoArrowMetadataView metadata_view_;
+  struct GeoArrowSchemaView schema_view_ {};
+  struct GeoArrowMetadataView metadata_view_ {};
   std::string crs_;
-  std::string error_;
-
-  GeometryDataType(const std::string& err) : crs_(""), error_(err) {
-    memset(&schema_view_, 0, sizeof(struct GeoArrowSchemaView));
-    memset(&metadata_view_, 0, sizeof(struct GeoArrowMetadataView));
-  }
 
   GeometryDataType(struct GeoArrowSchemaView schema_view,
-                   struct GeoArrowMetadataView metadata_view)
-      : error_("") {
+                   struct GeoArrowMetadataView metadata_view) {
     schema_view_.geometry_type = schema_view.geometry_type;
     schema_view_.dimensions = schema_view.dimensions;
     schema_view_.coord_type = schema_view.coord_type;

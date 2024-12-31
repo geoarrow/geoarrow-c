@@ -115,7 +115,7 @@ cdef extern from "geoarrow_type.h":
         GEOARROW_TYPE_INTERLEAVED_POLYGON_ZM = 13003
         GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZM = 13004
         GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_ZM = 13005
-        GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM = 1300
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM = 13006
 
     cpdef enum GeoArrowEdgeType:
         GEOARROW_EDGE_TYPE_PLANAR
@@ -224,8 +224,6 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
         GeometryDataType(const GeometryDataType& x) except +ValueError
         void MoveFrom(GeometryDataType* other)
 
-        bool valid()
-        string error()
         string extension_name() except +ValueError
         string extension_metadata() except +ValueError
         GeoArrowType id()
@@ -243,8 +241,8 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
         GeometryDataType WithEdgeType(GeoArrowEdgeType edge_type) except +ValueError
         GeometryDataType WithCrs(const string& crs, GeoArrowCrsType crs_type) except +ValueError
 
-        GeoArrowErrorCode InitSchema(ArrowSchema* schema) except +ValueError
-        GeoArrowErrorCode InitStorageSchema(ArrowSchema* schema) except +ValueError
+        void InitSchema(ArrowSchema* schema) except +ValueError
+        void InitStorageSchema(ArrowSchema* schema) except +ValueError
 
         @staticmethod
         GeometryDataType Make0 "Make"(GeoArrowGeometryType geometry_type,
@@ -338,9 +336,8 @@ cdef class CGeometryDataType:
         pass
 
     def __repr__(self):
-        if not self.c_vector_type.valid():
-            msg = self.c_vector_type.error().decode("UTF-8")
-            return f"<Invalid CGeometryDataType: {msg}"
+        if self.c_vector_type.id() == GEOARROW_TYPE_UNINITIALIZED:
+            return "<Uninitialized CGeometryDataType>"
 
         ext_name = self.extension_name
         spherical = self.edge_type == GEOARROW_EDGE_TYPE_SPHERICAL
@@ -378,15 +375,15 @@ cdef class CGeometryDataType:
 
     @staticmethod
     cdef _move_from_ctype(GeometryDataType* c_vector_type):
-        if not c_vector_type.valid():
-            raise ValueError(c_vector_type.error().decode("UTF-8"))
+        if c_vector_type.id() == GEOARROW_TYPE_UNINITIALIZED:
+            raise ValueError("Uninitialized CGeometryDataType")
         out = CGeometryDataType()
         out.c_vector_type.MoveFrom(c_vector_type)
         return out
 
     def _assert_valid(self):
-        if not self.c_vector_type.valid():
-            raise ValueError("CGeometryDataType is not valid")
+        if self.c_vector_type.id() == GEOARROW_TYPE_UNINITIALIZED:
+            raise ValueError("Uninitialized CGeometryDataType")
 
     @property
     def id(self):
@@ -471,17 +468,13 @@ cdef class CGeometryDataType:
     def to_schema(self):
         self._assert_valid()
         out = SchemaHolder()
-        cdef int result = self.c_vector_type.InitSchema(&out.c_schema)
-        if result != GEOARROW_OK:
-            raise ValueError("InitSchema() failed")
+        self.c_vector_type.InitSchema(&out.c_schema)
         return out
 
     def to_storage_schema(self):
         self._assert_valid()
         out = SchemaHolder()
-        cdef int result = self.c_vector_type.InitStorageSchema(&out.c_schema)
-        if result != GEOARROW_OK:
-            raise ValueError("InitStorageSchema() failed")
+        self.c_vector_type.InitStorageSchema(&out.c_schema)
         return out
 
     @staticmethod

@@ -31,7 +31,7 @@ def test_array_holder():
 
 def test_c_vector_type_empty():
     empty = lib.CGeometryDataType()
-    assert "Invalid CGeometryDataType" in repr(empty)
+    assert "Uninitialized CGeometryDataType" in repr(empty)
 
     with pytest.raises(ValueError):
         empty.id
