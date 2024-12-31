@@ -2,8 +2,6 @@
 #ifndef GEOARROW_H_INCLUDED
 #define GEOARROW_H_INCLUDED
 
-#include <stdint.h>
-
 #include "geoarrow_type.h"
 
 #ifdef __cplusplus
@@ -469,10 +467,11 @@ GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
 
 /// \brief Get a GeoArrowArrayView
 ///
-/// If there is a GeoArrowArrayView underlying this GeoArrowArrayReader, returns
-/// a pointer to it (or NULL otherwise).
-const struct GeoArrowArrayView* GeoArrowArrayReaderArrayView(
-    struct GeoArrowArrayReader* reader);
+/// If there is a GeoArrowArrayView underlying this GeoArrowArrayReader, populates
+/// out with the internal pointer. Returns an error code if there is no GeoArrowArrayView
+/// corresponding to this array.
+GeoArrowErrorCode GeoArrowArrayReaderArrayView(struct GeoArrowArrayReader* reader,
+                                               const struct GeoArrowArrayView** out);
 
 /// \brief Free resources held by a GeoArrowArrayReader
 void GeoArrowArrayReaderReset(struct GeoArrowArrayReader* reader);
@@ -515,6 +514,13 @@ GeoArrowErrorCode GeoArrowArrayWriterSetFlatMultipoint(struct GeoArrowArrayWrite
 /// \brief Populate a GeoArrowVisitor pointing to this writer
 GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* writer,
                                                  struct GeoArrowVisitor* v);
+
+/// \brief Get the underlying GeoArrowBuilder for the GeoArrowArrayWriter
+///
+/// Returns a pointer to the builder underlying this GeoArrowArrayWriter if one exists
+/// or returns an error code otherwise.
+GeoArrowErrorCode GeoArrowArrayWriterBuilder(struct GeoArrowArrayWriter* writer,
+                                             struct GeoArrowBuilder** out);
 
 /// \brief Finish an ArrowArray containing elements from the visited input
 ///

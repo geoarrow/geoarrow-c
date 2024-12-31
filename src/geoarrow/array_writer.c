@@ -102,6 +102,25 @@ GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* wri
   }
 }
 
+GeoArrowErrorCode GeoArrowArrayWriterBuilder(struct GeoArrowArrayWriter* writer,
+                                             struct GeoArrowBuilder** out) {
+  NANOARROW_DCHECK(writer != NULL);
+  NANOARROW_DCHECK(out != NULL);
+  struct GeoArrowArrayWriterPrivate* private_data =
+      (struct GeoArrowArrayWriterPrivate*)writer->private_data;
+
+  // One could update the wkt/wkb writers to use the builder so that this could
+  // return the builder in any case.
+  switch (private_data->type) {
+    case GEOARROW_TYPE_WKT:
+    case GEOARROW_TYPE_WKB:
+      return ENOTSUP;
+    default:
+      *out = &private_data->builder;
+      return GEOARROW_OK;
+  }
+}
+
 GeoArrowErrorCode GeoArrowArrayWriterFinish(struct GeoArrowArrayWriter* writer,
                                             struct ArrowArray* array,
                                             struct GeoArrowError* error) {
@@ -135,4 +154,5 @@ void GeoArrowArrayWriterReset(struct GeoArrowArrayWriter* writer) {
   }
 
   ArrowFree(private_data);
+  writer->private_data = NULL;
 }
