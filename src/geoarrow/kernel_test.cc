@@ -1,6 +1,5 @@
 
 #include <errno.h>
-#include <stdexcept>
 
 #include <gtest/gtest.h>
 
