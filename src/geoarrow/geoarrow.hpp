@@ -48,7 +48,8 @@ class GeometryDataType {
     metadata_view_.crs.data = crs_.data();
   }
 
-  /// \brief Make a VectorType from a geometry type, dimensions, and coordinate type.
+  /// \brief Make a GeometryDataType from a geometry type, dimensions, and coordinate
+  /// type.
   static GeometryDataType Make(
       enum GeoArrowGeometryType geometry_type,
       enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY,
@@ -57,7 +58,8 @@ class GeometryDataType {
     return Make(GeoArrowMakeType(geometry_type, dimensions, coord_type), metadata);
   }
 
-  /// \brief Make a VectorType from a type identifier and optional extension metadata.
+  /// \brief Make a GeometryDataType from a type identifier and optional extension
+  /// metadata.
   static GeometryDataType Make(enum GeoArrowType type, const std::string& metadata = "") {
     struct GeoArrowSchemaView schema_view;
     int result = GeoArrowSchemaViewInitFromType(&schema_view, type);
@@ -79,7 +81,7 @@ class GeometryDataType {
     return GeometryDataType(schema_view, metadata_view);
   }
 
-  /// \brief Make a VectorType from an ArrowSchema extension type
+  /// \brief Make a GeometryDataType from an ArrowSchema extension type
   ///
   /// The caller retains ownership of schema.
   static GeometryDataType Make(struct ArrowSchema* schema) {
@@ -104,7 +106,7 @@ class GeometryDataType {
     return GeometryDataType(schema_view, metadata_view);
   }
 
-  /// \brief Make a VectorType from an ArrowSchema storage type
+  /// \brief Make a GeometryDataType from an ArrowSchema storage type
   ///
   /// The caller retains ownership of schema. If schema is an extension type,
   /// any extension type or metadata is ignored.
@@ -136,7 +138,7 @@ class GeometryDataType {
     return GeometryDataType(schema_view, metadata_view);
   }
 
-  /// \brief Make an invalid VectorType for which valid() returns false.
+  /// \brief Make an invalid GeometryDataType for which valid() returns false.
   static GeometryDataType Invalid(const std::string& err = "") {
     return GeometryDataType(err);
   }
@@ -437,11 +439,12 @@ static inline GeometryDataType Polygon() {
 namespace internal {
 
 template <typename T>
-static inline struct GeoArrowBufferView BufferView(const std::vector<T>& v) {
+static inline struct GeoArrowBufferView BufferView(const T& v) {
   if (v.size() == 0) {
     return {nullptr, 0};
   } else {
-    return {(const uint8_t*)v.data(), (int64_t)(v.size() * sizeof(T))};
+    return {reinterpret_cast<const uint8_t*>(v.data()),
+            static_cast<int64_t>(v.size() * sizeof(typename T::value_type))};
   }
 }
 
