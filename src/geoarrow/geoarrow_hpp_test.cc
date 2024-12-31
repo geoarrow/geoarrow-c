@@ -1,6 +1,8 @@
 
 #include <gtest/gtest.h>
 
+#include "nanoarrow/nanoarrow.h"
+
 #include <geoarrow.hpp>
 
 TEST(GeoArrowHppTest, GeometryDataTypeMakeType) {
@@ -14,6 +16,19 @@ TEST(GeoArrowHppTest, GeometryDataTypeMakeType) {
   EXPECT_EQ(type.edge_type(), GEOARROW_EDGE_TYPE_PLANAR);
   EXPECT_EQ(type.crs_type(), GEOARROW_CRS_TYPE_NONE);
   EXPECT_EQ(type.crs(), "");
+}
+
+TEST(GeoArrowHppTest, GeometryDataTypeMakeTypeFromSchema) {
+  struct ArrowSchema schema;
+  ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, GEOARROW_TYPE_POINT), GEOARROW_OK);
+  auto type = geoarrow::GeometryDataType::Make(&schema);
+  ASSERT_EQ(type.id(), GEOARROW_TYPE_POINT);
+  ArrowSchemaRelease(&schema);
+
+  type.WithCrsLonLat().InitSchema(&schema);
+  type = geoarrow::GeometryDataType::Make(&schema);
+  ASSERT_EQ(type.crs_type(), GEOARROW_CRS_TYPE_PROJJSON);
+  ASSERT_GT(type.crs().size(), 0);
 }
 
 TEST(GeoArrowHppTest, GeometryDataTypeMakeTypeErrors) {
@@ -65,15 +80,16 @@ TEST(GeoArrowHppTest, GeometryDataTypeModifyBox) {
   EXPECT_EQ(geoarrow::Box().XYM().id(), GEOARROW_TYPE_BOX_M);
   EXPECT_EQ(geoarrow::Box().XYZM().id(), GEOARROW_TYPE_BOX_ZM);
   EXPECT_EQ(geoarrow::Box().XYZ().XY().id(), GEOARROW_TYPE_BOX);
-
-  EXPECT_THROW(geoarrow::Box().WithCoordType(GEOARROW_COORD_TYPE_INTERLEAVED),
-               geoarrow::Exception);
 }
 
 TEST(GeoArrowHppTest, GeometryDataTypeModifyXYZM) {
+  EXPECT_EQ(geoarrow::Point().num_dimensions(), 2);
   EXPECT_EQ(geoarrow::Point().XYZ().id(), GEOARROW_TYPE_POINT_Z);
+  EXPECT_EQ(geoarrow::Point().XYZ().num_dimensions(), 3);
   EXPECT_EQ(geoarrow::Point().XYM().id(), GEOARROW_TYPE_POINT_M);
+  EXPECT_EQ(geoarrow::Point().XYM().num_dimensions(), 3);
   EXPECT_EQ(geoarrow::Point().XYZM().id(), GEOARROW_TYPE_POINT_ZM);
+  EXPECT_EQ(geoarrow::Point().XYZM().num_dimensions(), 4);
   EXPECT_EQ(geoarrow::Point().XYZ().XY().id(), GEOARROW_TYPE_POINT);
 }
 
@@ -96,6 +112,20 @@ TEST(GeoArrowHppTest, GeometryDataTypeModifyMultipolygon) {
   EXPECT_EQ(geoarrow::Polygon().Multi().Multi().id(), GEOARROW_TYPE_MULTIPOLYGON);
   EXPECT_EQ(geoarrow::Polygon().Simple().id(), GEOARROW_TYPE_POLYGON);
   EXPECT_EQ(geoarrow::Polygon().Multi().Simple().id(), GEOARROW_TYPE_POLYGON);
+}
+
+TEST(GeoArrowHppTest, GeometryDataTypeModifyErrors) {
+  EXPECT_THROW(geoarrow::Box().WithCoordType(GEOARROW_COORD_TYPE_INTERLEAVED),
+               geoarrow::Exception);
+  EXPECT_THROW(geoarrow::Box().Simple(), geoarrow::Exception);
+  EXPECT_THROW(geoarrow::Box().Multi(), geoarrow::Exception);
+  EXPECT_THROW(geoarrow::GeometryDataType().extension_name(), geoarrow::Exception);
+}
+
+TEST(GeoArrowHppTest, SerializedAccessors) {
+  EXPECT_EQ(geoarrow::Wkt().coord_type(), GEOARROW_COORD_TYPE_UNKNOWN);
+  EXPECT_EQ(geoarrow::Wkt().dimensions(), GEOARROW_DIMENSIONS_UNKNOWN);
+  EXPECT_EQ(geoarrow::Wkt().num_dimensions(), -1);
 }
 
 TEST(GeoArrowHppTest, TypeConstructors) {

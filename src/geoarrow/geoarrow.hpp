@@ -232,6 +232,12 @@ class GeometryDataType {
     return GeometryDataType(schema_view_, metadata_view_copy);
   }
 
+  GeometryDataType WithCrsLonLat() {
+    struct GeoArrowMetadataView metadata_view_copy = metadata_view_;
+    GeoArrowMetadataSetLonLat(&metadata_view_copy);
+    return GeometryDataType(schema_view_, metadata_view_copy);
+  }
+
   GeometryDataType XY() const { return WithDimensions(GEOARROW_DIMENSIONS_XY); }
 
   GeometryDataType XYZ() const { return WithDimensions(GEOARROW_DIMENSIONS_XYZ); }
@@ -252,7 +258,9 @@ class GeometryDataType {
       case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
         return WithGeometryType(GEOARROW_GEOMETRY_TYPE_POLYGON);
       default:
-        throw ::geoarrow::Exception("Can't make simple type type");
+        throw ::geoarrow::Exception(
+            std::string("Can't make simple type from geometry type ") +
+            GeoArrowGeometryTypeString(geometry_type()));
     }
   }
 
@@ -268,7 +276,9 @@ class GeometryDataType {
       case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
         return WithGeometryType(GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON);
       default:
-        throw ::geoarrow::Exception("Can't make multi type");
+        throw ::geoarrow::Exception(
+            std::string("Can't make multi type from geometry type ") +
+            GeoArrowGeometryTypeString(geometry_type()));
     }
   }
 
