@@ -4,8 +4,8 @@
 
 #include "nanoarrow/nanoarrow.h"
 
-#include "array_writer.hpp"
 #include "array_reader.hpp"
+#include "array_writer.hpp"
 
 #include "wkx_testing.hpp"
 

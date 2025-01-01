@@ -260,7 +260,7 @@ if(GEOARROW_BUILD_TESTS)
   add_executable(array_reader_test src/geoarrow/array_reader_test.cc)
   add_executable(array_writer_test src/geoarrow/array_writer_test.cc)
   add_executable(wkx_files_test src/geoarrow/wkx_files_test.cc)
-  
+
   add_executable(hpp_array_writer_test src/geoarrow/hpp/array_writer_test.cc)
   add_executable(hpp_geometry_data_type_test src/geoarrow/hpp/geometry_data_type_test.cc)
   add_executable(hpp_arrow_extension_type_test
@@ -283,15 +283,13 @@ if(GEOARROW_BUILD_TESTS)
   target_link_libraries(array_reader_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(array_writer_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(wkx_files_test geoarrow gtest_main nanoarrow::nanoarrow)
-  
+
   target_link_libraries(hpp_array_writer_test
                         geoarrow
                         gtest_main
                         gmock_main
                         nanoarrow::nanoarrow)
-  target_link_libraries(hpp_geometry_data_type_test
-                        geoarrow
-                        gtest_main
+  target_link_libraries(hpp_geometry_data_type_test geoarrow gtest_main
                         nanoarrow::nanoarrow)
   target_link_libraries(hpp_arrow_extension_type_test geoarrow ${GEOARROW_ARROW_TARGET}
                         gtest_main)
