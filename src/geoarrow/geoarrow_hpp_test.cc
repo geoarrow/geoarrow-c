@@ -32,6 +32,7 @@ TEST(GeoArrowHppTest, GeometryDataTypeMakeTypeFromSchema) {
   type = geoarrow::GeometryDataType::Make(&schema);
   ASSERT_EQ(type.crs_type(), GEOARROW_CRS_TYPE_PROJJSON);
   ASSERT_GT(type.crs().size(), 0);
+  ArrowSchemaRelease(&schema);
 }
 
 TEST(GeoArrowHppTest, GeometryDataTypeMakeTypeErrors) {
