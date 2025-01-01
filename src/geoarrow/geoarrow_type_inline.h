@@ -402,7 +402,7 @@ static inline int GeoArrowBuilderOffsetCheck(struct GeoArrowBuilder* builder, in
 }
 
 static inline void GeoArrowBuilderOffsetAppendUnsafe(struct GeoArrowBuilder* builder,
-                                                     int32_t i, int32_t* data,
+                                                     int32_t i, const int32_t* data,
                                                      int64_t additional_size_elements) {
   struct GeoArrowWritableBufferView* buf = &builder->view.buffers[i + 1];
   memcpy(buf->data.as_uint8 + buf->size_bytes, data,
@@ -541,7 +541,7 @@ static inline GeoArrowErrorCode GeoArrowBuilderOffsetReserve(
 }
 
 static inline GeoArrowErrorCode GeoArrowBuilderOffsetAppend(
-    struct GeoArrowBuilder* builder, int32_t i, int32_t* data,
+    struct GeoArrowBuilder* builder, int32_t i, const int32_t* data,
     int64_t additional_size_elements) {
   if (!GeoArrowBuilderOffsetCheck(builder, i, additional_size_elements)) {
     int result = GeoArrowBuilderOffsetReserve(builder, i, additional_size_elements);

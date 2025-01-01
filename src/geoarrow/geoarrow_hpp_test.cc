@@ -1,4 +1,5 @@
 
+#include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>
 
 #include "nanoarrow/nanoarrow.h"
@@ -211,6 +212,27 @@ TEST(GeoArrowHppTest, ArrayWriterByBuffer) {
   EXPECT_EQ(reader.View().array_view()->validity_bitmap[0], 0b00001111);
   EXPECT_EQ(reader.View().array_view()->coords.values[0][0], 0);
   EXPECT_EQ(reader.View().array_view()->coords.values[1][0], 4);
+}
+
+TEST(GeoArrowHppTest, ArrayWriterByOffsetAndCoords) {
+  TestCoords coords({0, 1, 2, 3, 4}, {5, 6, 7, 8, 9});
+
+  geoarrow::ArrayWriter writer(geoarrow::Linestring());
+  writer.builder().AppendToOffsetBuffer(0, std::vector<int32_t>{0, 2, 5});
+  writer.builder().AppendCoords(coords.view(), GEOARROW_DIMENSIONS_XY, 0, 5);
+
+  struct ArrowArray array;
+  writer.Finish(&array);
+  ASSERT_EQ(array.length, 2);
+  ASSERT_EQ(array.n_children, 1);
+
+  WKXTester tester;
+  geoarrow::ArrayReader reader(geoarrow::Linestring());
+  reader.SetArray(&array);
+  ASSERT_EQ(reader.Visit(tester.WKTVisitor(), 0, array.length), GEOARROW_OK);
+
+  EXPECT_THAT(tester.WKTValues(), ::testing::ElementsAre("LINESTRING (0 5, 1 6)",
+                                                         "LINESTRING (2 7, 3 8, 4 9)"));
 }
 
 TEST(GeoArrowHppTest, ArrayWriterByVisitor) {
