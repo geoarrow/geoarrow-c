@@ -355,6 +355,25 @@ class GeometryDataType {
     metadata_view_.crs.size_bytes = crs_.size();
   }
 };
+
+static inline GeometryDataType Wkb() { return GeometryDataType::Make(GEOARROW_TYPE_WKB); }
+
+static inline GeometryDataType Wkt() { return GeometryDataType::Make(GEOARROW_TYPE_WKT); }
+
+static inline GeometryDataType Box() { return GeometryDataType::Make(GEOARROW_TYPE_BOX); }
+
+static inline GeometryDataType Point() {
+  return GeometryDataType::Make(GEOARROW_TYPE_POINT);
+}
+
+static inline GeometryDataType Linestring() {
+  return GeometryDataType::Make(GEOARROW_TYPE_LINESTRING);
+}
+
+static inline GeometryDataType Polygon() {
+  return GeometryDataType::Make(GEOARROW_TYPE_POLYGON);
+}
+
 }  // namespace geoarrow
 
 #endif
