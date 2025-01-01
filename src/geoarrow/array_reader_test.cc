@@ -13,6 +13,12 @@ TEST(ArrayReaderTest, ArrayReaderTestInit) {
   struct ArrowSchema schema;
   ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, GEOARROW_TYPE_POINT), GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayReaderInitFromSchema(&reader, &schema, nullptr), GEOARROW_OK);
+
+  const struct GeoArrowArrayView* view = nullptr;
+  ASSERT_EQ(GeoArrowArrayReaderArrayView(&reader, &view), GEOARROW_OK);
+  ASSERT_NE(view, nullptr);
+  ASSERT_EQ(view->schema_view.type, GEOARROW_TYPE_POINT);
+
   GeoArrowArrayReaderReset(&reader);
   ArrowSchemaRelease(&schema);
 }

@@ -2,178 +2,252 @@
 #ifndef GEOARROW_HPP_INCLUDED
 #define GEOARROW_HPP_INCLUDED
 
-#include <cerrno>
-#include <sstream>
+#include <cstring>
+#include <exception>
 #include <string>
 #include <vector>
 
 #include "geoarrow.h"
 
+#if defined(GEOARROW_DEBUG)
+#define _GEOARROW_THROW_NOT_OK_IMPL(NAME, EXPR, EXPR_STR, ERR)                      \
+  do {                                                                              \
+    const int NAME = (EXPR);                                                        \
+    if (NAME) {                                                                     \
+      throw ::geoarrow::ErrnoException(                                             \
+          NAME,                                                                     \
+          std::string(EXPR_STR) + std::string(" failed with errno ") +              \
+              std::to_string(NAME) + std::string("\n * ") + std::string(__FILE__) + \
+              std::string(":") + std::to_string(__LINE__),                          \
+          ERR);                                                                     \
+    }                                                                               \
+  } while (0)
+#else
+#define _GEOARROW_THROW_NOT_OK_IMPL(NAME, EXPR, EXPR_STR, ERR)                  \
+  do {                                                                          \
+    const int NAME = (EXPR);                                                    \
+    if (NAME) {                                                                 \
+      throw ::geoarrow::ErrnoException(NAME,                                    \
+                                       std::string(EXPR_STR) +                  \
+                                           std::string(" failed with errno ") + \
+                                           std::to_string(NAME),                \
+                                       ERR);                                    \
+    }                                                                           \
+  } while (0)
+#endif
+
+#define GEOARROW_THROW_NOT_OK(ERR, EXPR)                                             \
+  _GEOARROW_THROW_NOT_OK_IMPL(_GEOARROW_MAKE_NAME(errno_status_, __COUNTER__), EXPR, \
+                              #EXPR, ERR)
+
 namespace geoarrow {
 
-class VectorType {
+class Exception : public std::exception {
  public:
-  VectorType() : VectorType("") {}
+  std::string message;
 
-  VectorType(const VectorType& other)
+  Exception() = default;
+
+  explicit Exception(const std::string& msg) : message(msg){};
+
+  const char* what() const noexcept override { return message.c_str(); }
+};
+
+class ErrnoException : public Exception {
+ public:
+  GeoArrowErrorCode code{};
+
+  ErrnoException(GeoArrowErrorCode code, const std::string& msg, GeoArrowError* error)
+      : code(code) {
+    if (error != nullptr) {
+      message = msg + ": \n" + error->message;
+    } else {
+      message = msg;
+    }
+  }
+};
+
+namespace internal {
+struct SchemaHolder {
+  struct ArrowSchema schema {};
+  ~SchemaHolder() {
+    if (schema.release != nullptr) {
+      schema.release(&schema);
+    }
+  }
+};
+
+struct ArrayHolder {
+  struct ArrowArray array {};
+  ~ArrayHolder() {
+    if (array.release != nullptr) {
+      array.release(&array);
+    }
+  }
+};
+}  // namespace internal
+
+class GeometryDataType {
+ public:
+  GeometryDataType() = default;
+
+  GeometryDataType(const GeometryDataType& other)
       : schema_view_(other.schema_view_),
         metadata_view_(other.metadata_view_),
-        crs_(other.crs_),
-        error_(other.error_) {
+        crs_(other.crs_) {
     metadata_view_.crs.data = crs_.data();
   }
 
-  VectorType& operator=(VectorType other) {
+  GeometryDataType& operator=(const GeometryDataType& other) {
     this->schema_view_ = other.schema_view_;
     this->metadata_view_ = other.metadata_view_;
     this->crs_ = other.crs_;
-    this->error_ = other.error_;
     this->metadata_view_.crs.data = this->crs_.data();
     return *this;
   }
 
-  VectorType(const VectorType&& other)
-      : schema_view_(other.schema_view_),
-        metadata_view_(other.metadata_view_),
-        crs_(std::move(other.crs_)),
-        error_(std::move(other.error_)) {
-    metadata_view_.crs.data = crs_.data();
+  GeometryDataType(GeometryDataType&& other) { MoveFrom(&other); }
+
+  GeometryDataType& operator=(GeometryDataType&& other) {
+    MoveFrom(&other);
+    return *this;
   }
 
-  void MoveFrom(VectorType* other) {
+  void MoveFrom(GeometryDataType* other) {
     schema_view_ = other->schema_view_;
     metadata_view_ = other->metadata_view_;
-    error_ = std::move(other->error_);
     crs_ = std::move(other->crs_);
     metadata_view_.crs.data = crs_.data();
+
+    std::memset(&other->schema_view_, 0, sizeof(struct GeoArrowSchemaView));
+    std::memset(&other->metadata_view_, 0, sizeof(struct GeoArrowMetadataView));
   }
 
-  /// \brief Make a VectorType from a geometry type, dimensions, and coordinate type.
-  static VectorType Make(enum GeoArrowGeometryType geometry_type,
-                         enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY,
-                         enum GeoArrowCoordType coord_type = GEOARROW_COORD_TYPE_SEPARATE,
-                         const std::string& metadata = "") {
-    return Make(GeoArrowMakeType(geometry_type, dimensions, coord_type), metadata);
-  }
-
-  /// \brief Make a VectorType from a type identifier and optional extension metadata.
-  static VectorType Make(enum GeoArrowType type, const std::string& metadata = "") {
-    struct GeoArrowSchemaView schema_view;
-    int result = GeoArrowSchemaViewInitFromType(&schema_view, type);
-    if (result != GEOARROW_OK) {
-      return Invalid("Failed to initialize GeoArrowSchemaView");
+  /// \brief Make a GeometryDataType from a geometry type, dimensions, and coordinate
+  /// type.
+  static GeometryDataType Make(
+      enum GeoArrowGeometryType geometry_type,
+      enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY,
+      enum GeoArrowCoordType coord_type = GEOARROW_COORD_TYPE_SEPARATE,
+      const std::string& metadata = "") {
+    enum GeoArrowType type = GeoArrowMakeType(geometry_type, dimensions, coord_type);
+    if (type == GEOARROW_TYPE_UNINITIALIZED) {
+      throw ::geoarrow::Exception(
+          std::string("Combination of geometry type/dimensions/coord type not valid: ") +
+          GeoArrowGeometryTypeString(geometry_type) + "/" +
+          GeoArrowDimensionsString(dimensions) + "/" +
+          GeoArrowCoordTypeString(coord_type));
     }
 
-    struct GeoArrowStringView metadata_str_view = {metadata.data(),
-                                                   (int64_t)metadata.size()};
-    struct GeoArrowMetadataView metadata_view;
-    struct GeoArrowError error;
-    result = GeoArrowMetadataViewInit(&metadata_view, metadata_str_view, &error);
-    if (result != GEOARROW_OK) {
-      std::stringstream ss;
-      ss << "Failed to initialize GeoArrowMetadataView: " << error.message;
-      return Invalid(ss.str());
-    }
-
-    return VectorType(schema_view, metadata_view);
+    return Make(type, metadata);
   }
 
-  /// \brief Make a VectorType from an ArrowSchema extension type
+  /// \brief Make a GeometryDataType from a type identifier and optional extension
+  /// metadata.
+  static GeometryDataType Make(enum GeoArrowType type, const std::string& metadata = "") {
+    switch (type) {
+      case GEOARROW_TYPE_UNINITIALIZED:
+        throw Exception(
+            "Can't construct GeometryDataType from GEOARROW_TYPE_UNINITIALIZED");
+      default:
+        break;
+    }
+
+    GeoArrowError error{};
+    GeoArrowSchemaView schema_view;
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowSchemaViewInitFromType(&schema_view, type));
+
+    GeoArrowStringView metadata_str_view = {metadata.data(), (int64_t)metadata.size()};
+    GeoArrowMetadataView metadata_view{};
+    GEOARROW_THROW_NOT_OK(
+        &error, GeoArrowMetadataViewInit(&metadata_view, metadata_str_view, &error));
+
+    return GeometryDataType(schema_view, metadata_view);
+  }
+
+  /// \brief Make a GeometryDataType from an ArrowSchema extension type
   ///
   /// The caller retains ownership of schema.
-  static VectorType Make(struct ArrowSchema* schema) {
-    struct GeoArrowSchemaView schema_view;
-    struct GeoArrowError error;
-    int result = GeoArrowSchemaViewInit(&schema_view, schema, &error);
-    if (result != GEOARROW_OK) {
-      std::stringstream ss;
-      ss << "Failed to initialize GeoArrowSchemaView: " << error.message;
-      return Invalid(ss.str());
-    }
+  static GeometryDataType Make(const struct ArrowSchema* schema) {
+    GeoArrowError error{};
+    GeoArrowSchemaView schema_view{};
+    GEOARROW_THROW_NOT_OK(&error, GeoArrowSchemaViewInit(&schema_view, schema, &error));
 
-    struct GeoArrowMetadataView metadata_view;
-    result =
-        GeoArrowMetadataViewInit(&metadata_view, schema_view.extension_metadata, &error);
-    if (result != GEOARROW_OK) {
-      std::stringstream ss;
-      ss << "Failed to initialize GeoArrowMetadataView: " << error.message;
-      return Invalid(ss.str());
-    }
+    GeoArrowMetadataView metadata_view{};
+    GEOARROW_THROW_NOT_OK(
+        &error,
+        GeoArrowMetadataViewInit(&metadata_view, schema_view.extension_metadata, &error));
 
-    return VectorType(schema_view, metadata_view);
+    return GeometryDataType(schema_view, metadata_view);
   }
 
-  /// \brief Make a VectorType from an ArrowSchema storage type
+  /// \brief Make a GeometryDataType from an ArrowSchema storage type
   ///
   /// The caller retains ownership of schema. If schema is an extension type,
   /// any extension type or metadata is ignored.
-  static VectorType Make(struct ArrowSchema* schema, const std::string& extension_name,
-                         const std::string& metadata = "") {
-    struct GeoArrowSchemaView schema_view;
-    struct GeoArrowError error;
+  static GeometryDataType Make(struct ArrowSchema* schema,
+                               const std::string& extension_name,
+                               const std::string& metadata = "") {
+    struct GeoArrowError error {};
+    struct GeoArrowSchemaView schema_view {};
+
     struct GeoArrowStringView extension_name_view = {extension_name.data(),
                                                      (int64_t)extension_name.size()};
-    int result = GeoArrowSchemaViewInitFromStorage(&schema_view, schema,
-                                                   extension_name_view, &error);
-    if (result != GEOARROW_OK) {
-      std::stringstream ss;
-      ss << "Failed to initialize GeoArrowSchemaView: " << error.message;
-      return Invalid(ss.str());
-    }
+    GEOARROW_THROW_NOT_OK(&error, GeoArrowSchemaViewInitFromStorage(
+                                      &schema_view, schema, extension_name_view, &error));
 
     struct GeoArrowStringView metadata_str_view = {metadata.data(),
                                                    (int64_t)metadata.size()};
-    struct GeoArrowMetadataView metadata_view;
-    result = GeoArrowMetadataViewInit(&metadata_view, metadata_str_view, &error);
-    if (result != GEOARROW_OK) {
-      std::stringstream ss;
-      ss << "Failed to initialize GeoArrowMetadataView: " << error.message;
-      return Invalid(ss.str());
-    }
+    struct GeoArrowMetadataView metadata_view {};
+    GEOARROW_THROW_NOT_OK(
+        &error, GeoArrowMetadataViewInit(&metadata_view, metadata_str_view, &error));
 
-    return VectorType(schema_view, metadata_view);
+    return GeometryDataType(schema_view, metadata_view);
   }
 
-  /// \brief Make an invalid VectorType for which valid() returns false.
-  static VectorType Invalid(const std::string& err = "") { return VectorType(err); }
-
-  VectorType WithGeometryType(enum GeoArrowGeometryType geometry_type) const {
+  GeometryDataType WithGeometryType(enum GeoArrowGeometryType geometry_type) const {
     return Make(geometry_type, dimensions(), coord_type(), extension_metadata());
   }
 
-  VectorType WithCoordType(enum GeoArrowCoordType coord_type) const {
+  GeometryDataType WithCoordType(enum GeoArrowCoordType coord_type) const {
     return Make(geometry_type(), dimensions(), coord_type, extension_metadata());
   }
 
-  VectorType WithDimensions(enum GeoArrowDimensions dimensions) const {
+  GeometryDataType WithDimensions(enum GeoArrowDimensions dimensions) const {
     return Make(geometry_type(), dimensions, coord_type(), extension_metadata());
   }
 
-  VectorType WithEdgeType(enum GeoArrowEdgeType edge_type) const {
-    VectorType new_type(*this);
+  GeometryDataType WithEdgeType(enum GeoArrowEdgeType edge_type) const {
+    GeometryDataType new_type(*this);
     new_type.metadata_view_.edge_type = edge_type;
     return new_type;
   }
 
-  VectorType WithCrs(const std::string& crs,
-                     enum GeoArrowCrsType crs_type = GEOARROW_CRS_TYPE_UNKNOWN) {
+  GeometryDataType WithCrs(const std::string& crs,
+                           enum GeoArrowCrsType crs_type = GEOARROW_CRS_TYPE_UNKNOWN) {
     struct GeoArrowMetadataView metadata_view_copy = metadata_view_;
     metadata_view_copy.crs.data = crs.data();
     metadata_view_copy.crs.size_bytes = crs.size();
     metadata_view_copy.crs_type = crs_type;
 
-    return VectorType(schema_view_, metadata_view_copy);
+    return GeometryDataType(schema_view_, metadata_view_copy);
   }
 
-  VectorType XY() const { return WithDimensions(GEOARROW_DIMENSIONS_XY); }
+  GeometryDataType WithCrsLonLat() {
+    struct GeoArrowMetadataView metadata_view_copy = metadata_view_;
+    GeoArrowMetadataSetLonLat(&metadata_view_copy);
+    return GeometryDataType(schema_view_, metadata_view_copy);
+  }
 
-  VectorType XYZ() const { return WithDimensions(GEOARROW_DIMENSIONS_XYZ); }
+  GeometryDataType XY() const { return WithDimensions(GEOARROW_DIMENSIONS_XY); }
 
-  VectorType XYM() const { return WithDimensions(GEOARROW_DIMENSIONS_XYM); }
+  GeometryDataType XYZ() const { return WithDimensions(GEOARROW_DIMENSIONS_XYZ); }
 
-  VectorType XYZM() const { return WithDimensions(GEOARROW_DIMENSIONS_XYZM); }
+  GeometryDataType XYM() const { return WithDimensions(GEOARROW_DIMENSIONS_XYM); }
 
-  VectorType Simple() const {
+  GeometryDataType XYZM() const { return WithDimensions(GEOARROW_DIMENSIONS_XYZM); }
+
+  GeometryDataType Simple() const {
     switch (geometry_type()) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
@@ -185,11 +259,13 @@ class VectorType {
       case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
         return WithGeometryType(GEOARROW_GEOMETRY_TYPE_POLYGON);
       default:
-        return Invalid("Can't make simple type type");
+        throw ::geoarrow::Exception(
+            std::string("Can't make simple type from geometry type ") +
+            GeoArrowGeometryTypeString(geometry_type()));
     }
   }
 
-  VectorType Multi() const {
+  GeometryDataType Multi() const {
     switch (geometry_type()) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
@@ -201,37 +277,32 @@ class VectorType {
       case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
         return WithGeometryType(GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON);
       default:
-        return Invalid("Can't make multi type");
+        throw ::geoarrow::Exception(
+            std::string("Can't make multi type from geometry type ") +
+            GeoArrowGeometryTypeString(geometry_type()));
     }
   }
 
-  GeoArrowErrorCode InitSchema(struct ArrowSchema* schema_out) const {
-    if (!valid()) {
-      return EINVAL;
-    }
-
-    int result = GeoArrowSchemaInitExtension(schema_out, schema_view_.type);
-    if (result != GEOARROW_OK) {
-      return result;
-    }
-
-    return GeoArrowSchemaSetMetadata(schema_out, &metadata_view_);
+  void InitSchema(struct ArrowSchema* schema_out) const {
+    GEOARROW_THROW_NOT_OK(nullptr,
+                          GeoArrowSchemaInitExtension(schema_out, schema_view_.type));
+    GEOARROW_THROW_NOT_OK(nullptr,
+                          GeoArrowSchemaSetMetadata(schema_out, &metadata_view_));
   }
 
-  GeoArrowErrorCode InitStorageSchema(struct ArrowSchema* schema_out) const {
-    if (!valid()) {
-      return EINVAL;
-    }
-
-    return GeoArrowSchemaInit(schema_out, schema_view_.type);
+  void InitStorageSchema(struct ArrowSchema* schema_out) const {
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowSchemaInit(schema_out, schema_view_.type));
   }
-
-  bool valid() const { return schema_view_.type != GEOARROW_TYPE_UNINITIALIZED; }
-
-  std::string error() const { return error_; }
 
   std::string extension_name() const {
-    return GeoArrowExtensionNameFromType(schema_view_.type);
+    const char* name = GeoArrowExtensionNameFromType(schema_view_.type);
+    if (name == NULL) {
+      throw ::geoarrow::Exception(
+          std::string("Extension name not available for type with id ") +
+          std::to_string(schema_view_.type));
+    }
+
+    return name;
   }
 
   std::string extension_metadata() const {
@@ -279,20 +350,74 @@ class VectorType {
     return out_str;
   }
 
- private:
-  struct GeoArrowSchemaView schema_view_;
-  struct GeoArrowMetadataView metadata_view_;
-  std::string crs_;
-  std::string error_;
+  std::string ToString(size_t max_crs_size = 40) const {
+    if (id() == GEOARROW_TYPE_UNINITIALIZED) {
+      return "<Uninitialized GeometryDataType>";
+    }
 
-  VectorType(const std::string& err) : crs_(""), error_(err) {
-    memset(&schema_view_, 0, sizeof(struct GeoArrowSchemaView));
-    memset(&metadata_view_, 0, sizeof(struct GeoArrowMetadataView));
+    std::string ext_name = extension_name();
+    bool planar = edge_type() == GEOARROW_EDGE_TYPE_PLANAR;
+    bool interleaved = coord_type() == GEOARROW_COORD_TYPE_INTERLEAVED;
+
+    std::string dims;
+    switch (dimensions()) {
+      case GEOARROW_DIMENSIONS_UNKNOWN:
+      case GEOARROW_DIMENSIONS_XY:
+        break;
+      default:
+        dims = std::string("_") +
+               std::string(GeoArrowDimensionsString(dimensions())).substr(2);
+        break;
+    }
+
+    std::vector<std::string> modifiers;
+    if (id() == GEOARROW_TYPE_LARGE_WKT || id() == GEOARROW_TYPE_LARGE_WKB) {
+      modifiers.push_back("large");
+    }
+
+    if (edge_type() != GEOARROW_EDGE_TYPE_PLANAR) {
+      modifiers.push_back(GeoArrowEdgeTypeString(edge_type()));
+    }
+
+    if (coord_type() == GEOARROW_COORD_TYPE_INTERLEAVED) {
+      modifiers.push_back("interleaved");
+    }
+
+    std::string type_prefix;
+    for (const auto& modifier : modifiers) {
+      type_prefix += modifier + " ";
+    }
+
+    std::string crs_suffix;
+    switch (crs_type()) {
+      case GEOARROW_CRS_TYPE_NONE:
+        break;
+      case GEOARROW_CRS_TYPE_UNKNOWN:
+        crs_suffix = crs();
+        break;
+      default:
+        crs_suffix = std::string(GeoArrowCrsTypeString(crs_type())) + ":" + crs();
+        break;
+    }
+
+    if (!crs_suffix.empty()) {
+      crs_suffix = std::string("<") + crs_suffix + ">";
+    }
+
+    if (crs_suffix.size() >= max_crs_size) {
+      crs_suffix = crs_suffix.substr(0, max_crs_size - 4) + "...>";
+    }
+
+    return type_prefix + ext_name + dims + crs_suffix;
   }
 
-  VectorType(struct GeoArrowSchemaView schema_view,
-             struct GeoArrowMetadataView metadata_view)
-      : error_("") {
+ private:
+  struct GeoArrowSchemaView schema_view_ {};
+  struct GeoArrowMetadataView metadata_view_ {};
+  std::string crs_;
+
+  GeometryDataType(struct GeoArrowSchemaView schema_view,
+                   struct GeoArrowMetadataView metadata_view) {
     schema_view_.geometry_type = schema_view.geometry_type;
     schema_view_.dimensions = schema_view.dimensions;
     schema_view_.coord_type = schema_view.coord_type;
@@ -306,166 +431,236 @@ class VectorType {
   }
 };
 
-class VectorArray {
- public:
-  VectorArray(const VectorType& type = VectorType::Invalid()) : type_(type) {
-    array_.release = nullptr;
-    array_view_.schema_view.type = GEOARROW_TYPE_UNINITIALIZED;
-  }
-
-  VectorArray(VectorArray&& rhs) : VectorArray(rhs.type(), rhs.get()) {
-    array_view_ = rhs.array_view_;
-    rhs.array_view_.schema_view.type = GEOARROW_TYPE_UNINITIALIZED;
-  }
-
-  VectorArray(VectorArray& rhs) = delete;
-
-  VectorArray(const VectorType& type, struct ArrowArray* array) : type_(type) {
-    memcpy(&array_, array, sizeof(struct ArrowArray));
-    array->release = nullptr;
-    if (GeoArrowArrayViewInitFromType(&array_view_, type.id()) != GEOARROW_OK) {
-      type_ = VectorType::Invalid("GeoArrowArrayViewInitFromType failed");
-    }
-    array_view_.schema_view.type = GEOARROW_TYPE_UNINITIALIZED;
-  }
-
-  struct ArrowArray* get() { return &array_; }
-
-  struct ArrowArray* operator->() { return &array_; }
-
-  void reset() {
-    if (array_.release != nullptr) {
-      array_.release(&array_);
-    }
-  }
-
-  ~VectorArray() { reset(); }
-
-  const VectorType& type() { return type_; }
-
-  bool valid() { return type_.valid() && array_.release != nullptr; }
-
-  std::string error() {
-    if (array_.release != nullptr || !type_.valid()) {
-      return type_.error();
-    } else {
-      return "VectorArray is released";
-    }
-  }
-
-  struct GeoArrowArrayView* view() {
-    MaybeInitArrayView();
-    return &array_view_;
-  }
-
-  static VectorArray FromBuffers(VectorType type,
-                                 const std::vector<struct GeoArrowBufferView>& buffers) {
-    struct GeoArrowBuilder builder;
-    int result = GeoArrowBuilderInitFromType(&builder, type.id());
-    if (result != GEOARROW_OK) {
-      return VectorArray(VectorType::Invalid("GeoArrowBuilderInitFromType failed"));
-    }
-
-    for (size_t i = 0; i < buffers.size(); i++) {
-      if (buffers[i].data == nullptr) {
-        continue;
-      }
-
-      result = GeoArrowBuilderAppendBuffer(&builder, i, buffers[i]);
-      if (result != GEOARROW_OK) {
-        GeoArrowBuilderReset(&builder);
-        return VectorArray(VectorType::Invalid("GeoArrowBuilderAppendBuffer failed"));
-      }
-    }
-
-    struct GeoArrowError error;
-    VectorArray out(type);
-    result = GeoArrowBuilderFinish(&builder, out.get(), &error);
-    GeoArrowBuilderReset(&builder);
-    if (result != GEOARROW_OK) {
-      return VectorArray(VectorType::Invalid(error.message));
-    }
-
-    return out;
-  }
-
- private:
-  VectorType type_;
-  struct ArrowArray array_;
-  struct GeoArrowArrayView array_view_;
-
-  bool MaybeInitArrayView() {
-    if (valid() && array_view_.schema_view.type == GEOARROW_TYPE_UNINITIALIZED) {
-      int result = GeoArrowArrayViewInitFromType(&array_view_, type_.id());
-      if (result != GEOARROW_OK) {
-        type_ = VectorType::Invalid("GeoArrowArrayViewInitFromType failed");
-      }
-
-      result = GeoArrowArrayViewSetArray(&array_view_, &array_, nullptr);
-      if (result != GEOARROW_OK) {
-        type_ = VectorType::Invalid("GeoArrowArrayViewSetArray failed");
-      }
-    }
-
-    return valid();
-  }
-};
-
-static inline VectorType Wkb() { return VectorType::Make(GEOARROW_TYPE_WKB); }
-
-static inline VectorType Wkt() { return VectorType::Make(GEOARROW_TYPE_WKT); }
-
-static inline VectorType Box() { return VectorType::Make(GEOARROW_TYPE_BOX); }
-
-static inline VectorType Point() { return VectorType::Make(GEOARROW_TYPE_POINT); }
-
-static inline VectorType Linestring() {
-  return VectorType::Make(GEOARROW_TYPE_LINESTRING);
-}
-
-static inline VectorType Polygon() { return VectorType::Make(GEOARROW_TYPE_POLYGON); }
-
 namespace internal {
 
 template <typename T>
-static inline struct GeoArrowBufferView BufferView(const std::vector<T>& v) {
+static inline void FreeWrappedBuffer(uint8_t* ptr, int64_t size, void* private_data) {
+  auto obj = reinterpret_cast<T*>(private_data);
+  delete obj;
+}
+
+template <typename T>
+static inline struct GeoArrowBufferView BufferView(const T& v) {
   if (v.size() == 0) {
     return {nullptr, 0};
   } else {
-    return {(const uint8_t*)v.data(), (int64_t)(v.size() * sizeof(T))};
+    return {reinterpret_cast<const uint8_t*>(v.data()),
+            static_cast<int64_t>(v.size() * sizeof(typename T::value_type))};
   }
 }
 
 }  // namespace internal
 
-static inline VectorArray ArrayFromVectors(
-    const VectorType& type, const std::vector<std::vector<double>>& coords,
-    const std::vector<std::vector<int32_t>> offsets = {},
-    const std::vector<uint8_t> validity_bitmap = {}) {
-  std::vector<struct GeoArrowBufferView> buffers;
-  buffers.push_back(internal::BufferView(validity_bitmap));
+class ArrayView {
+ public:
+  explicit ArrayView(const struct GeoArrowArrayView* array_view = nullptr)
+      : array_view_(array_view) {}
 
-  for (const auto& v : offsets) {
-    buffers.push_back(internal::BufferView(v));
+  void Init(const struct GeoArrowArrayView* array_view) { array_view_ = array_view; }
+
+  bool is_valid() {
+    return array_view_ != nullptr &&
+           array_view_->schema_view.type != GEOARROW_TYPE_UNINITIALIZED;
   }
 
-  for (const auto& v : coords) {
-    buffers.push_back(internal::BufferView(v));
+  const struct GeoArrowArrayView* array_view() { return array_view_; }
+
+ private:
+  const struct GeoArrowArrayView* array_view_{};
+};
+
+class ArrayReader {
+ public:
+  explicit ArrayReader(GeoArrowType type) {
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayReaderInitFromType(&reader_, type));
   }
 
-  return VectorArray::FromBuffers(type, buffers);
+  explicit ArrayReader(const GeometryDataType& type) : ArrayReader(type.id()) {}
+
+  explicit ArrayReader(const ArrowSchema* schema) {
+    struct GeoArrowError error {};
+    GEOARROW_THROW_NOT_OK(&error,
+                          GeoArrowArrayReaderInitFromSchema(&reader_, schema, &error));
+  }
+
+  ~ArrayReader() {
+    if (reader_.private_data != nullptr) {
+      GeoArrowArrayReaderReset(&reader_);
+    }
+  }
+
+  void SetArray(struct ArrowArray* array) {
+    struct GeoArrowError error {};
+    GEOARROW_THROW_NOT_OK(&error, GeoArrowArrayReaderSetArray(&reader_, array, &error));
+    if (array_.array.release != nullptr) {
+      array_.array.release(&array_.array);
+    }
+
+    std::memcpy(&array_, array, sizeof(struct ArrowArray));
+    array->release = nullptr;
+  }
+
+  GeoArrowErrorCode Visit(struct GeoArrowVisitor* visitor, int64_t offset, int64_t length,
+                          struct GeoArrowError* error = nullptr) {
+    visitor->error = error;
+    return GeoArrowArrayReaderVisit(&reader_, offset, length, visitor);
+  }
+
+  ArrayView& View() {
+    if (!view_.is_valid()) {
+      const struct GeoArrowArrayView* array_view = nullptr;
+      GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayReaderArrayView(&reader_, &array_view));
+      view_.Init(array_view);
+    }
+
+    return view_;
+  }
+
+ private:
+  struct GeoArrowArrayReader reader_ {};
+  ArrayView view_;
+  internal::ArrayHolder array_;
+};
+
+class ArrayBuilder {
+ public:
+  explicit ArrayBuilder(struct GeoArrowBuilder* builder = nullptr) : builder_(builder) {}
+  void Init(struct GeoArrowBuilder* builder) { builder_ = builder; }
+
+  bool is_valid() { return builder_ != nullptr && builder_->private_data != nullptr; }
+
+  struct GeoArrowBuilder* builder() { return builder_; }
+
+  template <typename T>
+  void SetBufferWrapped(int64_t i, T obj, GeoArrowBufferView value) {
+    T* obj_moved = new T(std::move(obj));
+    GeoArrowErrorCode result = GeoArrowBuilderSetOwnedBuffer(
+        builder_, i, value, &internal::FreeWrappedBuffer<T>, obj_moved);
+    if (result != GEOARROW_OK) {
+      delete obj_moved;
+      throw ::geoarrow::ErrnoException(result, "GeoArrowBuilderSetOwnedBuffer()",
+                                       nullptr);
+    }
+  }
+
+  template <typename T>
+  void SetBufferWrapped(int64_t i, T obj) {
+    T* obj_moved = new T(std::move(obj));
+    struct GeoArrowBufferView value {
+      reinterpret_cast<const uint8_t*>(obj_moved->data()),
+          static_cast<int64_t>(obj_moved->size() * sizeof(typename T::value_type))
+    };
+
+    GeoArrowErrorCode result = GeoArrowBuilderSetOwnedBuffer(
+        builder_, i, value, &internal::FreeWrappedBuffer<T>, obj_moved);
+    if (result != GEOARROW_OK) {
+      delete obj_moved;
+      throw ::geoarrow::ErrnoException(result, "GeoArrowBuilderSetOwnedBuffer()",
+                                       nullptr);
+    }
+  }
+
+  template <typename T>
+  void AppendToBuffer(int64_t i, const T& obj) {
+    GEOARROW_THROW_NOT_OK(
+        nullptr, GeoArrowBuilderAppendBuffer(builder_, i, internal::BufferView(obj)));
+  }
+
+  template <typename T>
+  void AppendToOffsetBuffer(int64_t i, const T& obj) {
+    GEOARROW_THROW_NOT_OK(nullptr,
+                          GeoArrowBuilderOffsetAppend(builder_, i, obj.data(),
+                                                      static_cast<int64_t>(obj.size())));
+  }
+
+  void AppendCoords(const GeoArrowCoordView* coords, enum GeoArrowDimensions dimensions,
+                    int64_t offset, int64_t length) {
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowBuilderCoordsAppend(
+                                       builder_, coords, dimensions, offset, length));
+  }
+
+ protected:
+  struct GeoArrowBuilder* builder_{};
+};
+
+class ArrayWriter {
+ public:
+  explicit ArrayWriter(GeoArrowType type) {
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayWriterInitFromType(&writer_, type));
+  }
+  explicit ArrayWriter(const GeometryDataType& type) : ArrayWriter(type.id()) {}
+  explicit ArrayWriter(const ArrowSchema* schema) {
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayWriterInitFromSchema(&writer_, schema));
+  }
+
+  ~ArrayWriter() {
+    if (writer_.private_data != nullptr) {
+      GeoArrowArrayWriterReset(&writer_);
+    }
+  }
+
+  void SetPrecision(int precision) {
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayWriterSetPrecision(&writer_, precision));
+  }
+
+  void SetFlatMultipoint(bool flat_multipoint) {
+    GEOARROW_THROW_NOT_OK(nullptr,
+                          GeoArrowArrayWriterSetPrecision(&writer_, flat_multipoint));
+  }
+
+  struct GeoArrowVisitor* visitor() {
+    if (builder_.is_valid()) {
+      throw Exception("Can't use GeoArrowVisitor with ArrayBuilder in ArrayWriter");
+    }
+
+    if (visitor_.coords == nullptr) {
+      GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayWriterInitVisitor(&writer_, &visitor_));
+    }
+
+    return &visitor_;
+  }
+
+  ArrayBuilder& builder() {
+    if (visitor_.coords != nullptr) {
+      throw Exception("Can't use ArrayBuilder with GeoArrowVisitor in ArrayWriter");
+    }
+
+    if (!builder_.is_valid()) {
+      struct GeoArrowBuilder* builder = nullptr;
+      GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayWriterBuilder(&writer_, &builder));
+      builder_.Init(builder);
+    }
+
+    return builder_;
+  }
+
+  void Finish(struct ArrowArray* out) {
+    struct GeoArrowError error {};
+    GEOARROW_THROW_NOT_OK(&error, GeoArrowArrayWriterFinish(&writer_, out, &error));
+  }
+
+ private:
+  struct GeoArrowArrayWriter writer_ {};
+  ArrayBuilder builder_;
+  struct GeoArrowVisitor visitor_ {};
+};
+
+static inline GeometryDataType Wkb() { return GeometryDataType::Make(GEOARROW_TYPE_WKB); }
+
+static inline GeometryDataType Wkt() { return GeometryDataType::Make(GEOARROW_TYPE_WKT); }
+
+static inline GeometryDataType Box() { return GeometryDataType::Make(GEOARROW_TYPE_BOX); }
+
+static inline GeometryDataType Point() {
+  return GeometryDataType::Make(GEOARROW_TYPE_POINT);
 }
 
-static inline VectorArray ArrayFromVectors(
-    const VectorType& type, const std::vector<uint8_t> data,
-    const std::vector<std::vector<int32_t>> offsets,
-    const std::vector<uint8_t> validity_bitmap = {}) {
-  std::vector<struct GeoArrowBufferView> buffers;
-  buffers.push_back(internal::BufferView(validity_bitmap));
-  buffers.push_back(internal::BufferView(data));
-  buffers.push_back(internal::BufferView(offsets));
+static inline GeometryDataType Linestring() {
+  return GeometryDataType::Make(GEOARROW_TYPE_LINESTRING);
+}
 
-  return VectorArray::FromBuffers(type, buffers);
+static inline GeometryDataType Polygon() {
+  return GeometryDataType::Make(GEOARROW_TYPE_POLYGON);
 }
 
 }  // namespace geoarrow

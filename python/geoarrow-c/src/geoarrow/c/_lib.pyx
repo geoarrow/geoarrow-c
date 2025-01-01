@@ -115,7 +115,7 @@ cdef extern from "geoarrow_type.h":
         GEOARROW_TYPE_INTERLEAVED_POLYGON_ZM = 13003
         GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZM = 13004
         GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_ZM = 13005
-        GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM = 1300
+        GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM = 13006
 
     cpdef enum GeoArrowEdgeType:
         GEOARROW_EDGE_TYPE_PLANAR
@@ -219,15 +219,13 @@ cdef extern from "geoarrow_python.h":
 
 
 cdef extern from "geoarrow.hpp" namespace "geoarrow":
-    cdef cppclass VectorType:
-        VectorType() except +
-        VectorType(const VectorType& x) except +
-        void MoveFrom(VectorType* other)
+    cdef cppclass GeometryDataType:
+        GeometryDataType() except +ValueError
+        GeometryDataType(const GeometryDataType& x) except +ValueError
+        void MoveFrom(GeometryDataType* other)
 
-        bool valid()
-        string error()
-        string extension_name()
-        string extension_metadata()
+        string extension_name() except +ValueError
+        string extension_metadata() except +ValueError
         GeoArrowType id()
         GeoArrowGeometryType geometry_type()
         GeoArrowDimensions dimensions()
@@ -236,28 +234,29 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
         GeoArrowEdgeType edge_type()
         GeoArrowCrsType crs_type()
         string crs()
+        string ToString()
 
-        VectorType WithGeometryType(GeoArrowGeometryType geometry_type)
-        VectorType WithCoordType(GeoArrowCoordType coord_type)
-        VectorType WithDimensions(GeoArrowDimensions dimensions)
-        VectorType WithEdgeType(GeoArrowEdgeType edge_type)
-        VectorType WithCrs(const string& crs, GeoArrowCrsType crs_type)
+        GeometryDataType WithGeometryType(GeoArrowGeometryType geometry_type) except +ValueError
+        GeometryDataType WithCoordType(GeoArrowCoordType coord_type) except +ValueError
+        GeometryDataType WithDimensions(GeoArrowDimensions dimensions) except +ValueError
+        GeometryDataType WithEdgeType(GeoArrowEdgeType edge_type) except +ValueError
+        GeometryDataType WithCrs(const string& crs, GeoArrowCrsType crs_type) except +ValueError
 
-        GeoArrowErrorCode InitSchema(ArrowSchema* schema)
-        GeoArrowErrorCode InitStorageSchema(ArrowSchema* schema)
+        void InitSchema(ArrowSchema* schema) except +ValueError
+        void InitStorageSchema(ArrowSchema* schema) except +ValueError
 
         @staticmethod
-        VectorType Make0 "Make"(GeoArrowGeometryType geometry_type,
+        GeometryDataType Make0 "Make"(GeoArrowGeometryType geometry_type,
                                 GeoArrowDimensions dimensions,
                                 GeoArrowCoordType coord_type,
-                                const string& metadata)
+                                const string& metadata) except +ValueError
 
         @staticmethod
-        VectorType Make1 "Make"(ArrowSchema* schema)
+        GeometryDataType Make1 "Make"(ArrowSchema* schema) except +ValueError
 
         @staticmethod
-        VectorType Make2 "Make"(ArrowSchema* schema, const string& extension_name,
-                                const string& metadata)
+        GeometryDataType Make2 "Make"(ArrowSchema* schema, const string& extension_name,
+                                const string& metadata) except +ValueError
 
 
 class GeoArrowCException(RuntimeError):
@@ -331,62 +330,29 @@ cdef class ArrayHolder:
         self.c_array.release(&self.c_array)
 
 
-cdef class CVectorType:
-    cdef VectorType c_vector_type
+cdef class CGeometryDataType:
+    cdef GeometryDataType c_vector_type
 
     def __cinit__(self):
         pass
 
     def __repr__(self):
-        if not self.c_vector_type.valid():
-            msg = self.c_vector_type.error().decode("UTF-8")
-            return f"<Invalid CVectorType: {msg}"
+        if self.c_vector_type.id() == GEOARROW_TYPE_UNINITIALIZED:
+            return "<Uninitialized CGeometryDataType>"
 
-        ext_name = self.extension_name
-        spherical = self.edge_type == GEOARROW_EDGE_TYPE_SPHERICAL
-        interleaved = self.coord_type == GEOARROW_COORD_TYPE_INTERLEAVED
-
-        if self.dimensions == GEOARROW_DIMENSIONS_XYZM:
-            dims = '_zm'
-        elif self.dimensions == GEOARROW_DIMENSIONS_XYZ:
-            dims = '_z'
-        elif self.dimensions == GEOARROW_DIMENSIONS_XYM:
-            dims = '_m'
-        else:
-            dims = ''
-
-        if spherical and interleaved:
-            type_prefix = 'spherical interleaved '
-        elif spherical:
-            type_prefix = 'spherical '
-        elif interleaved:
-            type_prefix = 'interleaved '
-        else:
-            type_prefix = ''
-
-        if self.crs_type == GEOARROW_CRS_TYPE_PROJJSON:
-            crs = f' <PROJJSON:{self.crs.decode("UTF-8")}>'
-        elif self.crs_type == GEOARROW_CRS_TYPE_UNKNOWN:
-            crs = f' <{self.crs.decode("UTF-8")}>'
-        else:
-            crs = ''
-
-        if len(crs) > 40:
-            crs = crs[:36] + '...>'
-
-        return f'{type_prefix}{ext_name}{dims}{crs}'
+        return self.c_vector_type.ToString().decode()
 
     @staticmethod
-    cdef _move_from_ctype(VectorType* c_vector_type):
-        if not c_vector_type.valid():
-            raise ValueError(c_vector_type.error().decode("UTF-8"))
-        out = CVectorType()
+    cdef _move_from_ctype(GeometryDataType* c_vector_type):
+        if c_vector_type.id() == GEOARROW_TYPE_UNINITIALIZED:
+            raise ValueError("Uninitialized CGeometryDataType")
+        out = CGeometryDataType()
         out.c_vector_type.MoveFrom(c_vector_type)
         return out
 
     def _assert_valid(self):
-        if not self.c_vector_type.valid():
-            raise ValueError("CVectorType is not valid")
+        if self.c_vector_type.id() == GEOARROW_TYPE_UNINITIALIZED:
+            raise ValueError("Uninitialized CGeometryDataType")
 
     @property
     def id(self):
@@ -435,31 +401,31 @@ cdef class CVectorType:
 
     def with_geometry_type(self, GeoArrowGeometryType geometry_type):
         self._assert_valid()
-        cdef VectorType ctype = self.c_vector_type.WithGeometryType(geometry_type)
-        return CVectorType._move_from_ctype(&ctype)
+        cdef GeometryDataType ctype = self.c_vector_type.WithGeometryType(geometry_type)
+        return CGeometryDataType._move_from_ctype(&ctype)
 
     def with_dimensions(self, GeoArrowDimensions dimensions):
         self._assert_valid()
-        cdef VectorType ctype = self.c_vector_type.WithDimensions(dimensions)
-        return CVectorType._move_from_ctype(&ctype)
+        cdef GeometryDataType ctype = self.c_vector_type.WithDimensions(dimensions)
+        return CGeometryDataType._move_from_ctype(&ctype)
 
     def with_coord_type(self, GeoArrowCoordType coord_type):
         self._assert_valid()
-        cdef VectorType ctype = self.c_vector_type.WithCoordType(coord_type)
-        return CVectorType._move_from_ctype(&ctype)
+        cdef GeometryDataType ctype = self.c_vector_type.WithCoordType(coord_type)
+        return CGeometryDataType._move_from_ctype(&ctype)
 
     def with_edge_type(self, GeoArrowEdgeType edge_type):
         self._assert_valid()
-        cdef VectorType ctype = self.c_vector_type.WithEdgeType(edge_type)
-        return CVectorType._move_from_ctype(&ctype)
+        cdef GeometryDataType ctype = self.c_vector_type.WithEdgeType(edge_type)
+        return CGeometryDataType._move_from_ctype(&ctype)
 
     def with_crs(self, string crs, GeoArrowCrsType crs_type):
         self._assert_valid()
-        cdef VectorType ctype = self.c_vector_type.WithCrs(crs, crs_type)
-        return CVectorType._move_from_ctype(&ctype)
+        cdef GeometryDataType ctype = self.c_vector_type.WithCrs(crs, crs_type)
+        return CGeometryDataType._move_from_ctype(&ctype)
 
     def __eq__(self, other):
-        if not isinstance(other, CVectorType):
+        if not isinstance(other, CGeometryDataType):
             return False
         if self.id != other.id or self.edge_type != other.edge_type:
             return False
@@ -471,17 +437,13 @@ cdef class CVectorType:
     def to_schema(self):
         self._assert_valid()
         out = SchemaHolder()
-        cdef int result = self.c_vector_type.InitSchema(&out.c_schema)
-        if result != GEOARROW_OK:
-            raise ValueError("InitSchema() failed")
+        self.c_vector_type.InitSchema(&out.c_schema)
         return out
 
     def to_storage_schema(self):
         self._assert_valid()
         out = SchemaHolder()
-        cdef int result = self.c_vector_type.InitStorageSchema(&out.c_schema)
-        if result != GEOARROW_OK:
-            raise ValueError("InitStorageSchema() failed")
+        self.c_vector_type.InitStorageSchema(&out.c_schema)
         return out
 
     @staticmethod
@@ -489,18 +451,18 @@ cdef class CVectorType:
              GeoArrowDimensions dimensions,
              GeoArrowCoordType coord_type,
              metadata=b''):
-        cdef VectorType ctype = VectorType.Make0(geometry_type, dimensions, coord_type, metadata)
-        return CVectorType._move_from_ctype(&ctype)
+        cdef GeometryDataType ctype = GeometryDataType.Make0(geometry_type, dimensions, coord_type, metadata)
+        return CGeometryDataType._move_from_ctype(&ctype)
 
     @staticmethod
     def FromExtension(SchemaHolder schema):
-        cdef VectorType ctype = VectorType.Make1(&schema.c_schema)
-        return CVectorType._move_from_ctype(&ctype)
+        cdef GeometryDataType ctype = GeometryDataType.Make1(&schema.c_schema)
+        return CGeometryDataType._move_from_ctype(&ctype)
 
     @staticmethod
     def FromStorage(SchemaHolder schema, string extension_name, string extension_metadata):
-        cdef VectorType ctype = VectorType.Make2(&schema.c_schema, extension_name, extension_metadata)
-        return CVectorType._move_from_ctype(&ctype)
+        cdef GeometryDataType ctype = GeometryDataType.Make2(&schema.c_schema, extension_name, extension_metadata)
+        return CGeometryDataType._move_from_ctype(&ctype)
 
 cdef class CKernel:
     cdef GeoArrowKernel c_kernel

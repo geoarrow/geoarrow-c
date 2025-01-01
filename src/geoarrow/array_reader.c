@@ -93,7 +93,7 @@ GeoArrowErrorCode GeoArrowArrayReaderInitFromType(struct GeoArrowArrayReader* re
 }
 
 GeoArrowErrorCode GeoArrowArrayReaderInitFromSchema(struct GeoArrowArrayReader* reader,
-                                                    struct ArrowSchema* schema,
+                                                    const struct ArrowSchema* schema,
                                                     struct GeoArrowError* error) {
   struct GeoArrowArrayReaderPrivate* private_data =
       (struct GeoArrowArrayReaderPrivate*)ArrowMalloc(
@@ -168,4 +168,16 @@ GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
     default:
       return GeoArrowArrayViewVisit(&private_data->array_view, offset, length, v);
   }
+}
+
+GeoArrowErrorCode GeoArrowArrayReaderArrayView(struct GeoArrowArrayReader* reader,
+                                               const struct GeoArrowArrayView** out) {
+  NANOARROW_DCHECK(reader->private_data != NULL);
+  struct GeoArrowArrayReaderPrivate* private_data =
+      (struct GeoArrowArrayReaderPrivate*)reader->private_data;
+  NANOARROW_DCHECK(private_data != NULL);
+
+  // Currently all the types supported by the reader can be viewed
+  *out = &private_data->array_view;
+  return GEOARROW_OK;
 }

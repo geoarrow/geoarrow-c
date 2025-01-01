@@ -263,7 +263,11 @@ if(GEOARROW_BUILD_TESTS)
   add_executable(wkx_files_test src/geoarrow/wkx_files_test.cc)
   add_executable(geoarrow_arrow_test src/geoarrow/geoarrow_arrow_test.cc)
 
-  target_link_libraries(geoarrow_hpp_test geoarrow gtest_main)
+  target_link_libraries(geoarrow_hpp_test
+                        geoarrow
+                        gtest_main
+                        gmock_main
+                        nanoarrow::nanoarrow)
   target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main
                         nanoarrow::nanoarrow)
   target_link_libraries(builder_test geoarrow gtest_main nanoarrow::nanoarrow)

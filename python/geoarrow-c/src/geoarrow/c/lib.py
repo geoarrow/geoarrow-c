@@ -3,7 +3,7 @@ from ._lib import (
     CKernel,
     SchemaHolder,
     ArrayHolder,
-    CVectorType,
+    CGeometryDataType,
     CArrayView,
     CBuilder,
     GeoArrowCException,

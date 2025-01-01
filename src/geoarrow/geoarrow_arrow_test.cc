@@ -15,8 +15,10 @@ void ASSERT_ARROW_OK(Status status) {
   }
 }
 
+using geoarrow::arrow::GeometryExtensionType;
+
 TEST(ArrowTest, ArrowTestExtensionType) {
-  auto maybe_type = geoarrow::VectorExtensionType::Make(GEOARROW_TYPE_MULTIPOINT);
+  auto maybe_type = GeometryExtensionType::Make(GEOARROW_TYPE_MULTIPOINT);
   ASSERT_ARROW_OK(maybe_type.status());
   auto type = maybe_type.ValueUnsafe();
   EXPECT_EQ(type->extension_name(), "geoarrow.multipoint");
@@ -28,24 +30,39 @@ TEST(ArrowTest, ArrowTestExtensionType) {
   EXPECT_EQ(type->GeoArrowType().edge_type(), GEOARROW_EDGE_TYPE_PLANAR);
   EXPECT_EQ(type->GeoArrowType().crs_type(), GEOARROW_CRS_TYPE_NONE);
   EXPECT_EQ(type->GeoArrowType().crs(), "");
+  EXPECT_EQ(type->ToString(), "GeometryExtensionType(geoarrow.multipoint)");
 
-  auto maybe_type2 =
-      geoarrow::VectorExtensionType::Make(GEOARROW_GEOMETRY_TYPE_MULTIPOINT);
+  auto maybe_type2 = GeometryExtensionType::Make(GEOARROW_GEOMETRY_TYPE_MULTIPOINT);
   ASSERT_ARROW_OK(maybe_type.status());
   auto type2 = maybe_type.ValueUnsafe();
   EXPECT_TRUE(type->Equals(type2));
 }
 
+TEST(ArrowTest, ArrowTestExtensionTypeError) {
+  auto maybe_type = GeometryExtensionType::Make(GEOARROW_TYPE_UNINITIALIZED);
+  ASSERT_FALSE(maybe_type.ok());
+  EXPECT_EQ(maybe_type.status().ToStringWithoutContextLines(),
+            "Invalid: Can't construct GeometryDataType from GEOARROW_TYPE_UNINITIALIZED");
+
+  maybe_type =
+      GeometryExtensionType::Make(GEOARROW_GEOMETRY_TYPE_BOX, GEOARROW_DIMENSIONS_XY,
+                                  GEOARROW_COORD_TYPE_INTERLEAVED);
+  ASSERT_FALSE(maybe_type.ok());
+  EXPECT_EQ(maybe_type.status().ToStringWithoutContextLines(),
+            "Invalid: Combination of geometry type/dimensions/coord type not valid: "
+            "BOX/xy/interleaved");
+}
+
 TEST(ArrowTest, ArrowTestExtensionTypeDeserialize) {
-  auto maybe_type = geoarrow::VectorExtensionType::Make(GEOARROW_TYPE_MULTIPOINT);
+  auto maybe_type = GeometryExtensionType::Make(GEOARROW_TYPE_MULTIPOINT);
   ASSERT_ARROW_OK(maybe_type.status());
   auto type = maybe_type.ValueUnsafe();
 
   auto maybe_result = type->Deserialize(
       type->storage_type(), "{\"edges\": \"spherical\", \"crs\": \"OGC:CRS84\"}");
   ASSERT_ARROW_OK(maybe_result.status());
-  auto result = std::dynamic_pointer_cast<geoarrow::VectorExtensionType>(
-      maybe_result.ValueUnsafe());
+  auto result =
+      std::dynamic_pointer_cast<GeometryExtensionType>(maybe_result.ValueUnsafe());
   EXPECT_EQ(result->GeoArrowType().id(), GEOARROW_TYPE_MULTIPOINT);
   EXPECT_EQ(result->GeoArrowType().geometry_type(), GEOARROW_GEOMETRY_TYPE_MULTIPOINT);
   EXPECT_EQ(result->GeoArrowType().coord_type(), GEOARROW_COORD_TYPE_SEPARATE);
@@ -56,7 +73,7 @@ TEST(ArrowTest, ArrowTestExtensionTypeDeserialize) {
 }
 
 TEST(ArrowTest, ArrowTestExtensionTypeModify) {
-  auto maybe_type = geoarrow::VectorExtensionType::Make(GEOARROW_TYPE_MULTIPOINT);
+  auto maybe_type = GeometryExtensionType::Make(GEOARROW_TYPE_MULTIPOINT);
   ASSERT_ARROW_OK(maybe_type.status());
   auto type = maybe_type.ValueUnsafe();
 
@@ -111,13 +128,13 @@ TEST(ArrowTest, ArrowTestExtensionTypeModify) {
 
 TEST(ArrowTest, ArrowTestExtensionTypeRegister) {
   struct ArrowSchema schema;
-  ASSERT_ARROW_OK(geoarrow::VectorExtensionType::RegisterAll());
+  ASSERT_ARROW_OK(GeometryExtensionType::RegisterAll());
   ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, GEOARROW_TYPE_MULTIPOINT), GEOARROW_OK);
   auto maybe_ext_type = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_ext_type.status());
   EXPECT_EQ(maybe_ext_type.ValueUnsafe()->id(), arrow::Type::EXTENSION);
 
-  ASSERT_ARROW_OK(geoarrow::VectorExtensionType::UnregisterAll());
+  ASSERT_ARROW_OK(GeometryExtensionType::UnregisterAll());
   ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, GEOARROW_TYPE_MULTIPOINT), GEOARROW_OK);
   maybe_ext_type = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_ext_type.status());
