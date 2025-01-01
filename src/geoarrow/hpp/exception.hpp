@@ -55,7 +55,8 @@ class ErrnoException : public Exception {
  public:
   GeoArrowErrorCode code{};
 
-  ErrnoException(GeoArrowErrorCode code, const std::string& msg, struct GeoArrowError* error)
+  ErrnoException(GeoArrowErrorCode code, const std::string& msg,
+                 struct GeoArrowError* error)
       : code(code) {
     if (error != nullptr) {
       message = msg + ": \n" + error->message;

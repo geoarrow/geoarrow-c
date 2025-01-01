@@ -130,6 +130,6 @@ class ArrayWriter {
   struct GeoArrowVisitor visitor_ {};
 };
 
-}
+}  // namespace geoarrow
 
 #endif
