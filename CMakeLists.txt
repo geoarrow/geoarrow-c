@@ -110,28 +110,39 @@ if(GEOARROW_BUNDLE)
     file(APPEND ${GEOARROW_C_TEMP} "${SRC_FILE_CONTENTS}")
   endforeach()
 
+  set(GEOARROW_HPP_TEMP ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/geoarrow.hpp)
+  file(WRITE ${GEOARROW_HPP_TEMP} "")
+  foreach(SRC_FILE
+          exception.hpp
+          internal.hpp
+          geometry_data_type.hpp
+          array_reader.hpp
+          array_writer.hpp)
+    file(READ "src/geoarrow/hpp/${SRC_FILE}" SRC_FILE_CONTENTS)
+    file(APPEND ${GEOARROW_HPP_TEMP} "${SRC_FILE_CONTENTS}")
+  endforeach()
+
   # Update includes for concatenated sources
-  foreach(SRC_FILE ${GEOARROW_H_TEMP} ${GEOARROW_C_TEMP})
+  foreach(SRC_FILE ${GEOARROW_HPP_TEMP} ${GEOARROW_H_TEMP} ${GEOARROW_C_TEMP})
     file(READ ${SRC_FILE} SRC_FILE_CONTENTS)
     string(REGEX REPLACE "#include \"[a-z_.]+\"" "" SRC_FILE_CONTENTS
+                         "${SRC_FILE_CONTENTS}")
+    string(REGEX REPLACE "#include \"hpp/[a-z_.]+\"" "" SRC_FILE_CONTENTS
                          "${SRC_FILE_CONTENTS}")
     file(WRITE ${SRC_FILE} "${SRC_FILE_CONTENTS}")
   endforeach()
 
-  # Make sure geoarrow.h is included from geoarrow.c
-  file(READ ${GEOARROW_C_TEMP} SRC_FILE_CONTENTS)
-  file(WRITE ${GEOARROW_C_TEMP} "#include \"geoarrow.h\"\n")
-  file(APPEND ${GEOARROW_C_TEMP} "${SRC_FILE_CONTENTS}")
-
-  # Copy geoarrow.hpp
-  file(COPY_FILE src/geoarrow/geoarrow.hpp
-       ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/geoarrow.hpp)
-  file(COPY_FILE src/geoarrow/geoarrow_arrow.hpp
-       ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/geoarrow_arrow.hpp)
+  # Make sure geoarrow.h is included from geoarrow.c and geoarrow.hpp
+  foreach(SRC_FILE ${GEOARROW_HPP_TEMP} ${GEOARROW_C_TEMP})
+    file(READ ${SRC_FILE} SRC_FILE_CONTENTS)
+    file(WRITE ${SRC_FILE} "#include \"geoarrow.h\"\n")
+    file(APPEND ${SRC_FILE} "${SRC_FILE_CONTENTS}")
+  endforeach()
 
   # "install" means copy the bundled sources to the specified dir. Just
-  # geoarrow.c and geoarrow.h for now.
-  install(FILES ${GEOARROW_H_TEMP} ${GEOARROW_C_TEMP} DESTINATION ".")
+  # geoarrow.c, geoarrow.h, and geoarrow.hpp for now.
+  install(FILES ${GEOARROW_HPP_TEMP} ${GEOARROW_H_TEMP} ${GEOARROW_C_TEMP}
+          DESTINATION ".")
 
   # If building tests, add the geoarrow target so we can test against it
   if(GEOARROW_BUILD_TESTS)
@@ -244,7 +255,6 @@ if(GEOARROW_BUILD_TESTS)
 
   enable_testing()
 
-  add_executable(geoarrow_hpp_test src/geoarrow/geoarrow_hpp_test.cc)
   add_executable(geoarrow_type_inline_test src/geoarrow/geoarrow_type_inline_test.cc)
   add_executable(builder_test src/geoarrow/builder_test.cc)
   add_executable(array_view_test src/geoarrow/array_view_test.cc)
@@ -261,13 +271,12 @@ if(GEOARROW_BUILD_TESTS)
   add_executable(array_reader_test src/geoarrow/array_reader_test.cc)
   add_executable(array_writer_test src/geoarrow/array_writer_test.cc)
   add_executable(wkx_files_test src/geoarrow/wkx_files_test.cc)
-  add_executable(geoarrow_arrow_test src/geoarrow/geoarrow_arrow_test.cc)
 
-  target_link_libraries(geoarrow_hpp_test
-                        geoarrow
-                        gtest_main
-                        gmock_main
-                        nanoarrow::nanoarrow)
+  add_executable(hpp_array_writer_test src/geoarrow/hpp/array_writer_test.cc)
+  add_executable(hpp_geometry_data_type_test src/geoarrow/hpp/geometry_data_type_test.cc)
+  add_executable(hpp_arrow_extension_type_test
+                 src/geoarrow/hpp/arrow_extension_type_test.cc)
+
   target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main
                         nanoarrow::nanoarrow)
   target_link_libraries(builder_test geoarrow gtest_main nanoarrow::nanoarrow)
@@ -285,10 +294,18 @@ if(GEOARROW_BUILD_TESTS)
   target_link_libraries(array_reader_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(array_writer_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(wkx_files_test geoarrow gtest_main nanoarrow::nanoarrow)
-  target_link_libraries(geoarrow_arrow_test geoarrow ${GEOARROW_ARROW_TARGET} gtest_main)
+
+  target_link_libraries(hpp_array_writer_test
+                        geoarrow
+                        gtest_main
+                        gmock_main
+                        nanoarrow::nanoarrow)
+  target_link_libraries(hpp_geometry_data_type_test geoarrow gtest_main
+                        nanoarrow::nanoarrow)
+  target_link_libraries(hpp_arrow_extension_type_test geoarrow ${GEOARROW_ARROW_TARGET}
+                        gtest_main)
 
   include(GoogleTest)
-  gtest_discover_tests(geoarrow_hpp_test)
   gtest_discover_tests(geoarrow_type_inline_test)
   gtest_discover_tests(builder_test)
   gtest_discover_tests(array_view_test)
@@ -305,5 +322,8 @@ if(GEOARROW_BUILD_TESTS)
   gtest_discover_tests(array_reader_test)
   gtest_discover_tests(array_writer_test)
   gtest_discover_tests(wkx_files_test)
-  gtest_discover_tests(geoarrow_arrow_test)
+
+  gtest_discover_tests(hpp_array_writer_test)
+  gtest_discover_tests(hpp_geometry_data_type_test)
+  gtest_discover_tests(hpp_arrow_extension_type_test)
 endif()
