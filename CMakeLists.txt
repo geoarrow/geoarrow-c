@@ -244,7 +244,6 @@ if(GEOARROW_BUILD_TESTS)
 
   enable_testing()
 
-  add_executable(geoarrow_hpp_test src/geoarrow/geoarrow_hpp_test.cc)
   add_executable(geoarrow_type_inline_test src/geoarrow/geoarrow_type_inline_test.cc)
   add_executable(builder_test src/geoarrow/builder_test.cc)
   add_executable(array_view_test src/geoarrow/array_view_test.cc)
@@ -261,14 +260,12 @@ if(GEOARROW_BUILD_TESTS)
   add_executable(array_reader_test src/geoarrow/array_reader_test.cc)
   add_executable(array_writer_test src/geoarrow/array_writer_test.cc)
   add_executable(wkx_files_test src/geoarrow/wkx_files_test.cc)
+  
+  add_executable(hpp_array_writer_test src/geoarrow/hpp/array_writer_test.cc)
+  add_executable(hpp_geometry_data_type_test src/geoarrow/hpp/geometry_data_type_test.cc)
   add_executable(hpp_arrow_extension_type_test
                  src/geoarrow/hpp/arrow_extension_type_test.cc)
 
-  target_link_libraries(geoarrow_hpp_test
-                        geoarrow
-                        gtest_main
-                        gmock_main
-                        nanoarrow::nanoarrow)
   target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main
                         nanoarrow::nanoarrow)
   target_link_libraries(builder_test geoarrow gtest_main nanoarrow::nanoarrow)
@@ -286,11 +283,20 @@ if(GEOARROW_BUILD_TESTS)
   target_link_libraries(array_reader_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(array_writer_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(wkx_files_test geoarrow gtest_main nanoarrow::nanoarrow)
+  
+  target_link_libraries(hpp_array_writer_test
+                        geoarrow
+                        gtest_main
+                        gmock_main
+                        nanoarrow::nanoarrow)
+  target_link_libraries(hpp_geometry_data_type_test
+                        geoarrow
+                        gtest_main
+                        nanoarrow::nanoarrow)
   target_link_libraries(hpp_arrow_extension_type_test geoarrow ${GEOARROW_ARROW_TARGET}
                         gtest_main)
 
   include(GoogleTest)
-  gtest_discover_tests(geoarrow_hpp_test)
   gtest_discover_tests(geoarrow_type_inline_test)
   gtest_discover_tests(builder_test)
   gtest_discover_tests(array_view_test)
@@ -307,5 +313,8 @@ if(GEOARROW_BUILD_TESTS)
   gtest_discover_tests(array_reader_test)
   gtest_discover_tests(array_writer_test)
   gtest_discover_tests(wkx_files_test)
+
+  gtest_discover_tests(hpp_array_writer_test)
+  gtest_discover_tests(hpp_geometry_data_type_test)
   gtest_discover_tests(hpp_arrow_extension_type_test)
 endif()
