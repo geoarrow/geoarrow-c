@@ -463,6 +463,8 @@ class ArrayView {
            array_view_->schema_view.type != GEOARROW_TYPE_UNINITIALIZED;
   }
 
+  const struct GeoArrowArrayView* array_view() { return array_view_; }
+
  private:
   const struct GeoArrowArrayView* array_view_{};
 };
@@ -527,11 +529,13 @@ class ArrayBuilder {
 
   bool is_valid() { return builder_ != nullptr && builder_->private_data != nullptr; }
 
+  struct GeoArrowBuilder* builder() { return builder_; }
+
   template <typename T>
   void SetBufferWrapped(int64_t i, T obj, GeoArrowBufferView value) {
     T* obj_moved = new T(std::move(obj));
     GeoArrowErrorCode result = GeoArrowBuilderSetOwnedBuffer(
-        &builder_, i, value, &internal::FreeWrappedBuffer<T>, obj_moved);
+        builder_, i, value, &internal::FreeWrappedBuffer<T>, obj_moved);
     if (result != GEOARROW_OK) {
       delete obj_moved;
       throw ::geoarrow::ErrnoException(result, "GeoArrowBuilderSetOwnedBuffer()",
@@ -548,7 +552,7 @@ class ArrayBuilder {
     };
 
     GeoArrowErrorCode result = GeoArrowBuilderSetOwnedBuffer(
-        &builder_, i, value, &internal::FreeWrappedBuffer<T>, obj_moved);
+        builder_, i, value, &internal::FreeWrappedBuffer<T>, obj_moved);
     if (result != GEOARROW_OK) {
       delete obj_moved;
       throw ::geoarrow::ErrnoException(result, "GeoArrowBuilderSetOwnedBuffer()",
@@ -559,7 +563,7 @@ class ArrayBuilder {
   template <typename T>
   void AppendToBuffer(int64_t i, const T& obj) {
     GEOARROW_THROW_NOT_OK(
-        nullptr, GeoArrowBuilderAppendBuffer(&builder_, i, internal::BufferView(obj)));
+        nullptr, GeoArrowBuilderAppendBuffer(builder_, i, internal::BufferView(obj)));
   }
 
   template <typename T>
@@ -572,11 +576,6 @@ class ArrayBuilder {
                     int64_t offset, int64_t length) {
     GEOARROW_THROW_NOT_OK(nullptr, GeoArrowBuilderCoordsAppend(
                                        builder_, coords, dimensions, offset, length));
-  }
-
-  void Finish(struct ArrowArray* out) {
-    struct GeoArrowError error {};
-    GEOARROW_THROW_NOT_OK(&error, GeoArrowBuilderFinish(builder_, out, &error));
   }
 
  protected:
@@ -621,7 +620,7 @@ class ArrayWriter {
   }
 
   ArrayBuilder& builder() {
-    if (visitor_.coords == nullptr) {
+    if (visitor_.coords != nullptr) {
       throw Exception("Can't use ArrayBuilder with GeoArrowVisitor in ArrayWriter");
     }
 
@@ -632,6 +631,11 @@ class ArrayWriter {
     }
 
     return builder_;
+  }
+
+  void Finish(struct ArrowArray* out) {
+    struct GeoArrowError error {};
+    GEOARROW_THROW_NOT_OK(&error, GeoArrowArrayWriterFinish(&writer_, out, &error));
   }
 
  private:

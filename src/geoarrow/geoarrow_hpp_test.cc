@@ -5,6 +5,8 @@
 
 #include <geoarrow.hpp>
 
+#include "wkx_testing.hpp"
+
 TEST(GeoArrowHppTest, GeometryDataTypeMakeType) {
   auto type = geoarrow::GeometryDataType::Make(GEOARROW_TYPE_MULTIPOINT);
   EXPECT_EQ(type.extension_name(), "geoarrow.multipoint");
@@ -176,4 +178,56 @@ TEST(GeoArrowHppTest, CRSToString) {
   EXPECT_EQ(geoarrow::Wkt().WithCrs("foofy").ToString(), "geoarrow.wkt<foofy>");
   EXPECT_EQ(geoarrow::Wkt().WithCrsLonLat().ToString(),
             R"(geoarrow.wkt<projjson:{"type":"GeographicCRS","n...>)");
+}
+
+TEST(GeoArrowHppTest, ArrayWriterByBuffer) {
+  geoarrow::ArrayWriter writer(geoarrow::Point());
+
+  // Check SetBufferWrapped() overload with a movable C++ object + arbitrary buffer view
+  // (make it long enough that it keeps the same allocation when moved)
+  std::vector<uint8_t> validity(1024);
+  std::memset(validity.data(), 0, validity.size());
+  validity[0] = 0b00001111;
+  writer.builder().SetBufferWrapped(0, std::move(validity));
+
+  // Check SetBufferWrapped() overload with a sequence
+  writer.builder().SetBufferWrapped(1, std::vector<double>{0, 1, 2, 3});
+
+  // Check buffer appender
+  std::vector<double> ys{4, 5, 6, 7};
+  writer.builder().AppendToBuffer(2, ys);
+
+  // Make sure we can't also use the visitor
+  EXPECT_THROW(writer.visitor(), geoarrow::Exception);
+
+  struct ArrowArray array;
+  writer.Finish(&array);
+  ASSERT_EQ(array.length, 4);
+  ASSERT_EQ(array.n_children, 2);
+
+  geoarrow::ArrayReader reader(geoarrow::Point());
+  reader.SetArray(&array);
+  EXPECT_EQ(reader.View().array_view()->schema_view.type, GEOARROW_TYPE_POINT);
+  EXPECT_EQ(reader.View().array_view()->validity_bitmap[0], 0b00001111);
+  EXPECT_EQ(reader.View().array_view()->coords.values[0][0], 0);
+  EXPECT_EQ(reader.View().array_view()->coords.values[1][0], 4);
+}
+
+TEST(GeoArrowHppTest, ArrayWriterByVisitor) {
+  WKXTester tester;
+  geoarrow::ArrayWriter writer(geoarrow::Point());
+  tester.ReadWKT("POINT (0 4)", writer.visitor());
+
+  EXPECT_THROW(writer.builder(), geoarrow::Exception);
+
+  struct ArrowArray array;
+  writer.Finish(&array);
+  ASSERT_EQ(array.length, 1);
+  ASSERT_EQ(array.n_children, 2);
+
+  geoarrow::ArrayReader reader(geoarrow::Point());
+  reader.SetArray(&array);
+  EXPECT_EQ(reader.View().array_view()->schema_view.type, GEOARROW_TYPE_POINT);
+  EXPECT_EQ(reader.View().array_view()->coords.values[0][0], 0);
+  EXPECT_EQ(reader.View().array_view()->coords.values[1][0], 4);
 }
