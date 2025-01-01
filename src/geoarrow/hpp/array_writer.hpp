@@ -1,5 +1,5 @@
-#ifndef GEOARROW_HPP_INCLUDED
-#define GEOARROW_HPP_INCLUDED
+#ifndef GEOARROW_HPP_ARRAY_WRITER_INCLUDED
+#define GEOARROW_HPP_ARRAY_WRITER_INCLUDED
 
 #include "hpp/exception.hpp"
 #include "hpp/geometry_data_type.hpp"

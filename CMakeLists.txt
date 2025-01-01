@@ -110,28 +110,39 @@ if(GEOARROW_BUNDLE)
     file(APPEND ${GEOARROW_C_TEMP} "${SRC_FILE_CONTENTS}")
   endforeach()
 
+  set(GEOARROW_HPP_TEMP ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/geoarrow.hpp)
+  file(WRITE ${GEOARROW_HPP_TEMP} "")
+  foreach(SRC_FILE
+          exception.hpp
+          internal.hpp
+          geometry_data_type.hpp
+          array_reader.hpp
+          array_writer.hpp)
+    file(READ "src/geoarrow/hpp/${SRC_FILE}" SRC_FILE_CONTENTS)
+    file(APPEND ${GEOARROW_HPP_TEMP} "${SRC_FILE_CONTENTS}")
+  endforeach()
+
   # Update includes for concatenated sources
-  foreach(SRC_FILE ${GEOARROW_H_TEMP} ${GEOARROW_C_TEMP})
+  foreach(SRC_FILE ${GEOARROW_HPP_TEMP} ${GEOARROW_H_TEMP} ${GEOARROW_C_TEMP})
     file(READ ${SRC_FILE} SRC_FILE_CONTENTS)
     string(REGEX REPLACE "#include \"[a-z_.]+\"" "" SRC_FILE_CONTENTS
+                         "${SRC_FILE_CONTENTS}")
+    string(REGEX REPLACE "#include \"hpp/[a-z_.]+\"" "" SRC_FILE_CONTENTS
                          "${SRC_FILE_CONTENTS}")
     file(WRITE ${SRC_FILE} "${SRC_FILE_CONTENTS}")
   endforeach()
 
-  # Make sure geoarrow.h is included from geoarrow.c
-  file(READ ${GEOARROW_C_TEMP} SRC_FILE_CONTENTS)
-  file(WRITE ${GEOARROW_C_TEMP} "#include \"geoarrow.h\"\n")
-  file(APPEND ${GEOARROW_C_TEMP} "${SRC_FILE_CONTENTS}")
-
-  # Copy geoarrow.hpp
-  file(COPY_FILE src/geoarrow/geoarrow.hpp
-       ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/geoarrow.hpp)
-  file(COPY_FILE src/geoarrow/geoarrow_arrow.hpp
-       ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/geoarrow_arrow.hpp)
+  # Make sure geoarrow.h is included from geoarrow.c and geoarrow.hpp
+  foreach(SRC_FILE ${GEOARROW_HPP_TEMP} ${GEOARROW_C_TEMP})
+    file(READ ${SRC_FILE} SRC_FILE_CONTENTS)
+    file(WRITE ${SRC_FILE} "#include \"geoarrow.h\"\n")
+    file(APPEND ${SRC_FILE} "${SRC_FILE_CONTENTS}")
+  endforeach()
 
   # "install" means copy the bundled sources to the specified dir. Just
-  # geoarrow.c and geoarrow.h for now.
-  install(FILES ${GEOARROW_H_TEMP} ${GEOARROW_C_TEMP} DESTINATION ".")
+  # geoarrow.c, geoarrow.h, and geoarrow.hpp for now.
+  install(FILES ${GEOARROW_HPP_TEMP} ${GEOARROW_H_TEMP} ${GEOARROW_C_TEMP}
+          DESTINATION ".")
 
   # If building tests, add the geoarrow target so we can test against it
   if(GEOARROW_BUILD_TESTS)
