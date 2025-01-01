@@ -5,7 +5,7 @@
 #include <arrow/c/bridge.h>
 #include <gtest/gtest.h>
 
-#include <geoarrow_arrow.hpp>
+#include "arrow_extension_type.hpp"
 
 using namespace arrow;
 
