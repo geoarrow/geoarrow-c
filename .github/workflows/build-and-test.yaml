@@ -79,6 +79,8 @@ jobs:
         uses: codecov/codecov-action@v2
         with:
           files: build/coverage.info
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Test with memcheck
         if: matrix.config.label == 'default-build'
