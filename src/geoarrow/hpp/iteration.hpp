@@ -2,6 +2,7 @@
 #ifndef GEOARROW_HPP_ITERATION_INCLUDED
 #define GEOARROW_HPP_ITERATION_INCLUDED
 
+#include <array>
 #include <iterator>
 #include "geoarrow.h"
 
@@ -9,11 +10,38 @@ namespace geoarrow {
 
 namespace array {
 
+struct XY : public std::array<double, 2> {
+  double x() const { return at(0); }
+  double y() const { return at(1); }
+};
+
+struct XYZ : public XY {
+  double z() const { return at(2); }
+};
+
+struct XYM : public XY {
+  double m() const { return at(2); }
+};
+
+struct XYZM : public XYZ {
+  double m() const { return at(3); }
+};
+
 template <typename Coord>
 struct CoordSequence {
   int64_t offset;
   int64_t length;
   struct GeoArrowCoordView* coord_view;
+
+  Coord operator[](int64_t i) const {
+    Coord out;
+    for (size_t j = 0; j < out.size(); j++) {
+      out[j] = GEOARROW_COORD_VIEW_VALUE(coord_view, offset + i, j);
+    }
+    return out;
+  }
+
+  int64_t size() const { return length; }
 
   class Iterator {
     const CoordSequence& outer_;
@@ -33,13 +61,7 @@ struct CoordSequence {
     bool operator==(Iterator other) const { return i_ == other.i_; }
     bool operator!=(Iterator other) const { return i_ != other.i_; }
 
-    Coord operator*() const {
-      Coord out;
-      for (size_t i = 0; i < out.size(); i++) {
-        out[i] = GEOARROW_COORD_VIEW_VALUE(outer_.coord_view, outer_.offset + i_, i);
-      }
-      return out;
-    }
+    Coord operator*() const { return outer_[i_]; }
     using iterator_category = std::random_access_iterator_tag;
     using difference_type = int64_t;
     using value_type = Coord;
