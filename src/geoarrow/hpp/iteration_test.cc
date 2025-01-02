@@ -76,5 +76,4 @@ TEST(GeoArrowHppTest, SetArrayPoint) {
   }
 
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
-
 }
