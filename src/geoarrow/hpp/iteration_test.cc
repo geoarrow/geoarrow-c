@@ -3,6 +3,8 @@
 
 #include "nanoarrow/nanoarrow.h"
 
+#include "array_reader.hpp"
+#include "array_writer.hpp"
 #include "iteration.hpp"
 
 #include "wkx_testing.hpp"
@@ -50,4 +52,21 @@ TEST(GeoArrowHppTest, IterateNestedCoords) {
   EXPECT_THAT(elements,
               ::testing::ElementsAre(std::vector<XY>{XY{0, 5}, XY{1, 6}, XY{2, 7}},
                                      std::vector<XY>{XY{3, 8}, XY{4, 9}}));
+}
+
+TEST(GeoArrowHppTest, SetArrayPoint) {
+  geoarrow::ArrayWriter writer(GEOARROW_TYPE_POINT);
+  WKXTester tester;
+  tester.ReadWKT("POINT (0 1)", writer.visitor());
+  tester.ReadWKT("POINT (2 3)", writer.visitor());
+  tester.ReadWKT("POINT (4 5)", writer.visitor());
+
+  struct ArrowArray array;
+  writer.Finish(&array);
+
+  geoarrow::ArrayReader reader(GEOARROW_TYPE_POINT);
+  reader.SetArray(&array);
+
+  geoarrow::array::PointArray<XY> point_array;
+  point_array.Init(reader.View().array_view());
 }

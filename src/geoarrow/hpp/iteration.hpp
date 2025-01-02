@@ -108,8 +108,8 @@ struct BoxXY : public std::array<double, 4> {
   double ymax() const { return at(3); }
   double zmax() const { return -INFINITY; }
   double mmax() const { return -INFINITY; }
-  bound_type lower_bound() { return {xmin(), ymin()}; }
-  bound_type upper_bound() { return {xmax(), ymax()}; }
+  bound_type lower_bound() const { return {xmin(), ymin()}; }
+  bound_type upper_bound() const { return {xmax(), ymax()}; }
 };
 
 struct BoxXYZ : public std::array<double, 6> {
@@ -122,8 +122,8 @@ struct BoxXYZ : public std::array<double, 6> {
   double ymax() const { return at(4); }
   double zmax() const { return at(5); }
   double mmax() const { return -INFINITY; }
-  bound_type lower_bound() { return {xmin(), ymin(), zmin()}; }
-  bound_type upper_bound() { return {xmax(), ymax(), zmax()}; }
+  bound_type lower_bound() const { return {xmin(), ymin(), zmin()}; }
+  bound_type upper_bound() const { return {xmax(), ymax(), zmax()}; }
 };
 
 struct BoxXYM : public std::array<double, 6> {
@@ -136,8 +136,8 @@ struct BoxXYM : public std::array<double, 6> {
   double ymax() const { return at(4); }
   double zmax() const { return -INFINITY; }
   double mmax() const { return at(5); }
-  bound_type lower_bound() { return {mmin(), ymin(), mmin()}; }
-  bound_type upper_bound() { return {xmax(), ymax(), mmax()}; }
+  bound_type lower_bound() const { return {mmin(), ymin(), mmin()}; }
+  bound_type upper_bound() const { return {xmax(), ymax(), mmax()}; }
 };
 
 struct BoxXYZM : public std::array<double, 8> {
@@ -150,8 +150,8 @@ struct BoxXYZM : public std::array<double, 8> {
   double ymax() const { return at(5); }
   double zmax() const { return at(7); }
   double mmax() const { return at(8); }
-  bound_type lower_bound() { return {xmin(), ymin(), zmin(), mmin()}; }
-  bound_type upper_bound() { return {xmax(), ymax(), zmax(), mmax()}; }
+  bound_type lower_bound() const { return {xmin(), ymin(), zmin(), mmin()}; }
+  bound_type upper_bound() const { return {xmax(), ymax(), zmax(), mmax()}; }
 };
 
 template <typename Coord>
@@ -209,9 +209,9 @@ struct Nested {
 namespace internal {
 
 template <typename T>
-void InitFromCoordView(T* value, struct GeoArrowCoordView* view) {
+void InitFromCoordView(T* value, const struct GeoArrowCoordView* view) {
   // TODO: remove
-  value->coord_view = *view;
+  std::memcpy(&value->coord_view, view, sizeof(GeoArrowCoordView));
 
   value->offset = 0;
   value->length = view->n_coords;
@@ -222,9 +222,9 @@ void InitFromCoordView(T* value, struct GeoArrowCoordView* view) {
 }
 
 template <typename T>
-void InitFromArrayView(T* value, struct GeoArrowArrayView* view, int level) {
+void InitFromArrayView(T* value, const struct GeoArrowArrayView* view, int level) {
   if constexpr (T::is_sequence) {
-    InitFromCoordView(value, view->coords);
+    InitFromCoordView(value, &view->coords);
   } else {
     value->offsets = view->offsets[level];
     InitFromArrayView(&value->child, view, level + 1);
@@ -242,8 +242,8 @@ struct Array {
   value_type value;
   const uint8_t* validity;
 
-  void Init(struct GeoArrowArrayView* view) {
-    InitFromArrayView(this, view, 0);
+  void Init(const struct GeoArrowArrayView* view) {
+    internal::InitFromArrayView(&value, view, 0);
     validity = view->validity_bitmap;
   }
 };
