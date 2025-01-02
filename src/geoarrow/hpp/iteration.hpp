@@ -78,6 +78,17 @@ struct Nested {
   const int32_t* offsets;
   T child;
 
+  void InitChild(T* child_p) const {
+    *child_p = child;
+    UpdateChild(child_p, 0);
+  }
+
+  void UpdateChild(T* child_p, int64_t i) const {
+    int32_t child_offset = offsets[offset + i];
+    child_p->offset = child.offset + child_offset;
+    child_p->length = offsets[offset + i + 1] - child_offset;
+  }
+
   class Iterator {
     const Nested& outer_;
     int64_t i_;
@@ -99,8 +110,7 @@ struct Nested {
     bool operator!=(Iterator other) const { return i_ != other.i_; }
 
     const T& operator*() {
-      stashed_.offset = outer_.offsets[outer_.offset + i_];
-      stashed_.length = outer_.offsets[outer_.offset + i_ + 1] - stashed_.offset;
+      outer_.UpdateChild(&stashed_, i_);
       return stashed_;
     }
     using iterator_category = std::random_access_iterator_tag;
