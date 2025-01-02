@@ -276,6 +276,7 @@ if(GEOARROW_BUILD_TESTS)
   add_executable(hpp_geometry_data_type_test src/geoarrow/hpp/geometry_data_type_test.cc)
   add_executable(hpp_arrow_extension_type_test
                  src/geoarrow/hpp/arrow_extension_type_test.cc)
+  add_executable(hpp_iteration_test src/geoarrow/hpp/iteration_test.cc)
 
   target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main
                         nanoarrow::nanoarrow)
@@ -304,6 +305,11 @@ if(GEOARROW_BUILD_TESTS)
                         nanoarrow::nanoarrow)
   target_link_libraries(hpp_arrow_extension_type_test geoarrow ${GEOARROW_ARROW_TARGET}
                         gtest_main)
+  target_link_libraries(hpp_iteration_test
+                        geoarrow
+                        gtest_main
+                        gmock_main
+                        nanoarrow::nanoarrow)
 
   include(GoogleTest)
   gtest_discover_tests(geoarrow_type_inline_test)
@@ -326,4 +332,5 @@ if(GEOARROW_BUILD_TESTS)
   gtest_discover_tests(hpp_array_writer_test)
   gtest_discover_tests(hpp_geometry_data_type_test)
   gtest_discover_tests(hpp_arrow_extension_type_test)
+  gtest_discover_tests(hpp_iteration_test)
 endif()
