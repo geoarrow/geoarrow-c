@@ -2,8 +2,7 @@
 #ifndef GEOARROW_HPP_ITERATION_INCLUDED
 #define GEOARROW_HPP_ITERATION_INCLUDED
 
-#include <array>
-
+#include <iterator>
 #include "geoarrow.h"
 
 namespace geoarrow {
@@ -18,7 +17,7 @@ struct CoordSequence {
 
   class Iterator {
     const CoordSequence& outer_;
-    int64_t i_ = 0;
+    int64_t i_;
 
    public:
     explicit Iterator(const CoordSequence& outer, int64_t i = 0) : outer_(outer), i_(i) {}
@@ -31,10 +30,8 @@ struct CoordSequence {
       ++(*this);
       return retval;
     }
-    bool operator==(Iterator other) const {
-      return outer_.coord_view == other.outer_.coord_view && i_ == other.i_;
-    }
-    bool operator!=(Iterator other) const { return !(*this == other); }
+    bool operator==(Iterator other) const { return i_ == other.i_; }
+    bool operator!=(Iterator other) const { return i_ != other.i_; }
 
     Coord operator*() const {
       Coord out;
@@ -46,8 +43,6 @@ struct CoordSequence {
     using iterator_category = std::random_access_iterator_tag;
     using difference_type = int64_t;
     using value_type = Coord;
-    using pointer = const Coord*;
-    using reference = const Coord&;
   };
 
   Iterator begin() const { return Iterator(*this); }
@@ -60,6 +55,39 @@ struct Nested {
   int64_t length;
   const int32_t* offsets;
   T child;
+
+  class Iterator {
+    const Nested& outer_;
+    int64_t i_;
+    T stashed_;
+
+   public:
+    explicit Iterator(const Nested& outer, int64_t i = 0)
+        : outer_(outer), i_(i), stashed_(outer_.child) {}
+    Iterator& operator++() {
+      i_++;
+      return *this;
+    }
+    Iterator operator++(int) {
+      Iterator retval = *this;
+      ++(*this);
+      return retval;
+    }
+    bool operator==(Iterator other) const { return i_ == other.i_; }
+    bool operator!=(Iterator other) const { return i_ != other.i_; }
+
+    const T& operator*() {
+      stashed_.offset = outer_.offsets[outer_.offset + i_];
+      stashed_.length = outer_.offsets[outer_.offset + i_ + 1] - stashed_.offset;
+      return stashed_;
+    }
+    using iterator_category = std::random_access_iterator_tag;
+    using difference_type = int64_t;
+    using value_type = const T&;
+  };
+
+  Iterator begin() const { return Iterator(*this); }
+  Iterator end() const { return Iterator(*this, length); }
 };
 
 template <typename T>
