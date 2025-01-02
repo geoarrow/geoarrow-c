@@ -211,7 +211,7 @@ namespace internal {
 template <typename T>
 void InitFromCoordView(T* value, const struct GeoArrowCoordView* view) {
   // TODO: remove
-  std::memcpy(&value->coord_view, view, sizeof(GeoArrowCoordView));
+  *(value->coord_view) = *view;
 
   value->offset = 0;
   value->length = view->n_coords;

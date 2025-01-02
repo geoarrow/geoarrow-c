@@ -69,4 +69,12 @@ TEST(GeoArrowHppTest, SetArrayPoint) {
 
   geoarrow::array::PointArray<XY> point_array;
   point_array.Init(reader.View().array_view());
+
+  std::vector<XY> coords_vec;
+  for (const auto& coord : point_array.value) {
+    coords_vec.push_back(coord);
+  }
+
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
+
 }
