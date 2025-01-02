@@ -112,11 +112,6 @@ struct Nested {
   Iterator end() const { return Iterator(*this, length); }
 };
 
-template <typename T>
-struct Nullable : public T {
-  const uint8_t* validity;
-};
-
 }  // namespace array
 }  // namespace geoarrow
 
