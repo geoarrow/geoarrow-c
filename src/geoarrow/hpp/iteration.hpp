@@ -13,6 +13,8 @@ namespace geoarrow {
 namespace array {
 
 namespace internal {
+
+/// \brief Iterator implementation for CoordSequence
 template <typename CoordSequence>
 class CoordSequenceIterator {
   const CoordSequence& outer_;
@@ -39,37 +41,39 @@ class CoordSequenceIterator {
   using value_type = typename CoordSequence::coord_type;
 };
 
-template <typename Nested>
-class NestedIterator {
-  const Nested& outer_;
+/// \brief Iterator implementation for ListSequence
+template <typename ListSequence>
+class ListSequenceIterator {
+  const ListSequence& outer_;
   int64_t i_;
-  typename Nested::child_type stashed_;
+  typename ListSequence::child_type stashed_;
 
  public:
-  explicit NestedIterator(const Nested& outer, int64_t i = 0)
+  explicit ListSequenceIterator(const ListSequence& outer, int64_t i = 0)
       : outer_(outer), i_(i), stashed_(outer_.child) {}
-  NestedIterator& operator++() {
+  ListSequenceIterator& operator++() {
     i_++;
     return *this;
   }
-  NestedIterator operator++(int) {
-    NestedIterator retval = *this;
+  ListSequenceIterator operator++(int) {
+    ListSequenceIterator retval = *this;
     ++(*this);
     return retval;
   }
-  bool operator==(const NestedIterator& other) const { return i_ == other.i_; }
-  bool operator!=(const NestedIterator& other) const { return i_ != other.i_; }
+  bool operator==(const ListSequenceIterator& other) const { return i_ == other.i_; }
+  bool operator!=(const ListSequenceIterator& other) const { return i_ != other.i_; }
 
-  typename Nested::child_type& operator*() {
+  typename ListSequence::child_type& operator*() {
     outer_.UpdateChild(&stashed_, i_);
     return stashed_;
   }
   using iterator_category = std::random_access_iterator_tag;
   using difference_type = int64_t;
-  using value_type = typename Nested::child_type&;
+  using value_type = typename ListSequence::child_type&;
 };
 }  // namespace internal
 
+/// \brief Coord implementation for XY
 struct XY : public std::array<double, 2> {
   double x() const { return at(0); }
   double y() const { return at(1); }
@@ -77,6 +81,7 @@ struct XY : public std::array<double, 2> {
   double m() const { return NAN; }
 };
 
+/// \brief Coord implementation for XYZ
 struct XYZ : public std::array<double, 3> {
   double x() const { return at(0); }
   double y() const { return at(1); }
@@ -84,6 +89,7 @@ struct XYZ : public std::array<double, 3> {
   double m() const { return NAN; }
 };
 
+/// \brief Coord implementation for XYM
 struct XYM : public std::array<double, 3> {
   double x() const { return at(0); }
   double y() const { return at(1); }
@@ -91,6 +97,7 @@ struct XYM : public std::array<double, 3> {
   double m() const { return at(2); }
 };
 
+/// \brief Coord implementation for XYZM
 struct XYZM : public std::array<double, 4> {
   double x() const { return at(0); }
   double y() const { return at(1); }
@@ -98,6 +105,7 @@ struct XYZM : public std::array<double, 4> {
   double m() const { return at(3); }
 };
 
+/// \brief Coord implementation for Box
 struct BoxXY : public std::array<double, 4> {
   using bound_type = XY;
   double xmin() const { return at(0); }
@@ -112,6 +120,7 @@ struct BoxXY : public std::array<double, 4> {
   bound_type upper_bound() const { return {xmax(), ymax()}; }
 };
 
+/// \brief Coord implementation for BoxZ
 struct BoxXYZ : public std::array<double, 6> {
   using bound_type = XYZ;
   double xmin() const { return at(0); }
@@ -126,6 +135,7 @@ struct BoxXYZ : public std::array<double, 6> {
   bound_type upper_bound() const { return {xmax(), ymax(), zmax()}; }
 };
 
+/// \brief Coord implementation for BoxM
 struct BoxXYM : public std::array<double, 6> {
   using bound_type = XYM;
   double xmin() const { return at(0); }
@@ -140,6 +150,7 @@ struct BoxXYM : public std::array<double, 6> {
   bound_type upper_bound() const { return {xmax(), ymax(), mmax()}; }
 };
 
+/// \brief Coord implementation for BoxZM
 struct BoxXYZM : public std::array<double, 8> {
   using bound_type = XYZM;
   double xmin() const { return at(0); }
@@ -154,64 +165,120 @@ struct BoxXYZM : public std::array<double, 8> {
   bound_type upper_bound() const { return {xmax(), ymax(), zmax(), mmax()}; }
 };
 
+/// \brief View of a GeoArrow coordinate sequence
+///
+/// A view of zero or more coordinates. This data structure can handle either interleaved
+/// or separated coordinates.
 template <typename Coord>
 struct CoordSequence {
+  /// \brief The C++ Coordinate type. This type must implement size() and
+  /// assignment via [].
   using coord_type = Coord;
+
+  /// \brief Trait to indicate that this is a sequence (and not a list)
   static constexpr bool is_sequence = true;
+
+  /// \brief The number of values in each coordinate
   static constexpr uint32_t coord_size = Coord().size();
+
+  /// \brief The offset into values to apply
   uint32_t offset;
+
+  /// \brief The number of coordinates in the sequence
   uint32_t length;
-  struct GeoArrowCoordView* coord_view;
-  const double* values[coord_size];
+
+  /// \brief Pointers to the first ordinate values in each dimension
+  ///
+  /// This structure can accomodate either interleaved or separated
+  /// coordinates. For interleaved coordinates, these pointers will be
+  /// contiguous; for separated coordinates these pointers will point
+  /// to separate arrays. Each ordinate value is accessed by using the
+  /// expression `values[dimension_id][(offset + coord_id) * stride]`.
+  std::array<const double*, coord_size> values;
+
+  /// \brief The distance (in elements) between sequential coordinates in
+  /// each values array.
+  ///
+  /// For interleaved coordinates this is the number of dimensions in the
+  /// input; for separated coordinates this is 1. This does not need to be
+  /// equal to coord_size (e.g., when providing a CoordSequence<XY> view
+  /// of an interleaved sequence of XYZM coordinates).
   uint32_t stride;
 
+  /// \brief Return a coordinate at the given position
   Coord operator[](uint32_t i) const {
     Coord out;
     for (size_t j = 0; j < out.size(); j++) {
-      out[j] = GEOARROW_COORD_VIEW_VALUE(coord_view, offset + i, j);
+      out[j] = values[j][(offset + i) * stride];
     }
     return out;
   }
 
-  int64_t size() const { return length; }
+  /// \brief Return the number of coordinates in the sequence
+  uint32_t size() const { return length; }
 
   using Iterator = internal::CoordSequenceIterator<CoordSequence>;
   Iterator begin() const { return Iterator(*this); }
   Iterator end() const { return Iterator(*this, length); }
 };
 
+/// \brief View of a sequence of lists
 template <typename T>
-struct Nested {
+struct ListSequence {
+  /// \brief The child view type (either a ListSequence or a CoordSequence)
   using child_type = T;
+
+  /// \brief Trait to indicate this is not a CoordSequence
   static constexpr bool is_sequence = false;
 
+  /// \brief The logical offset into the sequence
   uint32_t offset;
+
+  /// \brief The number of lists in the sequence
   uint32_t length;
+
+  /// \brief The pointer to the first offset
+  ///
+  /// These offsets are sequential such that the offset of the ith element in the
+  /// sequence begins at offsets[i]. This means there must be (offset + length + 1)
+  /// accessible elements in offsets. This is exactly equal to the definition of the
+  /// offsets in the Apache Arrow list type.
   const int32_t* offsets;
+
+  /// \brief The item from which slices are to be taken according to each offset pair
+  ///
+  /// Note that the child may have its own non-zero offset which must also be applied.
   T child;
 
+  /// \brief Initialize a child whose offset and length are unset.
   void InitChild(T* child_p) const {
     *child_p = child;
-    UpdateChild(child_p, 0);
   }
 
+  /// \brief Update a child initialized with InitChild such that it represents the
+  /// ith element of the array.
   void UpdateChild(T* child_p, uint32_t i) const {
     int32_t child_offset = offsets[offset + i];
     child_p->offset = child.offset + child_offset;
     child_p->length = offsets[offset + i + 1] - child_offset;
   }
 
-  using Iterator = internal::NestedIterator<Nested>;
+  using Iterator = internal::ListSequenceIterator<ListSequence>;
   Iterator begin() const { return Iterator(*this); }
   Iterator end() const { return Iterator(*this, length); }
 };
 
 namespace internal {
 
+// Helpers to populate the above views from geoarrow-c structures. These structures
+// are intentionally omitted from the above definitions to keep the definitions
+// self-contained.
+
 template <typename T>
-void InitFromCoordView(T* value, const struct GeoArrowCoordView* view) {
-  // TODO: remove
-  *(value->coord_view) = *view;
+GeoArrowErrorCode InitFromCoordView(T* value, const struct GeoArrowCoordView* view) {
+  if (view->n_values != T::coord_size) {
+    return EINVAL;
+  }
 
   value->offset = 0;
   value->length = view->n_coords;
@@ -219,6 +286,7 @@ void InitFromCoordView(T* value, const struct GeoArrowCoordView* view) {
   for (uint32_t i = 0; i < T::coord_size; i++) {
     value->values[i] = view->values[i];
   }
+  return GEOARROW_OK;
 }
 
 template <typename T>
@@ -254,13 +322,13 @@ struct PointArray : public Array<CoordSequence<Coord>> {
 };
 
 template <typename Coord>
-struct LinestringArray : public Array<Nested<CoordSequence<Coord>>> {
+struct LinestringArray : public Array<ListSequence<CoordSequence<Coord>>> {
   static constexpr enum GeoArrowGeometryType geometry_type =
       GEOARROW_GEOMETRY_TYPE_LINESTRING;
 };
 
 template <typename Coord>
-struct PolygonArray : public Array<Nested<Nested<CoordSequence<Coord>>>> {
+struct PolygonArray : public Array<ListSequence<ListSequence<CoordSequence<Coord>>>> {
   static constexpr enum GeoArrowGeometryType geometry_type =
       GEOARROW_GEOMETRY_TYPE_POLYGON;
 };
@@ -272,13 +340,15 @@ struct MultipointArray : public Array<CoordSequence<Coord>> {
 };
 
 template <typename Coord>
-struct MultiLinestringArray : public Array<Nested<Nested<CoordSequence<Coord>>>> {
+struct MultiLinestringArray
+    : public Array<ListSequence<ListSequence<CoordSequence<Coord>>>> {
   static constexpr enum GeoArrowGeometryType geometry_type =
       GEOARROW_GEOMETRY_TYPE_MULTILINESTRING;
 };
 
 template <typename Coord>
-struct MultiPolygonArray : public Array<Nested<Nested<CoordSequence<Coord>>>> {
+struct MultiPolygonArray
+    : public Array<ListSequence<ListSequence<CoordSequence<Coord>>>> {
   static constexpr enum GeoArrowGeometryType geometry_type =
       GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON;
 };
