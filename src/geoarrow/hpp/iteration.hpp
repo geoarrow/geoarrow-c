@@ -274,7 +274,7 @@ namespace internal {
 
 template <typename T>
 GeoArrowErrorCode InitFromCoordView(T* value, const struct GeoArrowCoordView* view) {
-  if (view->n_values != T::coord_size) {
+  if (view->n_values < T::coord_size) {
     return EINVAL;
   }
 
@@ -307,6 +307,8 @@ GeoArrowErrorCode InitFromArrayView(T* value, const struct GeoArrowArrayView* vi
 
   value->offset = view->offset[level];
   value->length = view->length[level];
+
+  return GEOARROW_OK;
 };
 
 }  // namespace internal
@@ -317,10 +319,10 @@ GeoArrowErrorCode InitFromArrayView(T* value, const struct GeoArrowArrayView* vi
 template <typename T>
 struct Array {
   /// \brief The sequence type (either a ListSequence or a CoordSequence)
-  using value_type = T;
+  using sequence_type = T;
 
   /// \brief An instance of the ListSequence or CoordSequence
-  value_type value;
+  T value;
 
   /// \brief A validity bitmap where a set bit indicates a non-null value
   /// and an unset bit indicates a null value.
@@ -339,6 +341,7 @@ struct Array {
   GeoArrowErrorCode Init(const struct GeoArrowArrayView* view) {
     GEOARROW_RETURN_NOT_OK(internal::InitFromArrayView(&value, view, 0));
     validity = view->validity_bitmap;
+    return GEOARROW_OK;
   }
 };
 
@@ -374,7 +377,7 @@ struct MultiLinestringArray
 
 template <typename Coord>
 struct MultiPolygonArray
-    : public Array<ListSequence<ListSequence<CoordSequence<Coord>>>> {
+    : public Array<ListSequence<ListSequence<ListSequence<CoordSequence<Coord>>>>> {
   static constexpr enum GeoArrowGeometryType geometry_type =
       GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON;
 };
