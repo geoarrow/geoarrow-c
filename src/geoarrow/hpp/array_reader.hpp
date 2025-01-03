@@ -48,10 +48,6 @@ class ArrayReader {
   void SetArray(struct ArrowArray* array) {
     struct GeoArrowError error {};
     GEOARROW_THROW_NOT_OK(&error, GeoArrowArrayReaderSetArray(&reader_, array, &error));
-    if (array_.array.release != nullptr) {
-      array_.array.release(&array_.array);
-    }
-
     std::memcpy(&array_, array, sizeof(struct ArrowArray));
     array->release = nullptr;
   }
