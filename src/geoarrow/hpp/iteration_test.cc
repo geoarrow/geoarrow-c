@@ -92,12 +92,12 @@ TEST(GeoArrowHppTest, SetArrayPoint) {
     geoarrow::array::PointArray<XY> native_array;
     ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
 
-    std::vector<XY> coords_vec;
+    std::vector<XY> points;
     for (const auto& coord : native_array.value) {
-      coords_vec.push_back(coord);
+      points.push_back(coord);
     }
 
-    EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
+    EXPECT_THAT(points, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
   }
 }
 
@@ -123,19 +123,19 @@ TEST(GeoArrowHppTest, SetArrayLinestring) {
     geoarrow::array::LinestringArray<XY> native_array;
     ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
 
-    std::vector<std::vector<XY>> elements;
-    for (const auto& sequence : native_array.value) {
+    std::vector<std::vector<XY>> linestrings;
+    for (const auto& linestring : native_array.value) {
       std::vector<XY> coords;
-      for (const auto& coord : sequence) {
+      for (const auto& coord : linestring) {
         coords.push_back(coord);
       }
-      elements.push_back(std::move(coords));
+      linestrings.push_back(std::move(coords));
     }
 
-    EXPECT_THAT(elements, ::testing::ElementsAre(
-                              std::vector<XY>{XY{0, 1}, XY{2, 3}},
-                              std::vector<XY>{XY{4, 5}, XY{6, 7}},
-                              std::vector<XY>{XY{8, 9}, XY{10, 11}, XY{12, 13}}));
+    EXPECT_THAT(linestrings, ::testing::ElementsAre(
+                                 std::vector<XY>{XY{0, 1}, XY{2, 3}},
+                                 std::vector<XY>{XY{4, 5}, XY{6, 7}},
+                                 std::vector<XY>{XY{8, 9}, XY{10, 11}, XY{12, 13}}));
   }
 }
 
@@ -162,20 +162,20 @@ TEST(GeoArrowHppTest, SetArrayMultiLinestring) {
     geoarrow::array::MultiLinestringArray<XY> native_array;
     ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
 
-    std::vector<std::vector<std::vector<XY>>> elements;
-    for (const auto& list_sequence : native_array.value) {
-      std::vector<std::vector<XY>> elements_inner;
-      for (const auto& sequence : list_sequence) {
+    std::vector<std::vector<std::vector<XY>>> multilinestrings;
+    for (const auto& multilinestring : native_array.value) {
+      std::vector<std::vector<XY>> linestrings;
+      for (const auto& linestring : multilinestring) {
         std::vector<XY> coords;
-        for (const auto& coord : sequence) {
+        for (const auto& coord : linestring) {
           coords.push_back(coord);
         }
-        elements_inner.push_back(std::move(coords));
+        linestrings.push_back(std::move(coords));
       }
-      elements.push_back(std::move(elements_inner));
+      multilinestrings.push_back(std::move(linestrings));
     }
 
-    EXPECT_THAT(elements,
+    EXPECT_THAT(multilinestrings,
                 ::testing::ElementsAre(
                     std::vector<std::vector<XY>>{{XY{0, 1}, XY{2, 3}}},
                     std::vector<std::vector<XY>>{{XY{4, 5}, XY{6, 7}}},
@@ -207,24 +207,24 @@ TEST(GeoArrowHppTest, SetArrayMultiPolygon) {
     geoarrow::array::MultiPolygonArray<XY> native_array;
     ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
 
-    std::vector<std::vector<std::vector<std::vector<XY>>>> outer_elements;
-    for (const auto& list_list_sequence : native_array.value) {
-      std::vector<std::vector<std::vector<XY>>> elements;
-      for (const auto& list_sequence : list_list_sequence) {
-        std::vector<std::vector<XY>> elements_inner;
-        for (const auto& sequence : list_sequence) {
+    std::vector<std::vector<std::vector<std::vector<XY>>>> multipolygons;
+    for (const auto& multipolygon : native_array.value) {
+      std::vector<std::vector<std::vector<XY>>> polygons;
+      for (const auto& polygon : multipolygon) {
+        std::vector<std::vector<XY>> rings;
+        for (const auto& ring : polygon) {
           std::vector<XY> coords;
-          for (const auto& coord : sequence) {
+          for (const auto& coord : ring) {
             coords.push_back(coord);
           }
-          elements_inner.push_back(std::move(coords));
+          rings.push_back(std::move(coords));
         }
-        elements.push_back(std::move(elements_inner));
+        polygons.push_back(std::move(rings));
       }
-      outer_elements.push_back(std::move(elements));
+      multipolygons.push_back(std::move(polygons));
     }
 
-    EXPECT_THAT(outer_elements,
+    EXPECT_THAT(multipolygons,
                 ::testing::ElementsAre(
                     std::vector<std::vector<std::vector<XY>>>{{{XY{0, 1}, XY{2, 3}}}},
                     std::vector<std::vector<std::vector<XY>>>{{{XY{4, 5}, XY{6, 7}}}},
