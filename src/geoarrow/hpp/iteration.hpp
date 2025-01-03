@@ -251,9 +251,7 @@ struct ListSequence {
   T child;
 
   /// \brief Initialize a child whose offset and length are unset.
-  void InitChild(T* child_p) const {
-    *child_p = child;
-  }
+  void InitChild(T* child_p) const { *child_p = child; }
 
   /// \brief Update a child initialized with InitChild such that it represents the
   /// ith element of the array.
@@ -290,12 +288,21 @@ GeoArrowErrorCode InitFromCoordView(T* value, const struct GeoArrowCoordView* vi
 }
 
 template <typename T>
-void InitFromArrayView(T* value, const struct GeoArrowArrayView* view, int level) {
+GeoArrowErrorCode InitFromArrayView(T* value, const struct GeoArrowArrayView* view,
+                                    int level) {
   if constexpr (T::is_sequence) {
-    InitFromCoordView(value, &view->coords);
+    if (level != view->n_offsets) {
+      return EINVAL;
+    }
+
+    GEOARROW_RETURN_NOT_OK(InitFromCoordView(value, &view->coords));
   } else {
+    if (level > (view->n_offsets - 1)) {
+      return EINVAL;
+    }
+
     value->offsets = view->offsets[level];
-    InitFromArrayView(&value->child, view, level + 1);
+    GEOARROW_RETURN_NOT_OK(InitFromArrayView(&value->child, view, level + 1));
   }
 
   value->offset = view->offset[level];
@@ -304,14 +311,33 @@ void InitFromArrayView(T* value, const struct GeoArrowArrayView* view, int level
 
 }  // namespace internal
 
+/// \brief A nullable sequence (either a ListSequence or a CoordSequence)
+///
+/// Unlike the ListSequence and CoordSequence types, elements may be nullable.
 template <typename T>
 struct Array {
+  /// \brief The sequence type (either a ListSequence or a CoordSequence)
   using value_type = T;
+
+  /// \brief An instance of the ListSequence or CoordSequence
   value_type value;
+
+  /// \brief A validity bitmap where a set bit indicates a non-null value
+  /// and an unset bit indicates a null value.
+  ///
+  /// The pointer itself may be (C++) nullptr, which indicates that all values
+  /// in the array are non-null. Bits use least-significant bit ordering such that
+  /// the validity of the ith element in the array is calculated with the expression
+  /// `validity[i / 8] & (1 << (i % 8))`. This is exactly equal to the definition of
+  /// the validity bitmap in the Apache Arrow specification.
   const uint8_t* validity;
 
-  void Init(const struct GeoArrowArrayView* view) {
-    internal::InitFromArrayView(&value, view, 0);
+  /// \brief Initialize an Array from a GeoArrowArrayView
+  ///
+  /// Returns EINVAL if the nesting levels and/or coordinate size
+  /// is incompatible with the values in the view.
+  GeoArrowErrorCode Init(const struct GeoArrowArrayView* view) {
+    GEOARROW_RETURN_NOT_OK(internal::InitFromArrayView(&value, view, 0));
     validity = view->validity_bitmap;
   }
 };
