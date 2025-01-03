@@ -189,7 +189,7 @@ struct CoordSequence {
 
   /// \brief Pointers to the first ordinate values in each dimension
   ///
-  /// This structure can accomodate either interleaved or separated
+  /// This structure can accommodate either interleaved or separated
   /// coordinates. For interleaved coordinates, these pointers will be
   /// contiguous; for separated coordinates these pointers will point
   /// to separate arrays. Each ordinate value is accessed by using the
