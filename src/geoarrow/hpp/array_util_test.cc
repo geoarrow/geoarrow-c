@@ -4,14 +4,14 @@
 #include "nanoarrow/nanoarrow.h"
 
 #include "array_reader.hpp"
+#include "array_util.hpp"
 #include "array_writer.hpp"
-#include "iteration.hpp"
 
 #include "wkx_testing.hpp"
 
-using geoarrow::array::CoordSequence;
-using geoarrow::array::ListSequence;
-using geoarrow::array::XY;
+using geoarrow::array_util::CoordSequence;
+using geoarrow::array_util::ListSequence;
+using geoarrow::array_util::XY;
 
 TEST(GeoArrowHppTest, CoordXY) {
   XY coord{0, 1};
@@ -24,7 +24,7 @@ TEST(GeoArrowHppTest, CoordXY) {
 }
 
 TEST(GeoArrowHppTest, CoordXYZ) {
-  geoarrow::array::XYZ coord{0, 1, 2};
+  geoarrow::array_util::XYZ coord{0, 1, 2};
   EXPECT_EQ(coord[0], 0);
   EXPECT_EQ(coord[1], 1);
   EXPECT_EQ(coord[2], 2);
@@ -35,7 +35,7 @@ TEST(GeoArrowHppTest, CoordXYZ) {
 }
 
 TEST(GeoArrowHppTest, CoordXYM) {
-  geoarrow::array::XYM coord{0, 1, 2};
+  geoarrow::array_util::XYM coord{0, 1, 2};
   EXPECT_EQ(coord[0], 0);
   EXPECT_EQ(coord[1], 1);
   EXPECT_EQ(coord[2], 2);
@@ -46,7 +46,7 @@ TEST(GeoArrowHppTest, CoordXYM) {
 }
 
 TEST(GeoArrowHppTest, CoordXYZM) {
-  geoarrow::array::XYZM coord{0, 1, 2, 3};
+  geoarrow::array_util::XYZM coord{0, 1, 2, 3};
   EXPECT_EQ(coord[0], 0);
   EXPECT_EQ(coord[1], 1);
   EXPECT_EQ(coord[2], 2);
@@ -57,7 +57,7 @@ TEST(GeoArrowHppTest, CoordXYZM) {
 }
 
 TEST(GeoArrowHppTest, BoxXY) {
-  geoarrow::array::BoxXY coord{0, 1, 2, 3};
+  geoarrow::array_util::BoxXY coord{0, 1, 2, 3};
   EXPECT_EQ(coord[0], 0);
   EXPECT_EQ(coord[1], 1);
   EXPECT_EQ(coord[2], 2);
@@ -70,14 +70,14 @@ TEST(GeoArrowHppTest, BoxXY) {
   EXPECT_EQ(coord.zmax(), -std::numeric_limits<double>::infinity());
   EXPECT_EQ(coord.mmax(), -std::numeric_limits<double>::infinity());
 
-  geoarrow::array::XY expected_lower{0, 1};
+  geoarrow::array_util::XY expected_lower{0, 1};
   EXPECT_EQ(coord.lower_bound(), expected_lower);
-  geoarrow::array::XY expected_upper{2, 3};
+  geoarrow::array_util::XY expected_upper{2, 3};
   EXPECT_EQ(coord.upper_bound(), expected_upper);
 }
 
 TEST(GeoArrowHppTest, BoxXYZ) {
-  geoarrow::array::BoxXYZ coord{0, 1, 2, 3, 4, 5};
+  geoarrow::array_util::BoxXYZ coord{0, 1, 2, 3, 4, 5};
   EXPECT_EQ(coord[0], 0);
   EXPECT_EQ(coord[1], 1);
   EXPECT_EQ(coord[2], 2);
@@ -92,14 +92,14 @@ TEST(GeoArrowHppTest, BoxXYZ) {
   EXPECT_EQ(coord.zmax(), 5);
   EXPECT_EQ(coord.mmax(), -std::numeric_limits<double>::infinity());
 
-  geoarrow::array::XYZ expected_lower{0, 1, 2};
+  geoarrow::array_util::XYZ expected_lower{0, 1, 2};
   EXPECT_EQ(coord.lower_bound(), expected_lower);
-  geoarrow::array::XYZ expected_upper{3, 4, 5};
+  geoarrow::array_util::XYZ expected_upper{3, 4, 5};
   EXPECT_EQ(coord.upper_bound(), expected_upper);
 }
 
 TEST(GeoArrowHppTest, BoxXYM) {
-  geoarrow::array::BoxXYM coord{0, 1, 2, 3, 4, 5};
+  geoarrow::array_util::BoxXYM coord{0, 1, 2, 3, 4, 5};
   EXPECT_EQ(coord[0], 0);
   EXPECT_EQ(coord[1], 1);
   EXPECT_EQ(coord[2], 2);
@@ -114,14 +114,14 @@ TEST(GeoArrowHppTest, BoxXYM) {
   EXPECT_EQ(coord.zmax(), -std::numeric_limits<double>::infinity());
   EXPECT_EQ(coord.mmax(), 5);
 
-  geoarrow::array::XYM expected_lower{0, 1, 2};
+  geoarrow::array_util::XYM expected_lower{0, 1, 2};
   EXPECT_EQ(coord.lower_bound(), expected_lower);
-  geoarrow::array::XYM expected_upper{3, 4, 5};
+  geoarrow::array_util::XYM expected_upper{3, 4, 5};
   EXPECT_EQ(coord.upper_bound(), expected_upper);
 }
 
 TEST(GeoArrowHppTest, BoxXYZM) {
-  geoarrow::array::BoxXYZM coord{0, 1, 2, 3, 4, 5, 6, 7};
+  geoarrow::array_util::BoxXYZM coord{0, 1, 2, 3, 4, 5, 6, 7};
   EXPECT_EQ(coord[0], 0);
   EXPECT_EQ(coord[1], 1);
   EXPECT_EQ(coord[2], 2);
@@ -138,9 +138,9 @@ TEST(GeoArrowHppTest, BoxXYZM) {
   EXPECT_EQ(coord.zmax(), 6);
   EXPECT_EQ(coord.mmax(), 7);
 
-  geoarrow::array::XYZM expected_lower{0, 1, 2, 3};
+  geoarrow::array_util::XYZM expected_lower{0, 1, 2, 3};
   EXPECT_EQ(coord.lower_bound(), expected_lower);
-  geoarrow::array::XYZM expected_upper{4, 5, 6, 7};
+  geoarrow::array_util::XYZM expected_upper{4, 5, 6, 7};
   EXPECT_EQ(coord.upper_bound(), expected_upper);
 }
 
@@ -148,7 +148,7 @@ TEST(GeoArrowHppTest, IterateCoords) {
   TestCoords coords{{0, 1, 2}, {5, 6, 7}};
 
   CoordSequence<XY> sequence;
-  geoarrow::array::internal::InitFromCoordView(&sequence, coords.view());
+  geoarrow::array_util::internal::InitFromCoordView(&sequence, coords.view());
 
   ASSERT_EQ(sequence.size(), 3);
   XY last_coord{2, 7};
@@ -186,7 +186,7 @@ TEST(GeoArrowHppTest, IterateNestedCoords) {
   sequences.offset = 0;
   sequences.length = 2;
   sequences.offsets = offsets.data();
-  geoarrow::array::internal::InitFromCoordView(&sequences.child, coords.view());
+  geoarrow::array_util::internal::InitFromCoordView(&sequences.child, coords.view());
 
   std::vector<std::vector<XY>> elements;
   for (const auto& sequence : sequences) {
@@ -220,7 +220,7 @@ TEST(GeoArrowHppTest, SetArrayPoint) {
     geoarrow::ArrayReader reader(type);
     reader.SetArray(&array);
 
-    geoarrow::array::PointArray<XY> native_array;
+    geoarrow::array_util::PointArray<XY> native_array;
     ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
 
     std::vector<XY> points;
@@ -251,7 +251,7 @@ TEST(GeoArrowHppTest, SetArrayLinestring) {
     geoarrow::ArrayReader reader(type);
     reader.SetArray(&array);
 
-    geoarrow::array::LinestringArray<XY> native_array;
+    geoarrow::array_util::LinestringArray<XY> native_array;
     ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
 
     std::vector<std::vector<XY>> linestrings;
@@ -290,7 +290,7 @@ TEST(GeoArrowHppTest, SetArrayMultiLinestring) {
     geoarrow::ArrayReader reader(type);
     reader.SetArray(&array);
 
-    geoarrow::array::MultiLinestringArray<XY> native_array;
+    geoarrow::array_util::MultiLinestringArray<XY> native_array;
     ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
 
     std::vector<std::vector<std::vector<XY>>> multilinestrings;
@@ -335,7 +335,7 @@ TEST(GeoArrowHppTest, SetArrayMultiPolygon) {
     geoarrow::ArrayReader reader(type);
     reader.SetArray(&array);
 
-    geoarrow::array::MultiPolygonArray<XY> native_array;
+    geoarrow::array_util::MultiPolygonArray<XY> native_array;
     ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
 
     std::vector<std::vector<std::vector<std::vector<XY>>>> multipolygons;

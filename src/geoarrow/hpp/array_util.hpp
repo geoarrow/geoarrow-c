@@ -10,7 +10,7 @@
 
 namespace geoarrow {
 
-namespace array {
+namespace array_util {
 
 namespace internal {
 
