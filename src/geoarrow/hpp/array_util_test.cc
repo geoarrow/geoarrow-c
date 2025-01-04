@@ -202,6 +202,46 @@ TEST(GeoArrowHppTest, IterateNestedCoords) {
                                      std::vector<XY>{XY{3, 8}, XY{4, 9}}));
 }
 
+TEST(GeoArrowHppTest, SetArrayBox) {
+  geoarrow::ArrayWriter writer(GEOARROW_TYPE_LINESTRING);
+  WKXTester tester;
+  tester.ReadWKT("LINESTRING (0 1, 2 3)", writer.visitor());
+  tester.ReadWKT("LINESTRING (4 5, 6 7)", writer.visitor());
+  tester.ReadWKT("LINESTRING (8 9, 10 11, 12 13)", writer.visitor());
+
+  struct ArrowSchema schema_feat;
+  geoarrow::Linestring().InitSchema(&schema_feat);
+  struct ArrowArray array_feat;
+  writer.Finish(&array_feat);
+
+  // Create a box array using the input linestrings
+  struct GeoArrowKernel kernel;
+  struct ArrowSchema schema;
+  struct ArrowArray array;
+  ASSERT_EQ(GeoArrowKernelInit(&kernel, "box", nullptr), GEOARROW_OK);
+  ASSERT_EQ(kernel.start(&kernel, &schema_feat, nullptr, &schema, nullptr), GEOARROW_OK);
+  ASSERT_EQ(kernel.push_batch(&kernel, &array_feat, &array, nullptr), GEOARROW_OK);
+  kernel.release(&kernel);
+  ArrowSchemaRelease(&schema_feat);
+  ArrowArrayRelease(&array_feat);
+
+  geoarrow::ArrayReader reader(&schema);
+  reader.SetArray(&array);
+  ArrowSchemaRelease(&schema);
+
+  geoarrow::array_util::BoxArray<XY> native_array;
+  ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
+
+  using geoarrow::array_util::BoxXY;
+  std::vector<BoxXY> boxes;
+  for (const auto& coord : native_array.value) {
+    boxes.push_back(coord);
+  }
+
+  EXPECT_THAT(boxes, ::testing::ElementsAre(BoxXY{0, 1, 2, 3}, BoxXY{4, 5, 6, 7},
+                                            BoxXY{8, 9, 12, 13}));
+}
+
 TEST(GeoArrowHppTest, SetArrayPoint) {
   for (const auto type : {GEOARROW_TYPE_POINT, GEOARROW_TYPE_INTERLEAVED_POINT,
                           GEOARROW_TYPE_POINT_Z, GEOARROW_TYPE_INTERLEAVED_POINT_Z,
