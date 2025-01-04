@@ -152,7 +152,7 @@ TEST(GeoArrowHppTest, IterateCoords) {
 
   ASSERT_EQ(sequence.size(), 3);
   XY last_coord{2, 7};
-  ASSERT_EQ(sequence[2], last_coord);
+  ASSERT_EQ(sequence.coord(2), last_coord);
 
   std::vector<XY> coords_vec;
   for (const auto& coord : sequence) {

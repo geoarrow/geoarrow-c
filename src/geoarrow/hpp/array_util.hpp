@@ -14,63 +14,75 @@ namespace array_util {
 
 namespace internal {
 
-/// \brief Iterator implementation for CoordSequence
-template <typename CoordSequence>
-class CoordSequenceIterator {
-  const CoordSequence& outer_;
-  uint32_t i_;
-
+// The verbose bits of a random access iterator for simple outer + index-based
+// iteration. Requires that an implementation defineds value_type operator[]
+// and value_type operator*.
+template <typename Outer>
+class BaseRandomAccessIterator {
  public:
-  explicit CoordSequenceIterator(const CoordSequence& outer, uint32_t i = 0)
+  explicit BaseRandomAccessIterator(const Outer& outer, uint32_t i)
       : outer_(outer), i_(i) {}
-  CoordSequenceIterator& operator++() {
+  BaseRandomAccessIterator& operator++() {
     i_++;
     return *this;
   }
-  CoordSequenceIterator operator++(int) {
-    CoordSequenceIterator retval = *this;
-    ++(*this);
-    return retval;
+  BaseRandomAccessIterator& operator+=(int64_t n) {
+    i_ += n;
+    return *this;
   }
-  bool operator==(const CoordSequenceIterator& other) const { return i_ == other.i_; }
-  bool operator!=(const CoordSequenceIterator& other) const { return i_ != other.i_; }
+  BaseRandomAccessIterator& operator-=(int64_t n) {
+    i_ -= n;
+    return *this;
+  }
+  int64_t operator-(const BaseRandomAccessIterator& other) const { return i_ - other.i_; }
+  bool operator<(const BaseRandomAccessIterator& other) const { return i_ < other.i_; }
+  bool operator>(const BaseRandomAccessIterator& other) const { return i_ > other.i_; }
+  bool operator<=(const BaseRandomAccessIterator& other) const { return i_ <= other.i_; }
+  bool operator>=(const BaseRandomAccessIterator& other) const { return i_ >= other.i_; }
+  bool operator==(const BaseRandomAccessIterator& other) const { return i_ == other.i_; }
+  bool operator!=(const BaseRandomAccessIterator& other) const { return i_ != other.i_; }
 
-  typename CoordSequence::coord_type operator*() const { return outer_[i_]; }
+ protected:
+  const Outer& outer_;
+  uint32_t i_;
+};
+
+/// \brief Iterator implementation for CoordSequence
+template <typename CoordSequence>
+class CoordSequenceIterator : public BaseRandomAccessIterator<CoordSequence> {
+ public:
   using iterator_category = std::random_access_iterator_tag;
   using difference_type = int64_t;
-  using value_type = typename CoordSequence::coord_type;
+  using value_type = typename CoordSequence::value_type;
+
+  explicit CoordSequenceIterator(const CoordSequence& outer, uint32_t i)
+      : BaseRandomAccessIterator<CoordSequence>(outer, i) {}
+  value_type operator*() const { return this->outer_.coord(this->i_); }
+  value_type operator[](int64_t i) const { return this->outer_.coord(this->i_ + i); }
 };
 
 /// \brief Iterator implementation for ListSequence
 template <typename ListSequence>
-class ListSequenceIterator {
-  const ListSequence& outer_;
-  int64_t i_;
-  typename ListSequence::child_type stashed_;
-
+class ListSequenceIterator : public BaseRandomAccessIterator<ListSequence> {
  public:
-  explicit ListSequenceIterator(const ListSequence& outer, int64_t i = 0)
-      : outer_(outer), i_(i), stashed_(outer_.child) {}
-  ListSequenceIterator& operator++() {
-    i_++;
-    return *this;
-  }
-  ListSequenceIterator operator++(int) {
-    ListSequenceIterator retval = *this;
-    ++(*this);
-    return retval;
-  }
-  bool operator==(const ListSequenceIterator& other) const { return i_ == other.i_; }
-  bool operator!=(const ListSequenceIterator& other) const { return i_ != other.i_; }
-
-  typename ListSequence::child_type& operator*() {
-    outer_.UpdateChild(&stashed_, i_);
-    return stashed_;
-  }
   using iterator_category = std::random_access_iterator_tag;
   using difference_type = int64_t;
-  using value_type = typename ListSequence::child_type&;
+  using value_type = typename ListSequence::value_type;
+
+  explicit ListSequenceIterator(const ListSequence& outer, uint32_t i)
+      : BaseRandomAccessIterator<ListSequence>(outer, i), stashed_(outer.child) {}
+
+  typename ListSequence::child_type& operator*() {
+    this->outer_.UpdateChild(&stashed_, this->i_);
+    return stashed_;
+  }
+
+  // Not quite a random access iterator because it doesn't implement []
+  // (which would necessiate a copy, which we don't really want to do)
+ private:
+  typename ListSequence::child_type stashed_;
 };
+
 }  // namespace internal
 
 struct BoxXY;
@@ -182,7 +194,7 @@ template <typename Coord>
 struct CoordSequence {
   /// \brief The C++ Coordinate type. This type must implement size() and
   /// assignment via [].
-  using coord_type = Coord;
+  using value_type = Coord;
 
   /// \brief Trait to indicate that this is a sequence (and not a list)
   static constexpr bool is_sequence = true;
@@ -215,7 +227,7 @@ struct CoordSequence {
   uint32_t stride;
 
   /// \brief Return a coordinate at the given position
-  Coord operator[](uint32_t i) const {
+  Coord coord(uint32_t i) const {
     Coord out;
     for (size_t j = 0; j < out.size(); j++) {
       out[j] = values[j][(offset + i) * stride];
@@ -227,7 +239,7 @@ struct CoordSequence {
   uint32_t size() const { return length; }
 
   using iterator = internal::CoordSequenceIterator<CoordSequence>;
-  iterator begin() const { return iterator(*this); }
+  iterator begin() const { return iterator(*this, 0); }
   iterator end() const { return iterator(*this, length); }
 };
 
@@ -236,6 +248,10 @@ template <typename T>
 struct ListSequence {
   /// \brief The child view type (either a ListSequence or a CoordSequence)
   using child_type = T;
+
+  /// \brief For the purposes of iteration, the value type is a const reference
+  /// to the child type (stashed in the iterator).
+  using value_type = const T&;
 
   /// \brief Trait to indicate this is not a CoordSequence
   static constexpr bool is_sequence = false;
@@ -271,7 +287,7 @@ struct ListSequence {
   }
 
   using iterator = internal::ListSequenceIterator<ListSequence>;
-  iterator begin() const { return iterator(*this); }
+  iterator begin() const { return iterator(*this, 0); }
   iterator end() const { return iterator(*this, length); }
 };
 
