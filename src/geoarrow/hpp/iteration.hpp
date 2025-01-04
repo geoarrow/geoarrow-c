@@ -3,8 +3,8 @@
 #define GEOARROW_HPP_ITERATION_INCLUDED
 
 #include <array>
-#include <cmath>
 #include <iterator>
+#include <limits>
 
 #include "geoarrow.h"
 
@@ -77,8 +77,8 @@ class ListSequenceIterator {
 struct XY : public std::array<double, 2> {
   double x() const { return at(0); }
   double y() const { return at(1); }
-  double z() const { return NAN; }
-  double m() const { return NAN; }
+  double z() const { return std::numeric_limits<double>::quiet_NaN(); }
+  double m() const { return std::numeric_limits<double>::quiet_NaN(); }
 };
 
 /// \brief Coord implementation for XYZ
@@ -86,14 +86,14 @@ struct XYZ : public std::array<double, 3> {
   double x() const { return at(0); }
   double y() const { return at(1); }
   double z() const { return at(2); }
-  double m() const { return NAN; }
+  double m() const { return std::numeric_limits<double>::quiet_NaN(); }
 };
 
 /// \brief Coord implementation for XYM
 struct XYM : public std::array<double, 3> {
   double x() const { return at(0); }
   double y() const { return at(1); }
-  double z() const { return NAN; }
+  double z() const { return std::numeric_limits<double>::quiet_NaN(); }
   double m() const { return at(2); }
 };
 
@@ -110,12 +110,12 @@ struct BoxXY : public std::array<double, 4> {
   using bound_type = XY;
   double xmin() const { return at(0); }
   double ymin() const { return at(1); }
-  double zmin() const { return INFINITY; }
-  double mmin() const { return INFINITY; }
+  double zmin() const { return std::numeric_limits<double>::infinity(); }
+  double mmin() const { return std::numeric_limits<double>::infinity(); }
   double xmax() const { return at(2); }
   double ymax() const { return at(3); }
-  double zmax() const { return -INFINITY; }
-  double mmax() const { return -INFINITY; }
+  double zmax() const { return -std::numeric_limits<double>::infinity(); }
+  double mmax() const { return -std::numeric_limits<double>::infinity(); }
   bound_type lower_bound() const { return {xmin(), ymin()}; }
   bound_type upper_bound() const { return {xmax(), ymax()}; }
 };
@@ -126,11 +126,11 @@ struct BoxXYZ : public std::array<double, 6> {
   double xmin() const { return at(0); }
   double ymin() const { return at(1); }
   double zmin() const { return at(2); }
-  double mmin() const { return INFINITY; }
+  double mmin() const { return std::numeric_limits<double>::infinity(); }
   double xmax() const { return at(3); }
   double ymax() const { return at(4); }
   double zmax() const { return at(5); }
-  double mmax() const { return -INFINITY; }
+  double mmax() const { return -std::numeric_limits<double>::infinity(); }
   bound_type lower_bound() const { return {xmin(), ymin(), zmin()}; }
   bound_type upper_bound() const { return {xmax(), ymax(), zmax()}; }
 };
@@ -140,13 +140,13 @@ struct BoxXYM : public std::array<double, 6> {
   using bound_type = XYM;
   double xmin() const { return at(0); }
   double ymin() const { return at(1); }
-  double zmin() const { return INFINITY; }
+  double zmin() const { return std::numeric_limits<double>::infinity(); }
   double mmin() const { return at(2); }
   double xmax() const { return at(3); }
   double ymax() const { return at(4); }
-  double zmax() const { return -INFINITY; }
+  double zmax() const { return -std::numeric_limits<double>::infinity(); }
   double mmax() const { return at(5); }
-  bound_type lower_bound() const { return {mmin(), ymin(), mmin()}; }
+  bound_type lower_bound() const { return {xmin(), ymin(), mmin()}; }
   bound_type upper_bound() const { return {xmax(), ymax(), mmax()}; }
 };
 
@@ -159,8 +159,8 @@ struct BoxXYZM : public std::array<double, 8> {
   double mmin() const { return at(3); }
   double xmax() const { return at(4); }
   double ymax() const { return at(5); }
-  double zmax() const { return at(7); }
-  double mmax() const { return at(8); }
+  double zmax() const { return at(6); }
+  double mmax() const { return at(7); }
   bound_type lower_bound() const { return {xmin(), ymin(), zmin(), mmin()}; }
   bound_type upper_bound() const { return {xmax(), ymax(), zmax(), mmax()}; }
 };
@@ -217,9 +217,9 @@ struct CoordSequence {
   /// \brief Return the number of coordinates in the sequence
   uint32_t size() const { return length; }
 
-  using Iterator = internal::CoordSequenceIterator<CoordSequence>;
-  Iterator begin() const { return Iterator(*this); }
-  Iterator end() const { return Iterator(*this, length); }
+  using iterator = internal::CoordSequenceIterator<CoordSequence>;
+  iterator begin() const { return iterator(*this); }
+  iterator end() const { return iterator(*this, length); }
 };
 
 /// \brief View of a sequence of lists
@@ -261,9 +261,9 @@ struct ListSequence {
     child_p->length = offsets[offset + i + 1] - child_offset;
   }
 
-  using Iterator = internal::ListSequenceIterator<ListSequence>;
-  Iterator begin() const { return Iterator(*this); }
-  Iterator end() const { return Iterator(*this, length); }
+  using iterator = internal::ListSequenceIterator<ListSequence>;
+  iterator begin() const { return iterator(*this); }
+  iterator end() const { return iterator(*this, length); }
 };
 
 namespace internal {

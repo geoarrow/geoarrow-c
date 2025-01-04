@@ -13,6 +13,137 @@ using geoarrow::array::CoordSequence;
 using geoarrow::array::ListSequence;
 using geoarrow::array::XY;
 
+TEST(GeoArrowHppTest, CoordXY) {
+  XY coord{0, 1};
+  EXPECT_EQ(coord[0], 0);
+  EXPECT_EQ(coord[1], 1);
+  EXPECT_EQ(coord.x(), 0);
+  EXPECT_EQ(coord.y(), 1);
+  EXPECT_TRUE(std::isnan(coord.z()));
+  EXPECT_TRUE(std::isnan(coord.m()));
+}
+
+TEST(GeoArrowHppTest, CoordXYZ) {
+  geoarrow::array::XYZ coord{0, 1, 2};
+  EXPECT_EQ(coord[0], 0);
+  EXPECT_EQ(coord[1], 1);
+  EXPECT_EQ(coord[2], 2);
+  EXPECT_EQ(coord.x(), 0);
+  EXPECT_EQ(coord.y(), 1);
+  EXPECT_EQ(coord.z(), 2);
+  EXPECT_TRUE(std::isnan(coord.m()));
+}
+
+TEST(GeoArrowHppTest, CoordXYM) {
+  geoarrow::array::XYM coord{0, 1, 2};
+  EXPECT_EQ(coord[0], 0);
+  EXPECT_EQ(coord[1], 1);
+  EXPECT_EQ(coord[2], 2);
+  EXPECT_EQ(coord.x(), 0);
+  EXPECT_EQ(coord.y(), 1);
+  EXPECT_TRUE(std::isnan(coord.z()));
+  EXPECT_EQ(coord.m(), 2);
+}
+
+TEST(GeoArrowHppTest, CoordXYZM) {
+  geoarrow::array::XYZM coord{0, 1, 2, 3};
+  EXPECT_EQ(coord[0], 0);
+  EXPECT_EQ(coord[1], 1);
+  EXPECT_EQ(coord[2], 2);
+  EXPECT_EQ(coord.x(), 0);
+  EXPECT_EQ(coord.y(), 1);
+  EXPECT_EQ(coord.z(), 2);
+  EXPECT_EQ(coord.m(), 3);
+}
+
+TEST(GeoArrowHppTest, BoxXY) {
+  geoarrow::array::BoxXY coord{0, 1, 2, 3};
+  EXPECT_EQ(coord[0], 0);
+  EXPECT_EQ(coord[1], 1);
+  EXPECT_EQ(coord[2], 2);
+  EXPECT_EQ(coord.xmin(), 0);
+  EXPECT_EQ(coord.ymin(), 1);
+  EXPECT_EQ(coord.zmin(), std::numeric_limits<double>::infinity());
+  EXPECT_EQ(coord.mmin(), std::numeric_limits<double>::infinity());
+  EXPECT_EQ(coord.xmax(), 2);
+  EXPECT_EQ(coord.ymax(), 3);
+  EXPECT_EQ(coord.zmax(), -std::numeric_limits<double>::infinity());
+  EXPECT_EQ(coord.mmax(), -std::numeric_limits<double>::infinity());
+
+  geoarrow::array::XY expected_lower{0, 1};
+  EXPECT_EQ(coord.lower_bound(), expected_lower);
+  geoarrow::array::XY expected_upper{2, 3};
+  EXPECT_EQ(coord.upper_bound(), expected_upper);
+}
+
+TEST(GeoArrowHppTest, BoxXYZ) {
+  geoarrow::array::BoxXYZ coord{0, 1, 2, 3, 4, 5};
+  EXPECT_EQ(coord[0], 0);
+  EXPECT_EQ(coord[1], 1);
+  EXPECT_EQ(coord[2], 2);
+  EXPECT_EQ(coord[3], 3);
+  EXPECT_EQ(coord[4], 4);
+  EXPECT_EQ(coord.xmin(), 0);
+  EXPECT_EQ(coord.ymin(), 1);
+  EXPECT_EQ(coord.zmin(), 2);
+  EXPECT_EQ(coord.mmin(), std::numeric_limits<double>::infinity());
+  EXPECT_EQ(coord.xmax(), 3);
+  EXPECT_EQ(coord.ymax(), 4);
+  EXPECT_EQ(coord.zmax(), 5);
+  EXPECT_EQ(coord.mmax(), -std::numeric_limits<double>::infinity());
+
+  geoarrow::array::XYZ expected_lower{0, 1, 2};
+  EXPECT_EQ(coord.lower_bound(), expected_lower);
+  geoarrow::array::XYZ expected_upper{3, 4, 5};
+  EXPECT_EQ(coord.upper_bound(), expected_upper);
+}
+
+TEST(GeoArrowHppTest, BoxXYM) {
+  geoarrow::array::BoxXYM coord{0, 1, 2, 3, 4, 5};
+  EXPECT_EQ(coord[0], 0);
+  EXPECT_EQ(coord[1], 1);
+  EXPECT_EQ(coord[2], 2);
+  EXPECT_EQ(coord[3], 3);
+  EXPECT_EQ(coord[4], 4);
+  EXPECT_EQ(coord.xmin(), 0);
+  EXPECT_EQ(coord.ymin(), 1);
+  EXPECT_EQ(coord.zmin(), std::numeric_limits<double>::infinity());
+  EXPECT_EQ(coord.mmin(), 2);
+  EXPECT_EQ(coord.xmax(), 3);
+  EXPECT_EQ(coord.ymax(), 4);
+  EXPECT_EQ(coord.zmax(), -std::numeric_limits<double>::infinity());
+  EXPECT_EQ(coord.mmax(), 5);
+
+  geoarrow::array::XYM expected_lower{0, 1, 2};
+  EXPECT_EQ(coord.lower_bound(), expected_lower);
+  geoarrow::array::XYM expected_upper{3, 4, 5};
+  EXPECT_EQ(coord.upper_bound(), expected_upper);
+}
+
+TEST(GeoArrowHppTest, BoxXYZM) {
+  geoarrow::array::BoxXYZM coord{0, 1, 2, 3, 4, 5, 6, 7};
+  EXPECT_EQ(coord[0], 0);
+  EXPECT_EQ(coord[1], 1);
+  EXPECT_EQ(coord[2], 2);
+  EXPECT_EQ(coord[3], 3);
+  EXPECT_EQ(coord[4], 4);
+  EXPECT_EQ(coord[5], 5);
+  EXPECT_EQ(coord[6], 6);
+  EXPECT_EQ(coord.xmin(), 0);
+  EXPECT_EQ(coord.ymin(), 1);
+  EXPECT_EQ(coord.zmin(), 2);
+  EXPECT_EQ(coord.mmin(), 3);
+  EXPECT_EQ(coord.xmax(), 4);
+  EXPECT_EQ(coord.ymax(), 5);
+  EXPECT_EQ(coord.zmax(), 6);
+  EXPECT_EQ(coord.mmax(), 7);
+
+  geoarrow::array::XYZM expected_lower{0, 1, 2, 3};
+  EXPECT_EQ(coord.lower_bound(), expected_lower);
+  geoarrow::array::XYZM expected_upper{4, 5, 6, 7};
+  EXPECT_EQ(coord.upper_bound(), expected_upper);
+}
+
 TEST(GeoArrowHppTest, IterateCoords) {
   TestCoords coords{{0, 1, 2}, {5, 6, 7}};
 
