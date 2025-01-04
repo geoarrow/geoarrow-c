@@ -29,9 +29,7 @@ else()
   set(GEOARROW_NAMESPACE_DEFINE "// #define GEOARROW_NAMESPACE YourNamespaceHere")
 endif()
 
-if(GEOARROW_BUILD_TESTS)
-  add_library(geoarrow_coverage_config INTERFACE)
-endif()
+add_library(geoarrow_coverage_config INTERFACE)
 
 if(GEOARROW_CODE_COVERAGE)
   target_compile_options(geoarrow_coverage_config INTERFACE -O0 -g --coverage)
