@@ -366,6 +366,20 @@ struct Array {
   /// the validity bitmap in the Apache Arrow specification.
   const uint8_t* validity;
 
+  /// \brief Return the validity of a given element
+  ///
+  /// Note that this is not an efficient mechanism to check for nullability in a loop.
+  bool is_valid(uint32_t i) const {
+    return validity == nullptr || validity[i / 8] & (1 << (i % 8));
+  }
+
+  /// \brief Return the nullness of a given element
+  ///
+  /// Note that this is not an efficient mechanism to check for nullability in a loop.
+  bool is_null(uint32_t i) const {
+    return validity != nullptr && !(validity[i / 8] & (1 << (i % 8)));
+  }
+
   /// \brief Initialize an Array from a GeoArrowArrayView
   ///
   /// Returns EINVAL if the nesting levels and/or coordinate size
@@ -387,6 +401,8 @@ struct BoxArray : public Array<CoordSequence<typename Coord::box_type>> {
 template <typename Coord>
 struct PointArray : public Array<CoordSequence<Coord>> {
   static constexpr enum GeoArrowGeometryType geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
+  static constexpr enum GeoArrowDimensions dimensions =
+      internal::CoordTraits<Coord>::dimensions;
 };
 
 template <typename Coord>

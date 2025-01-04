@@ -202,6 +202,46 @@ TEST(GeoArrowHppTest, IterateNestedCoords) {
                                      std::vector<XY>{XY{3, 8}, XY{4, 9}}));
 }
 
+TEST(GeoArrowHppTest, CoordTraits) {
+  EXPECT_EQ(geoarrow::array_util::PointArray<geoarrow::array_util::XY>::dimensions,
+            GEOARROW_DIMENSIONS_XY);
+  EXPECT_EQ(geoarrow::array_util::PointArray<geoarrow::array_util::XYZ>::dimensions,
+            GEOARROW_DIMENSIONS_XYZ);
+  EXPECT_EQ(geoarrow::array_util::PointArray<geoarrow::array_util::XYM>::dimensions,
+            GEOARROW_DIMENSIONS_XYM);
+  EXPECT_EQ(geoarrow::array_util::PointArray<geoarrow::array_util::XYZM>::dimensions,
+            GEOARROW_DIMENSIONS_XYZM);
+}
+
+TEST(GeoArrowHppTest, ArrayNullness) {
+  geoarrow::array_util::PointArray<XY> native_array;
+
+  // With a set bitmap, ensure the formula is used
+  uint8_t validity_byte = 0b0000101;
+  native_array.validity = &validity_byte;
+  EXPECT_TRUE(native_array.is_valid(0));
+  EXPECT_FALSE(native_array.is_valid(1));
+  EXPECT_TRUE(native_array.is_valid(2));
+  EXPECT_FALSE(native_array.is_valid(3));
+
+  EXPECT_FALSE(native_array.is_null(0));
+  EXPECT_TRUE(native_array.is_null(1));
+  EXPECT_FALSE(native_array.is_null(2));
+  EXPECT_TRUE(native_array.is_null(3));
+
+  // With a null bitmap, elements are never null
+  native_array.validity = nullptr;
+  EXPECT_TRUE(native_array.is_valid(0));
+  EXPECT_TRUE(native_array.is_valid(1));
+  EXPECT_TRUE(native_array.is_valid(2));
+  EXPECT_TRUE(native_array.is_valid(3));
+
+  EXPECT_FALSE(native_array.is_null(0));
+  EXPECT_FALSE(native_array.is_null(1));
+  EXPECT_FALSE(native_array.is_null(2));
+  EXPECT_FALSE(native_array.is_null(3));
+}
+
 TEST(GeoArrowHppTest, SetArrayBox) {
   geoarrow::ArrayWriter writer(GEOARROW_TYPE_LINESTRING);
   WKXTester tester;
