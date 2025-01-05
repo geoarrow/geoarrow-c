@@ -252,6 +252,13 @@ struct CoordSequence {
   /// \brief Return the number of coordinates in the sequence
   uint32_t size() const { return length; }
 
+  CoordSequence<Coord> Slice(uint32_t offset, uint32_t length) const {
+    CoordSequence<Coord> out = *this;
+    out.offset += offset;
+    out.length = length;
+    return out;
+  }
+
   using const_iterator = internal::CoordSequenceIterator<CoordSequence>;
   const_iterator begin() const { return const_iterator(*this, 0); }
   const_iterator end() const { return const_iterator(*this, length); }
@@ -292,6 +299,16 @@ struct ListSequence {
   /// Note that the child may have its own non-zero offset which must also be applied.
   T child{};
 
+  T ValidChildElements() const {
+    if (length == 0) {
+      return child.Slice(0, 0);
+    } else {
+      uint32_t first_offset = offsets[offset];
+      uint32_t last_offset = offsets[offset + length];
+      return child.Slice(first_offset, last_offset - first_offset);
+    }
+  }
+
   /// \brief Initialize a child whose offset and length are unset.
   void InitChild(T* child_p) const { *child_p = child; }
 
@@ -301,6 +318,13 @@ struct ListSequence {
     int32_t child_offset = offsets[offset + i];
     child_p->offset = child.offset + child_offset;
     child_p->length = offsets[offset + i + 1] - child_offset;
+  }
+
+  ListSequence<T> Slice(uint32_t offset, uint32_t length) const {
+    ListSequence<T> out = *this;
+    out.offset += offset;
+    out.length = length;
+    return out;
   }
 
   using const_iterator = internal::ListSequenceIterator<ListSequence>;
@@ -397,12 +421,15 @@ struct Array {
   /// the validity of the ith element in the array is calculated with the expression
   /// `validity[i / 8] & (1 << (i % 8))`. This is exactly equal to the definition of
   /// the validity bitmap in the Apache Arrow specification.
+  ///
+  /// Note that the offset of the underlying sequence must be applied.
   const uint8_t* validity{};
 
   /// \brief Return the validity of a given element
   ///
   /// Note that this is not an efficient mechanism to check for nullability in a loop.
   bool is_valid(uint32_t i) const {
+    i += value.offset;
     return validity == nullptr || validity[i / 8] & (1 << (i % 8));
   }
 
@@ -410,6 +437,7 @@ struct Array {
   ///
   /// Note that this is not an efficient mechanism to check for nullability in a loop.
   bool is_null(uint32_t i) const {
+    i += value.offset;
     return validity != nullptr && !(validity[i / 8] & (1 << (i % 8)));
   }
 
@@ -421,6 +449,14 @@ struct Array {
     GEOARROW_RETURN_NOT_OK(internal::InitFromArrayView(&value, view, 0));
     validity = view->validity_bitmap;
     return GEOARROW_OK;
+  }
+
+ protected:
+  template <typename Impl>
+  Impl SliceImpl(Impl self, uint32_t offset, uint32_t length) {
+    self.value.offset += offset;
+    self.value.length = length;
+    return self;
   }
 };
 
@@ -436,7 +472,11 @@ struct PointArray : public Array<CoordSequence<Coord>> {
   /// Note that in the presence of null values, some of the coordinates values
   /// are not present in the array (e.g., for the purposes of calculating aggregate
   /// statistics).
-  const CoordSequence<Coord>& Coords() const { return this->value; }
+  CoordSequence<Coord> Coords() const { return this->value; }
+
+  PointArray Slice(uint32_t offset, uint32_t length) {
+    return this->template SliceImpl<PointArray>(*this, offset, length);
+  }
 };
 
 /// \brief An Array of boxes
@@ -471,6 +511,10 @@ struct BoxArray : public Array<CoordSequence<typename Coord::box_type>> {
 
     return out;
   }
+
+  BoxArray Slice(uint32_t offset, uint32_t length) {
+    return this->template SliceImpl<BoxArray>(*this, offset, length);
+  }
 };
 
 /// \brief An Array of linestrings
@@ -481,12 +525,16 @@ struct LinestringArray : public Array<ListSequence<CoordSequence<Coord>>> {
   static constexpr enum GeoArrowDimensions dimensions =
       internal::CoordTraits<Coord>::dimensions;
 
-  // \brief Return a view of all coordinates in this array
+  /// \brief Return a view of all coordinates in this array
   ///
   /// Note that in the presence of null values, some of the coordinates values
   /// are not present in the array (e.g., for the purposes of calculating aggregate
   /// statistics).
-  const CoordSequence<Coord>& Coords() const { return this->value.child; }
+  CoordSequence<Coord> Coords() const { return this->value.ValidChildElements(); }
+
+  LinestringArray Slice(uint32_t offset, uint32_t length) {
+    return this->template SliceImpl<LinestringArray>(*this, offset, length);
+  }
 };
 
 /// \brief An Array of polygons
@@ -497,12 +545,18 @@ struct PolygonArray : public Array<ListSequence<ListSequence<CoordSequence<Coord
   static constexpr enum GeoArrowDimensions dimensions =
       internal::CoordTraits<Coord>::dimensions;
 
-  // \brief Return a view of all coordinates in this array
+  /// \brief Return a view of all coordinates in this array
   ///
   /// Note that in the presence of null values, some of the coordinates values
   /// are not present in the array (e.g., for the purposes of calculating aggregate
   /// statistics).
-  const CoordSequence<Coord>& Coords() const { return this->value.child.child; }
+  CoordSequence<Coord> Coords() const {
+    return this->value.ValidChildElements().ValidChildElements();
+  }
+
+  PolygonArray Slice(uint32_t offset, uint32_t length) {
+    return this->template SliceImpl<PolygonArray>(*this, offset, length);
+  }
 };
 
 /// \brief An Array of multipoints
@@ -518,7 +572,11 @@ struct MultipointArray : public Array<CoordSequence<Coord>> {
   /// Note that in the presence of null values, some of the coordinates values
   /// are not present in the array (e.g., for the purposes of calculating aggregate
   /// statistics).
-  const CoordSequence<Coord>& Coords() const { return this->value.child; }
+  CoordSequence<Coord> Coords() const { return this->value.ValidChildElements(); }
+
+  MultipointArray Slice(uint32_t offset, uint32_t length) {
+    return this->template SliceImpl<MultipointArray>(*this, offset, length);
+  }
 };
 
 /// \brief An Array of multilinestrings
@@ -535,7 +593,13 @@ struct MultiLinestringArray
   /// Note that in the presence of null values, some of the coordinates values
   /// are not present in the array (e.g., for the purposes of calculating aggregate
   /// statistics).
-  const CoordSequence<Coord>& Coords() const { return this->value.child.child; }
+  CoordSequence<Coord> Coords() const {
+    return this->value.ValidChildElements().ValidChildElements();
+  }
+
+  MultiLinestringArray Slice(uint32_t offset, uint32_t length) {
+    return this->template SliceImpl<MultiLinestringArray>(*this, offset, length);
+  }
 };
 
 /// \brief An Array of multipolygons
@@ -552,7 +616,13 @@ struct MultiPolygonArray
   /// Note that in the presence of null values, some of the coordinates values
   /// are not present in the array (e.g., for the purposes of calculating aggregate
   /// statistics).
-  const CoordSequence<Coord>& Coords() const { return this->value.child.child.child; }
+  CoordSequence<Coord> Coords() const {
+    return this->value.ValidChildElements().ValidChildElements().ValidChildElements();
+  }
+
+  MultiPolygonArray Slice(uint32_t offset, uint32_t length) {
+    return this->template SliceImpl<MultiPolygonArray>(*this, offset, length);
+  }
 };
 
 }  // namespace array_util
