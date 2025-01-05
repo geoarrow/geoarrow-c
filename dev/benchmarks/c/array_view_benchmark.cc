@@ -21,15 +21,53 @@
 
 #include "geoarrow.h"
 
-#include "benchmark_lib.h"
 #include "benchmark_util.hpp"
 
-enum CoordAccessStrategy { GENERIC, OPTIMIZED, LOOP_THEN_IF };
+using geoarrow::benchmark_util::Operation;
+using Operation::BOUNDS;
+using Operation::CENTROID;
 
-enum Operation { BOUNDS, CENTROID };
+// Slightly faster than std::min/std::max
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-template <enum Operation operation, enum GeoArrowType type,
-          enum CoordAccessStrategy strategy>
+// Calculates bounds using GEOARROW_COORD_VIEW_VALUE
+std::array<double, 4> BoundsUsingCoordViewValue(struct GeoArrowCoordView* coords,
+                                                int64_t n_coords) {
+  double xmin = std::numeric_limits<double>::infinity();
+  double xmax = -std::numeric_limits<double>::infinity();
+  double ymin = std::numeric_limits<double>::infinity();
+  double ymax = -std::numeric_limits<double>::infinity();
+
+  double x, y;
+  for (int64_t i = 0; i < n_coords; i++) {
+    x = GEOARROW_COORD_VIEW_VALUE(coords, i, 0);
+    y = GEOARROW_COORD_VIEW_VALUE(coords, i, 1);
+    xmin = MIN(xmin, x);
+    xmax = MAX(xmax, y);
+    ymin = MIN(ymin, x);
+    ymax = MAX(ymax, y);
+  }
+
+  return {xmin, ymin, xmax, ymax};
+}
+
+// Calculates centroid using GEOARROW_COORD_VIEW_VALUE
+std::array<double, 2> CentroidUsingCoordViewValue(struct GeoArrowCoordView* coords,
+                                                  int64_t n_coords) {
+  double xsum = 0;
+  double ysum = 0;
+
+  double x, y;
+  for (int64_t i = 0; i < n_coords; i++) {
+    xsum += GEOARROW_COORD_VIEW_VALUE(coords, i, 0);
+    ysum += GEOARROW_COORD_VIEW_VALUE(coords, i, 1);
+  }
+
+  return {xsum / n_coords, ysum / n_coords};
+}
+
+template <enum Operation operation, enum GeoArrowType type>
 static void CoordViewLoop(benchmark::State& state) {
   struct GeoArrowArrayView view;
   GeoArrowArrayViewInitFromType(&view, type);
@@ -38,9 +76,6 @@ static void CoordViewLoop(benchmark::State& state) {
   uint32_t n_coords = geoarrow::benchmark_util::kNumCoordsPrettyBig;
   int n_dims = view.coords.n_values;
   std::vector<double> coords(n_coords * n_dims);
-  double angle_inc_radians = M_PI / 100;
-  double radius = 483;
-  double angle = 0;
 
   if (view.schema_view.coord_type == GEOARROW_COORD_TYPE_SEPARATE) {
     for (int i = 0; i < n_dims; i++) {
@@ -59,72 +94,26 @@ static void CoordViewLoop(benchmark::State& state) {
                                            const_cast<double*>(view.coords.values[1]));
 
   if (operation == BOUNDS) {
-    switch (strategy) {
-      case GENERIC:
-        for (auto _ : state) {
-          bounds = CalculateBoundsGeneric(&view.coords, n_coords);
-          benchmark::DoNotOptimize(bounds);
-        }
-        break;
-      case OPTIMIZED:
-        for (auto _ : state) {
-          bounds = CalculateBoundsOptimized(&view.coords, n_coords,
-                                            view.schema_view.coord_type);
-          benchmark::DoNotOptimize(bounds);
-        }
-        break;
-      case LOOP_THEN_IF:
-        for (auto _ : state) {
-          bounds = CalculateBoundsLoopThenIf(&view.coords, n_coords,
-                                             view.schema_view.coord_type);
-          benchmark::DoNotOptimize(bounds);
-        }
-        break;
+    for (auto _ : state) {
+      bounds = BoundsUsingCoordViewValue(&view.coords, n_coords);
+      benchmark::DoNotOptimize(bounds);
     }
-
   } else if (operation == CENTROID) {
     std::array<double, 2> centroid{};
-    switch (strategy) {
-      case GENERIC:
-        for (auto _ : state) {
-          centroid = CalculateCentroidGeneric(&view.coords, n_coords);
-          benchmark::DoNotOptimize(centroid);
-        }
-        break;
-      case OPTIMIZED:
-        for (auto _ : state) {
-          centroid = CalculateCentroidOptimized(&view.coords, n_coords,
-                                                view.schema_view.coord_type);
-          benchmark::DoNotOptimize(centroid);
-        }
-        break;
-      case LOOP_THEN_IF:
-        for (auto _ : state) {
-          centroid = CalculateCentroidLoopThenIf(&view.coords, n_coords,
-                                                 view.schema_view.coord_type);
-          benchmark::DoNotOptimize(centroid);
-        }
-        break;
+    for (auto _ : state) {
+      centroid = CentroidUsingCoordViewValue(&view.coords, n_coords);
+      benchmark::DoNotOptimize(centroid);
     }
   }
 
   state.SetItemsProcessed(n_coords * state.iterations());
-  // Check the result (centroid should more or less be 0, 0; bounds should be more or less
-  // -484..483 in both dimensions)
-  // std::cout << bounds[0] << ", " << bounds[1] << ", " << bounds[2] << ", " << bounds[3]
+  // Check the result (centroid should more or less be 0, 0; bounds should be more or
+  // less -484..483 in both dimensions) std::cout << bounds[0] << ", " << bounds[1] <<
+  // ", " << bounds[2] << ", " << bounds[3]
   //           << std::endl;
 }
 
-BENCHMARK(CoordViewLoop<BOUNDS, GEOARROW_TYPE_POINT, GENERIC>);
-BENCHMARK(CoordViewLoop<BOUNDS, GEOARROW_TYPE_POINT, LOOP_THEN_IF>);
-BENCHMARK(CoordViewLoop<BOUNDS, GEOARROW_TYPE_POINT, OPTIMIZED>);
-BENCHMARK(CoordViewLoop<BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT, GENERIC>);
-BENCHMARK(CoordViewLoop<BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT, LOOP_THEN_IF>);
-BENCHMARK(CoordViewLoop<BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT, OPTIMIZED>);
-
-BENCHMARK(CoordViewLoop<CENTROID, GEOARROW_TYPE_POINT, GENERIC>);
-BENCHMARK(CoordViewLoop<CENTROID, GEOARROW_TYPE_POINT, LOOP_THEN_IF>);
-BENCHMARK(CoordViewLoop<CENTROID, GEOARROW_TYPE_POINT, OPTIMIZED>);
-BENCHMARK(CoordViewLoop<CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT, GENERIC>);
-BENCHMARK(CoordViewLoop<CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT, LOOP_THEN_IF>);
-BENCHMARK(CoordViewLoop<CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT, OPTIMIZED>);
+BENCHMARK(CoordViewLoop<BOUNDS, GEOARROW_TYPE_POINT>);
+BENCHMARK(CoordViewLoop<BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT>);
+BENCHMARK(CoordViewLoop<CENTROID, GEOARROW_TYPE_POINT>);
+BENCHMARK(CoordViewLoop<CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT>);

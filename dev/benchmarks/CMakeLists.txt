@@ -58,7 +58,6 @@ if(IS_DIRECTORY "${GEOARROW_BENCHMARK_SOURCE_URL}")
 elseif(NOT "${GEOARROW_BENCHMARK_SOURCE_URL}" STREQUAL "")
   fetchcontent_declare(geoarrow URL "${GEOARROW_BENCHMARK_SOURCE_URL}")
   fetchcontent_makeavailable(geoarrow)
-  fetchcontent_makeavailable(geoarrow_ipc)
 endif()
 
 # Check that either the parent scope or this CMakeLists.txt defines a geoarrow target
@@ -75,7 +74,7 @@ include(CTest)
 enable_testing()
 
 foreach(ITEM array_view)
-  add_executable(${ITEM}_benchmark "c/${ITEM}_benchmark.cc" c/benchmark_lib.cc)
+  add_executable(${ITEM}_benchmark "c/${ITEM}_benchmark.cc")
   target_link_libraries(${ITEM}_benchmark PRIVATE geoarrow benchmark::benchmark_main)
   add_test(NAME ${ITEM}_benchmark COMMAND ${ITEM}_benchmark
                                           --benchmark_out=${ITEM}_benchmark.json)
