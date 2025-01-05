@@ -6,7 +6,17 @@
 #include <iterator>
 #include <limits>
 
-#include "geoarrow.h"
+#include "geoarrow_type.h"
+
+/// \defgroup hpp-array-utility Array iteration utilities
+///
+/// This header provides utilities for iterating over native GeoArrow arrays
+/// (i.e., nested lists of coordinates where the coordinates are contiguous).
+/// This header only depends on geoarrow_type.h (i.e., it does not use any symbols
+/// from the geoarrow-c runtime) and most logic is written such that it the
+/// dependency on the types could be removed.
+///
+/// @{
 
 namespace geoarrow {
 
@@ -414,6 +424,7 @@ struct Array {
   }
 };
 
+/// \brief An Array of points
 template <typename Coord>
 struct PointArray : public Array<CoordSequence<Coord>> {
   static constexpr enum GeoArrowGeometryType geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
@@ -428,6 +439,7 @@ struct PointArray : public Array<CoordSequence<Coord>> {
   const CoordSequence<Coord>& Coords() const { return this->value; }
 };
 
+/// \brief An Array of boxes
 template <typename Coord>
 struct BoxArray : public Array<CoordSequence<typename Coord::box_type>> {
   static constexpr enum GeoArrowGeometryType geometry_type = GEOARROW_GEOMETRY_TYPE_BOX;
@@ -461,6 +473,7 @@ struct BoxArray : public Array<CoordSequence<typename Coord::box_type>> {
   }
 };
 
+/// \brief An Array of linestrings
 template <typename Coord>
 struct LinestringArray : public Array<ListSequence<CoordSequence<Coord>>> {
   static constexpr enum GeoArrowGeometryType geometry_type =
@@ -476,6 +489,7 @@ struct LinestringArray : public Array<ListSequence<CoordSequence<Coord>>> {
   const CoordSequence<Coord>& Coords() const { return this->value.child; }
 };
 
+/// \brief An Array of polygons
 template <typename Coord>
 struct PolygonArray : public Array<ListSequence<ListSequence<CoordSequence<Coord>>>> {
   static constexpr enum GeoArrowGeometryType geometry_type =
@@ -491,6 +505,7 @@ struct PolygonArray : public Array<ListSequence<ListSequence<CoordSequence<Coord
   const CoordSequence<Coord>& Coords() const { return this->value.child.child; }
 };
 
+/// \brief An Array of multipoints
 template <typename Coord>
 struct MultipointArray : public Array<CoordSequence<Coord>> {
   static constexpr enum GeoArrowGeometryType geometry_type =
@@ -506,6 +521,7 @@ struct MultipointArray : public Array<CoordSequence<Coord>> {
   const CoordSequence<Coord>& Coords() const { return this->value.child; }
 };
 
+/// \brief An Array of multilinestrings
 template <typename Coord>
 struct MultiLinestringArray
     : public Array<ListSequence<ListSequence<CoordSequence<Coord>>>> {
@@ -522,6 +538,7 @@ struct MultiLinestringArray
   const CoordSequence<Coord>& Coords() const { return this->value.child.child; }
 };
 
+/// \brief An Array of multipolygons
 template <typename Coord>
 struct MultiPolygonArray
     : public Array<ListSequence<ListSequence<ListSequence<CoordSequence<Coord>>>>> {
@@ -540,5 +557,7 @@ struct MultiPolygonArray
 
 }  // namespace array_util
 }  // namespace geoarrow
+
+/// @}
 
 #endif
