@@ -316,6 +316,11 @@ TEST(GeoArrowHppTest, SetArrayBox) {
 
   EXPECT_THAT(boxes, ::testing::ElementsAre(BoxXY{0, 1, 2, 3}, BoxXY{4, 5, 6, 7},
                                             BoxXY{8, 9, 12, 13}));
+
+  EXPECT_THAT(native_array.LowerBound().value,
+              ::testing::ElementsAre(XY{0, 1}, XY{4, 5}, XY{8, 9}));
+  EXPECT_THAT(native_array.UpperBound().value,
+              ::testing::ElementsAre(XY{2, 3}, XY{6, 7}, XY{12, 13}));
 }
 
 TEST(GeoArrowHppTest, SetArrayPoint) {
@@ -345,6 +350,8 @@ TEST(GeoArrowHppTest, SetArrayPoint) {
     }
 
     EXPECT_THAT(points, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
+    EXPECT_THAT(native_array.Coords(),
+                ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
   }
 }
 
@@ -383,6 +390,10 @@ TEST(GeoArrowHppTest, SetArrayLinestring) {
                                  std::vector<XY>{XY{0, 1}, XY{2, 3}},
                                  std::vector<XY>{XY{4, 5}, XY{6, 7}},
                                  std::vector<XY>{XY{8, 9}, XY{10, 11}, XY{12, 13}}));
+
+    EXPECT_THAT(native_array.Coords(),
+                ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
+                                       XY{10, 11}, XY{12, 13}));
   }
 }
 
@@ -428,6 +439,9 @@ TEST(GeoArrowHppTest, SetArrayMultiLinestring) {
                     std::vector<std::vector<XY>>{{XY{4, 5}, XY{6, 7}}},
                     std::vector<std::vector<XY>>{{XY{8, 9}, XY{10, 11}, XY{12, 13}},
                                                  {XY{15, 16}, XY{17, 18}}}));
+    EXPECT_THAT(native_array.Coords(),
+                ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
+                                       XY{10, 11}, XY{12, 13}, XY{15, 16}, XY{17, 18}));
   }
 }
 
@@ -477,5 +491,8 @@ TEST(GeoArrowHppTest, SetArrayMultiPolygon) {
                     std::vector<std::vector<std::vector<XY>>>{{{XY{4, 5}, XY{6, 7}}}},
                     std::vector<std::vector<std::vector<XY>>>{
                         {{XY{8, 9}, XY{10, 11}, XY{12, 13}}, {XY{15, 16}, XY{17, 18}}}}));
+    EXPECT_THAT(native_array.Coords(),
+                ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
+                                       XY{10, 11}, XY{12, 13}, XY{15, 16}, XY{17, 18}));
   }
 }

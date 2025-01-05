@@ -242,9 +242,9 @@ struct CoordSequence {
   /// \brief Return the number of coordinates in the sequence
   uint32_t size() const { return length; }
 
-  using iterator = internal::CoordSequenceIterator<CoordSequence>;
-  iterator begin() const { return iterator(*this, 0); }
-  iterator end() const { return iterator(*this, length); }
+  using const_iterator = internal::CoordSequenceIterator<CoordSequence>;
+  const_iterator begin() const { return const_iterator(*this, 0); }
+  const_iterator end() const { return const_iterator(*this, length); }
 };
 
 /// \brief View of a sequence of lists
@@ -290,9 +290,9 @@ struct ListSequence {
     child_p->length = offsets[offset + i + 1] - child_offset;
   }
 
-  using iterator = internal::ListSequenceIterator<ListSequence>;
-  iterator begin() const { return iterator(*this, 0); }
-  iterator end() const { return iterator(*this, length); }
+  using const_iterator = internal::ListSequenceIterator<ListSequence>;
+  const_iterator begin() const { return const_iterator(*this, 0); }
+  const_iterator end() const { return const_iterator(*this, length); }
 };
 
 namespace internal {
@@ -412,17 +412,50 @@ struct Array {
 };
 
 template <typename Coord>
-struct BoxArray : public Array<CoordSequence<typename Coord::box_type>> {
-  static constexpr enum GeoArrowGeometryType geometry_type = GEOARROW_GEOMETRY_TYPE_BOX;
-  static constexpr enum GeoArrowDimensions dimensions =
-      internal::CoordTraits<Coord>::dimensions;
-};
-
-template <typename Coord>
 struct PointArray : public Array<CoordSequence<Coord>> {
   static constexpr enum GeoArrowGeometryType geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
   static constexpr enum GeoArrowDimensions dimensions =
       internal::CoordTraits<Coord>::dimensions;
+
+  /// \brief Return a view of all coordinates in this array
+  ///
+  /// Note that in the presence of null values, some of the coordinates values
+  /// are not present in the array (e.g., for the purposes of calculating aggregate
+  /// statistics).
+  const CoordSequence<Coord>& Coords() const { return this->value; }
+};
+
+template <typename Coord>
+struct BoxArray : public Array<CoordSequence<typename Coord::box_type>> {
+  static constexpr enum GeoArrowGeometryType geometry_type = GEOARROW_GEOMETRY_TYPE_BOX;
+  static constexpr enum GeoArrowDimensions dimensions =
+      internal::CoordTraits<Coord>::dimensions;
+
+  PointArray<Coord> LowerBound() {
+    PointArray<Coord> out;
+    out.validity = this->validity;
+    out.value.stride = this->value.stride;
+    out.value.offset = this->value.offset;
+    out.value.length = this->value.length;
+    for (size_t i = 0; i < Coord().size(); i++) {
+      out.value.values[i] = this->value.values[i];
+    }
+
+    return out;
+  }
+
+  PointArray<Coord> UpperBound() {
+    PointArray<Coord> out;
+    out.validity = this->validity;
+    out.value.stride = this->value.stride;
+    out.value.offset = this->value.offset;
+    out.value.length = this->value.length;
+    for (size_t i = 0; i < Coord().size(); i++) {
+      out.value.values[i] = this->value.values[Coord().size() + i];
+    }
+
+    return out;
+  }
 };
 
 template <typename Coord>
@@ -431,6 +464,13 @@ struct LinestringArray : public Array<ListSequence<CoordSequence<Coord>>> {
       GEOARROW_GEOMETRY_TYPE_LINESTRING;
   static constexpr enum GeoArrowDimensions dimensions =
       internal::CoordTraits<Coord>::dimensions;
+
+  // \brief Return a view of all coordinates in this array
+  ///
+  /// Note that in the presence of null values, some of the coordinates values
+  /// are not present in the array (e.g., for the purposes of calculating aggregate
+  /// statistics).
+  const CoordSequence<Coord>& Coords() const { return this->value.child; }
 };
 
 template <typename Coord>
@@ -439,6 +479,13 @@ struct PolygonArray : public Array<ListSequence<ListSequence<CoordSequence<Coord
       GEOARROW_GEOMETRY_TYPE_POLYGON;
   static constexpr enum GeoArrowDimensions dimensions =
       internal::CoordTraits<Coord>::dimensions;
+
+  // \brief Return a view of all coordinates in this array
+  ///
+  /// Note that in the presence of null values, some of the coordinates values
+  /// are not present in the array (e.g., for the purposes of calculating aggregate
+  /// statistics).
+  const CoordSequence<Coord>& Coords() const { return this->value.child.child; }
 };
 
 template <typename Coord>
@@ -447,6 +494,13 @@ struct MultipointArray : public Array<CoordSequence<Coord>> {
       GEOARROW_GEOMETRY_TYPE_MULTIPOINT;
   static constexpr enum GeoArrowDimensions dimensions =
       internal::CoordTraits<Coord>::dimensions;
+
+  // \brief Return a view of all coordinates in this array
+  ///
+  /// Note that in the presence of null values, some of the coordinates values
+  /// are not present in the array (e.g., for the purposes of calculating aggregate
+  /// statistics).
+  const CoordSequence<Coord>& Coords() const { return this->value.child; }
 };
 
 template <typename Coord>
@@ -456,6 +510,13 @@ struct MultiLinestringArray
       GEOARROW_GEOMETRY_TYPE_MULTILINESTRING;
   static constexpr enum GeoArrowDimensions dimensions =
       internal::CoordTraits<Coord>::dimensions;
+
+  // \brief Return a view of all coordinates in this array
+  ///
+  /// Note that in the presence of null values, some of the coordinates values
+  /// are not present in the array (e.g., for the purposes of calculating aggregate
+  /// statistics).
+  const CoordSequence<Coord>& Coords() const { return this->value.child.child; }
 };
 
 template <typename Coord>
@@ -465,6 +526,13 @@ struct MultiPolygonArray
       GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON;
   static constexpr enum GeoArrowDimensions dimensions =
       internal::CoordTraits<Coord>::dimensions;
+
+  // \brief Return a view of all coordinates in this array
+  ///
+  /// Note that in the presence of null values, some of the coordinates values
+  /// are not present in the array (e.g., for the purposes of calculating aggregate
+  /// statistics).
+  const CoordSequence<Coord>& Coords() const { return this->value.child.child.child; }
 };
 
 }  // namespace array_util
