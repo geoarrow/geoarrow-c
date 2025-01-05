@@ -29,9 +29,7 @@ else()
   set(GEOARROW_NAMESPACE_DEFINE "// #define GEOARROW_NAMESPACE YourNamespaceHere")
 endif()
 
-if(GEOARROW_BUILD_TESTS)
-  add_library(geoarrow_coverage_config INTERFACE)
-endif()
+add_library(geoarrow_coverage_config INTERFACE)
 
 if(GEOARROW_CODE_COVERAGE)
   target_compile_options(geoarrow_coverage_config INTERFACE -O0 -g --coverage)
@@ -276,6 +274,7 @@ if(GEOARROW_BUILD_TESTS)
   add_executable(hpp_geometry_data_type_test src/geoarrow/hpp/geometry_data_type_test.cc)
   add_executable(hpp_arrow_extension_type_test
                  src/geoarrow/hpp/arrow_extension_type_test.cc)
+  add_executable(hpp_array_util_test src/geoarrow/hpp/array_util_test.cc)
 
   target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main
                         nanoarrow::nanoarrow)
@@ -304,6 +303,11 @@ if(GEOARROW_BUILD_TESTS)
                         nanoarrow::nanoarrow)
   target_link_libraries(hpp_arrow_extension_type_test geoarrow ${GEOARROW_ARROW_TARGET}
                         gtest_main)
+  target_link_libraries(hpp_array_util_test
+                        geoarrow
+                        gtest_main
+                        gmock_main
+                        nanoarrow::nanoarrow)
 
   include(GoogleTest)
   gtest_discover_tests(geoarrow_type_inline_test)
@@ -326,4 +330,5 @@ if(GEOARROW_BUILD_TESTS)
   gtest_discover_tests(hpp_array_writer_test)
   gtest_discover_tests(hpp_geometry_data_type_test)
   gtest_discover_tests(hpp_arrow_extension_type_test)
+  gtest_discover_tests(hpp_array_util_test)
 endif()
