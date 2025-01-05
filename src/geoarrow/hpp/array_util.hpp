@@ -207,10 +207,10 @@ struct CoordSequence {
   static constexpr uint32_t coord_size = Coord().size();
 
   /// \brief The offset into values to apply
-  uint32_t offset;
+  uint32_t offset{};
 
   /// \brief The number of coordinates in the sequence
-  uint32_t length;
+  uint32_t length{};
 
   /// \brief Pointers to the first ordinate values in each dimension
   ///
@@ -219,7 +219,7 @@ struct CoordSequence {
   /// contiguous; for separated coordinates these pointers will point
   /// to separate arrays. Each ordinate value is accessed by using the
   /// expression `values[dimension_id][(offset + coord_id) * stride]`.
-  std::array<const double*, coord_size> values;
+  std::array<const double*, coord_size> values{};
 
   /// \brief The distance (in elements) between sequential coordinates in
   /// each values array.
@@ -228,7 +228,7 @@ struct CoordSequence {
   /// input; for separated coordinates this is 1. This does not need to be
   /// equal to coord_size (e.g., when providing a CoordSequence<XY> view
   /// of an interleaved sequence of XYZM coordinates).
-  uint32_t stride;
+  uint32_t stride{};
 
   /// \brief Return a coordinate at the given position
   Coord coord(uint32_t i) const {
@@ -245,6 +245,9 @@ struct CoordSequence {
   using const_iterator = internal::CoordSequenceIterator<CoordSequence>;
   const_iterator begin() const { return const_iterator(*this, 0); }
   const_iterator end() const { return const_iterator(*this, length); }
+
+  double* dim_begin(uint32_t j) const { return values[0]; }
+  double* dim_end(uint32_t j) const { return values[0] + (length * stride); }
 };
 
 /// \brief View of a sequence of lists
@@ -261,10 +264,10 @@ struct ListSequence {
   static constexpr bool is_sequence = false;
 
   /// \brief The logical offset into the sequence
-  uint32_t offset;
+  uint32_t offset{};
 
   /// \brief The number of lists in the sequence
-  uint32_t length;
+  uint32_t length{};
 
   /// \brief The pointer to the first offset
   ///
@@ -272,12 +275,12 @@ struct ListSequence {
   /// sequence begins at offsets[i]. This means there must be (offset + length + 1)
   /// accessible elements in offsets. This is exactly equal to the definition of the
   /// offsets in the Apache Arrow list type.
-  const int32_t* offsets;
+  const int32_t* offsets{};
 
   /// \brief The item from which slices are to be taken according to each offset pair
   ///
   /// Note that the child may have its own non-zero offset which must also be applied.
-  T child;
+  T child{};
 
   /// \brief Initialize a child whose offset and length are unset.
   void InitChild(T* child_p) const { *child_p = child; }
@@ -374,7 +377,7 @@ struct Array {
   using sequence_type = T;
 
   /// \brief An instance of the ListSequence or CoordSequence
-  T value;
+  T value{};
 
   /// \brief A validity bitmap where a set bit indicates a non-null value
   /// and an unset bit indicates a null value.
@@ -384,7 +387,7 @@ struct Array {
   /// the validity of the ith element in the array is calculated with the expression
   /// `validity[i / 8] & (1 << (i % 8))`. This is exactly equal to the definition of
   /// the validity bitmap in the Apache Arrow specification.
-  const uint8_t* validity;
+  const uint8_t* validity{};
 
   /// \brief Return the validity of a given element
   ///
