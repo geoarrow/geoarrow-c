@@ -144,6 +144,42 @@ TEST(GeoArrowHppTest, BoxXYZM) {
   EXPECT_EQ(coord.upper_bound(), expected_upper);
 }
 
+TEST(GeoArrowHppTest, RandomAccessIterator) {
+  TestCoords coords{{0, 1, 2, 3, 4, 5}, {6, 7, 8, 9, 10, 11}};
+  CoordSequence<XY> sequence;
+  geoarrow::array_util::internal::InitFromCoordView(&sequence, coords.view());
+
+  auto it = sequence.begin();
+  EXPECT_EQ(sequence.end() - it, sequence.size());
+  EXPECT_EQ(it - sequence.end(), -sequence.size());
+
+  ++it;
+  ASSERT_EQ(sequence.end() - it, (sequence.size() - 1));
+  it += 2;
+  ASSERT_EQ(sequence.end() - it, (sequence.size() - 3));
+  it -= 2;
+  ASSERT_EQ(sequence.end() - it, (sequence.size() - 1));
+  --it;
+  ASSERT_EQ(it, sequence.begin());
+
+  ASSERT_TRUE(sequence.begin() == sequence.begin());
+  ASSERT_FALSE(sequence.begin() != sequence.begin());
+  ASSERT_TRUE(sequence.begin() >= sequence.begin());
+  ASSERT_TRUE(sequence.begin() <= sequence.begin());
+  ASSERT_FALSE(sequence.begin() > sequence.begin());
+  ASSERT_FALSE(sequence.begin() < sequence.begin());
+
+  ++it;
+  ASSERT_TRUE(it > sequence.begin());
+  ASSERT_TRUE(it >= sequence.begin());
+  ASSERT_TRUE(sequence.begin() < it);
+  ASSERT_TRUE(sequence.begin() <= it);
+  ASSERT_FALSE(it < sequence.begin());
+  ASSERT_FALSE(it <= sequence.begin());
+  ASSERT_FALSE(sequence.begin() > it);
+  ASSERT_FALSE(sequence.begin() >= it);
+}
+
 TEST(GeoArrowHppTest, IterateCoords) {
   TestCoords coords{{0, 1, 2}, {5, 6, 7}};
 

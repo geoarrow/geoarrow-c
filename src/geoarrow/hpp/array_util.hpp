@@ -26,6 +26,10 @@ class BaseRandomAccessIterator {
     i_++;
     return *this;
   }
+  BaseRandomAccessIterator& operator--() {
+    i_--;
+    return *this;
+  }
   BaseRandomAccessIterator& operator+=(int64_t n) {
     i_ += n;
     return *this;
@@ -78,7 +82,7 @@ class ListSequenceIterator : public BaseRandomAccessIterator<ListSequence> {
   }
 
   // Not quite a random access iterator because it doesn't implement []
-  // (which would necessiate a copy, which we don't really want to do)
+  // (which would necessitate a copy, which we don't really want to do)
  private:
   typename ListSequence::child_type stashed_;
 };
