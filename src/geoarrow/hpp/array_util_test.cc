@@ -196,6 +196,7 @@ TEST(GeoArrowHppTest, IterateCoords) {
   }
 
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+  EXPECT_THAT(sequence.Slice(1, 1), ::testing::ElementsAre(XY{1, 6}));
 }
 
 TEST(GeoArrowHppTest, IterateCoordsInterleaved) {
@@ -264,6 +265,11 @@ TEST(GeoArrowHppTest, ArrayNullness) {
   EXPECT_TRUE(native_array.is_null(1));
   EXPECT_FALSE(native_array.is_null(2));
   EXPECT_TRUE(native_array.is_null(3));
+
+  // Make sure value offset is applied
+  EXPECT_FALSE(native_array.Slice(1, 1).is_valid(0));
+  EXPECT_TRUE(native_array.Slice(2, 1).is_valid(0));
+  EXPECT_FALSE(native_array.Slice(3, 1).is_valid(0));
 
   // With a null bitmap, elements are never null
   native_array.validity = nullptr;
@@ -352,6 +358,7 @@ TEST(GeoArrowHppTest, SetArrayPoint) {
     EXPECT_THAT(points, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
+    EXPECT_THAT(native_array.Slice(1, 1).Coords(), ::testing::ElementsAre(XY{2, 3}));
   }
 }
 
@@ -394,6 +401,8 @@ TEST(GeoArrowHppTest, SetArrayLinestring) {
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
                                        XY{10, 11}, XY{12, 13}));
+    EXPECT_THAT(native_array.Slice(1, 1).Coords(),
+                ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
   }
 }
 
@@ -442,6 +451,8 @@ TEST(GeoArrowHppTest, SetArrayMultiLinestring) {
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
                                        XY{10, 11}, XY{12, 13}, XY{15, 16}, XY{17, 18}));
+    EXPECT_THAT(native_array.Slice(1, 1).Coords(),
+                ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
   }
 }
 
@@ -494,5 +505,7 @@ TEST(GeoArrowHppTest, SetArrayMultiPolygon) {
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
                                        XY{10, 11}, XY{12, 13}, XY{15, 16}, XY{17, 18}));
+    EXPECT_THAT(native_array.Slice(1, 1).Coords(),
+                ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
   }
 }
