@@ -369,6 +369,15 @@ TEST(GeoArrowHppTest, SetArrayBox) {
   EXPECT_THAT(boxes, ::testing::ElementsAre(BoxXY{0, 1, 2, 3}, BoxXY{4, 5, 6, 7},
                                             BoxXY{8, 9, 12, 13}));
 
+  std::vector<double> xmins(native_array.value.dbegin(0), native_array.value.dend(0));
+  EXPECT_THAT(xmins, ::testing::ElementsAre(0, 4, 8));
+  std::vector<double> ymins(native_array.value.dbegin(1), native_array.value.dend(1));
+  EXPECT_THAT(ymins, ::testing::ElementsAre(1, 5, 9));
+  std::vector<double> xmaxs(native_array.value.dbegin(2), native_array.value.dend(2));
+  EXPECT_THAT(xmaxs, ::testing::ElementsAre(2, 6, 12));
+  std::vector<double> ymaxs(native_array.value.dbegin(3), native_array.value.dend(3));
+  EXPECT_THAT(ymaxs, ::testing::ElementsAre(3, 7, 13));
+
   EXPECT_THAT(native_array.LowerBound().value,
               ::testing::ElementsAre(XY{0, 1}, XY{4, 5}, XY{8, 9}));
   EXPECT_THAT(native_array.UpperBound().value,
@@ -404,7 +413,14 @@ TEST(GeoArrowHppTest, SetArrayPoint) {
     EXPECT_THAT(points, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
-    EXPECT_THAT(native_array.Slice(1, 1).Coords(), ::testing::ElementsAre(XY{2, 3}));
+
+    auto sliced_coords = native_array.Slice(1, 1).Coords();
+    EXPECT_THAT(sliced_coords, ::testing::ElementsAre(XY{2, 3}));
+
+    std::vector<double> sliced_x(sliced_coords.dbegin(0), sliced_coords.dend(0));
+    EXPECT_THAT(sliced_x, ::testing::ElementsAre(2));
+    std::vector<double> sliced_y(sliced_coords.dbegin(1), sliced_coords.dend(1));
+    EXPECT_THAT(sliced_y, ::testing::ElementsAre(3));
   }
 }
 
@@ -447,8 +463,14 @@ TEST(GeoArrowHppTest, SetArrayLinestring) {
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
                                        XY{10, 11}, XY{12, 13}));
-    EXPECT_THAT(native_array.Slice(1, 1).Coords(),
-                ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
+
+    auto sliced_coords = native_array.Slice(1, 1).Coords();
+    EXPECT_THAT(sliced_coords, ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
+
+    std::vector<double> sliced_x(sliced_coords.dbegin(0), sliced_coords.dend(0));
+    EXPECT_THAT(sliced_x, ::testing::ElementsAre(4, 6));
+    std::vector<double> sliced_y(sliced_coords.dbegin(1), sliced_coords.dend(1));
+    EXPECT_THAT(sliced_y, ::testing::ElementsAre(5, 7));
   }
 }
 
@@ -494,11 +516,18 @@ TEST(GeoArrowHppTest, SetArrayMultiLinestring) {
                     std::vector<std::vector<XY>>{{XY{4, 5}, XY{6, 7}}},
                     std::vector<std::vector<XY>>{{XY{8, 9}, XY{10, 11}, XY{12, 13}},
                                                  {XY{15, 16}, XY{17, 18}}}));
+
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
                                        XY{10, 11}, XY{12, 13}, XY{15, 16}, XY{17, 18}));
+
+    auto sliced_coords = native_array.Slice(1, 1).Coords();
     EXPECT_THAT(native_array.Slice(1, 1).Coords(),
                 ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
+    std::vector<double> sliced_x(sliced_coords.dbegin(0), sliced_coords.dend(0));
+    EXPECT_THAT(sliced_x, ::testing::ElementsAre(4, 6));
+    std::vector<double> sliced_y(sliced_coords.dbegin(1), sliced_coords.dend(1));
+    EXPECT_THAT(sliced_y, ::testing::ElementsAre(5, 7));
   }
 }
 
@@ -551,7 +580,12 @@ TEST(GeoArrowHppTest, SetArrayMultiPolygon) {
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
                                        XY{10, 11}, XY{12, 13}, XY{15, 16}, XY{17, 18}));
-    EXPECT_THAT(native_array.Slice(1, 1).Coords(),
-                ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
+
+    auto sliced_coords = native_array.Slice(1, 1).Coords();
+    EXPECT_THAT(sliced_coords, ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
+    std::vector<double> sliced_x(sliced_coords.dbegin(0), sliced_coords.dend(0));
+    EXPECT_THAT(sliced_x, ::testing::ElementsAre(4, 6));
+    std::vector<double> sliced_y(sliced_coords.dbegin(1), sliced_coords.dend(1));
+    EXPECT_THAT(sliced_y, ::testing::ElementsAre(5, 7));
   }
 }

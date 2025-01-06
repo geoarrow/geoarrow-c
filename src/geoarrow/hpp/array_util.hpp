@@ -68,6 +68,8 @@ class CoordSequenceIterator : public BaseRandomAccessIterator<CoordSequence> {
   using iterator_category = std::random_access_iterator_tag;
   using difference_type = int64_t;
   using value_type = typename CoordSequence::value_type;
+  using reference = value_type&;
+  using pointer = value_type*;
 
   explicit CoordSequenceIterator(const CoordSequence& outer, uint32_t i)
       : BaseRandomAccessIterator<CoordSequence>(outer, i) {}
@@ -97,6 +99,7 @@ class ListSequenceIterator : public BaseRandomAccessIterator<ListSequence> {
   typename ListSequence::child_type stashed_;
 };
 
+// Iterator for dimension begin/end
 template <typename T>
 class StridedIterator {
  public:
@@ -114,11 +117,11 @@ class StridedIterator {
     ptr_ -= stride_;
     return *this;
   }
-  StridedIterator& operator+=(int64_t n) {
+  StridedIterator& operator+=(ptrdiff_t n) {
     ptr_ += (n * stride_);
     return *this;
   }
-  StridedIterator& operator-=(int64_t n) {
+  StridedIterator& operator-=(ptrdiff_t n) {
     ptr_ -= (n * stride_);
     return *this;
   }
@@ -138,6 +141,8 @@ class StridedIterator {
   using iterator_category = std::random_access_iterator_tag;
   using difference_type = int64_t;
   using value_type = T;
+  using reference = T&;
+  using pointer = T*;
 
  protected:
   const T* ptr_;
