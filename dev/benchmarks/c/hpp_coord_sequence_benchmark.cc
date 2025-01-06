@@ -41,8 +41,8 @@ std::array<double, 4> BoundsUsingPointers(const CoordSequence<XY>& seq) {
   double ymin = std::numeric_limits<double>::infinity();
   double ymax = -std::numeric_limits<double>::infinity();
 
-  const double* x = seq.values[0];
-  const double* y = seq.values[1];
+  const double* x = seq.dbegin(0);
+  const double* y = seq.dbegin(1);
   for (uint32_t i = 0; i < seq.size(); i++) {
     xmin = MIN(xmin, *x);
     xmax = MAX(xmax, *x);
@@ -74,11 +74,13 @@ std::array<double, 2> CentroidUsingPointers(const CoordSequence<XY>& seq) {
   double xsum = 0;
   double ysum = 0;
 
-  const double* x = seq.values[0];
-  const double* y = seq.values[1];
+  const double* x = seq.dbegin(0);
+  const double* y = seq.dbegin(1);
   for (uint32_t i = 0; i < seq.size(); i++) {
-    xsum += *x++;
-    ysum += *y++;
+    xsum += *x;
+    ysum += *y;
+    x += seq.stride;
+    y += seq.stride;
   }
 
   return {xsum / seq.size(), ysum / seq.size()};
