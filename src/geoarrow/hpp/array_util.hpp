@@ -263,9 +263,9 @@ struct CoordSequence {
   const_iterator begin() const { return const_iterator(*this, 0); }
   const_iterator end() const { return const_iterator(*this, length); }
 
-  const double* dbegin(uint32_t j) const { return values[0] + (offset * stride); }
+  const double* dbegin(uint32_t j) const { return values[j] + (offset * stride); }
   const double* dend(uint32_t j) const {
-    return values[0] + ((offset + length) * stride);
+    return values[j] + ((offset + length) * stride);
   }
 };
 

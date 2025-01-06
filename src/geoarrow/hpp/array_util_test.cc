@@ -197,6 +197,29 @@ TEST(GeoArrowHppTest, IterateCoords) {
 
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
   EXPECT_THAT(sequence.Slice(1, 1), ::testing::ElementsAre(XY{1, 6}));
+
+  // Check dbegin() iteration
+  coords_vec.clear();
+  const double* x = sequence.dbegin(0);
+  const double* y = sequence.dbegin(1);
+  for (uint32_t i = 0; i < sequence.size(); i++) {
+    coords_vec.push_back(XY{*x, *y});
+    x += sequence.stride;
+    y += sequence.stride;
+  }
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check dbegin() iteration with offset
+  coords_vec.clear();
+  sequence = sequence.Slice(1, 2);
+  x = sequence.dbegin(0);
+  y = sequence.dbegin(1);
+  for (uint32_t i = 0; i < sequence.size(); i++) {
+    coords_vec.push_back(XY{*x, *y});
+    x += sequence.stride;
+    y += sequence.stride;
+  }
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{1, 6}, XY{2, 7}));
 }
 
 TEST(GeoArrowHppTest, IterateCoordsInterleaved) {
@@ -213,6 +236,29 @@ TEST(GeoArrowHppTest, IterateCoordsInterleaved) {
   }
 
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check dbegin() iteration
+  coords_vec.clear();
+  const double* x = sequence.dbegin(0);
+  const double* y = sequence.dbegin(1);
+  for (uint32_t i = 0; i < sequence.size(); i++) {
+    coords_vec.push_back(XY{*x, *y});
+    x += sequence.stride;
+    y += sequence.stride;
+  }
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check dbegin() iteration with offset
+  coords_vec.clear();
+  sequence = sequence.Slice(1, 2);
+  x = sequence.dbegin(0);
+  y = sequence.dbegin(1);
+  for (uint32_t i = 0; i < sequence.size(); i++) {
+    coords_vec.push_back(XY{*x, *y});
+    x += sequence.stride;
+    y += sequence.stride;
+  }
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{1, 6}, XY{2, 7}));
 }
 
 TEST(GeoArrowHppTest, IterateNestedCoords) {
