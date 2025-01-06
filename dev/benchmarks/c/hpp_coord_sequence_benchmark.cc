@@ -11,7 +11,7 @@ using geoarrow::array_util::CoordSequence;
 using geoarrow::array_util::XY;
 
 enum Operation { BOUNDS, CENTROID };
-enum Strategy { COORD_VIEW_VALUE, POINTERS };
+enum Strategy { STL_ITERATOR, POINTERS };
 
 // Slightly faster than std::min/std::max
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -24,7 +24,7 @@ std::array<double, 4> BoundsUsingCoordIterator(const CoordSequence<XY>& seq) {
   double ymin = std::numeric_limits<double>::infinity();
   double ymax = -std::numeric_limits<double>::infinity();
 
-  for (const auto& coord : seq) {
+  for (const XY coord : seq) {
     xmin = MIN(xmin, coord.x());
     xmax = MAX(xmax, coord.x());
     ymin = MIN(ymin, coord.y());
@@ -61,7 +61,7 @@ std::array<double, 2> CentroidUsingCoordIterator(const CoordSequence<XY>& seq) {
   double xsum = 0;
   double ysum = 0;
 
-  for (const auto& coord : seq) {
+  for (const XY coord : seq) {
     xsum += coord.x();
     ysum += coord.y();
   }
@@ -91,7 +91,7 @@ std::array<double, 2> CentroidUsingPointers(const CoordSequence<XY>& seq) {
 /// coordinates, and the strategy is to check STL iterators against raw
 /// pointer iteration.
 template <enum Operation operation, enum GeoArrowType type, enum Strategy strategy>
-static void CoordViewLoop(benchmark::State& state) {
+static void CoordSequenceLoop(benchmark::State& state) {
   CoordSequence<XY> seq;
 
   // Memory for circle with n points
@@ -100,10 +100,12 @@ static void CoordViewLoop(benchmark::State& state) {
   std::vector<double> coords(seq.size() * seq.coord_size);
 
   if (type == GEOARROW_TYPE_POINT) {
+    seq.stride = 1;
     for (uint32_t i = 0; i < seq.coord_size; i++) {
       seq.values[i] = coords.data() + (i * seq.size());
     }
   } else {
+    seq.stride = seq.coord_size;
     for (uint32_t i = 0; i < seq.coord_size; i++) {
       seq.values[i] = coords.data() + i;
     }
@@ -117,7 +119,7 @@ static void CoordViewLoop(benchmark::State& state) {
   std::array<double, 2> centroid{};
 
   if (operation == BOUNDS) {
-    if (strategy == COORD_VIEW_VALUE) {
+    if (strategy == STL_ITERATOR) {
       for (auto _ : state) {
         bounds = BoundsUsingCoordIterator(seq);
         benchmark::DoNotOptimize(bounds);
@@ -129,7 +131,7 @@ static void CoordViewLoop(benchmark::State& state) {
       }
     }
   } else if (operation == CENTROID) {
-    if (strategy == COORD_VIEW_VALUE) {
+    if (strategy == STL_ITERATOR) {
       for (auto _ : state) {
         centroid = CentroidUsingCoordIterator(seq);
         benchmark::DoNotOptimize(centroid);
@@ -149,11 +151,11 @@ static void CoordViewLoop(benchmark::State& state) {
   //           << std::endl;
 }
 
-BENCHMARK(CoordViewLoop<BOUNDS, GEOARROW_TYPE_POINT, COORD_VIEW_VALUE>);
-BENCHMARK(CoordViewLoop<BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT, COORD_VIEW_VALUE>);
-BENCHMARK(CoordViewLoop<CENTROID, GEOARROW_TYPE_POINT, COORD_VIEW_VALUE>);
-BENCHMARK(CoordViewLoop<CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT, COORD_VIEW_VALUE>);
-BENCHMARK(CoordViewLoop<BOUNDS, GEOARROW_TYPE_POINT, POINTERS>);
-BENCHMARK(CoordViewLoop<BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT, POINTERS>);
-BENCHMARK(CoordViewLoop<CENTROID, GEOARROW_TYPE_POINT, POINTERS>);
-BENCHMARK(CoordViewLoop<CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT, POINTERS>);
+BENCHMARK(CoordSequenceLoop<BOUNDS, GEOARROW_TYPE_POINT, STL_ITERATOR>);
+BENCHMARK(CoordSequenceLoop<BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT, STL_ITERATOR>);
+BENCHMARK(CoordSequenceLoop<CENTROID, GEOARROW_TYPE_POINT, STL_ITERATOR>);
+BENCHMARK(CoordSequenceLoop<CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT, STL_ITERATOR>);
+BENCHMARK(CoordSequenceLoop<BOUNDS, GEOARROW_TYPE_POINT, POINTERS>);
+BENCHMARK(CoordSequenceLoop<BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT, POINTERS>);
+BENCHMARK(CoordSequenceLoop<CENTROID, GEOARROW_TYPE_POINT, POINTERS>);
+BENCHMARK(CoordSequenceLoop<CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT, POINTERS>);
