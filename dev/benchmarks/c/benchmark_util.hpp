@@ -8,8 +8,6 @@ namespace benchmark_util {
 
 static const int64_t kNumCoordsPrettyBig = 10000000;
 
-enum Operation { BOUNDS, CENTROID };
-
 static inline void PointsOnCircle(uint32_t n, uint32_t stride, double* out_x,
                                   double* out_y, double dangle_radians = M_PI / 100.0,
                                   double radius = 483.0) {
