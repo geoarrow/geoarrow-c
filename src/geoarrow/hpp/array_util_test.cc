@@ -200,12 +200,12 @@ TEST(GeoArrowHppTest, IterateCoords) {
 
   // Check dbegin() iteration
   coords_vec.clear();
-  const double* x = sequence.dbegin(0);
-  const double* y = sequence.dbegin(1);
+  auto x = sequence.dbegin(0);
+  auto y = sequence.dbegin(1);
   for (uint32_t i = 0; i < sequence.size(); i++) {
     coords_vec.push_back(XY{*x, *y});
-    x += sequence.stride;
-    y += sequence.stride;
+    ++x;
+    ++y;
   }
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
 
@@ -216,8 +216,8 @@ TEST(GeoArrowHppTest, IterateCoords) {
   y = sequence.dbegin(1);
   for (uint32_t i = 0; i < sequence.size(); i++) {
     coords_vec.push_back(XY{*x, *y});
-    x += sequence.stride;
-    y += sequence.stride;
+    ++x;
+    ++y;
   }
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{1, 6}, XY{2, 7}));
 }
@@ -239,12 +239,12 @@ TEST(GeoArrowHppTest, IterateCoordsInterleaved) {
 
   // Check dbegin() iteration
   coords_vec.clear();
-  const double* x = sequence.dbegin(0);
-  const double* y = sequence.dbegin(1);
+  auto x = sequence.dbegin(0);
+  auto y = sequence.dbegin(1);
   for (uint32_t i = 0; i < sequence.size(); i++) {
     coords_vec.push_back(XY{*x, *y});
-    x += sequence.stride;
-    y += sequence.stride;
+    ++x;
+    ++y;
   }
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
 
@@ -255,8 +255,8 @@ TEST(GeoArrowHppTest, IterateCoordsInterleaved) {
   y = sequence.dbegin(1);
   for (uint32_t i = 0; i < sequence.size(); i++) {
     coords_vec.push_back(XY{*x, *y});
-    x += sequence.stride;
-    y += sequence.stride;
+    ++x;
+    ++y;
   }
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{1, 6}, XY{2, 7}));
 }
