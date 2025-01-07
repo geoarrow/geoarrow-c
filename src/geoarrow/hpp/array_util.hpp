@@ -68,6 +68,8 @@ class CoordSequenceIterator : public BaseRandomAccessIterator<CoordSequence> {
   using iterator_category = std::random_access_iterator_tag;
   using difference_type = int64_t;
   using value_type = typename CoordSequence::value_type;
+  using reference = value_type&;
+  using pointer = value_type*;
 
   explicit CoordSequenceIterator(const CoordSequence& outer, uint32_t i)
       : BaseRandomAccessIterator<CoordSequence>(outer, i) {}
@@ -95,6 +97,56 @@ class ListSequenceIterator : public BaseRandomAccessIterator<ListSequence> {
   // (which would necessitate a copy, which we don't really want to do)
  private:
   typename ListSequence::child_type stashed_;
+};
+
+// Iterator for dimension begin/end
+template <typename T>
+class StridedIterator {
+ public:
+  explicit StridedIterator(const T* ptr, ptrdiff_t stride) : ptr_(ptr), stride_(stride) {}
+  StridedIterator& operator++() {
+    ptr_ += stride_;
+    return *this;
+  }
+  T operator++(int) {
+    T retval = *ptr_;
+    ptr_ += stride_;
+    return retval;
+  }
+  StridedIterator& operator--() {
+    ptr_ -= stride_;
+    return *this;
+  }
+  StridedIterator& operator+=(ptrdiff_t n) {
+    ptr_ += (n * stride_);
+    return *this;
+  }
+  StridedIterator& operator-=(ptrdiff_t n) {
+    ptr_ -= (n * stride_);
+    return *this;
+  }
+  int64_t operator-(const StridedIterator& other) const {
+    return (ptr_ - other.ptr_) / stride_;
+  }
+  bool operator<(const StridedIterator& other) const { return ptr_ < other.ptr_; }
+  bool operator>(const StridedIterator& other) const { return ptr_ > other.ptr_; }
+  bool operator<=(const StridedIterator& other) const { return ptr_ <= other.ptr_; }
+  bool operator>=(const StridedIterator& other) const { return ptr_ >= other.ptr_; }
+  bool operator==(const StridedIterator& other) const { return ptr_ == other.ptr_; }
+  bool operator!=(const StridedIterator& other) const { return ptr_ != other.ptr_; }
+
+  T operator*() const { return *ptr_; }
+  T operator[](ptrdiff_t i) const { return ptr_[i]; }
+
+  using iterator_category = std::random_access_iterator_tag;
+  using difference_type = int64_t;
+  using value_type = T;
+  using reference = T&;
+  using pointer = T*;
+
+ protected:
+  const T* ptr_;
+  ptrdiff_t stride_;
 };
 
 }  // namespace internal
@@ -263,8 +315,13 @@ struct CoordSequence {
   const_iterator begin() const { return const_iterator(*this, 0); }
   const_iterator end() const { return const_iterator(*this, length); }
 
-  double* dim_begin(uint32_t j) const { return values[0]; }
-  double* dim_end(uint32_t j) const { return values[0] + (length * stride); }
+  using dimension_iterator = internal::StridedIterator<double>;
+  dimension_iterator dbegin(uint32_t j) const {
+    return dimension_iterator(values[j] + (offset * stride), stride);
+  }
+  dimension_iterator dend(uint32_t j) const {
+    return dimension_iterator(values[j] + ((offset + length) * stride), stride);
+  }
 };
 
 /// \brief View of a sequence of lists
