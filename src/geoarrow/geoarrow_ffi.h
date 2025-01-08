@@ -166,7 +166,8 @@ struct GeoArrowFFIAllocator {
   /// \brief Clone this allocator
   ///
   /// This will get
-  GeoArrowErrorCode (*clone)(GeoArrowFFIAllocator* data, GeoArrowFFIAllocator* copy);
+  GeoArrowErrorCode (*clone)(struct GeoArrowFFIAllocator* data,
+                             struct GeoArrowFFIAllocator* copy);
 
   /// \brief Release any resources associated with this allocator and set the release
   /// callback to NULL.
@@ -190,7 +191,7 @@ struct GeoArrowFFIFunctionState {
   /// Implementations are not required to implement this callback but not doing
   /// so may result in unexpected out-of-memory or degraded performance when used
   /// with an engine that expects its use.
-  GeoArrowErrorCode (*set_allocator)(GeoArrowFFIFunctionState* data);
+  GeoArrowErrorCode (*set_allocator)(struct GeoArrowFFIFunctionState* data);
 
   /// \brief Populate an independent clone of this state that can be used concurrently
   ///
@@ -199,8 +200,8 @@ struct GeoArrowFFIFunctionState {
   /// an engine can clone a reference instance on each batch and use it to perform
   /// the computation. Because of this, implementations of this callback should be
   /// cheap.
-  GeoArrowErrorCode (*clone)(GeoArrowFFIFunctionState* data,
-                             GeoArrowFFIFunctionState* copy);
+  GeoArrowErrorCode (*clone)(struct GeoArrowFFIFunctionState* data,
+                             struct GeoArrowFFIFunctionState* copy);
 
   /// \brief Push a batch of arguments into the compute function
   ///
@@ -214,14 +215,14 @@ struct GeoArrowFFIFunctionState {
   ///
   /// The input arrays must have length of n_rows or 1. Constant values should be
   /// represented by an array of length 1.
-  GeoArrowErrorCode (*push)(GeoArrowFFIFunctionState* data, ArrowArray** arrays,
-                            int64_t n_arrays, int64_t n_rows);
+  GeoArrowErrorCode (*push)(struct GeoArrowFFIFunctionState* data,
+                            struct ArrowArray** arrays, int64_t n_arrays, int64_t n_rows);
 
   /// \brief Compute and retrieve results of a calling the function
   ///
   /// Perform computation and pull n_rows of result into out (or a released out
   /// to indicate there is no more output until another call to push).
-  GeoArrowErrorCode (*pull)(GeoArrowFFIFunctionState* data, struct ArrowArray* out,
+  GeoArrowErrorCode (*pull)(struct GeoArrowFFIFunctionState* data, struct ArrowArray* out,
                             int64_t n_rows);
 
   /// \brief Retrieve a detailed error message from a previous erroring callback
@@ -276,8 +277,9 @@ struct GeoArrowFFICatalog {
   /// The function_type parameter corresponds to the GEOARROW_FFI_FUNCTION_TYPE_*
   /// definitions above; options are packed in the same way as the ArrowSchema::metadata
   /// field.
-  GeoArrowErrorCode get_function(int function_type, const char* name, const char* options,
-                                 struct GeoArrowFFIFunction* out_function);
+  GeoArrowErrorCode (*get_function)(int function_type, const char* name,
+                                    const char* options,
+                                    struct GeoArrowFFIFunction* out_function);
 
   /// \brief Retrieve a detailed error message from a previous erroring callback
   ///
