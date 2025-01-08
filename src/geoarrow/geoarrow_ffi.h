@@ -8,6 +8,56 @@
 extern "C" {
 #endif
 
+/// \defgroup geoarrow-ffi GeoArrow ABI-Stable structures
+///
+/// This header provides the ABI-stable structures used for within-process
+/// interoperability among GeoArrow implementations.
+///
+/// @{
+
+/// \brief An errno-compatbile error code
+typedef int GeoArrowErrorCode;
+
+/// \brief A function whose GeoArrowFFIFunctionState push/pull contract is not constrained
+/// beyond those noted in the struct definition.
+///
+/// This may be used to prototype other types of functions or share other types of
+/// functions whose contract is agreed upon outside this specification.
+#define GEOARROW_FFI_FUNCTION_TYPE_UNKNOWN 0
+
+/// \brief A function that applies a 1:1 input element to output element
+///
+/// A function requested from a GeoArrowFFICatalog with this value must implement a
+/// GeoArrowFFIFunctionState where a single call to push is matched to a single call to
+/// pull where the number of rows is the same.
+#define GEOARROW_FFI_FUNCTION_TYPE_SCALAR 1
+
+/// \brief A function whose output is a length 1 array regardless of the number of input
+/// rows
+///
+/// A function requested from a GeoArrowFFICatalog with this value must implement a
+/// GeoArrowFFIFunctionState whose pull callback always returns an ArrowArray with
+/// a single row regardless of the number of preceeding pull calls.
+#define GEOARROW_FFI_FUNCTION_TYPE_ACCUMULATOR 2
+
+/// \brief A function whose output does not depend on the size of the input
+///
+/// A function requested from a GeoArrowFFICatalog with this value must implement a
+/// GeoArrowFFIFunctionState whose pull callback processes all previous calls to
+/// push as a single logical array (e.g., a chunked array) and where the consumer
+/// must pull until an released array is returned from the output. This may also
+/// be used to implement a table function (e.g., where filenames are pushed as
+/// arguments and table scans are performed via pull).
+#define GEOARROW_FFI_FUNCTION_TYPE_ARRAY 4
+
+/// @}
+
+/// \defgroup arrow-ffi Arrow ABI-Stable structures
+///
+/// A group for the Arrow ABI to keep its documentation separate
+///
+/// @{
+
 // Extra guard for versions of Arrow without the canonical guard
 #ifndef ARROW_FLAG_DICTIONARY_ORDERED
 
@@ -95,17 +145,10 @@ struct ArrowArrayStream {
 #endif  // ARROW_C_STREAM_INTERFACE
 #endif  // ARROW_FLAG_DICTIONARY_ORDERED
 
-/// \defgroup geoarrow-ffi GeoArrow ABI-Stable structures
-///
-/// This header provides the ABI-stable structures used for within-process
-/// interoperability among GeoArrow implementations.
-///
-/// @{
-
-/// \brief An errno-compatbile error code
-typedef int GeoArrowFFIErrorCode;
+/// @}
 
 /// \brief An allocator to use for large allocations
+/// \ingroup geoarrow-ffi
 ///
 /// Most engines track memory usage very closely and provide a custom allocator
 /// to maximize performance. This structure allows the engine to specify how
@@ -114,8 +157,8 @@ struct GeoArrowFFIAllocator {
   /// \brief Allocate a new buffer or reallocate an old one
   ///
   /// New buffers are requested by ptr pointing to NULL and old_size equal to zero.
-  GeoArrowFFIErrorCode (*reallocate)(struct GeoArrowFFIAllocator* self, uint8_t** ptr,
-                                     int64_t old_size, int64_t new_size);
+  GeoArrowErrorCode (*reallocate)(struct GeoArrowFFIAllocator* self, uint8_t** ptr,
+                                  int64_t old_size, int64_t new_size);
 
   /// \brief Free a buffer allocated by reallocate
   void (*free)(struct GeoArrowFFIAllocator* self, uint8_t* ptr, int64_t old_size);
@@ -123,7 +166,7 @@ struct GeoArrowFFIAllocator {
   /// \brief Clone this allocator
   ///
   /// This will get
-  GeoArrowFFIErrorCode (*clone)(GeoArrowFFIAllocator* data, GeoArrowFFIAllocator* copy);
+  GeoArrowErrorCode (*clone)(GeoArrowFFIAllocator* data, GeoArrowFFIAllocator* copy);
 
   /// \brief Release any resources associated with this allocator and set the release
   /// callback to NULL.
@@ -134,6 +177,7 @@ struct GeoArrowFFIAllocator {
 };
 
 /// \brief State tracking a specific call to a function
+/// \ingroup geoarrow-ffi
 ///
 /// Specifically, this is the result of a call to "bind" (i.e., input types
 /// and/or constant options are already known when this object is instantiated).
@@ -146,7 +190,7 @@ struct GeoArrowFFIFunctionState {
   /// Implementations are not required to implement this callback but not doing
   /// so may result in unexpected out-of-memory or degraded performance when used
   /// with an engine that expects its use.
-  GeoArrowFFIErrorCode (*set_allocator)(GeoArrowFFIFunctionState* data);
+  GeoArrowErrorCode (*set_allocator)(GeoArrowFFIFunctionState* data);
 
   /// \brief Populate an independent clone of this state that can be used concurrently
   ///
@@ -155,8 +199,8 @@ struct GeoArrowFFIFunctionState {
   /// an engine can clone a reference instance on each batch and use it to perform
   /// the computation. Because of this, implementations of this callback should be
   /// cheap.
-  GeoArrowFFIErrorCode (*clone)(GeoArrowFFIFunctionState* data,
-                                GeoArrowFFIFunctionState* copy);
+  GeoArrowErrorCode (*clone)(GeoArrowFFIFunctionState* data,
+                             GeoArrowFFIFunctionState* copy);
 
   /// \brief Push a batch of arguments into the compute function
   ///
@@ -170,15 +214,15 @@ struct GeoArrowFFIFunctionState {
   ///
   /// The input arrays must have length of n_rows or 1. Constant values should be
   /// represented by an array of length 1.
-  GeoArrowFFIErrorCode (*push)(GeoArrowFFIFunctionState* data, ArrowArray** arrays,
-                               int64_t n_arrays, int64_t n_rows);
+  GeoArrowErrorCode (*push)(GeoArrowFFIFunctionState* data, ArrowArray** arrays,
+                            int64_t n_arrays, int64_t n_rows);
 
   /// \brief Compute and retrieve results of a calling the function
   ///
   /// Perform computation and pull n_rows of result into out (or a released out
   /// to indicate there is no more output until another call to push).
-  GeoArrowFFIErrorCode (*pull)(GeoArrowFFIFunctionState* data, struct ArrowArray* out,
-                               int64_t n_rows);
+  GeoArrowErrorCode (*pull)(GeoArrowFFIFunctionState* data, struct ArrowArray* out,
+                            int64_t n_rows);
 
   /// \brief Retrieve a detailed error message from a previous erroring callback
   ///
@@ -194,6 +238,7 @@ struct GeoArrowFFIFunctionState {
 };
 
 /// \brief An instance of a compute function
+/// \ingroup geoarrow-ffi
 ///
 /// Typically there will be one instance of this object in some global registry
 /// wrapped in the engine's function registry as a user-defined function of some
@@ -203,10 +248,12 @@ struct GeoArrowFFIFunction {
   ///
   /// This callback must be thread safe and reentrant (i.e., it can be called concurrently
   /// from more than one thread at a time to produce independent function states).
-  GeoArrowFFIErrorCode (*bind)(struct GeoArrowFFIFunction* self,
-                               struct ArrowSchema** args, int64_t n_args,
-                               const char* options, struct ArrowSchema* out_schema,
-                               struct GeoArrowFFIFunctionState* out_function_data);
+  /// This GeoArrowFFIFunction instance must outlive the lifetime of the populated
+  /// GeoArrowFFIFunctionState.
+  GeoArrowErrorCode (*bind)(struct GeoArrowFFIFunction* self, struct ArrowSchema** args,
+                            int64_t n_args, const char* options,
+                            struct ArrowSchema* out_schema,
+                            struct GeoArrowFFIFunctionState* out_function_data);
 
   /// \brief Retrieve a detailed error message from a previous erroring callback
   ///
@@ -221,9 +268,16 @@ struct GeoArrowFFIFunction {
   void* private_data;
 };
 
+/// \brief A producer of GeoarrowFFIFunction instances
+/// \ingroup geoarrow-ffi
 struct GeoArrowFFICatalog {
-  GeoArrowFFIErrorCode get_function(const char* name, const char* options,
-                                    struct GeoArrowFFIFunction* out_function);
+  /// \brief Populate a GeoArrowFFIFunction of the requested type
+  ///
+  /// The function_type parameter corresponds to the GEOARROW_FFI_FUNCTION_TYPE_*
+  /// definitions above; options are packed in the same way as the ArrowSchema::metadata
+  /// field.
+  GeoArrowErrorCode get_function(int function_type, const char* name, const char* options,
+                                 struct GeoArrowFFIFunction* out_function);
 
   /// \brief Retrieve a detailed error message from a previous erroring callback
   ///
