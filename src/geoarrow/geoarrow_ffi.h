@@ -37,7 +37,7 @@ typedef int GeoArrowErrorCode;
 ///
 /// A function requested from a GeoArrowFFICatalog with this value must implement a
 /// GeoArrowFFIFunctionState whose pull callback always returns an ArrowArray with
-/// a single row regardless of the number of preceeding pull calls.
+/// a single row regardless of the number of preceding pull calls.
 #define GEOARROW_FFI_FUNCTION_TYPE_ACCUMULATOR 2
 
 /// \brief A function whose output does not depend on the size of the input

@@ -83,8 +83,11 @@ set(GEOARROW_SOURCES
     src/geoarrow/array_writer.c)
 
 set(GEOARROW_PUBLIC_HEADERS
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/geoarrow_config.h src/geoarrow/geoarrow_type.h
-    src/geoarrow/geoarrow.h src/geoarrow/geoarrow_type_inline.h)
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/geoarrow_config.h
+    src/geoarrow/geoarrow_ffi.h
+    src/geoarrow/geoarrow_type.h
+    src/geoarrow/geoarrow.h
+    src/geoarrow/geoarrow_type_inline.h)
 
 if(GEOARROW_BUNDLE)
   # Bundle sources + headers, and if building tests, add a target the tests can link against
