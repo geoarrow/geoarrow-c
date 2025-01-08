@@ -105,17 +105,10 @@ struct GeoArrowFFIAllocator {
   void* private_data;
 };
 
-struct GeoArrowFFIArg {
-  struct ArrowSchema* schema;
-  struct ArrowArray* value;
-};
-
 struct GeoArrowFFIFunctionState {
   GeoArrowFFIErrorCode (*set_allocator)(GeoArrowFFIFunctionState* data);
-  GeoArrowFFIErrorCode (*push_view)(GeoArrowFFIFunctionState* data,
-                                    const ArrowArray* array, int64_t n_arrays);
-  GeoArrowFFIErrorCode (*push_owned)(GeoArrowFFIFunctionState* data, ArrowArray* array,
-                                     int64_t n_arrays);
+  GeoArrowFFIErrorCode (*push)(GeoArrowFFIFunctionState* data, ArrowArray* array,
+                               int64_t n_arrays);
   GeoArrowFFIErrorCode (*pull)(GeoArrowFFIFunctionState* data, struct ArrowArray* out);
   const char* (*get_last_error)(struct GeoArrowFFIFunctionState* data);
   void (*release)(struct GeoArrowFFIFunctionState* self);
@@ -123,18 +116,12 @@ struct GeoArrowFFIFunctionState {
 };
 
 struct GeoArrowFFIFunction {
-  GeoArrowFFIErrorCode (*set_option)(struct GeoArrowFFIFunction* self, const char* key,
-                                     const char* value);
-  GeoArrowFFIErrorCode (*get_option)(struct GeoArrowFFIFunction* self, const char* key,
-                                     const char** out_value);
-
   GeoArrowFFIErrorCode (*bind)(struct GeoArrowFFIFunction* self,
-                               const struct GeoArrowFFIArgument* args, int64_t n_args,
-                               const struct ArrowSchema** out_type,
+                               const struct ArrowSchema** args, int64_t n_args,
+                               const char* metadata, struct ArrowSchema* out_type,
                                struct GeoArrowFFIFunctionState* function_data_out);
 
   const char* (*get_last_error)(struct GeoArrowFFIFunction* self);
-
   void (*release)(struct GeoArrowFFIFunction* self);
   void* private_data;
 };
