@@ -34,7 +34,7 @@ struct BuilderPrivate {
   int64_t size[32];
   int32_t level;
   int64_t null_count;
-};
+}; 
 
 static ArrowErrorCode GeoArrowBuilderInitArrayAndCachePointers(
     struct GeoArrowBuilder* builder) {

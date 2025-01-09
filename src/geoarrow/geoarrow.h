@@ -310,6 +310,31 @@ GeoArrowErrorCode GeoArrowArrayViewVisit(const struct GeoArrowArrayView* array_v
                                          int64_t offset, int64_t length,
                                          struct GeoArrowVisitor* v);
 
+struct GeoArrowNativeWriter {
+  void* private_data;
+};
+
+/// \brief Initialize the memory of a GeoArrowNativeWriter
+///
+/// If GEOARROW_OK is returned, the caller is responsible for calling
+/// GeoArrowNativeWriterReset().
+GeoArrowErrorCode GeoArrowNativeWriterInit(struct GeoArrowNativeWriter* writer,
+                                           enum GeoArrowType type);
+
+/// \brief Populate a GeoArrowVisitor pointing to this writer
+GeoArrowErrorCode GeoArrowNativeWriterInitVisitor(struct GeoArrowNativeWriter* writer,
+                                                  struct GeoArrowVisitor* v);
+
+/// \brief Finish an ArrowArray containing elements from the visited input
+///
+/// This function can be called more than once to support multiple batches.
+GeoArrowErrorCode GeoArrowNativeWriterFinish(struct GeoArrowNativeWriter* writer,
+                                             struct ArrowArray* array,
+                                             struct GeoArrowError* error);
+
+/// \brief Free resources held by a GeoArrowNativeWriter
+void GeoArrowNativeWriterReset(struct GeoArrowNativeWriter* writer);
+
 /// \brief Well-known text writer
 ///
 /// This struct also contains options for well-known text serialization.
