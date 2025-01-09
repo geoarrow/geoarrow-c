@@ -310,7 +310,12 @@ GeoArrowErrorCode GeoArrowArrayViewVisit(const struct GeoArrowArrayView* array_v
                                          int64_t offset, int64_t length,
                                          struct GeoArrowVisitor* v);
 
+/// \brief GeoArrow native array writer
+///
+/// This writer writes the "native" memory layouts (i.e., nested lists of
+/// coordinates) implemented as a visitor.
 struct GeoArrowNativeWriter {
+  /// \brief Implementation-specific details
   void* private_data;
 };
 
