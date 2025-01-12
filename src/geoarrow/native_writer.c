@@ -15,6 +15,7 @@ struct GeoArrowNativeWriterPrivate {
   struct GeoArrowBuilder builder;
 
   struct ArrowBitmap validity;
+  int64_t null_count;
 
   // Fields to keep track of state
   int output_initialized;
@@ -25,7 +26,6 @@ struct GeoArrowNativeWriterPrivate {
   enum GeoArrowDimensions last_dimensions;
   int64_t size[32];
   int32_t level;
-  int64_t null_count;
 };
 
 GeoArrowErrorCode GeoArrowNativeWriterInit(struct GeoArrowNativeWriter* writer,
@@ -85,6 +85,7 @@ static GeoArrowErrorCode GeoArrowNativeWriterEnsureOutputInitialized(
     NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, i, &zero, 1));
   }
 
+  private_data->null_count = 0;
   NANOARROW_RETURN_NOT_OK(ArrowBitmapResize(&private_data->validity, 0, 0));
 
   private_data->builder.view.coords.size_coords = 0;
