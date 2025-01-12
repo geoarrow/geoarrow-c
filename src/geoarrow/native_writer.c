@@ -6,18 +6,18 @@
 #include "geoarrow.h"
 
 // Bytes for four quiet (little-endian) NANs
-// static uint8_t kEmptyPointCoords[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f,
-//                                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f,
-//                                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f,
-//                                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f};
+static uint8_t kEmptyPointCoords[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f,
+                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f,
+                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f,
+                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f};
 
 struct GeoArrowNativeWriterPrivate {
   struct GeoArrowBuilder builder;
 
-  struct ArrowBitmap* validity;
+  struct ArrowBitmap validity;
 
-  // Fields to keep track of state when using the visitor pattern
-  int visitor_initialized;
+  // Fields to keep track of state
+  int output_initialized;
   int feat_is_null;
   int nesting_multipoint;
   double empty_coord_values[4];
@@ -40,11 +40,23 @@ GeoArrowErrorCode GeoArrowNativeWriterInit(struct GeoArrowNativeWriter* writer,
 
   memset(private_data, 0, sizeof(struct GeoArrowNativeWriterPrivate));
 
-  GeoArrowErrorCode code = GeoArrowBuilderInitFromType(&private_data->builder, type);
-  if (code != GEOARROW_OK) {
+  GeoArrowErrorCode result = GeoArrowBuilderInitFromType(&private_data->builder, type);
+  if (result != GEOARROW_OK) {
     ArrowFree(private_data);
-    return code;
+    return result;
   }
+
+  ArrowBitmapInit(&private_data->validity);
+
+  // Initialize one empty coordinate
+  memcpy(private_data->empty_coord_values, kEmptyPointCoords, 4 * sizeof(double));
+  private_data->empty_coord.values[0] = private_data->empty_coord_values;
+  private_data->empty_coord.values[1] = private_data->empty_coord_values + 1;
+  private_data->empty_coord.values[2] = private_data->empty_coord_values + 2;
+  private_data->empty_coord.values[3] = private_data->empty_coord_values + 3;
+  private_data->empty_coord.n_coords = 1;
+  private_data->empty_coord.n_values = 4;
+  private_data->empty_coord.coords_stride = 1;
 
   writer->private_data = private_data;
   return GEOARROW_OK;
@@ -54,25 +66,63 @@ void GeoArrowNativeWriterReset(struct GeoArrowNativeWriter* writer) {
   struct GeoArrowNativeWriterPrivate* private_data =
       (struct GeoArrowNativeWriterPrivate*)writer->private_data;
   GeoArrowBuilderReset(&private_data->builder);
+  ArrowBitmapReset(&private_data->validity);
   ArrowFree(private_data);
 }
 
-static GeoArrowErrorCode GeoArrowNativeWriterPrepareForVisiting(
-    struct GeoArrowNativeWriter* builder) {
+static GeoArrowErrorCode GeoArrowNativeWriterEnsureOutputInitialized(
+    struct GeoArrowNativeWriter* writer) {
   struct GeoArrowNativeWriterPrivate* private_data =
-      (struct GeoArrowNativeWriterPrivate*)builder->private_data;
-  if (!private_data->visitor_initialized) {
-    struct GeoArrowBuilder* builder = &private_data->builder;
+      (struct GeoArrowNativeWriterPrivate*)writer->private_data;
 
-    int32_t zero = 0;
-    for (int i = 0; i < builder->view.n_offsets; i++) {
-      NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, i, &zero, 1));
-    }
-
-    builder->view.coords.size_coords = 0;
-    builder->view.coords.capacity_coords = 0;
+  if (private_data->output_initialized) {
+    return GEOARROW_OK;
   }
 
+  struct GeoArrowBuilder* builder = &private_data->builder;
+
+  int32_t zero = 0;
+  for (int i = 0; i < builder->view.n_offsets; i++) {
+    NANOARROW_RETURN_NOT_OK(GeoArrowBuilderOffsetAppend(builder, i, &zero, 1));
+  }
+
+  NANOARROW_RETURN_NOT_OK(ArrowBitmapResize(&private_data->validity, 0, 0));
+
+  builder->view.coords.size_coords = 0;
+  builder->view.coords.capacity_coords = 0;
+
+  private_data->output_initialized = 1;
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowNativeWriterFinish(struct GeoArrowNativeWriter* writer,
+                                             struct ArrowArray* array,
+                                             struct GeoArrowError* error) {
+  struct GeoArrowNativeWriterPrivate* private_data =
+      (struct GeoArrowNativeWriterPrivate*)writer->private_data;
+
+  // We could in theory wrap this buffer instead of copy it
+  struct GeoArrowBufferView validity_view;
+  validity_view.data = private_data->validity.buffer.data;
+  validity_view.size_bytes = private_data->validity.buffer.size_bytes;
+  if (validity_view.size_bytes > 0) {
+    GEOARROW_RETURN_NOT_OK(
+        GeoArrowBuilderAppendBuffer(&private_data->builder, 0, validity_view));
+  }
+
+  struct ArrowArray tmp;
+  GEOARROW_RETURN_NOT_OK(GeoArrowBuilderFinish(&private_data->builder, &tmp, error));
+
+  private_data->output_initialized = 0;
+
+  GeoArrowErrorCode result = GeoArrowNativeWriterEnsureOutputInitialized(writer);
+  if (result != GEOARROW_OK) {
+    ArrowArrayRelease(&tmp);
+    GeoArrowErrorSet(error, "Failed to reinitialize writer");
+    return result;
+  }
+
+  ArrowArrayMove(&tmp, array);
   return GEOARROW_OK;
 }
 
@@ -152,15 +202,16 @@ static int feat_end_point(struct GeoArrowVisitor* v) {
 
   if (private_data->feat_is_null) {
     int64_t current_length = builder->view.coords.size_coords;
-    if (private_data->validity->buffer.data == NULL) {
-      NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(private_data->validity, current_length));
-      ArrowBitmapAppendUnsafe(private_data->validity, 1, current_length - 1);
+    if (private_data->validity.buffer.data == NULL) {
+      NANOARROW_RETURN_NOT_OK(
+          ArrowBitmapReserve(&private_data->validity, current_length));
+      ArrowBitmapAppendUnsafe(&private_data->validity, 1, current_length - 1);
     }
 
     private_data->null_count++;
-    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private_data->validity, 0, 1));
-  } else if (private_data->validity->buffer.data != NULL) {
-    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private_data->validity, 1, 1));
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(&private_data->validity, 0, 1));
+  } else if (private_data->validity.buffer.data != NULL) {
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(&private_data->validity, 1, 1));
   }
 
   return GEOARROW_OK;
@@ -308,15 +359,16 @@ static int feat_end_multipoint(struct GeoArrowVisitor* v) {
 
   if (private_data->feat_is_null) {
     int64_t current_length = builder->view.buffers[1].size_bytes / sizeof(int32_t) - 1;
-    if (private_data->validity->buffer.data == NULL) {
-      NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(private_data->validity, current_length));
-      ArrowBitmapAppendUnsafe(private_data->validity, 1, current_length - 1);
+    if (private_data->validity.buffer.data == NULL) {
+      NANOARROW_RETURN_NOT_OK(
+          ArrowBitmapReserve(&private_data->validity, current_length));
+      ArrowBitmapAppendUnsafe(&private_data->validity, 1, current_length - 1);
     }
 
     private_data->null_count++;
-    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private_data->validity, 0, 1));
-  } else if (private_data->validity->buffer.data != NULL) {
-    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private_data->validity, 1, 1));
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(&private_data->validity, 0, 1));
+  } else if (private_data->validity.buffer.data != NULL) {
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(&private_data->validity, 1, 1));
   }
 
   return GEOARROW_OK;
@@ -458,15 +510,16 @@ static int feat_end_multilinestring(struct GeoArrowVisitor* v) {
 
   if (private_data->feat_is_null) {
     int64_t current_length = builder->view.buffers[1].size_bytes / sizeof(int32_t) - 1;
-    if (private_data->validity->buffer.data == NULL) {
-      NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(private_data->validity, current_length));
-      ArrowBitmapAppendUnsafe(private_data->validity, 1, current_length - 1);
+    if (private_data->validity.buffer.data == NULL) {
+      NANOARROW_RETURN_NOT_OK(
+          ArrowBitmapReserve(&private_data->validity, current_length));
+      ArrowBitmapAppendUnsafe(&private_data->validity, 1, current_length - 1);
     }
 
     private_data->null_count++;
-    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private_data->validity, 0, 1));
-  } else if (private_data->validity->buffer.data != NULL) {
-    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private_data->validity, 1, 1));
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(&private_data->validity, 0, 1));
+  } else if (private_data->validity.buffer.data != NULL) {
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(&private_data->validity, 1, 1));
   }
 
   return GEOARROW_OK;
@@ -630,15 +683,16 @@ static int feat_end_multipolygon(struct GeoArrowVisitor* v) {
 
   if (private_data->feat_is_null) {
     int64_t current_length = builder->view.buffers[1].size_bytes / sizeof(int32_t) - 1;
-    if (private_data->validity->buffer.data == NULL) {
-      NANOARROW_RETURN_NOT_OK(ArrowBitmapReserve(private_data->validity, current_length));
-      ArrowBitmapAppendUnsafe(private_data->validity, 1, current_length - 1);
+    if (private_data->validity.buffer.data == NULL) {
+      NANOARROW_RETURN_NOT_OK(
+          ArrowBitmapReserve(&private_data->validity, current_length));
+      ArrowBitmapAppendUnsafe(&private_data->validity, 1, current_length - 1);
     }
 
     private_data->null_count++;
-    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private_data->validity, 0, 1));
-  } else if (private_data->validity->buffer.data != NULL) {
-    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(private_data->validity, 1, 1));
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(&private_data->validity, 0, 1));
+  } else if (private_data->validity.buffer.data != NULL) {
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(&private_data->validity, 1, 1));
   }
 
   return GEOARROW_OK;
@@ -687,6 +741,6 @@ GeoArrowErrorCode GeoArrowNativeWriterInitVisitor(struct GeoArrowNativeWriter* w
       return EINVAL;
   }
 
-  NANOARROW_RETURN_NOT_OK(GeoArrowNativeWriterPrepareForVisiting(writer));
+  NANOARROW_RETURN_NOT_OK(GeoArrowNativeWriterEnsureOutputInitialized(writer));
   return GEOARROW_OK;
 }
