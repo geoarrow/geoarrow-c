@@ -9,17 +9,14 @@
 
 TEST(ArrayWriterTest, ArrayWriterTestInitFromType) {
   struct GeoArrowArrayWriter writer;
-  struct GeoArrowBuilder* builder = nullptr;
 
   ASSERT_EQ(GeoArrowArrayWriterInitFromType(&writer, GEOARROW_TYPE_WKT), GEOARROW_OK);
-  ASSERT_EQ(GeoArrowArrayWriterBuilder(&writer, &builder), ENOTSUP);
-  ASSERT_EQ(builder, nullptr);
+  GeoArrowArrayWriterReset(&writer);
+
+  ASSERT_EQ(GeoArrowArrayWriterInitFromType(&writer, GEOARROW_TYPE_WKB), GEOARROW_OK);
   GeoArrowArrayWriterReset(&writer);
 
   ASSERT_EQ(GeoArrowArrayWriterInitFromType(&writer, GEOARROW_TYPE_POINT), GEOARROW_OK);
-  ASSERT_EQ(GeoArrowArrayWriterBuilder(&writer, &builder), GEOARROW_OK);
-  ASSERT_NE(builder, nullptr);
-  ASSERT_EQ(builder->view.schema_view.type, GEOARROW_TYPE_POINT);
   GeoArrowArrayWriterReset(&writer);
 }
 

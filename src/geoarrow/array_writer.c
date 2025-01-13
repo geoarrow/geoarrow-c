@@ -6,9 +6,9 @@
 #include "geoarrow.h"
 
 struct GeoArrowArrayWriterPrivate {
+  struct GeoArrowNativeWriter native_writer;
   struct GeoArrowWKTWriter wkt_writer;
   struct GeoArrowWKBWriter wkb_writer;
-  struct GeoArrowBuilder builder;
   enum GeoArrowType type;
 };
 
@@ -36,7 +36,7 @@ GeoArrowErrorCode GeoArrowArrayWriterInitFromType(struct GeoArrowArrayWriter* wr
       result = GeoArrowWKBWriterInit(&private_data->wkb_writer);
       break;
     default:
-      result = GeoArrowBuilderInitFromType(&private_data->builder, type);
+      result = GeoArrowNativeWriterInit(&private_data->native_writer, type);
       break;
   }
 
@@ -98,26 +98,7 @@ GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* wri
       GeoArrowWKBWriterInitVisitor(&private_data->wkb_writer, v);
       return GEOARROW_OK;
     default:
-      return GeoArrowBuilderInitVisitor(&private_data->builder, v);
-  }
-}
-
-GeoArrowErrorCode GeoArrowArrayWriterBuilder(struct GeoArrowArrayWriter* writer,
-                                             struct GeoArrowBuilder** out) {
-  NANOARROW_DCHECK(writer != NULL);
-  NANOARROW_DCHECK(out != NULL);
-  struct GeoArrowArrayWriterPrivate* private_data =
-      (struct GeoArrowArrayWriterPrivate*)writer->private_data;
-
-  // One could update the wkt/wkb writers to use the builder so that this could
-  // return the builder in any case.
-  switch (private_data->type) {
-    case GEOARROW_TYPE_WKT:
-    case GEOARROW_TYPE_WKB:
-      return ENOTSUP;
-    default:
-      *out = &private_data->builder;
-      return GEOARROW_OK;
+      return GeoArrowNativeWriterInitVisitor(&private_data->native_writer, v);
   }
 }
 
@@ -133,7 +114,7 @@ GeoArrowErrorCode GeoArrowArrayWriterFinish(struct GeoArrowArrayWriter* writer,
     case GEOARROW_TYPE_WKB:
       return GeoArrowWKBWriterFinish(&private_data->wkb_writer, array, error);
     default:
-      return GeoArrowBuilderFinish(&private_data->builder, array, error);
+      return GeoArrowNativeWriterFinish(&private_data->native_writer, array, error);
   }
 }
 
@@ -149,8 +130,8 @@ void GeoArrowArrayWriterReset(struct GeoArrowArrayWriter* writer) {
     GeoArrowWKBWriterReset(&private_data->wkb_writer);
   }
 
-  if (private_data->builder.private_data != NULL) {
-    GeoArrowBuilderReset(&private_data->builder);
+  if (private_data->native_writer.private_data != NULL) {
+    GeoArrowNativeWriterReset(&private_data->native_writer);
   }
 
   ArrowFree(private_data);
