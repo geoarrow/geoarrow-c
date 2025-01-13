@@ -9,12 +9,28 @@ namespace geoarrow {
 
 class ArrayBuilder {
  public:
-  explicit ArrayBuilder(struct GeoArrowBuilder* builder = nullptr) : builder_(builder) {}
-  void Init(struct GeoArrowBuilder* builder) { builder_ = builder; }
+  explicit ArrayBuilder(GeoArrowType type) {
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowBuilderInitFromType(&builder_, type));
+  }
+  explicit ArrayBuilder(const GeometryDataType& type) : ArrayBuilder(type.id()) {}
+  explicit ArrayBuilder(const ArrowSchema* schema) {
+    struct GeoArrowError error {};
+    GEOARROW_THROW_NOT_OK(&error,
+                          GeoArrowBuilderInitFromSchema(&builder_, schema, &error));
+  }
 
-  bool is_valid() { return builder_ != nullptr && builder_->private_data != nullptr; }
+  ~ArrayBuilder() {
+    if (builder_.private_data != nullptr) {
+      GeoArrowBuilderReset(&builder_);
+    }
+  }
 
-  struct GeoArrowBuilder* builder() { return builder_; }
+  void Finish(struct ArrowArray* out) {
+    struct GeoArrowError error {};
+    GEOARROW_THROW_NOT_OK(&error, GeoArrowBuilderFinish(&builder_, out, &error));
+  }
+
+  struct GeoArrowBuilder* builder() { return &builder_; }
 
   template <typename T>
   void SetBufferWrapped(int64_t i, T obj, GeoArrowBufferView value) {
@@ -37,7 +53,7 @@ class ArrayBuilder {
     };
 
     GeoArrowErrorCode result = GeoArrowBuilderSetOwnedBuffer(
-        builder_, i, value, &internal::FreeWrappedBuffer<T>, obj_moved);
+        &builder_, i, value, &internal::FreeWrappedBuffer<T>, obj_moved);
     if (result != GEOARROW_OK) {
       delete obj_moved;
       throw ::geoarrow::ErrnoException(result, "GeoArrowBuilderSetOwnedBuffer()",
@@ -48,24 +64,24 @@ class ArrayBuilder {
   template <typename T>
   void AppendToBuffer(int64_t i, const T& obj) {
     GEOARROW_THROW_NOT_OK(
-        nullptr, GeoArrowBuilderAppendBuffer(builder_, i, internal::BufferView(obj)));
+        nullptr, GeoArrowBuilderAppendBuffer(&builder_, i, internal::BufferView(obj)));
   }
 
   template <typename T>
   void AppendToOffsetBuffer(int64_t i, const T& obj) {
     GEOARROW_THROW_NOT_OK(nullptr,
-                          GeoArrowBuilderOffsetAppend(builder_, i, obj.data(),
+                          GeoArrowBuilderOffsetAppend(&builder_, i, obj.data(),
                                                       static_cast<int64_t>(obj.size())));
   }
 
   void AppendCoords(const GeoArrowCoordView* coords, enum GeoArrowDimensions dimensions,
                     int64_t offset, int64_t length) {
     GEOARROW_THROW_NOT_OK(nullptr, GeoArrowBuilderCoordsAppend(
-                                       builder_, coords, dimensions, offset, length));
+                                       &builder_, coords, dimensions, offset, length));
   }
 
  protected:
-  struct GeoArrowBuilder* builder_{};
+  struct GeoArrowBuilder builder_ {};
 };
 
 class ArrayWriter {
@@ -94,29 +110,11 @@ class ArrayWriter {
   }
 
   struct GeoArrowVisitor* visitor() {
-    if (builder_.is_valid()) {
-      throw Exception("Can't use GeoArrowVisitor with ArrayBuilder in ArrayWriter");
-    }
-
     if (visitor_.coords == nullptr) {
       GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayWriterInitVisitor(&writer_, &visitor_));
     }
 
     return &visitor_;
-  }
-
-  ArrayBuilder& builder() {
-    if (visitor_.coords != nullptr) {
-      throw Exception("Can't use ArrayBuilder with GeoArrowVisitor in ArrayWriter");
-    }
-
-    if (!builder_.is_valid()) {
-      struct GeoArrowBuilder* builder = nullptr;
-      GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayWriterBuilder(&writer_, &builder));
-      builder_.Init(builder);
-    }
-
-    return builder_;
   }
 
   void Finish(struct ArrowArray* out) {
@@ -126,7 +124,6 @@ class ArrayWriter {
 
  private:
   struct GeoArrowArrayWriter writer_ {};
-  ArrayBuilder builder_;
   struct GeoArrowVisitor visitor_ {};
 };
 

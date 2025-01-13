@@ -44,10 +44,10 @@ TEST(WKTReaderTest, WKTReaderTestPoint) {
 }
 
 TEST(WKTReaderTest, WKTReaderTestPointMultipleDims) {
-  struct GeoArrowBuilder builder;
+  struct GeoArrowNativeWriter writer;
   struct GeoArrowVisitor v;
-  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_POINT_ZM), GEOARROW_OK);
-  GeoArrowBuilderInitVisitor(&builder, &v);
+  ASSERT_EQ(GeoArrowNativeWriterInit(&writer, GEOARROW_TYPE_POINT_ZM), GEOARROW_OK);
+  GeoArrowNativeWriterInitVisitor(&writer, &v);
 
   WKXTester tester;
   tester.ReadWKT("POINT (1 2)", &v);
@@ -57,14 +57,15 @@ TEST(WKTReaderTest, WKTReaderTestPointMultipleDims) {
 
   struct ArrowArray array_out;
   struct GeoArrowArrayView array_view;
-  EXPECT_EQ(GeoArrowBuilderFinish(&builder, &array_out, nullptr), GEOARROW_OK);
-  GeoArrowBuilderReset(&builder);
+  EXPECT_EQ(GeoArrowNativeWriterFinish(&writer, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowNativeWriterReset(&writer);
 
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT_ZM),
             GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
-  ASSERT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  ASSERT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   array_out.release(&array_out);
 
   auto values = tester.WKTValues("<null value>");

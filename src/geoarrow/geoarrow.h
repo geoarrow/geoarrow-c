@@ -298,17 +298,45 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 /// \brief Initialize a GeoArrowVisitor with a visitor that does nothing
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
-/// \brief Populate a GeoArrowVisitor pointing to a GeoArrowBuilder
-GeoArrowErrorCode GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
-                                             struct GeoArrowVisitor* v);
-
-/// \brief Visit the features of a GeoArrowArrayView
+/// \brief Visit the features of a native GeoArrowArrayView
 ///
 /// The caller must have initialized the GeoArrowVisitor with the appropriate
-/// writer before calling this function.
-GeoArrowErrorCode GeoArrowArrayViewVisit(const struct GeoArrowArrayView* array_view,
-                                         int64_t offset, int64_t length,
-                                         struct GeoArrowVisitor* v);
+/// writer before calling this function. This only works with GeoArrowArrayView
+/// instances pointing to native arrays, even though the GeoArrowArrayView can
+/// handle other types of arrays. Use the GeoArrowArrayReader for arbitrary input.
+GeoArrowErrorCode GeoArrowArrayViewVisitNative(const struct GeoArrowArrayView* array_view,
+                                               int64_t offset, int64_t length,
+                                               struct GeoArrowVisitor* v);
+
+/// \brief GeoArrow native array writer
+///
+/// This writer writes the "native" memory layouts (i.e., nested lists of
+/// coordinates) implemented as a visitor.
+struct GeoArrowNativeWriter {
+  /// \brief Implementation-specific details
+  void* private_data;
+};
+
+/// \brief Initialize the memory of a GeoArrowNativeWriter
+///
+/// If GEOARROW_OK is returned, the caller is responsible for calling
+/// GeoArrowNativeWriterReset().
+GeoArrowErrorCode GeoArrowNativeWriterInit(struct GeoArrowNativeWriter* writer,
+                                           enum GeoArrowType type);
+
+/// \brief Populate a GeoArrowVisitor pointing to this writer
+GeoArrowErrorCode GeoArrowNativeWriterInitVisitor(struct GeoArrowNativeWriter* writer,
+                                                  struct GeoArrowVisitor* v);
+
+/// \brief Finish an ArrowArray containing elements from the visited input
+///
+/// This function can be called more than once to support multiple batches.
+GeoArrowErrorCode GeoArrowNativeWriterFinish(struct GeoArrowNativeWriter* writer,
+                                             struct ArrowArray* array,
+                                             struct GeoArrowError* error);
+
+/// \brief Free resources held by a GeoArrowNativeWriter
+void GeoArrowNativeWriterReset(struct GeoArrowNativeWriter* writer);
 
 /// \brief Well-known text writer
 ///
@@ -514,13 +542,6 @@ GeoArrowErrorCode GeoArrowArrayWriterSetFlatMultipoint(struct GeoArrowArrayWrite
 /// \brief Populate a GeoArrowVisitor pointing to this writer
 GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* writer,
                                                  struct GeoArrowVisitor* v);
-
-/// \brief Get the underlying GeoArrowBuilder for the GeoArrowArrayWriter
-///
-/// Returns a pointer to the builder underlying this GeoArrowArrayWriter if one exists
-/// or returns an error code otherwise.
-GeoArrowErrorCode GeoArrowArrayWriterBuilder(struct GeoArrowArrayWriter* writer,
-                                             struct GeoArrowBuilder** out);
 
 /// \brief Finish an ArrowArray containing elements from the visited input
 ///

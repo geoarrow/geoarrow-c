@@ -75,6 +75,7 @@ set(GEOARROW_SOURCES
     src/geoarrow/array_view.c
     src/geoarrow/util.c
     src/geoarrow/visitor.c
+    src/geoarrow/native_writer.c
     src/geoarrow/wkb_reader.c
     src/geoarrow/wkb_writer.c
     src/geoarrow/wkt_reader.c
@@ -262,6 +263,7 @@ if(GEOARROW_BUILD_TESTS)
   add_executable(kernel_test src/geoarrow/kernel_test.cc)
   add_executable(visitor_test src/geoarrow/visitor_test.cc)
   add_executable(util_test src/geoarrow/util_test.cc)
+  add_executable(native_writer_test src/geoarrow/native_writer_test.cc)
   add_executable(wkb_reader_test src/geoarrow/wkb_reader_test.cc)
   add_executable(wkb_writer_test src/geoarrow/wkb_writer_test.cc)
   add_executable(wkt_reader_test src/geoarrow/wkt_reader_test.cc)
@@ -286,6 +288,7 @@ if(GEOARROW_BUILD_TESTS)
   target_link_libraries(metadata_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(visitor_test geoarrow gtest_main)
   target_link_libraries(util_test geoarrow gtest_main)
+  target_link_libraries(native_writer_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(wkb_reader_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(wkb_writer_test geoarrow gtest_main nanoarrow::nanoarrow)
   target_link_libraries(wkt_reader_test geoarrow gtest_main nanoarrow::nanoarrow)
@@ -319,6 +322,7 @@ if(GEOARROW_BUILD_TESTS)
   gtest_discover_tests(metadata_test)
   gtest_discover_tests(visitor_test)
   gtest_discover_tests(util_test)
+  gtest_discover_tests(native_writer_test)
   gtest_discover_tests(wkb_reader_test)
   gtest_discover_tests(wkb_writer_test)
   gtest_discover_tests(wkt_reader_test)

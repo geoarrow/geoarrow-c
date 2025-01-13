@@ -277,7 +277,7 @@ static inline void GeoArrowCoordViewUpdate(const struct GeoArrowCoordView* src,
   dst->n_coords = length;
 }
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitPoint(
+static GeoArrowErrorCode GeoArrowArrayViewVisitNativePoint(
     const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowVisitor* v) {
   struct GeoArrowCoordView coords = array_view->coords;
@@ -306,7 +306,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitPoint(
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitLinestring(
+static GeoArrowErrorCode GeoArrowArrayViewVisitNativeLinestring(
     const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowVisitor* v) {
   struct GeoArrowCoordView coords = array_view->coords;
@@ -336,7 +336,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitLinestring(
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitPolygon(
+static GeoArrowErrorCode GeoArrowArrayViewVisitNativePolygon(
     const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowVisitor* v) {
   struct GeoArrowCoordView coords = array_view->coords;
@@ -377,7 +377,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitPolygon(
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitMultipoint(
+static GeoArrowErrorCode GeoArrowArrayViewVisitNativeMultipoint(
     const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowVisitor* v) {
   struct GeoArrowCoordView coords = array_view->coords;
@@ -412,7 +412,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitMultipoint(
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitMultilinestring(
+static GeoArrowErrorCode GeoArrowArrayViewVisitNativeMultilinestring(
     const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowVisitor* v) {
   struct GeoArrowCoordView coords = array_view->coords;
@@ -454,7 +454,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitMultilinestring(
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitMultipolygon(
+static GeoArrowErrorCode GeoArrowArrayViewVisitNativeMultipolygon(
     const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowVisitor* v) {
   struct GeoArrowCoordView coords = array_view->coords;
@@ -509,7 +509,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitMultipolygon(
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitBox(
+static GeoArrowErrorCode GeoArrowArrayViewVisitNativeBox(
     const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowVisitor* v) {
   // We aren't going to attempt Z, M, or ZM boxes since there is no canonical
@@ -581,24 +581,24 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitBox(
   return GEOARROW_OK;
 }
 
-GeoArrowErrorCode GeoArrowArrayViewVisit(const struct GeoArrowArrayView* array_view,
-                                         int64_t offset, int64_t length,
-                                         struct GeoArrowVisitor* v) {
+GeoArrowErrorCode GeoArrowArrayViewVisitNative(const struct GeoArrowArrayView* array_view,
+                                               int64_t offset, int64_t length,
+                                               struct GeoArrowVisitor* v) {
   switch (array_view->schema_view.geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_BOX:
-      return GeoArrowArrayViewVisitBox(array_view, offset, length, v);
+      return GeoArrowArrayViewVisitNativeBox(array_view, offset, length, v);
     case GEOARROW_GEOMETRY_TYPE_POINT:
-      return GeoArrowArrayViewVisitPoint(array_view, offset, length, v);
+      return GeoArrowArrayViewVisitNativePoint(array_view, offset, length, v);
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
-      return GeoArrowArrayViewVisitLinestring(array_view, offset, length, v);
+      return GeoArrowArrayViewVisitNativeLinestring(array_view, offset, length, v);
     case GEOARROW_GEOMETRY_TYPE_POLYGON:
-      return GeoArrowArrayViewVisitPolygon(array_view, offset, length, v);
+      return GeoArrowArrayViewVisitNativePolygon(array_view, offset, length, v);
     case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
-      return GeoArrowArrayViewVisitMultipoint(array_view, offset, length, v);
+      return GeoArrowArrayViewVisitNativeMultipoint(array_view, offset, length, v);
     case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
-      return GeoArrowArrayViewVisitMultilinestring(array_view, offset, length, v);
+      return GeoArrowArrayViewVisitNativeMultilinestring(array_view, offset, length, v);
     case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
-      return GeoArrowArrayViewVisitMultipolygon(array_view, offset, length, v);
+      return GeoArrowArrayViewVisitNativeMultipolygon(array_view, offset, length, v);
     default:
       return ENOTSUP;
   }

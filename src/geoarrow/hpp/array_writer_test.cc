@@ -10,24 +10,21 @@
 #include "wkx_testing.hpp"
 
 TEST(GeoArrowHppTest, ArrayWriterByBuffer) {
-  geoarrow::ArrayWriter writer(geoarrow::Point());
+  geoarrow::ArrayBuilder writer(geoarrow::Point());
 
   // Check SetBufferWrapped() overload with a movable C++ object + arbitrary buffer view
   // (make it long enough that it keeps the same allocation when moved)
   std::vector<uint8_t> validity(1024);
   std::memset(validity.data(), 0, validity.size());
   validity[0] = 0b00001111;
-  writer.builder().SetBufferWrapped(0, std::move(validity));
+  writer.SetBufferWrapped(0, std::move(validity));
 
   // Check SetBufferWrapped() overload with a sequence
-  writer.builder().SetBufferWrapped(1, std::vector<double>{0, 1, 2, 3});
+  writer.SetBufferWrapped(1, std::vector<double>{0, 1, 2, 3});
 
   // Check buffer appender
   std::vector<double> ys{4, 5, 6, 7};
-  writer.builder().AppendToBuffer(2, ys);
-
-  // Make sure we can't also use the visitor
-  EXPECT_THROW(writer.visitor(), geoarrow::Exception);
+  writer.AppendToBuffer(2, ys);
 
   struct ArrowArray array;
   writer.Finish(&array);
@@ -45,9 +42,9 @@ TEST(GeoArrowHppTest, ArrayWriterByBuffer) {
 TEST(GeoArrowHppTest, ArrayWriterByOffsetAndCoords) {
   TestCoords coords({0, 1, 2, 3, 4}, {5, 6, 7, 8, 9});
 
-  geoarrow::ArrayWriter writer(geoarrow::Linestring());
-  writer.builder().AppendToOffsetBuffer(0, std::vector<int32_t>{0, 2, 5});
-  writer.builder().AppendCoords(coords.view(), GEOARROW_DIMENSIONS_XY, 0, 5);
+  geoarrow::ArrayBuilder writer(geoarrow::Linestring());
+  writer.AppendToOffsetBuffer(0, std::vector<int32_t>{0, 2, 5});
+  writer.AppendCoords(coords.view(), GEOARROW_DIMENSIONS_XY, 0, 5);
 
   struct ArrowArray array;
   writer.Finish(&array);
@@ -67,8 +64,6 @@ TEST(GeoArrowHppTest, ArrayWriterByVisitor) {
   WKXTester tester;
   geoarrow::ArrayWriter writer(geoarrow::Point());
   tester.ReadWKT("POINT (0 4)", writer.visitor());
-
-  EXPECT_THROW(writer.builder(), geoarrow::Exception);
 
   struct ArrowArray array;
   writer.Finish(&array);
