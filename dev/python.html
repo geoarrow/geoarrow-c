@@ -30,7 +30,7 @@
   <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
 <link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
   
   <!-- So that users can add custom icons -->
   <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
@@ -328,7 +328,7 @@ with geoarrow at a low level; most users should use the pyarrow integration
 as <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">geoarrow.pyarrow</span> <span class="pre">as</span> <span class="pre">ga</span></code>.</p>
 <section id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">#</a></h2>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow.c</span> <span class="k">as</span> <span class="nn">ga</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">geoarrow.c</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ga</span>
 </pre></div>
 </div>
 </section>
@@ -341,7 +341,7 @@ as <code class="docutils literal notranslate"><span class="pre">import</span> <s
 in well-known binary (i.e, 0-7).</p>
 <section id="id1">
 <h3>Examples<a class="headerlink" href="#id1" title="Link to this heading">#</a></h3>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow.c</span> <span class="k">as</span> <span class="nn">ga</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">geoarrow.c</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ga</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">GeometryType</span><span class="o">.</span><span class="n">MULTIPOINT</span>
 <span class="go">&lt;GeoArrowGeometryType.GEOARROW_GEOMETRY_TYPE_MULTIPOINT: 4&gt;</span>
 </pre></div>
@@ -409,7 +409,7 @@ in well-known binary (i.e, 0-7).</p>
 <dd><p>Constants for dimensions.</p>
 <section id="id2">
 <h3>Examples<a class="headerlink" href="#id2" title="Link to this heading">#</a></h3>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow.c</span> <span class="k">as</span> <span class="nn">ga</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">geoarrow.c</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ga</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">Dimensions</span><span class="o">.</span><span class="n">XYZM</span>
 <span class="go">&lt;GeoArrowDimensions.GEOARROW_DIMENSIONS_XYZM: 4&gt;</span>
 </pre></div>
@@ -453,7 +453,7 @@ in well-known binary (i.e, 0-7).</p>
 <dd><p>Constants for coordinate type.</p>
 <section id="id3">
 <h3>Examples<a class="headerlink" href="#id3" title="Link to this heading">#</a></h3>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow.c</span> <span class="k">as</span> <span class="nn">ga</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">geoarrow.c</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ga</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">CoordType</span><span class="o">.</span><span class="n">INTERLEAVED</span>
 <span class="go">&lt;GeoArrowCoordType.GEOARROW_COORD_TYPE_INTERLEAVED: 2&gt;</span>
 </pre></div>
@@ -486,7 +486,7 @@ in well-known binary (i.e, 0-7).</p>
 <dd><p>Constants for edge type.</p>
 <section id="id4">
 <h3>Examples<a class="headerlink" href="#id4" title="Link to this heading">#</a></h3>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow.c</span> <span class="k">as</span> <span class="nn">ga</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">geoarrow.c</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ga</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">EdgeType</span><span class="o">.</span><span class="n">SPHERICAL</span>
 <span class="go">&lt;GeoArrowEdgeType.GEOARROW_EDGE_TYPE_SPHERICAL: 1&gt;</span>
 </pre></div>
@@ -512,7 +512,7 @@ in well-known binary (i.e, 0-7).</p>
 <dd><p>Constants for coordinate reference system type.</p>
 <section id="id5">
 <h3>Examples<a class="headerlink" href="#id5" title="Link to this heading">#</a></h3>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">geoarrow.c</span> <span class="k">as</span> <span class="nn">ga</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">geoarrow.c</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ga</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span><span class="o">.</span><span class="n">CrsType</span><span class="o">.</span><span class="n">PROJJSON</span>
 <span class="go">&lt;GeoArrowCrsType.GEOARROW_CRS_TYPE_PROJJSON: 2&gt;</span>
 </pre></div>
