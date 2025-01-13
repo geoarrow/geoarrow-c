@@ -6,7 +6,7 @@
 
 #include "wkx_testing.hpp"
 
-TEST(ArrayWriterTest, WritePoint) {
+TEST(NativeWriterTest, WritePoint) {
   struct GeoArrowNativeWriter builder;
   struct GeoArrowVisitor v;
   ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_POINT), GEOARROW_OK);
@@ -58,7 +58,7 @@ TEST(ArrayWriterTest, WritePoint) {
   ArrowArrayRelease(&array_out);
 }
 
-TEST(BuilderTest, BuilderTestInterleavedPoint) {
+TEST(NativeWriterTest, WriteInterleavedPoint) {
   struct GeoArrowNativeWriter builder;
   struct GeoArrowVisitor v;
   ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_INTERLEAVED_POINT),
@@ -112,7 +112,7 @@ TEST(BuilderTest, BuilderTestInterleavedPoint) {
   array_out.release(&array_out);
 }
 
-TEST(BuilderTest, BuilderTestMultipoint) {
+TEST(NativeWriterTest, WriteMultipoint) {
   struct GeoArrowNativeWriter builder;
   struct GeoArrowVisitor v;
   ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_MULTIPOINT), GEOARROW_OK);
@@ -200,7 +200,7 @@ TEST(BuilderTest, BuilderTestMultipoint) {
   array_out.release(&array_out);
 }
 
-TEST(BuilderTest, BuilderTestInterleavedMultipoint) {
+TEST(NativeWriterTest, WriteInterleavedMultipoint) {
   struct GeoArrowNativeWriter builder;
   struct GeoArrowVisitor v;
   ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT),
@@ -290,7 +290,7 @@ TEST(BuilderTest, BuilderTestInterleavedMultipoint) {
   array_out.release(&array_out);
 }
 
-TEST(BuilderTest, BuilderTestMultiLinestring) {
+TEST(NativeWriterTest, WriteMultiLinestring) {
   struct GeoArrowNativeWriter builder;
   struct GeoArrowVisitor v;
   ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_MULTILINESTRING),
@@ -391,7 +391,7 @@ TEST(BuilderTest, BuilderTestMultiLinestring) {
   array_out.release(&array_out);
 }
 
-TEST(BuilderTest, BuilderTestMultiPolygon) {
+TEST(NativeWriterTest, WriteMultiPolygon) {
   struct GeoArrowNativeWriter builder;
   struct GeoArrowVisitor v;
   ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_MULTIPOLYGON), GEOARROW_OK);
@@ -497,7 +497,7 @@ class WKTRoundtripParameterizedTestFixture
   std::string wkt;
 };
 
-TEST_P(WKTRoundtripParameterizedTestFixture, BuilderTestWKTRoundtrip) {
+TEST_P(WKTRoundtripParameterizedTestFixture, NativeWriterWKTRoundtrip) {
   // Initialize params
   const std::string& wkt = GetParam().first;
   struct GeoArrowStringView wkt_view;
@@ -544,7 +544,7 @@ TEST_P(WKTRoundtripParameterizedTestFixture, BuilderTestWKTRoundtrip) {
 #define WKT_PAIR(a, b) std::pair<std::string, enum GeoArrowType> { a, b }
 
 INSTANTIATE_TEST_SUITE_P(
-    BuilderTest, WKTRoundtripParameterizedTestFixture,
+    NativeWriterTest, WKTRoundtripParameterizedTestFixture,
     ::testing::Values(
         // Point
         WKT_PAIR("POINT (0 1)", GEOARROW_TYPE_POINT),
