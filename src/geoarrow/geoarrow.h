@@ -298,10 +298,6 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 /// \brief Initialize a GeoArrowVisitor with a visitor that does nothing
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
-/// \brief Populate a GeoArrowVisitor pointing to a GeoArrowBuilder
-GeoArrowErrorCode GeoArrowBuilderInitVisitor(struct GeoArrowBuilder* builder,
-                                             struct GeoArrowVisitor* v);
-
 /// \brief Visit the features of a GeoArrowArrayView
 ///
 /// The caller must have initialized the GeoArrowVisitor with the appropriate
@@ -544,13 +540,6 @@ GeoArrowErrorCode GeoArrowArrayWriterSetFlatMultipoint(struct GeoArrowArrayWrite
 /// \brief Populate a GeoArrowVisitor pointing to this writer
 GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* writer,
                                                  struct GeoArrowVisitor* v);
-
-/// \brief Get the underlying GeoArrowBuilder for the GeoArrowArrayWriter
-///
-/// Returns a pointer to the builder underlying this GeoArrowArrayWriter if one exists
-/// or returns an error code otherwise.
-GeoArrowErrorCode GeoArrowArrayWriterBuilder(struct GeoArrowArrayWriter* writer,
-                                             struct GeoArrowBuilder** out);
 
 /// \brief Finish an ArrowArray containing elements from the visited input
 ///
