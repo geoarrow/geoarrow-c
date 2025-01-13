@@ -146,8 +146,9 @@ TEST(BuilderTest, BuilderTestAppendCoords) {
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
@@ -192,8 +193,9 @@ TEST(BuilderTest, BuilerTestSetBuffersBox) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
@@ -232,8 +234,9 @@ TEST(BuilderTest, BuilerTestSetBuffersPoint) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
@@ -277,8 +280,9 @@ TEST(BuilderTest, BuilderTestSetBuffersLinestring) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
@@ -326,8 +330,9 @@ TEST(BuilderTest, BuilderTestSetBuffersPolygon) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
@@ -371,8 +376,9 @@ TEST(BuilderTest, BuilderTestSetBuffersMultipoint) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
@@ -421,8 +427,9 @@ TEST(ArrayTest, ArrayTestSetBuffersMultilinestring) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
@@ -475,8 +482,9 @@ TEST(BuilderTest, BuilderTestSetBuffersMultipolygon) {
   EXPECT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);

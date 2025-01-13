@@ -46,8 +46,9 @@ TEST(NativeWriterTest, WritePoint) {
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
@@ -100,8 +101,9 @@ TEST(NativeWriterTest, WriteInterleavedPoint) {
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
@@ -185,8 +187,9 @@ TEST(NativeWriterTest, WriteMultipoint) {
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 6);
@@ -275,8 +278,9 @@ TEST(NativeWriterTest, WriteInterleavedMultipoint) {
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 6);
@@ -376,8 +380,9 @@ TEST(NativeWriterTest, WriteMultiLinestring) {
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 6);
@@ -476,8 +481,9 @@ TEST(NativeWriterTest, WriteMultiPolygon) {
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 6);
@@ -531,8 +537,9 @@ TEST_P(WKTRoundtripParameterizedTestFixture, NativeWriterWKTRoundtrip) {
 
   // Visit the output
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 1);

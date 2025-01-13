@@ -63,8 +63,9 @@ TEST(WKTReaderTest, WKTReaderTestPointMultipleDims) {
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT_ZM),
             GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
-  ASSERT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array_out.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  ASSERT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   array_out.release(&array_out);
 
   auto values = tester.WKTValues("<null value>");

@@ -246,8 +246,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidBox) {
   EXPECT_EQ(array_view.coords.values[3][1], -INFINITY);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
   EXPECT_EQ(values[0], "POLYGON ((0 1, 2 1, 2 3, 0 3, 0 1))");
@@ -270,7 +271,7 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidBoxNonXY) {
   struct GeoArrowVisitor v;
   GeoArrowVisitorInitVoid(&v);
   v.error = &error;
-  ASSERT_EQ(GeoArrowArrayViewVisit(&array_view, 0, 0, &v), ENOTSUP);
+  ASSERT_EQ(GeoArrowArrayViewVisitNative(&array_view, 0, 0, &v), ENOTSUP);
   ASSERT_STREQ(error.message, "Can't visit box with non-XY dimensions");
 
   ArrowSchemaRelease(&schema);
@@ -307,8 +308,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPoint) {
   EXPECT_EQ(array_view.coords.values[1][0], 10);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 2);
   EXPECT_EQ(values[0], "POINT (30 10)");
@@ -349,8 +351,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidInterleavedPoint) {
   EXPECT_EQ(array_view.coords.values[1][0], 10);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 2);
   EXPECT_EQ(values[0], "POINT (30 10)");
@@ -402,8 +405,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPointWithOffset) {
   EXPECT_EQ(array_view.length[0], 2);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 2);
   EXPECT_EQ(values[0], "<null value>");
@@ -453,8 +457,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidInterleavedPointWithOffset) {
   EXPECT_EQ(array_view.length[0], 2);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 2);
   EXPECT_EQ(values[0], "<null value>");
@@ -508,8 +513,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidLinestring) {
   EXPECT_EQ(array_view.coords.values[1][1], 1);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
   EXPECT_EQ(values[0], "LINESTRING (30 10, 0 1)");
@@ -569,8 +575,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidLinestringWithOffset) {
   EXPECT_EQ(array_view.length[1], 3);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 2);
   EXPECT_EQ(values[0], "<null value>");
@@ -646,8 +653,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPolygon) {
   EXPECT_EQ(array_view.coords.values[1][3], 2);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
   EXPECT_EQ(values[0], "POLYGON ((1 2, 2 3, 4 5, 1 2))");
@@ -733,8 +741,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidPolygonWithOffset) {
   EXPECT_EQ(array_view.length[2], 4);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 2);
   EXPECT_EQ(values[0], "<null value>");
@@ -788,8 +797,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultipoint) {
   EXPECT_EQ(array_view.coords.values[1][1], 1);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
   EXPECT_EQ(values[0], "MULTIPOINT ((30 10), (0 1))");
@@ -851,8 +861,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultiPointWithOffset) {
   EXPECT_EQ(array_view.length[1], 3);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 2);
   EXPECT_EQ(values[0], "<null value>");
@@ -932,8 +943,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultilinestring) {
   EXPECT_EQ(array_view.coords.values[1][3], 2);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
   EXPECT_EQ(values[0], "MULTILINESTRING ((30 10, 0 1), (31 11, 1 2))");
@@ -1021,8 +1033,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultiLinestringWithOffset) {
   EXPECT_EQ(array_view.length[2], 4);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 2);
   EXPECT_EQ(values[0], "<null value>");
@@ -1114,8 +1127,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultipolygon) {
   EXPECT_EQ(array_view.coords.values[1][3], 2);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 3);
   EXPECT_EQ(values[0], "MULTIPOLYGON (((1 2, 2 3, 4 5, 1 2)))");
@@ -1223,8 +1237,9 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultipolygonWithOffsets) {
   EXPECT_EQ(array_view.length[3], 4);
 
   WKXTester tester;
-  EXPECT_EQ(GeoArrowArrayViewVisit(&array_view, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array.length, tester.WKTVisitor()),
+      GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
   ASSERT_EQ(values.size(), 2);
   EXPECT_EQ(values[0], "<null value>");

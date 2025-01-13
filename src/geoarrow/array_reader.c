@@ -9,7 +9,7 @@ struct GeoArrowArrayReaderPrivate {
   struct GeoArrowWKBReader wkb_reader;
 };
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitWKT(
+static GeoArrowErrorCode GeoArrowArrayViewVisitNativeWKT(
     const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowWKTReader* reader, struct GeoArrowVisitor* v) {
   struct GeoArrowStringView item;
@@ -31,7 +31,7 @@ static GeoArrowErrorCode GeoArrowArrayViewVisitWKT(
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowArrayViewVisitWKB(
+static GeoArrowErrorCode GeoArrowArrayViewVisitNativeWKB(
     const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
     struct GeoArrowWKBReader* reader, struct GeoArrowVisitor* v) {
   struct GeoArrowBufferView item;
@@ -160,13 +160,13 @@ GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
 
   switch (private_data->array_view.schema_view.type) {
     case GEOARROW_TYPE_WKT:
-      return GeoArrowArrayViewVisitWKT(&private_data->array_view, offset, length,
-                                       &private_data->wkt_reader, v);
+      return GeoArrowArrayViewVisitNativeWKT(&private_data->array_view, offset, length,
+                                             &private_data->wkt_reader, v);
     case GEOARROW_TYPE_WKB:
-      return GeoArrowArrayViewVisitWKB(&private_data->array_view, offset, length,
-                                       &private_data->wkb_reader, v);
+      return GeoArrowArrayViewVisitNativeWKB(&private_data->array_view, offset, length,
+                                             &private_data->wkb_reader, v);
     default:
-      return GeoArrowArrayViewVisit(&private_data->array_view, offset, length, v);
+      return GeoArrowArrayViewVisitNative(&private_data->array_view, offset, length, v);
   }
 }
 

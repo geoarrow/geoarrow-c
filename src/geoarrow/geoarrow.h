@@ -298,13 +298,15 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 /// \brief Initialize a GeoArrowVisitor with a visitor that does nothing
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
-/// \brief Visit the features of a GeoArrowArrayView
+/// \brief Visit the features of a native GeoArrowArrayView
 ///
 /// The caller must have initialized the GeoArrowVisitor with the appropriate
-/// writer before calling this function.
-GeoArrowErrorCode GeoArrowArrayViewVisit(const struct GeoArrowArrayView* array_view,
-                                         int64_t offset, int64_t length,
-                                         struct GeoArrowVisitor* v);
+/// writer before calling this function. This only works with GeoArrowArrayView
+/// instances pointing to native arrays, even though the GeoArrowArrayView can
+/// handle other types of arrays. Use the GeoArrowArrayReader for arbitrary input.
+GeoArrowErrorCode GeoArrowArrayViewVisitNative(const struct GeoArrowArrayView* array_view,
+                                               int64_t offset, int64_t length,
+                                               struct GeoArrowVisitor* v);
 
 /// \brief GeoArrow native array writer
 ///
