@@ -266,7 +266,7 @@ GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
   struct ArrowArray tmp;
   ArrowArrayMove(&private->array, &tmp);
 
-  // Prepare for another round of visiting (e.g., append zeroes to the offset arrays)
+  // Prepare for another round of building
   int result = GeoArrowBuilderInitArrayAndCachePointers(builder);
   if (result != GEOARROW_OK) {
     tmp.release(&tmp);
