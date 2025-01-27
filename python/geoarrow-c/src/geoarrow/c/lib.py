@@ -9,6 +9,9 @@ from ._lib import (
     GeoArrowCException,
 )
 
+# Ease the transition between 0.1 and 0.2
+CVectorType = CGeometryDataType
+
 
 class GeometryType:
     """Constants for geometry type. These values are the same as those used
