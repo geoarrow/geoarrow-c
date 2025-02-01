@@ -22,7 +22,7 @@ on:
 
 jobs:
   sdist:
-    runs-on: "ubuntu-20.04"
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
       with:
@@ -41,10 +41,11 @@ jobs:
       run: |
         cd python/geoarrow-c
         python -m build --sdist
+        pwd && ls -lh dist
 
     - name: Check install from sdist
       run: |
-        pip install ./python/geoarrow-c/dist/geoarrow-c-*.tar.gz
+        pip install python/geoarrow-c/dist/geoarrow-c-*.tar.gz
 
     - name: Test import
       run: |
@@ -52,7 +53,7 @@ jobs:
 
     - name: Run twine check
       run: |
-        twine check --strict ./python/geoarrow-c/dist/geoarrow-c-*.tar.gz
+        twine check --strict python/geoarrow-c/dist/geoarrow-c-*.tar.gz
 
     - uses: actions/upload-artifact@v4
       with:
