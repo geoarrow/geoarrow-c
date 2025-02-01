@@ -19,3 +19,4 @@ exclude bootstrap.py
 include src/geoarrow/c/**/**/*.h
 include src/geoarrow/c/**/*.h
 include src/geoarrow/c/**/*.hpp
+include src/geoarrow/c/**/**/*.hpp
