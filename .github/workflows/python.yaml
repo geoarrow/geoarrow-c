@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
 
     steps:
       - uses: actions/checkout@v4
@@ -49,7 +49,7 @@ jobs:
           pip install -e python/geoarrow-c/
 
       - name: Coverage (geoarrow-c)
-        if: success() && matrix.python-version == '3.12'
+        if: success() && matrix.python-version == '3.13'
         run: |
           pip install setuptools Cython
 
@@ -79,13 +79,13 @@ jobs:
           popd
 
       - name: Upload coverage to codecov
-        if: success() && matrix.python-version == '3.12'
+        if: success() && matrix.python-version == '3.13'
         uses: codecov/codecov-action@v2
         with:
           files: 'python/geoarrow-c/coverage.info,python/geoarrow-c/coverage.xml'
 
       - name: Run doctests
-        if: success() && matrix.python-version == '3.12'
+        if: success() && matrix.python-version == '3.13'
         run: |
           pushd python/geoarrow-c
           pytest --pyargs geoarrow.c --doctest-modules
