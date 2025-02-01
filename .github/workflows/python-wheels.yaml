@@ -45,7 +45,7 @@ jobs:
 
     - name: Check install from sdist
       run: |
-        pip install python/geoarrow-c/dist/geoarrow-c-*.tar.gz
+        pip install python/geoarrow-c/dist/geoarrow_c-*.tar.gz
 
     - name: Test import
       run: |
@@ -53,12 +53,12 @@ jobs:
 
     - name: Run twine check
       run: |
-        twine check --strict python/geoarrow-c/dist/geoarrow-c-*.tar.gz
+        twine check --strict python/geoarrow-c/dist/geoarrow_c-*.tar.gz
 
     - uses: actions/upload-artifact@v4
       with:
         name: release-sdist
-        path: ./python/geoarrow-c/dist/geoarrow-c-*.tar.gz
+        path: ./python/geoarrow-c/dist/geoarrow_c-*.tar.gz
 
   wheels:
     needs: ["sdist"]
