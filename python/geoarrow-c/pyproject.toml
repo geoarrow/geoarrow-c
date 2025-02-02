@@ -19,7 +19,8 @@
 [project]
 name = "geoarrow-c"
 dynamic = ["version"]
-description = ""
+readme = "README.md"
+description = "Python bindings to the geoarrow C and C++ implementation"
 authors = [{name = "Dewey Dunnington", email = "dewey@dunnington.ca"}]
 license = {text = "Apache-2.0"}
 requires-python = ">=3.8"
