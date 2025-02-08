@@ -8,7 +8,8 @@
 #include "benchmark_util.hpp"
 
 using geoarrow::array_util::CoordSequence;
-using geoarrow::array_util::XY;
+using geoarrow::array_util::UnalignedCoordSequence;
+using XY = geoarrow::array_util::XY<double>;
 
 enum Operation { BOUNDS, CENTROID };
 enum Strategy { STL_ITERATOR, POINTERS };
@@ -18,7 +19,8 @@ enum Strategy { STL_ITERATOR, POINTERS };
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 // Calculates total bounds using the STL iterator
-std::array<double, 4> BoundsUsingCoordIterator(const CoordSequence<XY>& seq) {
+template <typename Sequence>
+std::array<double, 4> BoundsUsingCoordIterator(const Sequence& seq) {
   double xmin = std::numeric_limits<double>::infinity();
   double xmax = -std::numeric_limits<double>::infinity();
   double ymin = std::numeric_limits<double>::infinity();
@@ -35,7 +37,8 @@ std::array<double, 4> BoundsUsingCoordIterator(const CoordSequence<XY>& seq) {
 }
 
 // Calculates total bounds using raw pointer iteration
-std::array<double, 4> BoundsUsingPointers(const CoordSequence<XY>& seq) {
+template <typename Sequence>
+std::array<double, 4> BoundsUsingPointers(const Sequence& seq) {
   double xmin = std::numeric_limits<double>::infinity();
   double xmax = -std::numeric_limits<double>::infinity();
   double ymin = std::numeric_limits<double>::infinity();
@@ -57,7 +60,8 @@ std::array<double, 4> BoundsUsingPointers(const CoordSequence<XY>& seq) {
 }
 
 // Calculates centroid using the STL iterator
-std::array<double, 2> CentroidUsingCoordIterator(const CoordSequence<XY>& seq) {
+template <typename Sequence>
+std::array<double, 2> CentroidUsingCoordIterator(const Sequence& seq) {
   double xsum = 0;
   double ysum = 0;
 
@@ -70,7 +74,8 @@ std::array<double, 2> CentroidUsingCoordIterator(const CoordSequence<XY>& seq) {
 }
 
 // Calculates centroid using raw pointer iteration
-std::array<double, 2> CentroidUsingPointers(const CoordSequence<XY>& seq) {
+template <typename Sequence>
+std::array<double, 2> CentroidUsingPointers(const Sequence& seq) {
   double xsum = 0;
   double ysum = 0;
 
@@ -90,9 +95,10 @@ std::array<double, 2> CentroidUsingPointers(const CoordSequence<XY>& seq) {
 /// and nothing is optimized out. The type is to check interleaved and separated
 /// coordinates, and the strategy is to check STL iterators against raw
 /// pointer iteration.
-template <enum Operation operation, enum GeoArrowType type, enum Strategy strategy>
+template <typename Sequence, enum Operation operation, enum GeoArrowType type,
+          enum Strategy strategy>
 static void CoordSequenceLoop(benchmark::State& state) {
-  CoordSequence<XY> seq;
+  Sequence seq;
 
   // Memory for circle with n points
   seq.offset = 0;
@@ -102,18 +108,19 @@ static void CoordSequenceLoop(benchmark::State& state) {
   if (type == GEOARROW_TYPE_POINT) {
     seq.stride = 1;
     for (uint32_t i = 0; i < seq.coord_size; i++) {
-      seq.values[i] = coords.data() + (i * seq.size());
+      seq.init_value(i, coords.data() + (i * seq.size()));
     }
   } else {
     seq.stride = seq.coord_size;
     for (uint32_t i = 0; i < seq.coord_size; i++) {
-      seq.values[i] = coords.data() + i;
+      seq.init_value(i, coords.data() + i);
     }
   }
 
-  geoarrow::benchmark_util::PointsOnCircle(seq.size(), seq.stride,
-                                           const_cast<double*>(seq.values[0]),
-                                           const_cast<double*>(seq.values[1]));
+  geoarrow::benchmark_util::PointsOnCircle(
+      seq.size(), seq.stride,
+      const_cast<double*>(reinterpret_cast<const double*>(seq.values[0])),
+      const_cast<double*>(reinterpret_cast<const double*>(seq.values[1])));
 
   std::array<double, 4> bounds{};
   std::array<double, 2> centroid{};
@@ -151,11 +158,34 @@ static void CoordSequenceLoop(benchmark::State& state) {
   //           << std::endl;
 }
 
-BENCHMARK(CoordSequenceLoop<BOUNDS, GEOARROW_TYPE_POINT, STL_ITERATOR>);
-BENCHMARK(CoordSequenceLoop<BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT, STL_ITERATOR>);
-BENCHMARK(CoordSequenceLoop<CENTROID, GEOARROW_TYPE_POINT, STL_ITERATOR>);
-BENCHMARK(CoordSequenceLoop<CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT, STL_ITERATOR>);
-BENCHMARK(CoordSequenceLoop<BOUNDS, GEOARROW_TYPE_POINT, POINTERS>);
-BENCHMARK(CoordSequenceLoop<BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT, POINTERS>);
-BENCHMARK(CoordSequenceLoop<CENTROID, GEOARROW_TYPE_POINT, POINTERS>);
-BENCHMARK(CoordSequenceLoop<CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT, POINTERS>);
+BENCHMARK(
+    CoordSequenceLoop<CoordSequence<XY>, BOUNDS, GEOARROW_TYPE_POINT, STL_ITERATOR>);
+BENCHMARK(CoordSequenceLoop<CoordSequence<XY>, BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT,
+                            STL_ITERATOR>);
+BENCHMARK(
+    CoordSequenceLoop<CoordSequence<XY>, CENTROID, GEOARROW_TYPE_POINT, STL_ITERATOR>);
+BENCHMARK(CoordSequenceLoop<CoordSequence<XY>, CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT,
+                            STL_ITERATOR>);
+BENCHMARK(CoordSequenceLoop<CoordSequence<XY>, BOUNDS, GEOARROW_TYPE_POINT, POINTERS>);
+BENCHMARK(CoordSequenceLoop<CoordSequence<XY>, BOUNDS, GEOARROW_TYPE_INTERLEAVED_POINT,
+                            POINTERS>);
+BENCHMARK(CoordSequenceLoop<CoordSequence<XY>, CENTROID, GEOARROW_TYPE_POINT, POINTERS>);
+BENCHMARK(CoordSequenceLoop<CoordSequence<XY>, CENTROID, GEOARROW_TYPE_INTERLEAVED_POINT,
+                            POINTERS>);
+
+BENCHMARK(CoordSequenceLoop<UnalignedCoordSequence<XY>, BOUNDS, GEOARROW_TYPE_POINT,
+                            STL_ITERATOR>);
+BENCHMARK(CoordSequenceLoop<UnalignedCoordSequence<XY>, BOUNDS,
+                            GEOARROW_TYPE_INTERLEAVED_POINT, STL_ITERATOR>);
+BENCHMARK(CoordSequenceLoop<UnalignedCoordSequence<XY>, CENTROID, GEOARROW_TYPE_POINT,
+                            STL_ITERATOR>);
+BENCHMARK(CoordSequenceLoop<UnalignedCoordSequence<XY>, CENTROID,
+                            GEOARROW_TYPE_INTERLEAVED_POINT, STL_ITERATOR>);
+BENCHMARK(
+    CoordSequenceLoop<UnalignedCoordSequence<XY>, BOUNDS, GEOARROW_TYPE_POINT, POINTERS>);
+BENCHMARK(CoordSequenceLoop<UnalignedCoordSequence<XY>, BOUNDS,
+                            GEOARROW_TYPE_INTERLEAVED_POINT, POINTERS>);
+BENCHMARK(CoordSequenceLoop<UnalignedCoordSequence<XY>, CENTROID, GEOARROW_TYPE_POINT,
+                            POINTERS>);
+BENCHMARK(CoordSequenceLoop<UnalignedCoordSequence<XY>, CENTROID,
+                            GEOARROW_TYPE_INTERLEAVED_POINT, POINTERS>);
