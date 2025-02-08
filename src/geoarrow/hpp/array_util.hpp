@@ -27,6 +27,13 @@ namespace internal {
 // The verbose bits of a random access iterator for simple outer + index-based
 // iteration. Requires that an implementation defineds value_type operator[]
 // and value_type operator*.
+template <typename T>
+T SafeLoadAs(const uint8_t* unaligned) {
+  T out;
+  std::memcpy(&out, unaligned, sizeof(T));
+  return out;
+}
+
 template <typename Outer>
 class BaseRandomAccessIterator {
  public:
@@ -146,6 +153,68 @@ class StridedIterator {
 
  protected:
   const T* ptr_;
+  ptrdiff_t stride_;
+};
+
+template <typename T>
+class UnalignedStridedIterator {
+ public:
+  explicit UnalignedStridedIterator(const uint8_t* ptr, ptrdiff_t stride)
+      : ptr_(ptr), stride_(stride) {}
+  UnalignedStridedIterator& operator++() {
+    ptr_ += stride_;
+    return *this;
+  }
+  T operator++(int) {
+    T retval = *ptr_;
+    ptr_ += stride_;
+    return retval;
+  }
+  UnalignedStridedIterator& operator--() {
+    ptr_ -= stride_;
+    return *this;
+  }
+  UnalignedStridedIterator& operator+=(ptrdiff_t n) {
+    ptr_ += (n * stride_);
+    return *this;
+  }
+  UnalignedStridedIterator& operator-=(ptrdiff_t n) {
+    ptr_ -= (n * stride_);
+    return *this;
+  }
+  int64_t operator-(const UnalignedStridedIterator& other) const {
+    return (ptr_ - other.ptr_) / stride_;
+  }
+  bool operator<(const UnalignedStridedIterator& other) const {
+    return ptr_ < other.ptr_;
+  }
+  bool operator>(const UnalignedStridedIterator& other) const {
+    return ptr_ > other.ptr_;
+  }
+  bool operator<=(const UnalignedStridedIterator& other) const {
+    return ptr_ <= other.ptr_;
+  }
+  bool operator>=(const UnalignedStridedIterator& other) const {
+    return ptr_ >= other.ptr_;
+  }
+  bool operator==(const UnalignedStridedIterator& other) const {
+    return ptr_ == other.ptr_;
+  }
+  bool operator!=(const UnalignedStridedIterator& other) const {
+    return ptr_ != other.ptr_;
+  }
+
+  T operator*() const { return SafeLoadAs<T>(ptr_); }
+  T operator[](ptrdiff_t i) const { return SafeLoadAs<T>(ptr_ + (i * stride_)); }
+
+  using iterator_category = std::random_access_iterator_tag;
+  using difference_type = int64_t;
+  using value_type = T;
+  using reference = T&;
+  using pointer = T*;
+
+ protected:
+  const uint8_t* ptr_;
   ptrdiff_t stride_;
 };
 
@@ -293,7 +362,7 @@ struct CoordSequence {
   /// contiguous; for separated coordinates these pointers will point
   /// to separate arrays. Each ordinate value is accessed by using the
   /// expression `values[dimension_id][(offset + coord_id) * stride]`.
-  std::array<const double*, coord_size> values{};
+  std::array<const typename Coord::value_type*, coord_size> values{};
 
   /// \brief The distance (in elements) between sequential coordinates in
   /// each values array.
@@ -303,6 +372,9 @@ struct CoordSequence {
   /// equal to coord_size (e.g., when providing a CoordSequence<XY> view
   /// of an interleaved sequence of XYZM coordinates).
   uint32_t stride{};
+
+  /// \brief Initialize a dimension pointer for this array
+  void init_value(uint32_t i, const double* value) { values[i] = value; }
 
   /// \brief Return a coordinate at the given position
   Coord coord(uint32_t i) const {
@@ -333,6 +405,86 @@ struct CoordSequence {
   }
   dimension_iterator dend(uint32_t j) const {
     return dimension_iterator(values[j] + ((offset + length) * stride), stride);
+  }
+};
+
+/// \brief View of an unaligned GeoArrow coordinate sequence
+///
+/// A view of zero or more coordinates. This data structure can handle either interleaved
+/// or separated coordinates. This coordinate sequence type is intended to wrap
+/// arbitrary bytes (e.g., WKB).
+template <typename Coord>
+struct UnalignedCoordSequence {
+  /// \brief The C++ Coordinate type. This type must implement size() and
+  /// assignment via [].
+  using value_type = Coord;
+
+  /// \brief The C++ numeric type for ordinate storage
+  using ordinate_type = typename value_type::value_type;
+
+  /// \brief Trait to indicate that this is a sequence (and not a list)
+  static constexpr bool is_sequence = true;
+
+  /// \brief The number of values in each coordinate
+  static constexpr uint32_t coord_size = Coord().size();
+
+  /// \brief The number of bytes in each coordinate
+  static constexpr uint32_t coord_size_bytes = sizeof(Coord);
+
+  /// \brief The offset into values to apply
+  uint32_t offset{};
+
+  /// \brief The number of coordinates in the sequence
+  uint32_t length{};
+
+  /// \brief Pointers to the first ordinate values in each dimension
+  std::array<const uint8_t*, coord_size> values{};
+
+  /// \brief The distance (in elements) between sequential coordinates in
+  /// each values array.
+  uint32_t stride{};
+
+  /// \brief The distance (in bytes) between sequential coordinates in
+  /// each values array.
+  uint32_t stride_bytes() const { return stride * sizeof(ordinate_type); }
+
+  /// \brief Initialize a dimension pointer for this array
+  void init_value(uint32_t i, const void* value) {
+    values[i] = reinterpret_cast<const uint8_t*>(value);
+  }
+
+  /// \brief Return a coordinate at the given position
+  Coord coord(uint32_t i) const {
+    Coord out;
+    for (size_t j = 0; j < out.size(); j++) {
+      out[j] = internal::SafeLoadAs<ordinate_type>(values[j] +
+                                                   ((offset + i) * stride_bytes()));
+    }
+    return out;
+  }
+
+  /// \brief Return the number of coordinates in the sequence
+  uint32_t size() const { return length; }
+
+  UnalignedCoordSequence<Coord> Slice(uint32_t offset, uint32_t length) const {
+    UnalignedCoordSequence<Coord> out = *this;
+    out.offset += offset;
+    out.length = length;
+    return out;
+  }
+
+  using const_iterator = internal::CoordSequenceIterator<UnalignedCoordSequence>;
+  const_iterator begin() const { return const_iterator(*this, 0); }
+  const_iterator end() const { return const_iterator(*this, length); }
+
+  using dimension_iterator =
+      internal::UnalignedStridedIterator<typename value_type::value_type>;
+  dimension_iterator dbegin(uint32_t j) const {
+    return dimension_iterator(values[j] + (offset * stride_bytes()), stride_bytes());
+  }
+  dimension_iterator dend(uint32_t j) const {
+    return dimension_iterator(values[j] + ((offset + length) * stride_bytes()),
+                              stride_bytes());
   }
 };
 
@@ -417,7 +569,7 @@ GeoArrowErrorCode InitFromCoordView(T* value, const struct GeoArrowCoordView* vi
   value->length = view->n_coords;
   value->stride = view->coords_stride;
   for (uint32_t i = 0; i < T::coord_size; i++) {
-    value->values[i] = view->values[i];
+    value->init_value(i, view->values[i]);
   }
   return GEOARROW_OK;
 }
