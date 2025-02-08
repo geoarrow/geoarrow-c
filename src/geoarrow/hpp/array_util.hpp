@@ -151,103 +151,115 @@ class StridedIterator {
 
 }  // namespace internal
 
+template <typename T>
 struct BoxXY;
+template <typename T>
 struct BoxXYZ;
+template <typename T>
 struct BoxXYM;
+template <typename T>
 struct BoxXYZM;
 
 /// \brief Coord implementation for XY
-struct XY : public std::array<double, 2> {
-  using box_type = BoxXY;
-  double x() const { return at(0); }
-  double y() const { return at(1); }
-  double z() const { return std::numeric_limits<double>::quiet_NaN(); }
-  double m() const { return std::numeric_limits<double>::quiet_NaN(); }
+template <typename T>
+struct XY : public std::array<T, 2> {
+  using box_type = BoxXY<T>;
+  T x() const { return this->at(0); }
+  T y() const { return this->at(1); }
+  T z() const { return std::numeric_limits<T>::quiet_NaN(); }
+  T m() const { return std::numeric_limits<T>::quiet_NaN(); }
 };
 
 /// \brief Coord implementation for XYZ
-struct XYZ : public std::array<double, 3> {
-  using box_type = BoxXYZ;
-  double x() const { return at(0); }
-  double y() const { return at(1); }
-  double z() const { return at(2); }
-  double m() const { return std::numeric_limits<double>::quiet_NaN(); }
+template <typename T>
+struct XYZ : public std::array<T, 3> {
+  using box_type = BoxXYZ<T>;
+  T x() const { return this->at(0); }
+  T y() const { return this->at(1); }
+  T z() const { return this->at(2); }
+  T m() const { return std::numeric_limits<T>::quiet_NaN(); }
 };
 
 /// \brief Coord implementation for XYM
-struct XYM : public std::array<double, 3> {
-  using box_type = BoxXYM;
-  double x() const { return at(0); }
-  double y() const { return at(1); }
-  double z() const { return std::numeric_limits<double>::quiet_NaN(); }
-  double m() const { return at(2); }
+template <typename T>
+struct XYM : public std::array<T, 3> {
+  using box_type = BoxXYM<T>;
+  T x() const { return this->at(0); }
+  T y() const { return this->at(1); }
+  T z() const { return std::numeric_limits<T>::quiet_NaN(); }
+  T m() const { return this->at(2); }
 };
 
 /// \brief Coord implementation for XYZM
-struct XYZM : public std::array<double, 4> {
-  using box_type = BoxXYZM;
-  double x() const { return at(0); }
-  double y() const { return at(1); }
-  double z() const { return at(2); }
-  double m() const { return at(3); }
+template <typename T>
+struct XYZM : public std::array<T, 4> {
+  using box_type = BoxXYZM<T>;
+  T x() const { return this->at(0); }
+  T y() const { return this->at(1); }
+  T z() const { return this->at(2); }
+  T m() const { return this->at(3); }
 };
 
 /// \brief Coord implementation for Box
-struct BoxXY : public std::array<double, 4> {
-  using bound_type = XY;
-  double xmin() const { return at(0); }
-  double ymin() const { return at(1); }
-  double zmin() const { return std::numeric_limits<double>::infinity(); }
-  double mmin() const { return std::numeric_limits<double>::infinity(); }
-  double xmax() const { return at(2); }
-  double ymax() const { return at(3); }
-  double zmax() const { return -std::numeric_limits<double>::infinity(); }
-  double mmax() const { return -std::numeric_limits<double>::infinity(); }
+template <typename T>
+struct BoxXY : public std::array<T, 4> {
+  using bound_type = XY<T>;
+  T xmin() const { return this->at(0); }
+  T ymin() const { return this->at(1); }
+  T zmin() const { return std::numeric_limits<T>::infinity(); }
+  T mmin() const { return std::numeric_limits<T>::infinity(); }
+  T xmax() const { return this->at(2); }
+  T ymax() const { return this->at(3); }
+  T zmax() const { return -std::numeric_limits<T>::infinity(); }
+  T mmax() const { return -std::numeric_limits<T>::infinity(); }
   bound_type lower_bound() const { return {xmin(), ymin()}; }
   bound_type upper_bound() const { return {xmax(), ymax()}; }
 };
 
 /// \brief Coord implementation for BoxZ
-struct BoxXYZ : public std::array<double, 6> {
-  using bound_type = XYZ;
-  double xmin() const { return at(0); }
-  double ymin() const { return at(1); }
-  double zmin() const { return at(2); }
-  double mmin() const { return std::numeric_limits<double>::infinity(); }
-  double xmax() const { return at(3); }
-  double ymax() const { return at(4); }
-  double zmax() const { return at(5); }
-  double mmax() const { return -std::numeric_limits<double>::infinity(); }
+template <typename T>
+struct BoxXYZ : public std::array<T, 6> {
+  using bound_type = XYZ<T>;
+  T xmin() const { return this->at(0); }
+  T ymin() const { return this->at(1); }
+  T zmin() const { return this->at(2); }
+  T mmin() const { return std::numeric_limits<T>::infinity(); }
+  T xmax() const { return this->at(3); }
+  T ymax() const { return this->at(4); }
+  T zmax() const { return this->at(5); }
+  T mmax() const { return -std::numeric_limits<T>::infinity(); }
   bound_type lower_bound() const { return {xmin(), ymin(), zmin()}; }
   bound_type upper_bound() const { return {xmax(), ymax(), zmax()}; }
 };
 
 /// \brief Coord implementation for BoxM
-struct BoxXYM : public std::array<double, 6> {
-  using bound_type = XYM;
-  double xmin() const { return at(0); }
-  double ymin() const { return at(1); }
-  double zmin() const { return std::numeric_limits<double>::infinity(); }
-  double mmin() const { return at(2); }
-  double xmax() const { return at(3); }
-  double ymax() const { return at(4); }
-  double zmax() const { return -std::numeric_limits<double>::infinity(); }
-  double mmax() const { return at(5); }
+template <typename T>
+struct BoxXYM : public std::array<T, 6> {
+  using bound_type = XYM<T>;
+  T xmin() const { return this->at(0); }
+  T ymin() const { return this->at(1); }
+  T zmin() const { return std::numeric_limits<T>::infinity(); }
+  T mmin() const { return this->at(2); }
+  T xmax() const { return this->at(3); }
+  T ymax() const { return this->at(4); }
+  T zmax() const { return -std::numeric_limits<T>::infinity(); }
+  T mmax() const { return this->at(5); }
   bound_type lower_bound() const { return {xmin(), ymin(), mmin()}; }
   bound_type upper_bound() const { return {xmax(), ymax(), mmax()}; }
 };
 
 /// \brief Coord implementation for BoxZM
-struct BoxXYZM : public std::array<double, 8> {
-  using bound_type = XYZM;
-  double xmin() const { return at(0); }
-  double ymin() const { return at(1); }
-  double zmin() const { return at(2); }
-  double mmin() const { return at(3); }
-  double xmax() const { return at(4); }
-  double ymax() const { return at(5); }
-  double zmax() const { return at(6); }
-  double mmax() const { return at(7); }
+template <typename T>
+struct BoxXYZM : public std::array<T, 8> {
+  using bound_type = XYZM<T>;
+  T xmin() const { return this->at(0); }
+  T ymin() const { return this->at(1); }
+  T zmin() const { return this->at(2); }
+  T mmin() const { return this->at(3); }
+  T xmax() const { return this->at(4); }
+  T ymax() const { return this->at(5); }
+  T zmax() const { return this->at(6); }
+  T mmax() const { return this->at(7); }
   bound_type lower_bound() const { return {xmin(), ymin(), zmin(), mmin()}; }
   bound_type upper_bound() const { return {xmax(), ymax(), zmax(), mmax()}; }
 };
@@ -315,7 +327,7 @@ struct CoordSequence {
   const_iterator begin() const { return const_iterator(*this, 0); }
   const_iterator end() const { return const_iterator(*this, length); }
 
-  using dimension_iterator = internal::StridedIterator<double>;
+  using dimension_iterator = internal::StridedIterator<typename value_type::value_type>;
   dimension_iterator dbegin(uint32_t j) const {
     return dimension_iterator(values[j] + (offset * stride), stride);
   }
@@ -438,22 +450,22 @@ template <typename Coord>
 struct CoordTraits;
 
 template <>
-struct CoordTraits<XY> {
+struct CoordTraits<XY<double>> {
   static constexpr enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY;
 };
 
 template <>
-struct CoordTraits<XYZ> {
+struct CoordTraits<XYZ<double>> {
   static constexpr enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XYZ;
 };
 
 template <>
-struct CoordTraits<XYM> {
+struct CoordTraits<XYM<double>> {
   static constexpr enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XYM;
 };
 
 template <>
-struct CoordTraits<XYZM> {
+struct CoordTraits<XYZM<double>> {
   static constexpr enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XYZM;
 };
 
