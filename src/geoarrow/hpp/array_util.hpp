@@ -1,6 +1,6 @@
 
-#ifndef GEOARROW_HPP_ITERATION_INCLUDED
-#define GEOARROW_HPP_ITERATION_INCLUDED
+#ifndef GEOARROW_HPP_ARRAY_UTIL_INCLUDED
+#define GEOARROW_HPP_ARRAY_UTIL_INCLUDED
 
 #include <array>
 #include <iterator>
@@ -233,6 +233,8 @@ struct BoxXYZM;
 template <typename T>
 struct XY : public std::array<T, 2> {
   using box_type = BoxXY<T>;
+  static constexpr enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY;
+
   T x() const { return this->at(0); }
   T y() const { return this->at(1); }
   T z() const { return std::numeric_limits<T>::quiet_NaN(); }
@@ -243,6 +245,8 @@ struct XY : public std::array<T, 2> {
 template <typename T>
 struct XYZ : public std::array<T, 3> {
   using box_type = BoxXYZ<T>;
+  static constexpr enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XYZ;
+
   T x() const { return this->at(0); }
   T y() const { return this->at(1); }
   T z() const { return this->at(2); }
@@ -253,6 +257,8 @@ struct XYZ : public std::array<T, 3> {
 template <typename T>
 struct XYM : public std::array<T, 3> {
   using box_type = BoxXYM<T>;
+  static constexpr enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XYM;
+
   T x() const { return this->at(0); }
   T y() const { return this->at(1); }
   T z() const { return std::numeric_limits<T>::quiet_NaN(); }
@@ -263,6 +269,8 @@ struct XYM : public std::array<T, 3> {
 template <typename T>
 struct XYZM : public std::array<T, 4> {
   using box_type = BoxXYZM<T>;
+  static constexpr enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XYZM;
+
   T x() const { return this->at(0); }
   T y() const { return this->at(1); }
   T z() const { return this->at(2); }
@@ -343,6 +351,9 @@ struct CoordSequence {
   /// assignment via [].
   using value_type = Coord;
 
+  /// \brief The C++ numeric type for ordinate storage
+  using ordinate_type = typename value_type::value_type;
+
   /// \brief Trait to indicate that this is a sequence (and not a list)
   static constexpr bool is_sequence = true;
 
@@ -362,7 +373,7 @@ struct CoordSequence {
   /// contiguous; for separated coordinates these pointers will point
   /// to separate arrays. Each ordinate value is accessed by using the
   /// expression `values[dimension_id][(offset + coord_id) * stride]`.
-  std::array<const typename Coord::value_type*, coord_size> values{};
+  std::array<const ordinate_type*, coord_size> values{};
 
   /// \brief The distance (in elements) between sequential coordinates in
   /// each values array.
@@ -374,7 +385,7 @@ struct CoordSequence {
   uint32_t stride{};
 
   /// \brief Initialize a dimension pointer for this array
-  void init_value(uint32_t i, const double* value) { values[i] = value; }
+  void init_value(uint32_t i, const ordinate_type* value) { values[i] = value; }
 
   /// \brief Return a coordinate at the given position
   Coord coord(uint32_t i) const {
@@ -399,7 +410,7 @@ struct CoordSequence {
   const_iterator begin() const { return const_iterator(*this, 0); }
   const_iterator end() const { return const_iterator(*this, length); }
 
-  using dimension_iterator = internal::StridedIterator<typename value_type::value_type>;
+  using dimension_iterator = internal::StridedIterator<ordinate_type>;
   dimension_iterator dbegin(uint32_t j) const {
     return dimension_iterator(values[j] + (offset * stride), stride);
   }
@@ -598,29 +609,6 @@ GeoArrowErrorCode InitFromArrayView(T* value, const struct GeoArrowArrayView* vi
   return GEOARROW_OK;
 };
 
-template <typename Coord>
-struct CoordTraits;
-
-template <>
-struct CoordTraits<XY<double>> {
-  static constexpr enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY;
-};
-
-template <>
-struct CoordTraits<XYZ<double>> {
-  static constexpr enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XYZ;
-};
-
-template <>
-struct CoordTraits<XYM<double>> {
-  static constexpr enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XYM;
-};
-
-template <>
-struct CoordTraits<XYZM<double>> {
-  static constexpr enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XYZM;
-};
-
 }  // namespace internal
 
 /// \brief A nullable sequence (either a ListSequence or a CoordSequence)
@@ -685,8 +673,7 @@ struct Array {
 template <typename Coord>
 struct PointArray : public Array<CoordSequence<Coord>> {
   static constexpr enum GeoArrowGeometryType geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
-  static constexpr enum GeoArrowDimensions dimensions =
-      internal::CoordTraits<Coord>::dimensions;
+  static constexpr enum GeoArrowDimensions dimensions = Coord::dimensions;
 
   /// \brief Return a view of all coordinates in this array
   ///
@@ -704,8 +691,7 @@ struct PointArray : public Array<CoordSequence<Coord>> {
 template <typename Coord>
 struct BoxArray : public Array<CoordSequence<typename Coord::box_type>> {
   static constexpr enum GeoArrowGeometryType geometry_type = GEOARROW_GEOMETRY_TYPE_BOX;
-  static constexpr enum GeoArrowDimensions dimensions =
-      internal::CoordTraits<Coord>::dimensions;
+  static constexpr enum GeoArrowDimensions dimensions = Coord::dimensions;
 
   PointArray<Coord> LowerBound() {
     PointArray<Coord> out;
@@ -743,8 +729,7 @@ template <typename Coord>
 struct LinestringArray : public Array<ListSequence<CoordSequence<Coord>>> {
   static constexpr enum GeoArrowGeometryType geometry_type =
       GEOARROW_GEOMETRY_TYPE_LINESTRING;
-  static constexpr enum GeoArrowDimensions dimensions =
-      internal::CoordTraits<Coord>::dimensions;
+  static constexpr enum GeoArrowDimensions dimensions = Coord::dimensions;
 
   /// \brief Return a view of all coordinates in this array
   ///
@@ -763,8 +748,7 @@ template <typename Coord>
 struct PolygonArray : public Array<ListSequence<ListSequence<CoordSequence<Coord>>>> {
   static constexpr enum GeoArrowGeometryType geometry_type =
       GEOARROW_GEOMETRY_TYPE_POLYGON;
-  static constexpr enum GeoArrowDimensions dimensions =
-      internal::CoordTraits<Coord>::dimensions;
+  static constexpr enum GeoArrowDimensions dimensions = Coord::dimensions;
 
   /// \brief Return a view of all coordinates in this array
   ///
@@ -785,8 +769,7 @@ template <typename Coord>
 struct MultipointArray : public Array<CoordSequence<Coord>> {
   static constexpr enum GeoArrowGeometryType geometry_type =
       GEOARROW_GEOMETRY_TYPE_MULTIPOINT;
-  static constexpr enum GeoArrowDimensions dimensions =
-      internal::CoordTraits<Coord>::dimensions;
+  static constexpr enum GeoArrowDimensions dimensions = Coord::dimensions;
 
   // \brief Return a view of all coordinates in this array
   ///
@@ -806,8 +789,7 @@ struct MultiLinestringArray
     : public Array<ListSequence<ListSequence<CoordSequence<Coord>>>> {
   static constexpr enum GeoArrowGeometryType geometry_type =
       GEOARROW_GEOMETRY_TYPE_MULTILINESTRING;
-  static constexpr enum GeoArrowDimensions dimensions =
-      internal::CoordTraits<Coord>::dimensions;
+  static constexpr enum GeoArrowDimensions dimensions = Coord::dimensions;
 
   // \brief Return a view of all coordinates in this array
   ///
@@ -829,8 +811,7 @@ struct MultiPolygonArray
     : public Array<ListSequence<ListSequence<ListSequence<CoordSequence<Coord>>>>> {
   static constexpr enum GeoArrowGeometryType geometry_type =
       GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON;
-  static constexpr enum GeoArrowDimensions dimensions =
-      internal::CoordTraits<Coord>::dimensions;
+  static constexpr enum GeoArrowDimensions dimensions = Coord::dimensions;
 
   // \brief Return a view of all coordinates in this array
   ///
