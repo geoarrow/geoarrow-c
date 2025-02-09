@@ -155,7 +155,7 @@ TEST(GeoArrowHppTest, BoxXYZM) {
 TEST(GeoArrowHppTest, RandomAccessIterator) {
   TestCoords coords{{0, 1, 2, 3, 4, 5}, {6, 7, 8, 9, 10, 11}};
   CoordSequence<XY> sequence;
-  geoarrow::array_util::internal::InitFromCoordView(&sequence, coords.view());
+  sequence.InitFrom(coords.view());
 
   auto it = sequence.begin();
   EXPECT_EQ(sequence.end() - it, sequence.size());
@@ -192,7 +192,7 @@ TEST(GeoArrowHppTest, IterateCoords) {
   TestCoords coords{{0, 1, 2}, {5, 6, 7}};
 
   CoordSequence<XY> sequence;
-  geoarrow::array_util::internal::InitFromCoordView(&sequence, coords.view());
+  sequence.InitFrom(coords.view());
 
   ASSERT_EQ(sequence.size(), 3);
   XY last_coord{2, 7};
@@ -273,7 +273,7 @@ TEST(GeoArrowHppTest, IterateUnalignedCoords) {
   TestCoords coords{{0, 1, 2}, {5, 6, 7}};
 
   UnalignedCoordSequence<XY> sequence;
-  geoarrow::array_util::internal::InitFromCoordView(&sequence, coords.view());
+  sequence.InitFrom(coords.view());
 
   ASSERT_EQ(sequence.size(), 3);
   XY last_coord{2, 7};
@@ -359,7 +359,7 @@ TEST(GeoArrowHppTest, IterateNestedCoords) {
   sequences.offset = 0;
   sequences.length = 2;
   sequences.offsets = offsets.data();
-  geoarrow::array_util::internal::InitFromCoordView(&sequences.child, coords.view());
+  sequences.child.InitFrom(coords.view());
 
   std::vector<std::vector<XY>> elements;
   for (const auto& sequence : sequences) {

@@ -420,6 +420,32 @@ struct CoordSequence {
   /// \brief Initialize a dimension pointer for this array
   void InitValue(uint32_t i, const ordinate_type* value) { values[i] = value; }
 
+  /// \brief Initialize from a GeoArrowCoordView
+  GeoArrowErrorCode InitFrom(const struct GeoArrowCoordView* view) {
+    if (view->n_values < coord_size) {
+      return EINVAL;
+    }
+
+    this->offset = 0;
+    this->length = view->n_coords;
+    this->stride = view->coords_stride;
+    for (uint32_t i = 0; i < coord_size; i++) {
+      this->InitValue(i, view->values[i]);
+    }
+    return GEOARROW_OK;
+  }
+
+  GeoArrowErrorCode InitFrom(const struct GeoArrowArrayView* view, int level = 0) {
+    if (level != view->n_offsets) {
+      return EINVAL;
+    }
+
+    GEOARROW_RETURN_NOT_OK(InitFrom(&view->coords));
+    this->offset = view->offset[level];
+    this->length = view->length[level];
+    return GEOARROW_OK;
+  }
+
   /// \brief Return a coordinate at the given position
   Coord coord(uint32_t i) const {
     Coord out;
@@ -498,6 +524,33 @@ struct UnalignedCoordSequence {
     values[i] = reinterpret_cast<const uint8_t*>(value);
   }
 
+  /// \brief Initialize from a GeoArrowCoordView
+  GeoArrowErrorCode InitFrom(struct GeoArrowCoordView* view) {
+    if (view->n_values < coord_size) {
+      return EINVAL;
+    }
+
+    this->offset = 0;
+    this->length = view->n_coords;
+    this->stride = view->coords_stride;
+    for (uint32_t i = 0; i < coord_size; i++) {
+      this->InitValue(i, view->values[i]);
+    }
+    return GEOARROW_OK;
+  }
+
+  /// \brief Initialize from a GeoArrowArrayView
+  GeoArrowErrorCode InitFrom(const struct GeoArrowArrayView* view, int level = 0) {
+    if (level != view->n_offsets) {
+      return EINVAL;
+    }
+
+    GEOARROW_RETURN_NOT_OK(InitFrom(&view->coords));
+    this->offset = view->offset[level];
+    this->length = view->length[level];
+    return GEOARROW_OK;
+  }
+
   /// \brief Return a coordinate at the given position
   Coord coord(uint32_t i) const {
     Coord out;
@@ -565,6 +618,19 @@ struct ListSequence {
   /// Note that the child may have its own non-zero offset which must also be applied.
   T child{};
 
+  /// \brief Initialize from a GeoArrowArrayView
+  GeoArrowErrorCode InitFrom(const struct GeoArrowArrayView* view, int level = 0) {
+    if (level > (view->n_offsets - 1)) {
+      return EINVAL;
+    }
+
+    this->offsets = view->offsets[level];
+    GEOARROW_RETURN_NOT_OK(this->child.InitFrom(view, level + 1));
+    this->offset = view->offset[level];
+    this->length = view->length[level];
+    return GEOARROW_OK;
+  }
+
   T ValidChildElements() const {
     if (length == 0) {
       return child.Slice(0, 0);
@@ -622,6 +688,14 @@ struct BinarySequence {
   /// \brief The pointer to the contiguous data buffer
   const uint8_t* data{};
 
+  /// \brief Initialize from a GeoArrowArrayView
+  GeoArrowErrorCode InitFrom(const struct GeoArrowArrayView* view) {
+    this->offsets = view->offsets[0];
+    this->offset = view->offset[0];
+    this->length = view->length[0];
+    return GEOARROW_OK;
+  }
+
   value_type at(uint32_t i) {
     Offset element_begin = offsets[offset + i];
     Offset element_end = offsets[offset + i + 1];
@@ -632,53 +706,6 @@ struct BinarySequence {
   const_iterator begin() const { return const_iterator(*this, 0); }
   const_iterator end() const { return const_iterator(*this, length); }
 };
-
-namespace internal {
-
-// Helpers to populate the above views from geoarrow-c structures. These structures
-// are intentionally omitted from the above definitions to keep the definitions
-// self-contained.
-
-template <typename T>
-GeoArrowErrorCode InitFromCoordView(T* value, const struct GeoArrowCoordView* view) {
-  if (view->n_values < T::coord_size) {
-    return EINVAL;
-  }
-
-  value->offset = 0;
-  value->length = view->n_coords;
-  value->stride = view->coords_stride;
-  for (uint32_t i = 0; i < T::coord_size; i++) {
-    value->InitValue(i, view->values[i]);
-  }
-  return GEOARROW_OK;
-}
-
-template <typename T>
-GeoArrowErrorCode InitFromArrayView(T* value, const struct GeoArrowArrayView* view,
-                                    int level) {
-  if constexpr (T::is_sequence) {
-    if (level != view->n_offsets) {
-      return EINVAL;
-    }
-
-    GEOARROW_RETURN_NOT_OK(InitFromCoordView(value, &view->coords));
-  } else {
-    if (level > (view->n_offsets - 1)) {
-      return EINVAL;
-    }
-
-    value->offsets = view->offsets[level];
-    GEOARROW_RETURN_NOT_OK(InitFromArrayView(&value->child, view, level + 1));
-  }
-
-  value->offset = view->offset[level];
-  value->length = view->length[level];
-
-  return GEOARROW_OK;
-};
-
-}  // namespace internal
 
 /// \brief A nullable sequence (either a ListSequence or a CoordSequence)
 ///
@@ -724,7 +751,7 @@ struct Array {
   /// Returns EINVAL if the nesting levels and/or coordinate size
   /// is incompatible with the values in the view.
   GeoArrowErrorCode Init(const struct GeoArrowArrayView* view) {
-    GEOARROW_RETURN_NOT_OK(internal::InitFromArrayView(&value, view, 0));
+    GEOARROW_RETURN_NOT_OK(value.InitFrom(view));
     validity = view->validity_bitmap;
     return GEOARROW_OK;
   }
