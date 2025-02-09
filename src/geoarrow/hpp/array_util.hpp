@@ -157,6 +157,24 @@ class StridedIterator {
 };
 
 template <typename T>
+struct LoadIdentity {
+  T operator()(const uint8_t* unaligned) const {
+    return internal::SafeLoadAs<T>(unaligned);
+  };
+};
+
+template <typename T>
+struct LoadSwapped {
+  T operator()(const uint8_t* unaligned) const {
+    uint8_t swapped[sizeof(T)];
+    for (uint32_t i = 0; i < sizeof(T); i++) {
+      swapped[sizeof(T) - i - 1] = unaligned[0];
+    }
+    return internal::SafeLoadAs<T>(swapped);
+  };
+};
+
+template <typename T, typename Load>
 class UnalignedStridedIterator {
  public:
   explicit UnalignedStridedIterator(const uint8_t* ptr, ptrdiff_t stride)
@@ -204,8 +222,8 @@ class UnalignedStridedIterator {
     return ptr_ != other.ptr_;
   }
 
-  T operator*() const { return SafeLoadAs<T>(ptr_); }
-  T operator[](ptrdiff_t i) const { return SafeLoadAs<T>(ptr_ + (i * stride_)); }
+  T operator*() const { return load_(ptr_); }
+  T operator[](ptrdiff_t i) const { return load_(ptr_ + (i * stride_)); }
 
   using iterator_category = std::random_access_iterator_tag;
   using difference_type = int64_t;
@@ -216,6 +234,7 @@ class UnalignedStridedIterator {
  protected:
   const uint8_t* ptr_;
   ptrdiff_t stride_;
+  static constexpr Load load_;
 };
 
 }  // namespace internal
@@ -385,7 +404,7 @@ struct CoordSequence {
   uint32_t stride{};
 
   /// \brief Initialize a dimension pointer for this array
-  void init_value(uint32_t i, const ordinate_type* value) { values[i] = value; }
+  void InitValue(uint32_t i, const ordinate_type* value) { values[i] = value; }
 
   /// \brief Return a coordinate at the given position
   Coord coord(uint32_t i) const {
@@ -424,7 +443,8 @@ struct CoordSequence {
 /// A view of zero or more coordinates. This data structure can handle either interleaved
 /// or separated coordinates. This coordinate sequence type is intended to wrap
 /// arbitrary bytes (e.g., WKB).
-template <typename Coord>
+template <typename Coord,
+          typename Load = internal::LoadIdentity<typename Coord::value_type>>
 struct UnalignedCoordSequence {
   /// \brief The C++ Coordinate type. This type must implement size() and
   /// assignment via [].
@@ -460,7 +480,7 @@ struct UnalignedCoordSequence {
   uint32_t stride_bytes() const { return stride * sizeof(ordinate_type); }
 
   /// \brief Initialize a dimension pointer for this array
-  void init_value(uint32_t i, const void* value) {
+  void InitValue(uint32_t i, const void* value) {
     values[i] = reinterpret_cast<const uint8_t*>(value);
   }
 
@@ -489,7 +509,7 @@ struct UnalignedCoordSequence {
   const_iterator end() const { return const_iterator(*this, length); }
 
   using dimension_iterator =
-      internal::UnalignedStridedIterator<typename value_type::value_type>;
+      internal::UnalignedStridedIterator<typename value_type::value_type, Load>;
   dimension_iterator dbegin(uint32_t j) const {
     return dimension_iterator(values[j] + (offset * stride_bytes()), stride_bytes());
   }
@@ -580,7 +600,7 @@ GeoArrowErrorCode InitFromCoordView(T* value, const struct GeoArrowCoordView* vi
   value->length = view->n_coords;
   value->stride = view->coords_stride;
   for (uint32_t i = 0; i < T::coord_size; i++) {
-    value->init_value(i, view->values[i]);
+    value->InitValue(i, view->values[i]);
   }
   return GEOARROW_OK;
 }
