@@ -106,6 +106,20 @@ class ListSequenceIterator : public BaseRandomAccessIterator<ListSequence> {
   typename ListSequence::child_type stashed_;
 };
 
+// Iterator implementation for a binary sequence. It might be faster to
+// cache some offset buffer dereferences when performing sequential scans.
+template <typename BinarySequence>
+class BinarySequenceIterator : public BaseRandomAccessIterator<BinarySequence> {
+ public:
+  using iterator_category = std::random_access_iterator_tag;
+  using difference_type = int64_t;
+  using value_type = typename BinarySequence::value_type;
+
+  value_type operator*() { return this->outer_.at(this->i_); }
+
+  value_type operator[](uint32_t i) { return this->outer_.at(this->i_ + i); }
+};
+
 // Iterator for dimension begin/end
 template <typename T>
 class StridedIterator {
@@ -584,6 +598,41 @@ struct ListSequence {
   const_iterator end() const { return const_iterator(*this, length); }
 };
 
+/// \brief View of a sequence of blobs
+template <typename Offset>
+struct BinarySequence {
+  /// \brief For the purposes of iteration, the value type is a const reference
+  /// to the child type (stashed in the iterator).
+  using value_type = GeoArrowBufferView;
+
+  /// \brief The logical offset into the sequence
+  uint32_t offset{};
+
+  /// \brief The number of blobs in the sequence
+  uint32_t length{};
+
+  /// \brief The pointer to the first offset
+  ///
+  /// These offsets are sequential such that the offset of the ith element in the
+  /// sequence begins at offsets[i]. This means there must be (offset + length + 1)
+  /// accessible elements in offsets. This is exactly equal to the definition of the
+  /// offsets in the Apache Arrow binary and utf8 types.
+  const Offset* offsets{};
+
+  /// \brief The pointer to the contiguous data buffer
+  const uint8_t* data{};
+
+  value_type at(uint32_t i) {
+    Offset element_begin = offsets[offset + i];
+    Offset element_end = offsets[offset + i + 1];
+    return {data + element_begin, element_end - element_begin};
+  }
+
+  using const_iterator = internal::ListSequenceIterator<BinarySequence>;
+  const_iterator begin() const { return const_iterator(*this, 0); }
+  const_iterator end() const { return const_iterator(*this, length); }
+};
+
 namespace internal {
 
 // Helpers to populate the above views from geoarrow-c structures. These structures
@@ -844,6 +893,14 @@ struct MultiPolygonArray
 
   MultiPolygonArray Slice(uint32_t offset, uint32_t length) {
     return this->template SliceImpl<MultiPolygonArray>(*this, offset, length);
+  }
+};
+
+/// \brief An Array of blobs
+template <typename Offset>
+struct BinaryArray : public Array<BinarySequence<Offset>> {
+  BinaryArray Slice(uint32_t offset, uint32_t length) {
+    return this->template SliceImpl<BinaryArray>(*this, offset, length);
   }
 };
 
