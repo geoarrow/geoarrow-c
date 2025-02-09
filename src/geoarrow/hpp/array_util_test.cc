@@ -317,8 +317,8 @@ TEST(GeoArrowHppTest, IterateUnalignedCoordsInterleaved) {
   sequence.length = 3;
   sequence.offset = 0;
   sequence.stride = 2;
-  sequence.init_value(0, coords.data());
-  sequence.init_value(1, coords.data() + 1);
+  sequence.InitValue(0, coords.data());
+  sequence.InitValue(1, coords.data() + 1);
 
   std::vector<XY> coords_vec;
   for (const auto& coord : sequence) {

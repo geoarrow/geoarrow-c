@@ -108,12 +108,12 @@ static void CoordSequenceLoop(benchmark::State& state) {
   if (type == GEOARROW_TYPE_POINT) {
     seq.stride = 1;
     for (uint32_t i = 0; i < seq.coord_size; i++) {
-      seq.init_value(i, coords.data() + (i * seq.size()));
+      seq.InitValue(i, coords.data() + (i * seq.size()));
     }
   } else {
     seq.stride = seq.coord_size;
     for (uint32_t i = 0; i < seq.coord_size; i++) {
-      seq.init_value(i, coords.data() + i);
+      seq.InitValue(i, coords.data() + i);
     }
   }
 
