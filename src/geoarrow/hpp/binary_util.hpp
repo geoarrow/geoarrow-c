@@ -65,6 +65,31 @@ struct WKBSequence {
   uint32_t stride{};
   enum GeoArrowDimensions dimensions {};
   uint8_t endianness;
+
+  template <typename Func>
+  void VisitXY(Func&& f) const {
+    if (endianness == kLittleEndian) {
+      Endian<kLittleEndian>::SequenceXY seq;
+      seq.values[0] = data;
+      seq.values[1] = data + sizeof(double);
+      seq.offset = 0;
+      seq.length = size;
+      seq.stride = stride;
+      for (auto coord : seq) {
+        f(coord);
+      }
+    } else {
+      Endian<kBigEndian>::SequenceXY seq;
+      seq.values[0] = data;
+      seq.values[1] = data + sizeof(double);
+      seq.offset = 0;
+      seq.length = size;
+      seq.stride = stride;
+      for (auto coord : seq) {
+        f(coord);
+      }
+    }
+  }
 };
 
 class WKBParser;
@@ -86,25 +111,39 @@ class WKBGeometry {
  public:
   static constexpr uint32_t kSridUnset = 0xFFFFFFFF;
 
-  enum GeoArrowGeometryType geometry_type_ {};
-  enum GeoArrowDimensions dimensions_ {};
-  uint32_t srid_{kSridUnset};
+  enum GeoArrowGeometryType geometry_type {};
+  enum GeoArrowDimensions dimensions {};
+  uint32_t srid{kSridUnset};
+
+  const WKBSequence& Sequence(uint32_t i) const { return sequences_[i]; }
+
+  uint32_t NumSequences() const { return num_sequences_; }
+
+  const WKBGeometry& Geometry(uint32_t i) const { return geometries_[i]; }
+
+  uint32_t NumGeometries() const { return num_geometries_; }
 
   WKBSequence* AppendSequence() {
-    sequences_.resize(++num_sequences_);
+    ++num_sequences_;
+    if (sequences_.size() < num_sequences_) {
+      sequences_.resize(num_sequences_);
+    }
     return &sequences_.back();
   }
 
   WKBGeometry* AppendGeometry() {
-    geometries_.resize(++num_geometries_);
+    ++num_geometries_;
+    if (geometries_.size() < num_geometries_) {
+      geometries_.resize(num_geometries_);
+    }
     geometries_.back().Reset();
     return &geometries_.back();
   }
 
   void Reset() {
-    geometry_type_ = GEOARROW_GEOMETRY_TYPE_GEOMETRY;
-    dimensions_ = GEOARROW_DIMENSIONS_UNKNOWN;
-    srid_ = kSridUnset;
+    geometry_type = GEOARROW_GEOMETRY_TYPE_GEOMETRY;
+    dimensions = GEOARROW_DIMENSIONS_UNKNOWN;
+    srid = kSridUnset;
     num_sequences_ = 0;
     num_geometries_ = 0;
   }
@@ -180,7 +219,7 @@ class WKBParser {
         return status;
       }
 
-      out->srid_ = ReadUInt32Unchecked();
+      out->srid = ReadUInt32Unchecked();
     }
 
     bool has_z = geometry_type & kEWKBZ;
@@ -202,31 +241,31 @@ class WKBParser {
 
     last_coord_stride_ = 2 + has_z + has_m;
     if (has_z && has_m) {
-      last_dimensions_ = out->dimensions_ = GEOARROW_DIMENSIONS_XYZM;
+      last_dimensions_ = out->dimensions = GEOARROW_DIMENSIONS_XYZM;
     } else if (has_z) {
-      last_dimensions_ = out->dimensions_ = GEOARROW_DIMENSIONS_XYZ;
+      last_dimensions_ = out->dimensions = GEOARROW_DIMENSIONS_XYZ;
     } else if (has_m) {
-      last_dimensions_ = out->dimensions_ = GEOARROW_DIMENSIONS_XYM;
+      last_dimensions_ = out->dimensions = GEOARROW_DIMENSIONS_XYM;
     } else {
-      last_dimensions_ = out->dimensions_ = GEOARROW_DIMENSIONS_XY;
+      last_dimensions_ = out->dimensions = GEOARROW_DIMENSIONS_XY;
     }
 
     geometry_type = geometry_type % 1000;
     switch (geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
-        out->geometry_type_ = static_cast<enum GeoArrowGeometryType>(geometry_type);
+        out->geometry_type = static_cast<enum GeoArrowGeometryType>(geometry_type);
         return ParsePoint(out);
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
-        out->geometry_type_ = static_cast<enum GeoArrowGeometryType>(geometry_type);
+        out->geometry_type = static_cast<enum GeoArrowGeometryType>(geometry_type);
         return ParseSequence(out);
       case GEOARROW_GEOMETRY_TYPE_POLYGON:
-        out->geometry_type_ = static_cast<enum GeoArrowGeometryType>(geometry_type);
+        out->geometry_type = static_cast<enum GeoArrowGeometryType>(geometry_type);
         return ParsePolygon(out);
       case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
       case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
       case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
       case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
-        out->geometry_type_ = static_cast<enum GeoArrowGeometryType>(geometry_type);
+        out->geometry_type = static_cast<enum GeoArrowGeometryType>(geometry_type);
         return ParseCollection(out);
       default:
         return INVALID_GEOMETRY_TYPE;
@@ -262,7 +301,7 @@ class WKBParser {
 
     uint32_t size = ReadUInt32Unchecked();
     for (uint32_t i = 0; i < size; ++i) {
-      status = ParseSequence(out->AppendGeometry());
+      status = ParseSequence(out);
       if (status != OK) {
         return status;
       }
