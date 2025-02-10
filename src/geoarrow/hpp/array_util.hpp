@@ -693,6 +693,7 @@ struct BinarySequence {
     this->offsets = view->offsets[0];
     this->offset = view->offset[0];
     this->length = view->length[0];
+    this->data = view->data;
     return GEOARROW_OK;
   }
 
