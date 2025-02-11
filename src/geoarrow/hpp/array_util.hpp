@@ -5,6 +5,7 @@
 #include <array>
 #include <iterator>
 #include <limits>
+#include <type_traits>
 
 #include "geoarrow_type.h"
 
@@ -273,7 +274,7 @@ struct XY : public std::array<T, 2> {
   T z() const { return std::numeric_limits<T>::quiet_NaN(); }
   T m() const { return std::numeric_limits<T>::quiet_NaN(); }
 
-  XY FromXYZM(T x, T y, T z, T m) { return XY{x, y}; }
+  static XY FromXYZM(T x, T y, T z, T m) { return XY{x, y}; }
 };
 
 /// \brief Coord implementation for XYZ
@@ -287,7 +288,7 @@ struct XYZ : public std::array<T, 3> {
   T z() const { return this->at(2); }
   T m() const { return std::numeric_limits<T>::quiet_NaN(); }
 
-  XYZ FromXYZM(T x, T y, T z, T m) { return XYZ{x, y, z}; }
+  static XYZ FromXYZM(T x, T y, T z, T m) { return XYZ{x, y, z}; }
 };
 
 /// \brief Coord implementation for XYM
@@ -301,7 +302,7 @@ struct XYM : public std::array<T, 3> {
   T z() const { return std::numeric_limits<T>::quiet_NaN(); }
   T m() const { return this->at(2); }
 
-  XYM FromXYZM(T x, T y, T z, T m) { return XYM{x, y, m}; }
+  static XYM FromXYZM(T x, T y, T z, T m) { return XYM{x, y, m}; }
 };
 
 /// \brief Coord implementation for XYZM
@@ -315,7 +316,7 @@ struct XYZM : public std::array<T, 4> {
   T z() const { return this->at(2); }
   T m() const { return this->at(3); }
 
-  XYZM FromXYZM(T x, T y, T z, T m) { return XYZM{x, y, z, m}; }
+  static XYZM FromXYZM(T x, T y, T z, T m) { return XYZM{x, y, z, m}; }
 };
 
 /// \brief Coord implementation for Box
@@ -652,6 +653,13 @@ struct UnalignedCoordSequence {
     out.offset += offset;
     out.length = length;
     return out;
+  }
+
+  template <typename CoordDst, typename Func>
+  void VisitVertices(Func&& func) {
+    for (const auto vertex : *this) {
+      func(CoordCast<Coord, CoordDst>(vertex));
+    }
   }
 
   using const_iterator = internal::CoordSequenceIterator<UnalignedCoordSequence>;

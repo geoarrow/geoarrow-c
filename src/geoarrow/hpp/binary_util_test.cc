@@ -10,8 +10,8 @@
 
 #include "wkx_testing.hpp"
 
-using geoarrow::binary_util::wkb::WKBGeometry;
-using geoarrow::binary_util::wkb::WKBParser;
+using geoarrow::binary_util::WKBGeometry;
+using geoarrow::binary_util::WKBParser;
 using XY = geoarrow::array_util::XY<double>;
 
 TEST(GeoArrowHppTest, WKBGeometryTypes) {
@@ -41,7 +41,7 @@ TEST(GeoArrowHppTest, WKBGeometryTypes) {
   EXPECT_EQ(geometry.NumGeometries(), 0);
   EXPECT_EQ(geometry.NumSequences(), 1);
   EXPECT_EQ(geometry.Sequence(0).size, 1);
-  geometry.Sequence(0).VisitXY([&](XY val) { coords.push_back(val); });
+  geometry.Sequence(0).Visit<XY>([&](XY val) { coords.push_back(val); });
   EXPECT_THAT(coords, ::testing::ElementsAre(XY{0, 1}));
 
   coords.clear();
@@ -50,7 +50,7 @@ TEST(GeoArrowHppTest, WKBGeometryTypes) {
   EXPECT_EQ(geometry.NumGeometries(), 0);
   EXPECT_EQ(geometry.NumSequences(), 1);
   EXPECT_EQ(geometry.Sequence(0).size, 2);
-  geometry.Sequence(0).VisitXY([&](XY val) { coords.push_back(val); });
+  geometry.Sequence(0).Visit<XY>([&](XY val) { coords.push_back(val); });
   EXPECT_THAT(coords, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}));
 
   coords.clear();
@@ -60,8 +60,8 @@ TEST(GeoArrowHppTest, WKBGeometryTypes) {
   EXPECT_EQ(geometry.NumSequences(), 2);
   EXPECT_EQ(geometry.Sequence(0).size, 2);
   EXPECT_EQ(geometry.Sequence(1).size, 2);
-  geometry.Sequence(0).VisitXY([&](XY val) { coords.push_back(val); });
-  geometry.Sequence(1).VisitXY([&](XY val) { coords.push_back(val); });
+  geometry.Sequence(0).Visit<XY>([&](XY val) { coords.push_back(val); });
+  geometry.Sequence(1).Visit<XY>([&](XY val) { coords.push_back(val); });
   EXPECT_THAT(coords, ::testing::ElementsAre(XY{4, 5}, XY{6, 7}, XY{8, 9}, XY{10, 11}));
 
   coords.clear();
@@ -71,7 +71,7 @@ TEST(GeoArrowHppTest, WKBGeometryTypes) {
   EXPECT_EQ(geometry.NumSequences(), 0);
   EXPECT_EQ(geometry.Geometry(0).NumSequences(), 1);
   EXPECT_EQ(geometry.Geometry(1).NumSequences(), 1);
-  geometry.Geometry(0).Sequence(0).VisitXY([&](XY val) { coords.push_back(val); });
-  geometry.Geometry(1).Sequence(0).VisitXY([&](XY val) { coords.push_back(val); });
+  geometry.Geometry(0).Sequence(0).Visit<XY>([&](XY val) { coords.push_back(val); });
+  geometry.Geometry(1).Sequence(0).Visit<XY>([&](XY val) { coords.push_back(val); });
   EXPECT_THAT(coords, ::testing::ElementsAre(XY{8, 9}, XY{10, 11}));
 }

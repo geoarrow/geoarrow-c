@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "hpp/array_util.hpp"
+#include "hpp/exception.hpp"
 
 /// \defgroup hpp-binary-utility Binary iteration utilities
 ///
@@ -17,7 +18,7 @@ namespace geoarrow {
 
 namespace binary_util {
 
-namespace wkb {
+namespace internal {
 
 static constexpr uint8_t kBigEndian = 0x00;
 static constexpr uint8_t kLittleEndian = 0x01;
@@ -38,25 +39,15 @@ template <>
 struct Endian<kNativeEndian> {
   using LoadUInt32 = array_util::internal::LoadIdentity<uint32_t>;
   using LoadDouble = array_util::internal::LoadIdentity<double>;
-  using SequenceXY = array_util::UnalignedCoordSequence<array_util::XY<double>>;
-  using SequenceXYZ = array_util::UnalignedCoordSequence<array_util::XYZ<double>>;
-  using SequenceXYM = array_util::UnalignedCoordSequence<array_util::XYM<double>>;
-  using SequenceXYZM = array_util::UnalignedCoordSequence<array_util::XYZM<double>>;
 };
 
 template <>
 struct Endian<kSwappedEndian> {
   using LoadUInt32 = array_util::internal::LoadSwapped<uint32_t>;
   using LoadDouble = array_util::internal::LoadSwapped<double>;
-  using SequenceXY =
-      array_util::UnalignedCoordSequence<array_util::XY<double>, LoadDouble>;
-  using SequenceXYZ =
-      array_util::UnalignedCoordSequence<array_util::XYZ<double>, LoadDouble>;
-  using SequenceXYM =
-      array_util::UnalignedCoordSequence<array_util::XYM<double>, LoadDouble>;
-  using SequenceXYZM =
-      array_util::UnalignedCoordSequence<array_util::XYZM<double>, LoadDouble>;
 };
+
+}  // namespace internal
 
 /// \brief Location and structure of a coordiante sequence within a WKB blob
 struct WKBSequence {
@@ -66,28 +57,48 @@ struct WKBSequence {
   enum GeoArrowDimensions dimensions {};
   uint8_t endianness;
 
-  template <typename Func>
-  void VisitXY(Func&& f) const {
-    if (endianness == kLittleEndian) {
-      Endian<kLittleEndian>::SequenceXY seq;
-      seq.values[0] = data;
-      seq.values[1] = data + sizeof(double);
-      seq.offset = 0;
-      seq.length = size;
-      seq.stride = stride;
-      for (auto coord : seq) {
-        f(coord);
-      }
+  using NativeXYSequence = array_util::UnalignedCoordSequence<array_util::XY<double>>;
+  NativeXYSequence ViewAsNativeXY() {
+    NativeXYSequence seq;
+    seq.InitInterleaved(size, data, stride);
+    return seq;
+  }
+
+  template <typename CoordDst, typename Func>
+  void Visit(Func&& f) const {
+    switch (dimensions) {
+      case GEOARROW_DIMENSIONS_XY:
+        VisitInternal<array_util::XY<double>, CoordDst>(f);
+        break;
+      case GEOARROW_DIMENSIONS_XYZ:
+        VisitInternal<array_util::XYZ<double>, CoordDst>(f);
+        break;
+      case GEOARROW_DIMENSIONS_XYM:
+        VisitInternal<array_util::XYM<double>, CoordDst>(f);
+        break;
+      case GEOARROW_DIMENSIONS_XYZM:
+        VisitInternal<array_util::XYZM<double>, CoordDst>(f);
+        break;
+      default:
+        throw Exception("Unknown dimensions");
+    }
+  }
+
+ private:
+  template <typename CoordSrc, typename CoordDst, typename Func>
+  void VisitInternal(Func&& f) const {
+    if (endianness == internal::kLittleEndian) {
+      using LoadDouble = internal::Endian<internal::kLittleEndian>::LoadDouble;
+      using Sequence = array_util::UnalignedCoordSequence<CoordSrc, LoadDouble>;
+      Sequence seq;
+      seq.InitInterleaved(size, data, stride);
+      seq.template VisitVertices<CoordDst>(f);
     } else {
-      Endian<kBigEndian>::SequenceXY seq;
-      seq.values[0] = data;
-      seq.values[1] = data + sizeof(double);
-      seq.offset = 0;
-      seq.length = size;
-      seq.stride = stride;
-      for (auto coord : seq) {
-        f(coord);
-      }
+      using LoadDouble = internal::Endian<internal::kBigEndian>::LoadDouble;
+      using Sequence = array_util::UnalignedCoordSequence<CoordSrc, LoadDouble>;
+      Sequence seq;
+      seq.InitInterleaved(size, data, stride);
+      seq.template VisitVertices<CoordDst>(f);
     }
   }
 };
@@ -192,8 +203,8 @@ class WKBParser {
   uint8_t last_endian_;
   enum GeoArrowDimensions last_dimensions_;
   uint32_t last_coord_stride_;
-  Endian<kBigEndian>::LoadUInt32 load_uint32_be_;
-  Endian<kLittleEndian>::LoadUInt32 load_uint32_le_;
+  internal::Endian<internal::kBigEndian>::LoadUInt32 load_uint32_be_;
+  internal::Endian<internal::kLittleEndian>::LoadUInt32 load_uint32_le_;
 
   static constexpr uint32_t kEWKBZ = 0x80000000;
   static constexpr uint32_t kEWKBM = 0x40000000;
@@ -348,8 +359,8 @@ class WKBParser {
   Status ReadEndianUnchecked() {
     last_endian_ = *cursor_;
     switch (last_endian_) {
-      case kLittleEndian:
-      case kBigEndian:
+      case internal::kLittleEndian:
+      case internal::kBigEndian:
         ++cursor_;
         return OK;
       default:
@@ -359,7 +370,7 @@ class WKBParser {
 
   uint32_t ReadUInt32Unchecked() {
     uint32_t out;
-    if (last_endian_ == kLittleEndian) {
+    if (last_endian_ == internal::kLittleEndian) {
       out = load_uint32_le_(cursor_);
     } else {
       load_uint32_be_(cursor_);
@@ -369,8 +380,6 @@ class WKBParser {
     return out;
   }
 };
-
-}  // namespace wkb
 
 }  // namespace binary_util
 
