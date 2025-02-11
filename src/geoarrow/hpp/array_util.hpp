@@ -319,6 +319,26 @@ struct XYZM : public std::array<T, 4> {
   static XYZM FromXYZM(T x, T y, T z, T m) { return XYZM{x, y, z, m}; }
 };
 
+/// \brief Cast a coordinate from one type to another
+///
+/// When one type of coordinate is requested but another exists, perform
+/// the transformation by (1) dropping dimensions or (2) filling dimensions
+/// that did not previously exist with NaN. A difference between ordinate type
+/// (e.g., double/float) is handled using static_cast<>().
+template <typename CoordSrc, typename CoordDst>
+CoordDst CoordCast(CoordSrc src) {
+  if constexpr (std::is_same<CoordSrc, CoordDst>::value) {
+    return src;
+  } else if constexpr (std::is_same<CoordDst, XY<typename CoordSrc::value_type>>::value) {
+    return XY<typename CoordSrc::value_type>{src.x(), src.y()};
+  } else {
+    return CoordDst::FromXYZM(static_cast<typename CoordDst::value_type>(src.x()),
+                              static_cast<typename CoordDst::value_type>(src.y()),
+                              static_cast<typename CoordDst::value_type>(src.z()),
+                              static_cast<typename CoordDst::value_type>(src.m()));
+  }
+}
+
 /// \brief Coord implementation for Box
 template <typename T>
 struct BoxXY : public std::array<T, 4> {
@@ -383,32 +403,19 @@ struct BoxXYZM : public std::array<T, 8> {
   bound_type upper_bound() const { return {xmax(), ymax(), zmax(), mmax()}; }
 };
 
-template <typename CoordSrc, typename CoordDst>
-CoordDst CoordCast(CoordSrc src) {
-  if constexpr (std::is_same<CoordSrc, CoordDst>::value) {
-    return src;
-  } else if constexpr (std::is_same<CoordDst, XY<typename CoordSrc::value_type>>::value) {
-    return XY<typename CoordSrc::value_type>{src.x(), src.y()};
-  } else {
-    return CoordDst::FromXYZM(src.x(), src.y(), src.z(), src.m());
-  }
-}
-
 /// \brief View of a GeoArrow coordinate sequence
 ///
 /// A view of zero or more coordinates. This data structure can handle either interleaved
-/// or separated coordinates.
+/// coordinates, separated coordinates, or any other sequence where values are aligned
+/// and equally spaced. For example, this sequence can be used to view only the
+/// interleaved XY portion of an interleaved XYZM sequence.
 template <typename Coord>
 struct CoordSequence {
-  /// \brief The C++ Coordinate type. This type must implement size() and
-  /// assignment via [].
+  /// \brief The C++ Coordinate type
   using value_type = Coord;
 
   /// \brief The C++ numeric type for ordinate storage
   using ordinate_type = typename value_type::value_type;
-
-  /// \brief Trait to indicate that this is a sequence (and not a list)
-  static constexpr bool is_sequence = true;
 
   /// \brief The number of values in each coordinate
   static constexpr uint32_t coord_size = Coord().size();
@@ -513,6 +520,10 @@ struct CoordSequence {
   /// \brief Return the number of coordinates in the sequence
   uint32_t size() const { return length; }
 
+  /// \brief Return a new coordinate sequence that is a subset of this one
+  ///
+  /// Caller is responsible for ensuring that offset + length is within the bounds
+  /// of this sequence.
   CoordSequence<Coord> Slice(uint32_t offset, uint32_t length) const {
     CoordSequence<Coord> out = *this;
     out.offset += offset;
@@ -520,6 +531,13 @@ struct CoordSequence {
     return out;
   }
 
+  /// \brief Call func once for each vertex in this sequence
+  ///
+  /// This function is templated on the desired coordinate output type.
+  /// This allows, for example, iteration along all XYZM dimensions of an
+  /// arbitrary sequence, even if some of those dimensions don't exist
+  /// in the sequence. Similarly, one can iterate over fewer dimensions than
+  /// are strictly in the output (discarding dimensions not of interest).
   template <typename CoordDst, typename Func>
   void VisitVertices(Func&& func) {
     for (const auto vertex : *this) {
@@ -527,6 +545,11 @@ struct CoordSequence {
     }
   }
 
+  /// \brief Call func once for each sequential pair of vertices in this sequence
+  ///
+  /// This function is templated on the desired coordinate output type, performing
+  /// the same coordinate conversion as VisitVertices. Note that sequential vertices
+  /// may not be meaningful as edges for some types of sequences.
   template <typename CoordDst, typename Func>
   void VisitEdges(Func&& func) {
     if (this->length < 2) {
@@ -562,18 +585,20 @@ struct CoordSequence {
 /// A view of zero or more coordinates. This data structure can handle either interleaved
 /// or separated coordinates. This coordinate sequence type is intended to wrap
 /// arbitrary bytes (e.g., WKB).
+///
+/// Like the CoordSequence, this sequence can handle structures beyond strictly
+/// interleaved or separated coordinates. For example, the UnalignedCoordSequence can wrap
+/// a sequence of contiguous WKB points (because the memory representing XY[Z[M]] values
+/// are equally spaced, although the spacing is not an even multiple of the coordinate
+/// size).
 template <typename Coord,
           typename Load = internal::LoadIdentity<typename Coord::value_type>>
 struct UnalignedCoordSequence {
-  /// \brief The C++ Coordinate type. This type must implement size() and
-  /// assignment via [].
+  /// \brief The C++ Coordinate type
   using value_type = Coord;
 
   /// \brief The C++ numeric type for ordinate storage
   using ordinate_type = typename value_type::value_type;
-
-  /// \brief Trait to indicate that this is a sequence (and not a list)
-  static constexpr bool is_sequence = true;
 
   /// \brief The number of values in each coordinate
   static constexpr uint32_t coord_size = Coord().size();
@@ -674,6 +699,10 @@ struct UnalignedCoordSequence {
   /// \brief Return the number of coordinates in the sequence
   uint32_t size() const { return length; }
 
+  /// \brief Return a new coordinate sequence that is a subset of this one
+  ///
+  /// Caller is responsible for ensuring that offset + length is within the bounds
+  /// of this function.
   UnalignedCoordSequence<Coord> Slice(uint32_t offset, uint32_t length) const {
     UnalignedCoordSequence<Coord> out = *this;
     out.offset += offset;
@@ -681,6 +710,13 @@ struct UnalignedCoordSequence {
     return out;
   }
 
+  /// \brief Call func once for each vertex in this sequence
+  ///
+  /// This function is templated on the desired coordinate output type.
+  /// This allows, for example, iteration along all XYZM dimensions of an
+  /// arbitrary sequence, even if some of those dimensions don't exist
+  /// in the sequence. Similarly, one can iterate over fewer dimensions than
+  /// are strictly in the output (discarding dimensions not of interest).
   template <typename CoordDst, typename Func>
   void VisitVertices(Func&& func) {
     for (const auto vertex : *this) {
@@ -688,6 +724,11 @@ struct UnalignedCoordSequence {
     }
   }
 
+  /// \brief Call func once for each sequential pair of vertices in this sequence
+  ///
+  /// This function is templated on the desired coordinate output type, performing
+  /// the same coordinate conversion as VisitVertices. Note that sequential vertices
+  /// may not be meaningful as edges for some types of sequences.
   template <typename CoordDst, typename Func>
   void VisitEdges(Func&& func) {
     if (this->length < 2) {
@@ -729,9 +770,6 @@ struct ListSequence {
   /// \brief For the purposes of iteration, the value type is a const reference
   /// to the child type (stashed in the iterator).
   using value_type = const T&;
-
-  /// \brief Trait to indicate this is not a CoordSequence
-  static constexpr bool is_sequence = false;
 
   /// \brief The logical offset into the sequence
   uint32_t offset{};
@@ -924,6 +962,7 @@ struct BoxArray : public Array<CoordSequence<typename Coord::box_type>> {
   static constexpr enum GeoArrowGeometryType geometry_type = GEOARROW_GEOMETRY_TYPE_BOX;
   static constexpr enum GeoArrowDimensions dimensions = Coord::dimensions;
 
+  /// \brief Return the xmin/ymin/zmin/xmin tuple from this box array
   PointArray<Coord> LowerBound() {
     PointArray<Coord> out;
     out.validity = this->validity;
@@ -937,6 +976,7 @@ struct BoxArray : public Array<CoordSequence<typename Coord::box_type>> {
     return out;
   }
 
+  /// \brief Return the xmax/ymax/zmax/xmax tuple from this box array
   PointArray<Coord> UpperBound() {
     PointArray<Coord> out;
     out.validity = this->validity;
@@ -950,6 +990,10 @@ struct BoxArray : public Array<CoordSequence<typename Coord::box_type>> {
     return out;
   }
 
+  /// \brief Return a new array that is a subset of this one
+  ///
+  /// Caller is responsible for ensuring that offset + length is within the bounds
+  /// of this array.
   BoxArray Slice(uint32_t offset, uint32_t length) {
     return this->template SliceImpl<BoxArray>(*this, offset, length);
   }
@@ -969,6 +1013,10 @@ struct LinestringArray : public Array<ListSequence<CoordSequence<Coord>>> {
   /// statistics).
   CoordSequence<Coord> Coords() const { return this->value.ValidChildElements(); }
 
+  /// \brief Return a new array that is a subset of this one
+  ///
+  /// Caller is responsible for ensuring that offset + length is within the bounds
+  /// of this array.
   LinestringArray Slice(uint32_t offset, uint32_t length) {
     return this->template SliceImpl<LinestringArray>(*this, offset, length);
   }
@@ -990,6 +1038,10 @@ struct PolygonArray : public Array<ListSequence<ListSequence<CoordSequence<Coord
     return this->value.ValidChildElements().ValidChildElements();
   }
 
+  /// \brief Return a new array that is a subset of this one
+  ///
+  /// Caller is responsible for ensuring that offset + length is within the bounds
+  /// of this array.
   PolygonArray Slice(uint32_t offset, uint32_t length) {
     return this->template SliceImpl<PolygonArray>(*this, offset, length);
   }
@@ -1002,13 +1054,17 @@ struct MultipointArray : public Array<CoordSequence<Coord>> {
       GEOARROW_GEOMETRY_TYPE_MULTIPOINT;
   static constexpr enum GeoArrowDimensions dimensions = Coord::dimensions;
 
-  // \brief Return a view of all coordinates in this array
+  /// \brief Return a view of all coordinates in this array
   ///
   /// Note that in the presence of null values, some of the coordinates values
   /// are not present in the array (e.g., for the purposes of calculating aggregate
   /// statistics).
   CoordSequence<Coord> Coords() const { return this->value.ValidChildElements(); }
 
+  /// \brief Return a new array that is a subset of this one
+  ///
+  /// Caller is responsible for ensuring that offset + length is within the bounds
+  /// of this array.
   MultipointArray Slice(uint32_t offset, uint32_t length) {
     return this->template SliceImpl<MultipointArray>(*this, offset, length);
   }
@@ -1022,7 +1078,7 @@ struct MultiLinestringArray
       GEOARROW_GEOMETRY_TYPE_MULTILINESTRING;
   static constexpr enum GeoArrowDimensions dimensions = Coord::dimensions;
 
-  // \brief Return a view of all coordinates in this array
+  /// \brief Return a view of all coordinates in this array
   ///
   /// Note that in the presence of null values, some of the coordinates values
   /// are not present in the array (e.g., for the purposes of calculating aggregate
@@ -1031,6 +1087,10 @@ struct MultiLinestringArray
     return this->value.ValidChildElements().ValidChildElements();
   }
 
+  /// \brief Return a new array that is a subset of this one
+  ///
+  /// Caller is responsible for ensuring that offset + length is within the bounds
+  /// of this array.
   MultiLinestringArray Slice(uint32_t offset, uint32_t length) {
     return this->template SliceImpl<MultiLinestringArray>(*this, offset, length);
   }
@@ -1044,7 +1104,7 @@ struct MultiPolygonArray
       GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON;
   static constexpr enum GeoArrowDimensions dimensions = Coord::dimensions;
 
-  // \brief Return a view of all coordinates in this array
+  /// \brief Return a view of all coordinates in this array
   ///
   /// Note that in the presence of null values, some of the coordinates values
   /// are not present in the array (e.g., for the purposes of calculating aggregate
@@ -1053,6 +1113,10 @@ struct MultiPolygonArray
     return this->value.ValidChildElements().ValidChildElements().ValidChildElements();
   }
 
+  /// \brief Return a new array that is a subset of this one
+  ///
+  /// Caller is responsible for ensuring that offset + length is within the bounds
+  /// of this array.
   MultiPolygonArray Slice(uint32_t offset, uint32_t length) {
     return this->template SliceImpl<MultiPolygonArray>(*this, offset, length);
   }
@@ -1061,6 +1125,10 @@ struct MultiPolygonArray
 /// \brief An Array of blobs
 template <typename Offset>
 struct BinaryArray : public Array<BinarySequence<Offset>> {
+  /// \brief Return a new array that is a subset of this one
+  ///
+  /// Caller is responsible for ensuring that offset + length is within the bounds
+  /// of this array.
   BinaryArray Slice(uint32_t offset, uint32_t length) {
     return this->template SliceImpl<BinaryArray>(*this, offset, length);
   }
