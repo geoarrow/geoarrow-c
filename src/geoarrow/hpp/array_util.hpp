@@ -877,6 +877,20 @@ struct ListSequence {
     return out;
   }
 
+  template <typename CoordDst, typename Func>
+  void VisitVertices(Func&& func) const {
+    for (const auto& item : *this) {
+      item.template VisitVertices<CoordDst>(func);
+    }
+  }
+
+  template <typename CoordDst, typename Func>
+  void VisitEdges(Func&& func) const {
+    for (const auto& item : *this) {
+      item.template VisitEdges<CoordDst>(func);
+    }
+  }
+
   using const_iterator = internal::ListSequenceIterator<ListSequence>;
   const_iterator begin() const { return const_iterator(*this, 0); }
   const_iterator end() const { return const_iterator(*this, length); }

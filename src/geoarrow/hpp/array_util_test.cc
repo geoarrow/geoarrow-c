@@ -637,6 +637,13 @@ TEST(GeoArrowHppTest, SetArrayLinestring) {
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
                                        XY{10, 11}, XY{12, 13}));
 
+    std::vector<std::pair<XY, XY>> edges;
+    native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+    EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {2, 3}),
+                                              std::pair<XY, XY>({4, 5}, {6, 7}),
+                                              std::pair<XY, XY>({8, 9}, {10, 11}),
+                                              std::pair<XY, XY>({10, 11}, {12, 13})));
+
     auto sliced_coords = native_array.Slice(1, 1).Coords();
     EXPECT_THAT(sliced_coords, ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
 
