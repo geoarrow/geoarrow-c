@@ -46,7 +46,7 @@ TEST(GeoArrowHppTest, WKBGeometryTypes) {
   geometry.Sequence(0).VisitVertices<XY>([&](XY val) { coords.push_back(val); });
   EXPECT_THAT(coords, ::testing::ElementsAre(XY{0, 1}));
   geometry.Sequence(0).VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
-  EXPECT_TRUE(coords.empty());
+  EXPECT_TRUE(edges.empty());
 
   coords.clear();
   edges.clear();
@@ -88,12 +88,13 @@ TEST(GeoArrowHppTest, WKBGeometryTypes) {
       [&](XY val) { coords.push_back(val); });
   geometry.Geometry(1).Sequence(0).VisitVertices<XY>(
       [&](XY val) { coords.push_back(val); });
+  EXPECT_THAT(coords, ::testing::ElementsAre(XY{8, 9}, XY{10, 11}));
   geometry.Geometry(0).Sequence(0).VisitEdges<XY>([&](XY v0, XY v1) {
     edges.push_back({v0, v1});
   });
   geometry.Geometry(1).Sequence(0).VisitEdges<XY>([&](XY v0, XY v1) {
     edges.push_back({v0, v1});
   });
-  EXPECT_THAT(coords, ::testing::ElementsAre(XY{8, 9}, XY{10, 11}));
-  EXPECT_TRUE(coords.empty());
+
+  EXPECT_TRUE(edges.empty());
 }
