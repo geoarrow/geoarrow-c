@@ -192,8 +192,7 @@ TEST(GeoArrowHppTest, IterateCoords) {
   TestCoords coords{{0, 1, 2}, {5, 6, 7}};
 
   CoordSequence<XY> sequence;
-  sequence.InitFrom(coords.view());
-
+  sequence.InitSeparated(3, {coords.storage()[0].data(), coords.storage()[1].data()});
   ASSERT_EQ(sequence.size(), 3);
   XY last_coord{2, 7};
   ASSERT_EQ(sequence.coord(2), last_coord);
@@ -233,10 +232,7 @@ TEST(GeoArrowHppTest, IterateCoords) {
 TEST(GeoArrowHppTest, IterateCoordsInterleaved) {
   std::vector<double> coords{0, 5, 1, 6, 2, 7};
   CoordSequence<XY> sequence;
-  sequence.length = 3;
-  sequence.offset = 0;
-  sequence.stride = 2;
-  sequence.values = {coords.data(), coords.data() + 1};
+  sequence.InitInterleaved(3, coords.data());
 
   std::vector<XY> coords_vec;
   for (const auto& coord : sequence) {
@@ -273,7 +269,7 @@ TEST(GeoArrowHppTest, IterateUnalignedCoords) {
   TestCoords coords{{0, 1, 2}, {5, 6, 7}};
 
   UnalignedCoordSequence<XY> sequence;
-  sequence.InitFrom(coords.view());
+  sequence.InitSeparated(3, {coords.storage()[0].data(), coords.storage()[1].data()});
 
   ASSERT_EQ(sequence.size(), 3);
   XY last_coord{2, 7};
@@ -314,11 +310,7 @@ TEST(GeoArrowHppTest, IterateUnalignedCoords) {
 TEST(GeoArrowHppTest, IterateUnalignedCoordsInterleaved) {
   std::vector<double> coords{0, 5, 1, 6, 2, 7};
   UnalignedCoordSequence<XY> sequence;
-  sequence.length = 3;
-  sequence.offset = 0;
-  sequence.stride = 2;
-  sequence.InitValue(0, coords.data());
-  sequence.InitValue(1, coords.data() + 1);
+  sequence.InitInterleaved(3, coords.data());
 
   std::vector<XY> coords_vec;
   for (const auto& coord : sequence) {

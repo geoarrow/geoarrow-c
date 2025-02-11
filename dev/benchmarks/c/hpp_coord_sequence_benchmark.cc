@@ -162,24 +162,20 @@ static void UnalignedCoordSequenceLoop(benchmark::State& state) {
   UnalignedCoordSequence<XY> seq;
 
   // Memory for circle with n points
-  seq.offset = 0;
-  seq.length = geoarrow::benchmark_util::kNumCoordsPrettyBig;
-  std::vector<double> coords(seq.size() * seq.coord_size);
+  int64_t n_coords = geoarrow::benchmark_util::kNumCoordsPrettyBig;
+  std::vector<double> coords(n_coords * seq.coord_size);
+  uint32_t stride_elements;
 
   if (type == GEOARROW_TYPE_POINT) {
-    seq.stride = 1;
-    for (uint32_t i = 0; i < seq.coord_size; i++) {
-      seq.InitValue(i, coords.data() + (i * seq.size()));
-    }
+    seq.InitSeparated(n_coords, {coords.data(), coords.data() + n_coords});
+    stride_elements = 1;
   } else {
-    seq.stride = seq.coord_size;
-    for (uint32_t i = 0; i < seq.coord_size; i++) {
-      seq.InitValue(i, coords.data() + i);
-    }
+    seq.InitInterleaved(n_coords, coords.data());
+    stride_elements = seq.coord_size;
   }
 
   geoarrow::benchmark_util::PointsOnCircle(
-      seq.size(), seq.stride,
+      n_coords, stride_elements,
       const_cast<double*>(reinterpret_cast<const double*>(seq.values[0])),
       const_cast<double*>(reinterpret_cast<const double*>(seq.values[1])));
 
@@ -188,13 +184,11 @@ static void UnalignedCoordSequenceLoop(benchmark::State& state) {
   std::memcpy(coords_unaligned.data() + 1, coords.data(), coords.size() * sizeof(double));
 
   if (type == GEOARROW_TYPE_POINT) {
-    for (uint32_t i = 0; i < seq.coord_size; i++) {
-      seq.InitValue(i, coords_unaligned.data() + 1 + (i * seq.size() * sizeof(double)));
-    }
+    seq.InitSeparated(n_coords,
+                      {coords_unaligned.data() + 1,
+                       coords_unaligned.data() + 1 + n_coords * sizeof(double)});
   } else {
-    for (uint32_t i = 0; i < seq.coord_size; i++) {
-      seq.InitValue(i, coords_unaligned.data() + 1 + (i * sizeof(double)));
-    }
+    seq.InitInterleaved(n_coords, coords_unaligned.data() + 1);
   }
 
   std::array<double, 4> bounds{};
@@ -229,9 +223,8 @@ static void UnalignedCoordSequenceLoop(benchmark::State& state) {
   state.SetItemsProcessed(seq.size() * state.iterations());
   // Check the result (centroid should more or less be 0, 0; bounds should be more or
   // less -484..483 in both dimensions)
-  // std::cout << bounds[0] << ", " << bounds[1] <<
-  // ", " << bounds[2] << ", " << bounds[3]
-  //           << std::endl;
+  // std::cout << bounds[0] << ", " << bounds[1] << ", " << bounds[2] << ", " << bounds[3]
+  //         << std::endl;
 }
 
 BENCHMARK(AlignedCoordSequenceLoop<BOUNDS, GEOARROW_TYPE_POINT, STL_ITERATOR>);

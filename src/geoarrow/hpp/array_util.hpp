@@ -272,6 +272,8 @@ struct XY : public std::array<T, 2> {
   T y() const { return this->at(1); }
   T z() const { return std::numeric_limits<T>::quiet_NaN(); }
   T m() const { return std::numeric_limits<T>::quiet_NaN(); }
+
+  XY FromXYZM(T x, T y, T z, T m) { return XY{x, y}; }
 };
 
 /// \brief Coord implementation for XYZ
@@ -284,6 +286,8 @@ struct XYZ : public std::array<T, 3> {
   T y() const { return this->at(1); }
   T z() const { return this->at(2); }
   T m() const { return std::numeric_limits<T>::quiet_NaN(); }
+
+  XYZ FromXYZM(T x, T y, T z, T m) { return XYZ{x, y, z}; }
 };
 
 /// \brief Coord implementation for XYM
@@ -296,6 +300,8 @@ struct XYM : public std::array<T, 3> {
   T y() const { return this->at(1); }
   T z() const { return std::numeric_limits<T>::quiet_NaN(); }
   T m() const { return this->at(2); }
+
+  XYM FromXYZM(T x, T y, T z, T m) { return XYM{x, y, m}; }
 };
 
 /// \brief Coord implementation for XYZM
@@ -308,6 +314,8 @@ struct XYZM : public std::array<T, 4> {
   T y() const { return this->at(1); }
   T z() const { return this->at(2); }
   T m() const { return this->at(3); }
+
+  XYZM FromXYZM(T x, T y, T z, T m) { return XYZM{x, y, z, m}; }
 };
 
 /// \brief Coord implementation for Box
@@ -374,6 +382,15 @@ struct BoxXYZM : public std::array<T, 8> {
   bound_type upper_bound() const { return {xmax(), ymax(), zmax(), mmax()}; }
 };
 
+template <typename CoordSrc, typename CoordDst>
+CoordDst CoordCast(CoordSrc src) {
+  if constexpr (std::is_same<CoordSrc, CoordDst>::value) {
+    return src;
+  } else {
+    return CoordDst::FromXYZM(src.x(), src.y(), src.z(), src.m());
+  }
+}
+
 /// \brief View of a GeoArrow coordinate sequence
 ///
 /// A view of zero or more coordinates. This data structure can handle either interleaved
@@ -422,7 +439,7 @@ struct CoordSequence {
 
   /// \brief Initialize from a GeoArrowCoordView
   GeoArrowErrorCode InitFrom(const struct GeoArrowCoordView* view) {
-    if (view->n_values < coord_size) {
+    if (view->n_values < coord_size || !std::is_same<ordinate_type, double>::value) {
       return EINVAL;
     }
 
@@ -430,11 +447,12 @@ struct CoordSequence {
     this->length = view->n_coords;
     this->stride = view->coords_stride;
     for (uint32_t i = 0; i < coord_size; i++) {
-      this->InitValue(i, view->values[i]);
+      this->InitValue(i, reinterpret_cast<const ordinate_type*>(view->values[i]));
     }
     return GEOARROW_OK;
   }
 
+  /// \brief Initialize from a GeoArrowArrayView
   GeoArrowErrorCode InitFrom(const struct GeoArrowArrayView* view, int level = 0) {
     if (level != view->n_offsets) {
       return EINVAL;
@@ -443,6 +461,40 @@ struct CoordSequence {
     GEOARROW_RETURN_NOT_OK(InitFrom(&view->coords));
     this->offset = view->offset[level];
     this->length = view->length[level];
+    return GEOARROW_OK;
+  }
+
+  /// \brief Initialize an interleaved coordinate sequence from a pointer to its start
+  GeoArrowErrorCode InitInterleaved(uint32_t length_elements, const ordinate_type* data,
+                                    uint32_t stride_elements = coord_size) {
+    if (data == nullptr && length_elements != 0) {
+      return EINVAL;
+    }
+
+    stride = stride_elements;
+    offset = 0;
+    length = length_elements;
+    if (data != nullptr) {
+      for (uint32_t i = 0; i < coord_size; ++i) {
+        InitValue(i, data + i);
+      }
+    }
+
+    return GEOARROW_OK;
+  }
+
+  /// \brief Initialize a separated coordinate sequence from pointers to each
+  /// dimension start
+  GeoArrowErrorCode InitSeparated(uint32_t length_elements,
+                                  std::array<const ordinate_type*, coord_size> dimensions,
+                                  uint32_t stride_elements = 1) {
+    this->offset = 0;
+    this->length = length_elements;
+    this->stride = stride_elements;
+    for (uint32_t i = 0; i < dimensions.size(); i++) {
+      this->InitValue(i, dimensions[i]);
+    }
+
     return GEOARROW_OK;
   }
 
@@ -511,13 +563,9 @@ struct UnalignedCoordSequence {
   /// \brief Pointers to the first ordinate values in each dimension
   std::array<const uint8_t*, coord_size> values{};
 
-  /// \brief The distance (in elements) between sequential coordinates in
-  /// each values array.
-  uint32_t stride{};
-
   /// \brief The distance (in bytes) between sequential coordinates in
   /// each values array.
-  uint32_t stride_bytes() const { return stride * sizeof(ordinate_type); }
+  uint32_t stride_bytes{};
 
   /// \brief Initialize a dimension pointer for this array
   void InitValue(uint32_t i, const void* value) {
@@ -526,13 +574,13 @@ struct UnalignedCoordSequence {
 
   /// \brief Initialize from a GeoArrowCoordView
   GeoArrowErrorCode InitFrom(struct GeoArrowCoordView* view) {
-    if (view->n_values < coord_size) {
+    if (view->n_values < coord_size || !std::is_same<ordinate_type, double>::value) {
       return EINVAL;
     }
 
     this->offset = 0;
     this->length = view->n_coords;
-    this->stride = view->coords_stride;
+    this->stride_bytes = view->coords_stride * sizeof(ordinate_type);
     for (uint32_t i = 0; i < coord_size; i++) {
       this->InitValue(i, view->values[i]);
     }
@@ -551,12 +599,47 @@ struct UnalignedCoordSequence {
     return GEOARROW_OK;
   }
 
+  /// \brief Initialize an interleaved coordinate sequence from a pointer to its start
+  GeoArrowErrorCode InitInterleaved(uint32_t length_elements, const void* data,
+                                    uint32_t stride_elements = coord_size) {
+    if (data == nullptr && length_elements != 0) {
+      return EINVAL;
+    }
+
+    this->stride_bytes = stride_elements * sizeof(ordinate_type);
+    this->offset = 0;
+    this->length = length_elements;
+    if (data != nullptr) {
+      for (uint32_t i = 0; i < coord_size; ++i) {
+        this->InitValue(
+            i, reinterpret_cast<const uint8_t*>(data) + i * sizeof(ordinate_type));
+      }
+    }
+
+    return GEOARROW_OK;
+  }
+
+  /// \brief Initialize a separated coordinate sequence from pointers to each
+  /// dimension start
+  GeoArrowErrorCode InitSeparated(uint32_t length_elements,
+                                  std::array<const void*, coord_size> dimensions,
+                                  uint32_t stride_elements = 1) {
+    this->offset = 0;
+    this->length = length_elements;
+    this->stride_bytes = stride_elements * sizeof(ordinate_type);
+    for (uint32_t i = 0; i < dimensions.size(); i++) {
+      this->InitValue(i, dimensions[i]);
+    }
+
+    return GEOARROW_OK;
+  }
+
   /// \brief Return a coordinate at the given position
   Coord coord(uint32_t i) const {
     Coord out;
     for (size_t j = 0; j < out.size(); j++) {
-      out[j] = internal::SafeLoadAs<ordinate_type>(values[j] +
-                                                   ((offset + i) * stride_bytes()));
+      out[j] =
+          internal::SafeLoadAs<ordinate_type>(values[j] + ((offset + i) * stride_bytes));
     }
     return out;
   }
@@ -578,11 +661,11 @@ struct UnalignedCoordSequence {
   using dimension_iterator =
       internal::UnalignedStridedIterator<typename value_type::value_type, Load>;
   dimension_iterator dbegin(uint32_t j) const {
-    return dimension_iterator(values[j] + (offset * stride_bytes()), stride_bytes());
+    return dimension_iterator(values[j] + (offset * stride_bytes), stride_bytes);
   }
   dimension_iterator dend(uint32_t j) const {
-    return dimension_iterator(values[j] + ((offset + length) * stride_bytes()),
-                              stride_bytes());
+    return dimension_iterator(values[j] + ((offset + length) * stride_bytes),
+                              stride_bytes);
   }
 };
 
