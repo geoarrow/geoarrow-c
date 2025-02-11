@@ -65,19 +65,39 @@ struct WKBSequence {
   }
 
   template <typename CoordDst, typename Func>
-  void Visit(Func&& f) const {
+  void VisitVertices(Func&& f) const {
     switch (dimensions) {
       case GEOARROW_DIMENSIONS_XY:
-        VisitInternal<array_util::XY<double>, CoordDst>(f);
+        VisitVerticesInternal<array_util::XY<double>, CoordDst>(f);
         break;
       case GEOARROW_DIMENSIONS_XYZ:
-        VisitInternal<array_util::XYZ<double>, CoordDst>(f);
+        VisitVerticesInternal<array_util::XYZ<double>, CoordDst>(f);
         break;
       case GEOARROW_DIMENSIONS_XYM:
-        VisitInternal<array_util::XYM<double>, CoordDst>(f);
+        VisitVerticesInternal<array_util::XYM<double>, CoordDst>(f);
         break;
       case GEOARROW_DIMENSIONS_XYZM:
-        VisitInternal<array_util::XYZM<double>, CoordDst>(f);
+        VisitVerticesInternal<array_util::XYZM<double>, CoordDst>(f);
+        break;
+      default:
+        throw Exception("Unknown dimensions");
+    }
+  }
+
+  template <typename CoordDst, typename Func>
+  void VisitEdges(Func&& f) const {
+    switch (dimensions) {
+      case GEOARROW_DIMENSIONS_XY:
+        VisitEdgesInternal<array_util::XY<double>, CoordDst>(f);
+        break;
+      case GEOARROW_DIMENSIONS_XYZ:
+        VisitEdgesInternal<array_util::XYZ<double>, CoordDst>(f);
+        break;
+      case GEOARROW_DIMENSIONS_XYM:
+        VisitEdgesInternal<array_util::XYM<double>, CoordDst>(f);
+        break;
+      case GEOARROW_DIMENSIONS_XYZM:
+        VisitEdgesInternal<array_util::XYZM<double>, CoordDst>(f);
         break;
       default:
         throw Exception("Unknown dimensions");
@@ -86,7 +106,7 @@ struct WKBSequence {
 
  private:
   template <typename CoordSrc, typename CoordDst, typename Func>
-  void VisitInternal(Func&& f) const {
+  void VisitVerticesInternal(Func&& f) const {
     if (endianness == internal::kLittleEndian) {
       using LoadDouble = internal::Endian<internal::kLittleEndian>::LoadDouble;
       using Sequence = array_util::UnalignedCoordSequence<CoordSrc, LoadDouble>;
@@ -99,6 +119,23 @@ struct WKBSequence {
       Sequence seq;
       seq.InitInterleaved(size, data, stride);
       seq.template VisitVertices<CoordDst>(f);
+    }
+  }
+
+  template <typename CoordSrc, typename CoordDst, typename Func>
+  void VisitEdgesInternal(Func&& f) const {
+    if (endianness == internal::kLittleEndian) {
+      using LoadDouble = internal::Endian<internal::kLittleEndian>::LoadDouble;
+      using Sequence = array_util::UnalignedCoordSequence<CoordSrc, LoadDouble>;
+      Sequence seq;
+      seq.InitInterleaved(size, data, stride);
+      seq.template VisitEdges<CoordDst>(f);
+    } else {
+      using LoadDouble = internal::Endian<internal::kBigEndian>::LoadDouble;
+      using Sequence = array_util::UnalignedCoordSequence<CoordSrc, LoadDouble>;
+      Sequence seq;
+      seq.InitInterleaved(size, data, stride);
+      seq.template VisitEdges<CoordDst>(f);
     }
   }
 };

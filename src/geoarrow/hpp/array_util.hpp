@@ -698,7 +698,7 @@ struct UnalignedCoordSequence {
     CoordDst start = CoordCast<Coord, CoordDst>(*it);
     ++it;
     while (it != end()) {
-      CoordDst end = *it;
+      CoordDst end = CoordCast<Coord, CoordDst>(*it);
       func(start, end);
       start = end;
       ++it;
