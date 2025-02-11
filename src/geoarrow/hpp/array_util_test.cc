@@ -256,6 +256,17 @@ TEST(GeoArrowHppTest, IterateCoords) {
   }
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
 
+  // Check vertex visiting
+  coords_vec.clear();
+  sequence.VisitVertices<XY>([&](XY vertex) { coords_vec.push_back(vertex); });
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check edge visiting
+  std::vector<std::pair<XY, XY>> edges;
+  sequence.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>{XY{0, 5}, XY{1, 6}},
+                                            std::pair<XY, XY>{XY{1, 6}, XY{2, 7}}));
+
   // Check dbegin() iteration with offset
   coords_vec.clear();
   sequence = sequence.Slice(1, 2);
@@ -291,6 +302,17 @@ TEST(GeoArrowHppTest, IterateCoordsInterleaved) {
     ++y;
   }
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check vertex visiting
+  coords_vec.clear();
+  sequence.VisitVertices<XY>([&](XY vertex) { coords_vec.push_back(vertex); });
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check edge visiting
+  std::vector<std::pair<XY, XY>> edges;
+  sequence.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>{XY{0, 5}, XY{1, 6}},
+                                            std::pair<XY, XY>{XY{1, 6}, XY{2, 7}}));
 
   // Check dbegin() iteration with offset
   coords_vec.clear();
@@ -334,6 +356,17 @@ TEST(GeoArrowHppTest, IterateUnalignedCoords) {
   }
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
 
+  // Check vertex visiting
+  coords_vec.clear();
+  sequence.VisitVertices<XY>([&](XY vertex) { coords_vec.push_back(vertex); });
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check edge visiting
+  std::vector<std::pair<XY, XY>> edges;
+  sequence.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>{XY{0, 5}, XY{1, 6}},
+                                            std::pair<XY, XY>{XY{1, 6}, XY{2, 7}}));
+
   // Check dbegin() iteration with offset
   coords_vec.clear();
   sequence = sequence.Slice(1, 2);
@@ -369,6 +402,17 @@ TEST(GeoArrowHppTest, IterateUnalignedCoordsInterleaved) {
     ++y;
   }
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check vertex visiting
+  coords_vec.clear();
+  sequence.VisitVertices<XY>([&](XY vertex) { coords_vec.push_back(vertex); });
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check edge visiting
+  std::vector<std::pair<XY, XY>> edges;
+  sequence.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>{XY{0, 5}, XY{1, 6}},
+                                            std::pair<XY, XY>{XY{1, 6}, XY{2, 7}}));
 
   // Check dbegin() iteration with offset
   coords_vec.clear();

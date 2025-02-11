@@ -520,6 +520,30 @@ struct CoordSequence {
     return out;
   }
 
+  template <typename CoordDst, typename Func>
+  void VisitVertices(Func&& func) {
+    for (const auto vertex : *this) {
+      func(CoordCast<Coord, CoordDst>(vertex));
+    }
+  }
+
+  template <typename CoordDst, typename Func>
+  void VisitEdges(Func&& func) {
+    if (this->length < 2) {
+      return;
+    }
+
+    auto it = begin();
+    CoordDst start = CoordCast<Coord, CoordDst>(*it);
+    ++it;
+    while (it != end()) {
+      CoordDst end = *it;
+      func(start, end);
+      start = end;
+      ++it;
+    }
+  }
+
   using const_iterator = internal::CoordSequenceIterator<CoordSequence>;
   const_iterator begin() const { return const_iterator(*this, 0); }
   const_iterator end() const { return const_iterator(*this, length); }
@@ -676,7 +700,7 @@ struct UnalignedCoordSequence {
     while (it != end()) {
       CoordDst end = *it;
       func(start, end);
-      end = start;
+      start = end;
       ++it;
     }
   }
