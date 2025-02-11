@@ -49,7 +49,7 @@ struct Endian<kSwappedEndian> {
 
 }  // namespace internal
 
-/// \brief Location and structure of a coordiante sequence within a WKB blob
+/// \brief Location and structure of a coordinate sequence within a WKB blob
 struct WKBSequence {
   const uint8_t* data{};
   uint32_t size{};
