@@ -249,7 +249,7 @@ class UnalignedStridedIterator {
  protected:
   const uint8_t* ptr_;
   ptrdiff_t stride_;
-  static constexpr Load load_;
+  static constexpr Load load_{};
 };
 
 }  // namespace internal
