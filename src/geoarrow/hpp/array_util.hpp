@@ -262,6 +262,8 @@ template <typename T>
 struct BoxXYM;
 template <typename T>
 struct BoxXYZM;
+template <typename CoordSrc, typename CoordDst>
+CoordDst CoordCast(CoordSrc src);
 
 /// \brief Coord implementation for XY
 template <typename T>
@@ -273,6 +275,17 @@ struct XY : public std::array<T, 2> {
   T y() const { return this->at(1); }
   T z() const { return std::numeric_limits<T>::quiet_NaN(); }
   T m() const { return std::numeric_limits<T>::quiet_NaN(); }
+
+  template <typename CoordDst, typename Func>
+  void VisitVertices(Func&& func) const {
+    func(CoordCast<XY, CoordDst>(*this));
+  }
+
+  template <typename CoordDst, typename Func>
+  void VisitEdges(Func&& func) const {
+    CoordDst coord = CoordCast<XY, CoordDst>(*this);
+    func(coord, coord);
+  }
 
   static XY FromXYZM(T x, T y, T z, T m) { return XY{x, y}; }
 };
@@ -288,6 +301,17 @@ struct XYZ : public std::array<T, 3> {
   T z() const { return this->at(2); }
   T m() const { return std::numeric_limits<T>::quiet_NaN(); }
 
+  template <typename CoordDst, typename Func>
+  void VisitVertices(Func&& func) const {
+    func(CoordCast<XYZ, CoordDst>(*this));
+  }
+
+  template <typename CoordDst, typename Func>
+  void VisitEdges(Func&& func) const {
+    CoordDst coord = CoordCast<XYZ, CoordDst>(*this);
+    func(coord, coord);
+  }
+
   static XYZ FromXYZM(T x, T y, T z, T m) { return XYZ{x, y, z}; }
 };
 
@@ -302,6 +326,17 @@ struct XYM : public std::array<T, 3> {
   T z() const { return std::numeric_limits<T>::quiet_NaN(); }
   T m() const { return this->at(2); }
 
+  template <typename CoordDst, typename Func>
+  void VisitVertices(Func&& func) const {
+    func(CoordCast<XYM, CoordDst>(*this));
+  }
+
+  template <typename CoordDst, typename Func>
+  void VisitEdges(Func&& func) const {
+    CoordDst coord = CoordCast<XYM, CoordDst>(*this);
+    func(coord, coord);
+  }
+
   static XYM FromXYZM(T x, T y, T z, T m) { return XYM{x, y, m}; }
 };
 
@@ -315,6 +350,17 @@ struct XYZM : public std::array<T, 4> {
   T y() const { return this->at(1); }
   T z() const { return this->at(2); }
   T m() const { return this->at(3); }
+
+  template <typename CoordDst, typename Func>
+  void VisitVertices(Func&& func) const {
+    func(CoordCast<XYZM, CoordDst>(*this));
+  }
+
+  template <typename CoordDst, typename Func>
+  void VisitEdges(Func&& func) const {
+    CoordDst coord = CoordCast<XYZM, CoordDst>(*this);
+    func(coord, coord);
+  }
 
   static XYZM FromXYZM(T x, T y, T z, T m) { return XYZM{x, y, z, m}; }
 };
@@ -539,7 +585,7 @@ struct CoordSequence {
   /// in the sequence. Similarly, one can iterate over fewer dimensions than
   /// are strictly in the output (discarding dimensions not of interest).
   template <typename CoordDst, typename Func>
-  void VisitVertices(Func&& func) {
+  void VisitVertices(Func&& func) const {
     for (const auto vertex : *this) {
       func(CoordCast<Coord, CoordDst>(vertex));
     }
@@ -551,7 +597,7 @@ struct CoordSequence {
   /// the same coordinate conversion as VisitVertices. Note that sequential vertices
   /// may not be meaningful as edges for some types of sequences.
   template <typename CoordDst, typename Func>
-  void VisitEdges(Func&& func) {
+  void VisitEdges(Func&& func) const {
     if (this->length < 2) {
       return;
     }
@@ -718,7 +764,7 @@ struct UnalignedCoordSequence {
   /// in the sequence. Similarly, one can iterate over fewer dimensions than
   /// are strictly in the output (discarding dimensions not of interest).
   template <typename CoordDst, typename Func>
-  void VisitVertices(Func&& func) {
+  void VisitVertices(Func&& func) const {
     for (const auto vertex : *this) {
       func(CoordCast<Coord, CoordDst>(vertex));
     }
@@ -730,7 +776,7 @@ struct UnalignedCoordSequence {
   /// the same coordinate conversion as VisitVertices. Note that sequential vertices
   /// may not be meaningful as edges for some types of sequences.
   template <typename CoordDst, typename Func>
-  void VisitEdges(Func&& func) {
+  void VisitEdges(Func&& func) const {
     if (this->length < 2) {
       return;
     }
@@ -919,6 +965,48 @@ struct Array {
     return validity != nullptr && !(validity[i / 8] & (1 << (i % 8)));
   }
 
+  /// \brief Call func once for each vertex in this array (excluding null elements)
+  template <typename CoordDst, typename Func>
+  void VisitVertices(Func&& func) const {
+    if (this->validity) {
+      // TODO: optimize the nullable case
+      auto it = this->value.begin();
+      uint32_t i = 0;
+      while (it != this->value.end()) {
+        if (this->is_valid(i)) {
+          const auto& item = *it;
+          item.template VisitVertices<CoordDst>(func);
+        }
+        ++i;
+        ++it;
+      }
+    } else {
+      this->value.template VisitVertices<CoordDst>(func);
+    }
+  }
+
+  /// \brief Call func once for each edge in this array (excluding null elements)
+  ///
+  /// For the purposes of this function, points are considered degenerate edges.
+  template <typename CoordDst, typename Func>
+  void VisitEdges(Func&& func) const {
+    if (this->validity) {
+      // TODO: optimize the nullable case
+      auto it = this->value.begin();
+      uint32_t i = 0;
+      while (it != this->value.end()) {
+        if (this->is_valid(i)) {
+          const auto& item = *it;
+          item.template VisitEdges<CoordDst>(func);
+        }
+        ++i;
+        ++it;
+      }
+    } else {
+      this->value.template VisitEdges<CoordDst>(func);
+    }
+  }
+
   /// \brief Initialize an Array from a GeoArrowArrayView
   ///
   /// Returns EINVAL if the nesting levels and/or coordinate size
@@ -951,8 +1039,33 @@ struct PointArray : public Array<CoordSequence<Coord>> {
   /// statistics).
   CoordSequence<Coord> Coords() const { return this->value; }
 
+  /// \brief Return a new array that is a subset of this one
+  ///
+  /// Caller is responsible for ensuring that offset + length is within the bounds
+  /// of this array.
   PointArray Slice(uint32_t offset, uint32_t length) {
     return this->template SliceImpl<PointArray>(*this, offset, length);
+  }
+
+  template <typename CoordDst, typename Func>
+  void VisitEdges(Func&& func) const {
+    if (this->validity) {
+      // TODO: optimize the nullable case
+      auto it = this->value.begin();
+      uint32_t i = 0;
+      while (it != this->value.end()) {
+        if (this->is_valid(i)) {
+          const auto& item = *it;
+          item.template VisitEdges<CoordDst>(func);
+        }
+        ++i;
+        ++it;
+      }
+    } else {
+      for (const auto item : this->Coords()) {
+        func(item, item);
+      }
+    }
   }
 };
 

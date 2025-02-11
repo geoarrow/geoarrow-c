@@ -575,6 +575,18 @@ TEST(GeoArrowHppTest, SetArrayPoint) {
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
 
+    // Visitors
+    points.clear();
+    native_array.VisitVertices<XY>([&](XY v) { points.push_back(v); });
+    EXPECT_THAT(native_array.Coords(),
+                ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
+
+    std::vector<std::pair<XY, XY>> edges;
+    native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+    EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {0, 1}),
+                                              std::pair<XY, XY>({2, 3}, {2, 3}),
+                                              std::pair<XY, XY>({4, 5}, {4, 5})));
+
     auto sliced_coords = native_array.Slice(1, 1).Coords();
     EXPECT_THAT(sliced_coords, ::testing::ElementsAre(XY{2, 3}));
 
