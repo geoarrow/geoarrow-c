@@ -9,6 +9,7 @@
 
 #include "wkx_testing.hpp"
 
+using geoarrow::array_util::CoordCast;
 using geoarrow::array_util::CoordSequence;
 using geoarrow::array_util::ListSequence;
 using geoarrow::array_util::UnalignedCoordSequence;
@@ -29,6 +30,24 @@ TEST(GeoArrowHppTest, CoordXY) {
   EXPECT_EQ(coord.y(), 1);
   EXPECT_TRUE(std::isnan(coord.z()));
   EXPECT_TRUE(std::isnan(coord.m()));
+
+  EXPECT_EQ((CoordCast<XY, XY>(coord)), coord);
+
+  auto xyz = CoordCast<XY, XYZ>(coord);
+  EXPECT_EQ(xyz.x(), 0);
+  EXPECT_EQ(xyz.y(), 1);
+  EXPECT_TRUE(std::isnan(xyz.z()));
+
+  auto xym = CoordCast<XY, XYM>(coord);
+  EXPECT_EQ(xyz.x(), 0);
+  EXPECT_EQ(xyz.y(), 1);
+  EXPECT_TRUE(std::isnan(xyz.m()));
+
+  auto xyzm = CoordCast<XY, XYZM>(coord);
+  EXPECT_EQ(xyzm.x(), 0);
+  EXPECT_EQ(xyzm.y(), 1);
+  EXPECT_TRUE(std::isnan(xyzm.z()));
+  EXPECT_TRUE(std::isnan(xyzm.m()));
 }
 
 TEST(GeoArrowHppTest, CoordXYZ) {
@@ -40,6 +59,14 @@ TEST(GeoArrowHppTest, CoordXYZ) {
   EXPECT_EQ(coord.y(), 1);
   EXPECT_EQ(coord.z(), 2);
   EXPECT_TRUE(std::isnan(coord.m()));
+
+  EXPECT_EQ((CoordCast<XYZ, XY>(coord)), (XY{0, 1}));
+  EXPECT_EQ((CoordCast<XYZ, XYZ>(coord)), coord);
+  auto xyzm = CoordCast<XYZ, XYZM>(coord);
+  EXPECT_EQ(xyzm.x(), 0);
+  EXPECT_EQ(xyzm.y(), 1);
+  EXPECT_EQ(coord.z(), 2);
+  EXPECT_TRUE(std::isnan(xyzm.m()));
 }
 
 TEST(GeoArrowHppTest, CoordXYM) {
@@ -50,6 +77,14 @@ TEST(GeoArrowHppTest, CoordXYM) {
   EXPECT_EQ(coord.x(), 0);
   EXPECT_EQ(coord.y(), 1);
   EXPECT_TRUE(std::isnan(coord.z()));
+  EXPECT_EQ(coord.m(), 2);
+
+  EXPECT_EQ((CoordCast<XYM, XY>(coord)), (XY{0, 1}));
+  EXPECT_EQ((CoordCast<XYM, XYM>(coord)), coord);
+  auto xyzm = CoordCast<XYM, XYZM>(coord);
+  EXPECT_EQ(xyzm.x(), 0);
+  EXPECT_EQ(xyzm.y(), 1);
+  EXPECT_TRUE(std::isnan(xyzm.z()));
   EXPECT_EQ(coord.m(), 2);
 }
 
@@ -62,6 +97,11 @@ TEST(GeoArrowHppTest, CoordXYZM) {
   EXPECT_EQ(coord.y(), 1);
   EXPECT_EQ(coord.z(), 2);
   EXPECT_EQ(coord.m(), 3);
+
+  EXPECT_EQ((CoordCast<XYZM, XY>(coord)), (XY{0, 1}));
+  EXPECT_EQ((CoordCast<XYZM, XYZ>(coord)), (XYZ{0, 1, 2}));
+  EXPECT_EQ((CoordCast<XYZM, XYM>(coord)), (XYM{0, 1, 3}));
+  EXPECT_EQ((CoordCast<XYZM, XYZM>(coord)), coord);
 }
 
 TEST(GeoArrowHppTest, BoxXY) {

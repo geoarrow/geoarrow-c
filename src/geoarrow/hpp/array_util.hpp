@@ -387,6 +387,8 @@ template <typename CoordSrc, typename CoordDst>
 CoordDst CoordCast(CoordSrc src) {
   if constexpr (std::is_same<CoordSrc, CoordDst>::value) {
     return src;
+  } else if constexpr (std::is_same<CoordDst, XY<typename CoordSrc::value_type>>::value) {
+    return XY<typename CoordSrc::value_type>{src.x(), src.y()};
   } else {
     return CoordDst::FromXYZM(src.x(), src.y(), src.z(), src.m());
   }
@@ -659,6 +661,23 @@ struct UnalignedCoordSequence {
   void VisitVertices(Func&& func) {
     for (const auto vertex : *this) {
       func(CoordCast<Coord, CoordDst>(vertex));
+    }
+  }
+
+  template <typename CoordDst, typename Func>
+  void VisitEdges(Func&& func) {
+    if (this->length < 2) {
+      return;
+    }
+
+    auto it = begin();
+    CoordDst start = CoordCast<Coord, CoordDst>(*it);
+    ++it;
+    while (it != end()) {
+      CoordDst end = *it;
+      func(start, end);
+      end = start;
+      ++it;
     }
   }
 
