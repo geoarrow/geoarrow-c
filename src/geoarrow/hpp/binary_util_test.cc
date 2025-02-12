@@ -13,6 +13,9 @@
 using geoarrow::binary_util::WKBGeometry;
 using geoarrow::binary_util::WKBParser;
 using XY = geoarrow::array_util::XY<double>;
+using XYZ = geoarrow::array_util::XYZ<double>;
+using XYM = geoarrow::array_util::XYM<double>;
+using XYZM = geoarrow::array_util::XYZM<double>;
 
 TEST(GeoArrowHppTest, ValidWKBArray) {
   geoarrow::ArrayWriter writer(GEOARROW_TYPE_WKB);
@@ -113,6 +116,155 @@ TEST(GeoArrowHppTest, ValidWKBArray) {
                                             std::pair<XY, XY>({8, 9}, {10, 11}),
                                             std::pair<XY, XY>({8, 9}, {8, 9}),
                                             std::pair<XY, XY>({10, 11}, {10, 11})));
+}
+
+TEST(GeoArrowHppTest, ParseEWKB) {
+  std::basic_string<uint8_t> point_z({0x01, 0x01, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0x3e, 0x40, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0x24, 0x40, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0x00, 0x40});
+
+  std::basic_string<uint8_t> point_m({0x01, 0x01, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0x3e, 0x40, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0x24, 0x40, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0x00, 0x40});
+
+  std::basic_string<uint8_t> point_zm(
+      {0x01, 0x01, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3e, 0x40,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f});
+
+  // These two have embedded SRID values
+  std::basic_string<uint8_t> point_s(
+      {0x01, 0x01, 0x00, 0x00, 0x20, 0xc7, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x3e, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
+
+  std::basic_string<uint8_t> point_zms(
+      {0x01, 0x01, 0x00, 0x00, 0xe0, 0xe6, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x3e, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x28, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x40});
+
+  WKBParser parser;
+  WKBGeometry geometry;
+
+  uint32_t n_points = 0;
+  ASSERT_EQ(parser.Parse(point_z.data(), point_z.size(), &geometry), WKBParser::OK);
+  EXPECT_EQ(geometry.dimensions, GEOARROW_DIMENSIONS_XYZ);
+  EXPECT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
+  EXPECT_EQ(geometry.srid, WKBGeometry::kSridUnset);
+  geometry.VisitVertices<XYZ>([&](XYZ v) {
+    EXPECT_EQ(v, (XYZ{30, 10, 2}));
+    ++n_points;
+  });
+  EXPECT_EQ(n_points, 1);
+
+  n_points = 0;
+  ASSERT_EQ(parser.Parse(point_m.data(), point_m.size(), &geometry), WKBParser::OK);
+  EXPECT_EQ(geometry.dimensions, GEOARROW_DIMENSIONS_XYM);
+  EXPECT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
+  EXPECT_EQ(geometry.srid, WKBGeometry::kSridUnset);
+  geometry.VisitVertices<XYM>([&](XYM v) {
+    EXPECT_EQ(v, (XYM{30, 10, 2}));
+    ++n_points;
+  });
+  EXPECT_EQ(n_points, 1);
+
+  n_points = 0;
+  ASSERT_EQ(parser.Parse(point_zm.data(), point_zm.size(), &geometry), WKBParser::OK);
+  EXPECT_EQ(geometry.dimensions, GEOARROW_DIMENSIONS_XYZM);
+  EXPECT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
+  EXPECT_EQ(geometry.srid, WKBGeometry::kSridUnset);
+  geometry.VisitVertices<XYZM>([&](XYZM v) {
+    EXPECT_EQ(v, (XYZM{30, 10, 2, 1}));
+    ++n_points;
+  });
+  EXPECT_EQ(n_points, 1);
+}
+
+TEST(GeoArrowHppTest, ParseEWKBSrid) {
+  std::basic_string<uint8_t> point_s(
+      {0x01, 0x01, 0x00, 0x00, 0x20, 0xc7, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x3e, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
+
+  std::basic_string<uint8_t> point_zms(
+      {0x01, 0x01, 0x00, 0x00, 0xe0, 0xe6, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x3e, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x28, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x40});
+
+  WKBParser parser;
+  WKBGeometry geometry;
+
+  uint32_t n_points = 0;
+  ASSERT_EQ(parser.Parse(point_s.data(), point_s.size(), &geometry), WKBParser::OK);
+  EXPECT_EQ(geometry.dimensions, GEOARROW_DIMENSIONS_XY);
+  EXPECT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
+  EXPECT_EQ(geometry.srid, 199);
+  geometry.VisitVertices<XY>([&](XY v) {
+    EXPECT_EQ(v, (XY{30, 10}));
+    ++n_points;
+  });
+  EXPECT_EQ(n_points, 1);
+
+  n_points = 0;
+  ASSERT_EQ(parser.Parse(point_zms.data(), point_zms.size(), &geometry), WKBParser::OK);
+  EXPECT_EQ(geometry.dimensions, GEOARROW_DIMENSIONS_XYZM);
+  EXPECT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
+  EXPECT_EQ(geometry.srid, 4326);
+  geometry.VisitVertices<XYZM>([&](XYZM v) {
+    EXPECT_EQ(v, (XYZM{30, 10, 12, 14}));
+    ++n_points;
+  });
+  EXPECT_EQ(n_points, 1);
+}
+
+TEST(GeoArrowHppTest, ParseISOZM) {
+  std::basic_string<uint8_t> point_z({0x01, 0xe9, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0xf0, 0x3f, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0x08, 0x40});
+
+  std::basic_string<uint8_t> point_m({0x01, 0xd1, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0xf0, 0x3f, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00,
+                                      0x00, 0x00, 0x00, 0x08, 0x40});
+
+  std::basic_string<uint8_t> point_zm(
+      {0x01, 0xb9, 0x0b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x08, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x40});
+
+  WKBParser parser;
+  WKBGeometry geometry;
+
+  uint32_t n_points = 0;
+  ASSERT_EQ(parser.Parse(point_z.data(), point_z.size(), &geometry), WKBParser::OK);
+  EXPECT_EQ(geometry.dimensions, GEOARROW_DIMENSIONS_XYZ);
+  ASSERT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
+  geometry.VisitVertices<XYZ>([&](XYZ v) {
+    EXPECT_EQ(v, (XYZ{1, 2, 3}));
+    ++n_points;
+  });
+  EXPECT_EQ(n_points, 1);
+
+  n_points = 0;
+  ASSERT_EQ(parser.Parse(point_m.data(), point_m.size(), &geometry), WKBParser::OK);
+  EXPECT_EQ(geometry.dimensions, GEOARROW_DIMENSIONS_XYM);
+  ASSERT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
+  geometry.VisitVertices<XYM>([&](XYM v) {
+    EXPECT_EQ(v, (XYM{1, 2, 3}));
+    ++n_points;
+  });
+  EXPECT_EQ(n_points, 1);
+
+  n_points = 0;
+  ASSERT_EQ(parser.Parse(point_zm.data(), point_zm.size(), &geometry), WKBParser::OK);
+  EXPECT_EQ(geometry.dimensions, GEOARROW_DIMENSIONS_XYZM);
+  ASSERT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
+  geometry.VisitVertices<XYZM>([&](XYZM v) {
+    EXPECT_EQ(v, (XYZM{1, 2, 3, 4}));
+    ++n_points;
+  });
+  EXPECT_EQ(n_points, 1);
 }
 
 TEST(GeoArrowHppTest, InvalidWKBArray) {

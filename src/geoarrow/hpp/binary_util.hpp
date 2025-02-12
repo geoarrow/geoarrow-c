@@ -361,7 +361,7 @@ class WKBParser {
       case 2:
         has_m = true;
         break;
-      case 4:
+      case 3:
         has_z = true;
         has_m = true;
         break;
