@@ -46,7 +46,7 @@ TEST(GeoArrowHppTest, ValidWKBArray) {
   EXPECT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
   EXPECT_EQ(geometry.NumGeometries(), 0);
   EXPECT_EQ(geometry.NumSequences(), 1);
-  EXPECT_EQ(geometry.Sequence(0).size, 1);
+  EXPECT_EQ(geometry.Sequence(0).size(), 1);
   geometry.VisitVertices<XY>([&](XY val) { coords.push_back(val); });
   EXPECT_THAT(coords, ::testing::ElementsAre(XY{0, 1}));
   geometry.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
@@ -58,7 +58,7 @@ TEST(GeoArrowHppTest, ValidWKBArray) {
   EXPECT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_LINESTRING);
   EXPECT_EQ(geometry.NumGeometries(), 0);
   EXPECT_EQ(geometry.NumSequences(), 1);
-  EXPECT_EQ(geometry.Sequence(0).size, 2);
+  EXPECT_EQ(geometry.Sequence(0).size(), 2);
   geometry.VisitVertices<XY>([&](XY val) { coords.push_back(val); });
   EXPECT_THAT(coords, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}));
   geometry.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
@@ -70,8 +70,8 @@ TEST(GeoArrowHppTest, ValidWKBArray) {
   EXPECT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_POLYGON);
   EXPECT_EQ(geometry.NumGeometries(), 0);
   EXPECT_EQ(geometry.NumSequences(), 2);
-  EXPECT_EQ(geometry.Sequence(0).size, 2);
-  EXPECT_EQ(geometry.Sequence(1).size, 2);
+  EXPECT_EQ(geometry.Sequence(0).size(), 2);
+  EXPECT_EQ(geometry.Sequence(1).size(), 2);
   geometry.VisitVertices<XY>([&](XY val) { coords.push_back(val); });
   EXPECT_THAT(coords, ::testing::ElementsAre(XY{4, 5}, XY{6, 7}, XY{8, 9}, XY{10, 11}));
   geometry.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });

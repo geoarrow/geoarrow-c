@@ -56,10 +56,13 @@ struct Endian<kSwappedEndian> {
 /// \brief Location and structure of a coordinate sequence within a WKB blob
 struct WKBSequence {
   const uint8_t* data{};
-  uint32_t size{};
+  uint32_t length{};
   uint32_t stride{};
   enum GeoArrowDimensions dimensions {};
   uint8_t endianness;
+
+  /// \brief The number of coordinates in the sequence
+  uint32_t size() const { return length; }
 
   using NativeXYSequence = array_util::UnalignedCoordSequence<array_util::XY<double>>;
 
@@ -67,9 +70,9 @@ struct WKBSequence {
   ///
   /// This may be faster or more convenient than using a visitor-based approach
   /// when only the XY dimensions are needed.
-  NativeXYSequence ViewAsNativeXY() {
+  NativeXYSequence ViewAsNativeXY() const {
     NativeXYSequence seq;
-    seq.InitInterleaved(size, data, stride);
+    seq.InitInterleaved(length, data, stride);
     return seq;
   }
 
@@ -132,13 +135,13 @@ struct WKBSequence {
       using LoadDouble = internal::Endian<internal::kLittleEndian>::LoadDouble;
       using Sequence = array_util::UnalignedCoordSequence<CoordSrc, LoadDouble>;
       Sequence seq;
-      seq.InitInterleaved(size, data, stride);
+      seq.InitInterleaved(length, data, stride);
       seq.template VisitVertices<CoordDst>(f);
     } else {
       using LoadDouble = internal::Endian<internal::kBigEndian>::LoadDouble;
       using Sequence = array_util::UnalignedCoordSequence<CoordSrc, LoadDouble>;
       Sequence seq;
-      seq.InitInterleaved(size, data, stride);
+      seq.InitInterleaved(length, data, stride);
       seq.template VisitVertices<CoordDst>(f);
     }
   }
@@ -149,13 +152,13 @@ struct WKBSequence {
       using LoadDouble = internal::Endian<internal::kLittleEndian>::LoadDouble;
       using Sequence = array_util::UnalignedCoordSequence<CoordSrc, LoadDouble>;
       Sequence seq;
-      seq.InitInterleaved(size, data, stride);
+      seq.InitInterleaved(length, data, stride);
       seq.template VisitEdges<CoordDst>(f);
     } else {
       using LoadDouble = internal::Endian<internal::kBigEndian>::LoadDouble;
       using Sequence = array_util::UnalignedCoordSequence<CoordSrc, LoadDouble>;
       Sequence seq;
-      seq.InitInterleaved(size, data, stride);
+      seq.InitInterleaved(length, data, stride);
       seq.template VisitEdges<CoordDst>(f);
     }
   }
@@ -484,7 +487,7 @@ class WKBParser {
 
   uint32_t NewSequenceAtCursor(WKBGeometry* out, uint32_t size) {
     WKBSequence* seq = out->AppendSequence();
-    seq->size = size;
+    seq->length = size;
     seq->data = cursor_;
     seq->dimensions = last_dimensions_;
     seq->stride = last_coord_stride_;
