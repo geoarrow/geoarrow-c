@@ -1,8 +1,8 @@
 
 #pragma once
 
+#include <exception>
 #include <sstream>
-#include <stdexcept>
 #include <vector>
 
 #include <geoarrow.h>
@@ -97,6 +97,14 @@ class WKXTester {
     int result = GeoArrowWKTReaderVisit(&wkt_reader_, str_view, v);
     if (result != GEOARROW_OK) {
       throw WKXTestException("GeoArrowWKTReaderVisit", result, error_.message);
+    }
+  }
+
+  void ReadNulls(int64_t n, struct GeoArrowVisitor* v) {
+    for (int64_t i = 0; i < n; i++) {
+      v->feat_start(v);
+      v->null_feat(v);
+      v->feat_end(v);
     }
   }
 

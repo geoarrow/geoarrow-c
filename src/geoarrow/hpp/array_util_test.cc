@@ -9,9 +9,18 @@
 
 #include "wkx_testing.hpp"
 
+using geoarrow::array_util::CoordCast;
 using geoarrow::array_util::CoordSequence;
 using geoarrow::array_util::ListSequence;
-using geoarrow::array_util::XY;
+using geoarrow::array_util::UnalignedCoordSequence;
+using XY = geoarrow::array_util::XY<double>;
+using XYZ = geoarrow::array_util::XYZ<double>;
+using XYM = geoarrow::array_util::XYM<double>;
+using XYZM = geoarrow::array_util::XYZM<double>;
+using BoxXY = XY::box_type;
+using BoxXYZ = XYZ::box_type;
+using BoxXYM = XYM::box_type;
+using BoxXYZM = XYZM::box_type;
 
 TEST(GeoArrowHppTest, CoordXY) {
   XY coord{0, 1};
@@ -21,10 +30,28 @@ TEST(GeoArrowHppTest, CoordXY) {
   EXPECT_EQ(coord.y(), 1);
   EXPECT_TRUE(std::isnan(coord.z()));
   EXPECT_TRUE(std::isnan(coord.m()));
+
+  EXPECT_EQ((CoordCast<XY, XY>(coord)), coord);
+
+  auto xyz = CoordCast<XY, XYZ>(coord);
+  EXPECT_EQ(xyz.x(), 0);
+  EXPECT_EQ(xyz.y(), 1);
+  EXPECT_TRUE(std::isnan(xyz.z()));
+
+  auto xym = CoordCast<XY, XYM>(coord);
+  EXPECT_EQ(xyz.x(), 0);
+  EXPECT_EQ(xyz.y(), 1);
+  EXPECT_TRUE(std::isnan(xyz.m()));
+
+  auto xyzm = CoordCast<XY, XYZM>(coord);
+  EXPECT_EQ(xyzm.x(), 0);
+  EXPECT_EQ(xyzm.y(), 1);
+  EXPECT_TRUE(std::isnan(xyzm.z()));
+  EXPECT_TRUE(std::isnan(xyzm.m()));
 }
 
 TEST(GeoArrowHppTest, CoordXYZ) {
-  geoarrow::array_util::XYZ coord{0, 1, 2};
+  XYZ coord{0, 1, 2};
   EXPECT_EQ(coord[0], 0);
   EXPECT_EQ(coord[1], 1);
   EXPECT_EQ(coord[2], 2);
@@ -32,10 +59,18 @@ TEST(GeoArrowHppTest, CoordXYZ) {
   EXPECT_EQ(coord.y(), 1);
   EXPECT_EQ(coord.z(), 2);
   EXPECT_TRUE(std::isnan(coord.m()));
+
+  EXPECT_EQ((CoordCast<XYZ, XY>(coord)), (XY{0, 1}));
+  EXPECT_EQ((CoordCast<XYZ, XYZ>(coord)), coord);
+  auto xyzm = CoordCast<XYZ, XYZM>(coord);
+  EXPECT_EQ(xyzm.x(), 0);
+  EXPECT_EQ(xyzm.y(), 1);
+  EXPECT_EQ(coord.z(), 2);
+  EXPECT_TRUE(std::isnan(xyzm.m()));
 }
 
 TEST(GeoArrowHppTest, CoordXYM) {
-  geoarrow::array_util::XYM coord{0, 1, 2};
+  XYM coord{0, 1, 2};
   EXPECT_EQ(coord[0], 0);
   EXPECT_EQ(coord[1], 1);
   EXPECT_EQ(coord[2], 2);
@@ -43,10 +78,18 @@ TEST(GeoArrowHppTest, CoordXYM) {
   EXPECT_EQ(coord.y(), 1);
   EXPECT_TRUE(std::isnan(coord.z()));
   EXPECT_EQ(coord.m(), 2);
+
+  EXPECT_EQ((CoordCast<XYM, XY>(coord)), (XY{0, 1}));
+  EXPECT_EQ((CoordCast<XYM, XYM>(coord)), coord);
+  auto xyzm = CoordCast<XYM, XYZM>(coord);
+  EXPECT_EQ(xyzm.x(), 0);
+  EXPECT_EQ(xyzm.y(), 1);
+  EXPECT_TRUE(std::isnan(xyzm.z()));
+  EXPECT_EQ(coord.m(), 2);
 }
 
 TEST(GeoArrowHppTest, CoordXYZM) {
-  geoarrow::array_util::XYZM coord{0, 1, 2, 3};
+  XYZM coord{0, 1, 2, 3};
   EXPECT_EQ(coord[0], 0);
   EXPECT_EQ(coord[1], 1);
   EXPECT_EQ(coord[2], 2);
@@ -54,10 +97,15 @@ TEST(GeoArrowHppTest, CoordXYZM) {
   EXPECT_EQ(coord.y(), 1);
   EXPECT_EQ(coord.z(), 2);
   EXPECT_EQ(coord.m(), 3);
+
+  EXPECT_EQ((CoordCast<XYZM, XY>(coord)), (XY{0, 1}));
+  EXPECT_EQ((CoordCast<XYZM, XYZ>(coord)), (XYZ{0, 1, 2}));
+  EXPECT_EQ((CoordCast<XYZM, XYM>(coord)), (XYM{0, 1, 3}));
+  EXPECT_EQ((CoordCast<XYZM, XYZM>(coord)), coord);
 }
 
 TEST(GeoArrowHppTest, BoxXY) {
-  geoarrow::array_util::BoxXY coord{0, 1, 2, 3};
+  BoxXY coord{0, 1, 2, 3};
   EXPECT_EQ(coord[0], 0);
   EXPECT_EQ(coord[1], 1);
   EXPECT_EQ(coord[2], 2);
@@ -70,14 +118,14 @@ TEST(GeoArrowHppTest, BoxXY) {
   EXPECT_EQ(coord.zmax(), -std::numeric_limits<double>::infinity());
   EXPECT_EQ(coord.mmax(), -std::numeric_limits<double>::infinity());
 
-  geoarrow::array_util::XY expected_lower{0, 1};
+  XY expected_lower{0, 1};
   EXPECT_EQ(coord.lower_bound(), expected_lower);
-  geoarrow::array_util::XY expected_upper{2, 3};
+  XY expected_upper{2, 3};
   EXPECT_EQ(coord.upper_bound(), expected_upper);
 }
 
 TEST(GeoArrowHppTest, BoxXYZ) {
-  geoarrow::array_util::BoxXYZ coord{0, 1, 2, 3, 4, 5};
+  BoxXYZ coord{0, 1, 2, 3, 4, 5};
   EXPECT_EQ(coord[0], 0);
   EXPECT_EQ(coord[1], 1);
   EXPECT_EQ(coord[2], 2);
@@ -92,14 +140,14 @@ TEST(GeoArrowHppTest, BoxXYZ) {
   EXPECT_EQ(coord.zmax(), 5);
   EXPECT_EQ(coord.mmax(), -std::numeric_limits<double>::infinity());
 
-  geoarrow::array_util::XYZ expected_lower{0, 1, 2};
+  XYZ expected_lower{0, 1, 2};
   EXPECT_EQ(coord.lower_bound(), expected_lower);
-  geoarrow::array_util::XYZ expected_upper{3, 4, 5};
+  XYZ expected_upper{3, 4, 5};
   EXPECT_EQ(coord.upper_bound(), expected_upper);
 }
 
 TEST(GeoArrowHppTest, BoxXYM) {
-  geoarrow::array_util::BoxXYM coord{0, 1, 2, 3, 4, 5};
+  BoxXYM coord{0, 1, 2, 3, 4, 5};
   EXPECT_EQ(coord[0], 0);
   EXPECT_EQ(coord[1], 1);
   EXPECT_EQ(coord[2], 2);
@@ -114,14 +162,14 @@ TEST(GeoArrowHppTest, BoxXYM) {
   EXPECT_EQ(coord.zmax(), -std::numeric_limits<double>::infinity());
   EXPECT_EQ(coord.mmax(), 5);
 
-  geoarrow::array_util::XYM expected_lower{0, 1, 2};
+  XYM expected_lower{0, 1, 2};
   EXPECT_EQ(coord.lower_bound(), expected_lower);
-  geoarrow::array_util::XYM expected_upper{3, 4, 5};
+  XYM expected_upper{3, 4, 5};
   EXPECT_EQ(coord.upper_bound(), expected_upper);
 }
 
 TEST(GeoArrowHppTest, BoxXYZM) {
-  geoarrow::array_util::BoxXYZM coord{0, 1, 2, 3, 4, 5, 6, 7};
+  BoxXYZM coord{0, 1, 2, 3, 4, 5, 6, 7};
   EXPECT_EQ(coord[0], 0);
   EXPECT_EQ(coord[1], 1);
   EXPECT_EQ(coord[2], 2);
@@ -138,16 +186,16 @@ TEST(GeoArrowHppTest, BoxXYZM) {
   EXPECT_EQ(coord.zmax(), 6);
   EXPECT_EQ(coord.mmax(), 7);
 
-  geoarrow::array_util::XYZM expected_lower{0, 1, 2, 3};
+  XYZM expected_lower{0, 1, 2, 3};
   EXPECT_EQ(coord.lower_bound(), expected_lower);
-  geoarrow::array_util::XYZM expected_upper{4, 5, 6, 7};
+  XYZM expected_upper{4, 5, 6, 7};
   EXPECT_EQ(coord.upper_bound(), expected_upper);
 }
 
 TEST(GeoArrowHppTest, RandomAccessIterator) {
   TestCoords coords{{0, 1, 2, 3, 4, 5}, {6, 7, 8, 9, 10, 11}};
   CoordSequence<XY> sequence;
-  geoarrow::array_util::internal::InitFromCoordView(&sequence, coords.view());
+  sequence.InitFrom(coords.view());
 
   auto it = sequence.begin();
   EXPECT_EQ(sequence.end() - it, sequence.size());
@@ -184,7 +232,106 @@ TEST(GeoArrowHppTest, IterateCoords) {
   TestCoords coords{{0, 1, 2}, {5, 6, 7}};
 
   CoordSequence<XY> sequence;
-  geoarrow::array_util::internal::InitFromCoordView(&sequence, coords.view());
+  sequence.InitSeparated(3, {coords.storage()[0].data(), coords.storage()[1].data()});
+  ASSERT_EQ(sequence.size(), 3);
+  XY last_coord{2, 7};
+  ASSERT_EQ(sequence.coord(2), last_coord);
+
+  std::vector<XY> coords_vec;
+  for (const auto& coord : sequence) {
+    coords_vec.push_back(coord);
+  }
+
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+  EXPECT_THAT(sequence.Slice(1, 1), ::testing::ElementsAre(XY{1, 6}));
+
+  // Check dbegin() iteration
+  coords_vec.clear();
+  auto x = sequence.dbegin(0);
+  auto y = sequence.dbegin(1);
+  for (uint32_t i = 0; i < sequence.size(); i++) {
+    coords_vec.push_back(XY{*x, *y});
+    ++x;
+    ++y;
+  }
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check vertex visiting
+  coords_vec.clear();
+  sequence.VisitVertices<XY>([&](XY vertex) { coords_vec.push_back(vertex); });
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check edge visiting
+  std::vector<std::pair<XY, XY>> edges;
+  sequence.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>{XY{0, 5}, XY{1, 6}},
+                                            std::pair<XY, XY>{XY{1, 6}, XY{2, 7}}));
+
+  // Check dbegin() iteration with offset
+  coords_vec.clear();
+  sequence = sequence.Slice(1, 2);
+  x = sequence.dbegin(0);
+  y = sequence.dbegin(1);
+  for (uint32_t i = 0; i < sequence.size(); i++) {
+    coords_vec.push_back(XY{*x, *y});
+    ++x;
+    ++y;
+  }
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{1, 6}, XY{2, 7}));
+}
+
+TEST(GeoArrowHppTest, IterateCoordsInterleaved) {
+  std::vector<double> coords{0, 5, 1, 6, 2, 7};
+  CoordSequence<XY> sequence;
+  sequence.InitInterleaved(3, coords.data());
+
+  std::vector<XY> coords_vec;
+  for (const auto& coord : sequence) {
+    coords_vec.push_back(coord);
+  }
+
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check dbegin() iteration
+  coords_vec.clear();
+  auto x = sequence.dbegin(0);
+  auto y = sequence.dbegin(1);
+  for (uint32_t i = 0; i < sequence.size(); i++) {
+    coords_vec.push_back(XY{*x, *y});
+    ++x;
+    ++y;
+  }
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check vertex visiting
+  coords_vec.clear();
+  sequence.VisitVertices<XY>([&](XY vertex) { coords_vec.push_back(vertex); });
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check edge visiting
+  std::vector<std::pair<XY, XY>> edges;
+  sequence.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>{XY{0, 5}, XY{1, 6}},
+                                            std::pair<XY, XY>{XY{1, 6}, XY{2, 7}}));
+
+  // Check dbegin() iteration with offset
+  coords_vec.clear();
+  sequence = sequence.Slice(1, 2);
+  x = sequence.dbegin(0);
+  y = sequence.dbegin(1);
+  for (uint32_t i = 0; i < sequence.size(); i++) {
+    coords_vec.push_back(XY{*x, *y});
+    ++x;
+    ++y;
+  }
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{1, 6}, XY{2, 7}));
+}
+
+TEST(GeoArrowHppTest, IterateUnalignedCoords) {
+  TestCoords coords{{0, 1, 2}, {5, 6, 7}};
+
+  UnalignedCoordSequence<XY> sequence;
+  sequence.InitSeparated(3, {coords.storage()[0].data(), coords.storage()[1].data()});
 
   ASSERT_EQ(sequence.size(), 3);
   XY last_coord{2, 7};
@@ -209,6 +356,17 @@ TEST(GeoArrowHppTest, IterateCoords) {
   }
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
 
+  // Check vertex visiting
+  coords_vec.clear();
+  sequence.VisitVertices<XY>([&](XY vertex) { coords_vec.push_back(vertex); });
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check edge visiting
+  std::vector<std::pair<XY, XY>> edges;
+  sequence.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>{XY{0, 5}, XY{1, 6}},
+                                            std::pair<XY, XY>{XY{1, 6}, XY{2, 7}}));
+
   // Check dbegin() iteration with offset
   coords_vec.clear();
   sequence = sequence.Slice(1, 2);
@@ -222,13 +380,10 @@ TEST(GeoArrowHppTest, IterateCoords) {
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{1, 6}, XY{2, 7}));
 }
 
-TEST(GeoArrowHppTest, IterateCoordsInterleaved) {
+TEST(GeoArrowHppTest, IterateUnalignedCoordsInterleaved) {
   std::vector<double> coords{0, 5, 1, 6, 2, 7};
-  CoordSequence<XY> sequence;
-  sequence.length = 3;
-  sequence.offset = 0;
-  sequence.stride = 2;
-  sequence.values = {coords.data(), coords.data() + 1};
+  UnalignedCoordSequence<XY> sequence;
+  sequence.InitInterleaved(3, coords.data());
 
   std::vector<XY> coords_vec;
   for (const auto& coord : sequence) {
@@ -247,6 +402,17 @@ TEST(GeoArrowHppTest, IterateCoordsInterleaved) {
     ++y;
   }
   EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check vertex visiting
+  coords_vec.clear();
+  sequence.VisitVertices<XY>([&](XY vertex) { coords_vec.push_back(vertex); });
+  EXPECT_THAT(coords_vec, ::testing::ElementsAre(XY{0, 5}, XY{1, 6}, XY{2, 7}));
+
+  // Check edge visiting
+  std::vector<std::pair<XY, XY>> edges;
+  sequence.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>{XY{0, 5}, XY{1, 6}},
+                                            std::pair<XY, XY>{XY{1, 6}, XY{2, 7}}));
 
   // Check dbegin() iteration with offset
   coords_vec.clear();
@@ -269,7 +435,7 @@ TEST(GeoArrowHppTest, IterateNestedCoords) {
   sequences.offset = 0;
   sequences.length = 2;
   sequences.offsets = offsets.data();
-  geoarrow::array_util::internal::InitFromCoordView(&sequences.child, coords.view());
+  sequences.child.InitFrom(coords.view());
 
   std::vector<std::vector<XY>> elements;
   for (const auto& sequence : sequences) {
@@ -286,14 +452,10 @@ TEST(GeoArrowHppTest, IterateNestedCoords) {
 }
 
 TEST(GeoArrowHppTest, CoordTraits) {
-  EXPECT_EQ(geoarrow::array_util::PointArray<geoarrow::array_util::XY>::dimensions,
-            GEOARROW_DIMENSIONS_XY);
-  EXPECT_EQ(geoarrow::array_util::PointArray<geoarrow::array_util::XYZ>::dimensions,
-            GEOARROW_DIMENSIONS_XYZ);
-  EXPECT_EQ(geoarrow::array_util::PointArray<geoarrow::array_util::XYM>::dimensions,
-            GEOARROW_DIMENSIONS_XYM);
-  EXPECT_EQ(geoarrow::array_util::PointArray<geoarrow::array_util::XYZM>::dimensions,
-            GEOARROW_DIMENSIONS_XYZM);
+  EXPECT_EQ(geoarrow::array_util::PointArray<XY>::dimensions, GEOARROW_DIMENSIONS_XY);
+  EXPECT_EQ(geoarrow::array_util::PointArray<XYZ>::dimensions, GEOARROW_DIMENSIONS_XYZ);
+  EXPECT_EQ(geoarrow::array_util::PointArray<XYM>::dimensions, GEOARROW_DIMENSIONS_XYM);
+  EXPECT_EQ(geoarrow::array_util::PointArray<XYZM>::dimensions, GEOARROW_DIMENSIONS_XYZM);
 }
 
 TEST(GeoArrowHppTest, ArrayNullness) {
@@ -360,7 +522,6 @@ TEST(GeoArrowHppTest, SetArrayBox) {
   geoarrow::array_util::BoxArray<XY> native_array;
   ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
 
-  using geoarrow::array_util::BoxXY;
   std::vector<BoxXY> boxes;
   for (const auto& coord : native_array.value) {
     boxes.push_back(coord);
@@ -414,6 +575,17 @@ TEST(GeoArrowHppTest, SetArrayPoint) {
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
 
+    // Visitors
+    points.clear();
+    native_array.VisitVertices<XY>([&](XY v) { points.push_back(v); });
+    EXPECT_THAT(points, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
+
+    std::vector<std::pair<XY, XY>> edges;
+    native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+    EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {0, 1}),
+                                              std::pair<XY, XY>({2, 3}, {2, 3}),
+                                              std::pair<XY, XY>({4, 5}, {4, 5})));
+
     auto sliced_coords = native_array.Slice(1, 1).Coords();
     EXPECT_THAT(sliced_coords, ::testing::ElementsAre(XY{2, 3}));
 
@@ -422,6 +594,35 @@ TEST(GeoArrowHppTest, SetArrayPoint) {
     std::vector<double> sliced_y(sliced_coords.dbegin(1), sliced_coords.dend(1));
     EXPECT_THAT(sliced_y, ::testing::ElementsAre(3));
   }
+}
+
+TEST(GeoArrowHppTest, SetArrayNullablePoint) {
+  geoarrow::ArrayWriter writer(GEOARROW_TYPE_POINT);
+  WKXTester tester;
+  tester.ReadWKT("POINT (0 1)", writer.visitor());
+  tester.ReadNulls(1, writer.visitor());
+  tester.ReadWKT("POINT (2 3)", writer.visitor());
+  tester.ReadWKT("POINT (4 5)", writer.visitor());
+
+  struct ArrowArray array;
+  writer.Finish(&array);
+
+  geoarrow::ArrayReader reader(GEOARROW_TYPE_POINT);
+  reader.SetArray(&array);
+
+  geoarrow::array_util::PointArray<XY> native_array;
+  ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
+
+  // Visitors
+  std::vector<XY> points;
+  native_array.VisitVertices<XY>([&](XY v) { points.push_back(v); });
+  EXPECT_THAT(points, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
+
+  std::vector<std::pair<XY, XY>> edges;
+  native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {0, 1}),
+                                            std::pair<XY, XY>({2, 3}, {2, 3}),
+                                            std::pair<XY, XY>({4, 5}, {4, 5})));
 }
 
 TEST(GeoArrowHppTest, SetArrayLinestring) {
@@ -463,6 +664,116 @@ TEST(GeoArrowHppTest, SetArrayLinestring) {
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
                                        XY{10, 11}, XY{12, 13}));
+
+    // Visitors
+    std::vector<XY> coords;
+    native_array.VisitVertices<XY>([&](XY v) { coords.push_back(v); });
+    EXPECT_THAT(coords, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7},
+                                               XY{8, 9}, XY{10, 11}, XY{12, 13}));
+
+    std::vector<std::pair<XY, XY>> edges;
+    native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+    EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {2, 3}),
+                                              std::pair<XY, XY>({4, 5}, {6, 7}),
+                                              std::pair<XY, XY>({8, 9}, {10, 11}),
+                                              std::pair<XY, XY>({10, 11}, {12, 13})));
+
+    auto sliced_coords = native_array.Slice(1, 1).Coords();
+    EXPECT_THAT(sliced_coords, ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
+
+    std::vector<double> sliced_x(sliced_coords.dbegin(0), sliced_coords.dend(0));
+    EXPECT_THAT(sliced_x, ::testing::ElementsAre(4, 6));
+    std::vector<double> sliced_y(sliced_coords.dbegin(1), sliced_coords.dend(1));
+    EXPECT_THAT(sliced_y, ::testing::ElementsAre(5, 7));
+  }
+}
+
+TEST(GeoArrowHppTest, SetArrayNullableLinestring) {
+  geoarrow::ArrayWriter writer(GEOARROW_TYPE_LINESTRING);
+  WKXTester tester;
+  tester.ReadWKT("LINESTRING (0 1, 2 3)", writer.visitor());
+  tester.ReadNulls(1, writer.visitor());
+  tester.ReadWKT("LINESTRING (4 5, 6 7)", writer.visitor());
+  tester.ReadWKT("LINESTRING (8 9, 10 11, 12 13)", writer.visitor());
+
+  struct ArrowArray array;
+  writer.Finish(&array);
+
+  geoarrow::ArrayReader reader(GEOARROW_TYPE_LINESTRING);
+  reader.SetArray(&array);
+
+  geoarrow::array_util::LinestringArray<XY> native_array;
+  ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
+
+  // Visitors
+  std::vector<XY> points;
+  native_array.VisitVertices<XY>([&](XY v) { points.push_back(v); });
+  EXPECT_THAT(points, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7},
+                                             XY{8, 9}, XY{10, 11}, XY{12, 13}));
+
+  std::vector<std::pair<XY, XY>> edges;
+  native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {2, 3}),
+                                            std::pair<XY, XY>({4, 5}, {6, 7}),
+                                            std::pair<XY, XY>({8, 9}, {10, 11}),
+                                            std::pair<XY, XY>({10, 11}, {12, 13})));
+}
+
+TEST(GeoArrowHppTest, SetArrayMultipoint) {
+  for (const auto type :
+       {GEOARROW_TYPE_MULTIPOINT, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT,
+        GEOARROW_TYPE_MULTIPOINT_Z, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_Z,
+        GEOARROW_TYPE_MULTIPOINT_M, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_M,
+        GEOARROW_TYPE_MULTIPOINT_ZM, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZM}) {
+    SCOPED_TRACE(geoarrow::GeometryDataType::Make(type).ToString());
+    geoarrow::ArrayWriter writer(type);
+    WKXTester tester;
+    tester.ReadWKT("MULTIPOINT (0 1, 2 3)", writer.visitor());
+    tester.ReadWKT("MULTIPOINT (4 5, 6 7)", writer.visitor());
+    tester.ReadWKT("MULTIPOINT (8 9, 10 11, 12 13)", writer.visitor());
+
+    struct ArrowArray array;
+    writer.Finish(&array);
+
+    geoarrow::ArrayReader reader(type);
+    reader.SetArray(&array);
+
+    geoarrow::array_util::MultipointArray<XY> native_array;
+    ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
+
+    std::vector<std::vector<XY>> multipoints;
+    for (const auto& multipoint : native_array.value) {
+      std::vector<XY> coords;
+      for (const auto& coord : multipoint) {
+        coords.push_back(coord);
+      }
+      multipoints.push_back(std::move(coords));
+    }
+
+    EXPECT_THAT(multipoints, ::testing::ElementsAre(
+                                 std::vector<XY>{XY{0, 1}, XY{2, 3}},
+                                 std::vector<XY>{XY{4, 5}, XY{6, 7}},
+                                 std::vector<XY>{XY{8, 9}, XY{10, 11}, XY{12, 13}}));
+
+    EXPECT_THAT(native_array.Coords(),
+                ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
+                                       XY{10, 11}, XY{12, 13}));
+
+    // Visitors
+    std::vector<XY> coords;
+    native_array.VisitVertices<XY>([&](XY v) { coords.push_back(v); });
+    EXPECT_THAT(coords, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7},
+                                               XY{8, 9}, XY{10, 11}, XY{12, 13}));
+
+    std::vector<std::pair<XY, XY>> edges;
+    native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+    EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {0, 1}),
+                                              std::pair<XY, XY>({2, 3}, {2, 3}),
+                                              std::pair<XY, XY>({4, 5}, {4, 5}),
+                                              std::pair<XY, XY>({6, 7}, {6, 7}),
+                                              std::pair<XY, XY>({8, 9}, {8, 9}),
+                                              std::pair<XY, XY>({10, 11}, {10, 11}),
+                                              std::pair<XY, XY>({12, 13}, {12, 13})));
 
     auto sliced_coords = native_array.Slice(1, 1).Coords();
     EXPECT_THAT(sliced_coords, ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
@@ -520,6 +831,21 @@ TEST(GeoArrowHppTest, SetArrayMultiLinestring) {
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
                                        XY{10, 11}, XY{12, 13}, XY{15, 16}, XY{17, 18}));
+
+    // Visitors
+    std::vector<XY> coords;
+    native_array.VisitVertices<XY>([&](XY v) { coords.push_back(v); });
+    EXPECT_THAT(coords,
+                ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
+                                       XY{10, 11}, XY{12, 13}, XY{15, 16}, XY{17, 18}));
+
+    std::vector<std::pair<XY, XY>> edges;
+    native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+    EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {2, 3}),
+                                              std::pair<XY, XY>({4, 5}, {6, 7}),
+                                              std::pair<XY, XY>({8, 9}, {10, 11}),
+                                              std::pair<XY, XY>({10, 11}, {12, 13}),
+                                              std::pair<XY, XY>({15, 16}, {17, 18})));
 
     auto sliced_coords = native_array.Slice(1, 1).Coords();
     EXPECT_THAT(native_array.Slice(1, 1).Coords(),
@@ -580,6 +906,21 @@ TEST(GeoArrowHppTest, SetArrayMultiPolygon) {
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
                                        XY{10, 11}, XY{12, 13}, XY{15, 16}, XY{17, 18}));
+
+    // Visitors
+    std::vector<XY> coords;
+    native_array.VisitVertices<XY>([&](XY v) { coords.push_back(v); });
+    EXPECT_THAT(coords,
+                ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
+                                       XY{10, 11}, XY{12, 13}, XY{15, 16}, XY{17, 18}));
+
+    std::vector<std::pair<XY, XY>> edges;
+    native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+    EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {2, 3}),
+                                              std::pair<XY, XY>({4, 5}, {6, 7}),
+                                              std::pair<XY, XY>({8, 9}, {10, 11}),
+                                              std::pair<XY, XY>({10, 11}, {12, 13}),
+                                              std::pair<XY, XY>({15, 16}, {17, 18})));
 
     auto sliced_coords = native_array.Slice(1, 1).Coords();
     EXPECT_THAT(sliced_coords, ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
