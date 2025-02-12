@@ -122,22 +122,26 @@ TEST(GeoArrowHppTest, ParseSwappedEndian) {
   WKBParser parser;
   WKBGeometry geometry;
 
-  std::basic_string<uint8_t> point_be({0x00, 0x00, 0x00, 0x00, 0x01, 0x40, 0x3e,
-                                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40,
-                                       0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+  std::basic_string<uint8_t> linestring_be(
+      {0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, 0x40, 0x3e, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x40, 0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x34, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
 
-  uint32_t n_points = 0;
-  ASSERT_EQ(parser.Parse(point_be.data(), point_be.size(), &geometry), WKBParser::OK);
+  ASSERT_EQ(parser.Parse(linestring_be.data(), linestring_be.size(), &geometry),
+            WKBParser::OK);
   EXPECT_EQ(geometry.dimensions, GEOARROW_DIMENSIONS_XY);
   EXPECT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
   EXPECT_EQ(geometry.srid, WKBGeometry::kSridUnset);
   EXPECT_EQ(geometry.NumSequences(), 1);
   EXPECT_EQ(geometry.Sequence(0).endianness, 0x00);
-  geometry.VisitVertices<XY>([&](XY v) {
-    EXPECT_EQ(v, (XY{30, 10}));
-    ++n_points;
-  });
-  EXPECT_EQ(n_points, 1);
+
+  std::vector<XY> vertices;
+  geometry.VisitVertices<XY>([&](XY v) { vertices.push_back(v); });
+  EXPECT_THAT(vertices, ::testing::ElementsAre(XY{30, 10}, XY{20, 40}));
+
+  std::vector<std::pair<XY, XY>> edges;
+  geometry.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({30, 10}, {20, 40})));
 }
 
 TEST(GeoArrowHppTest, ParseEWKB) {
