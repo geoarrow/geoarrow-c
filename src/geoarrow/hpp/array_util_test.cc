@@ -688,6 +688,37 @@ TEST(GeoArrowHppTest, SetArrayLinestring) {
   }
 }
 
+TEST(GeoArrowHppTest, SetArrayNullableLinestring) {
+  geoarrow::ArrayWriter writer(GEOARROW_TYPE_LINESTRING);
+  WKXTester tester;
+  tester.ReadWKT("LINESTRING (0 1, 2 3)", writer.visitor());
+  tester.ReadNulls(1, writer.visitor());
+  tester.ReadWKT("LINESTRING (4 5, 6 7)", writer.visitor());
+  tester.ReadWKT("LINESTRING (8 9, 10 11, 12 13)", writer.visitor());
+
+  struct ArrowArray array;
+  writer.Finish(&array);
+
+  geoarrow::ArrayReader reader(GEOARROW_TYPE_LINESTRING);
+  reader.SetArray(&array);
+
+  geoarrow::array_util::LinestringArray<XY> native_array;
+  ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
+
+  // Visitors
+  std::vector<XY> points;
+  native_array.VisitVertices<XY>([&](XY v) { points.push_back(v); });
+  EXPECT_THAT(points, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7},
+                                             XY{8, 9}, XY{10, 11}, XY{12, 13}));
+
+  std::vector<std::pair<XY, XY>> edges;
+  native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {2, 3}),
+                                            std::pair<XY, XY>({4, 5}, {6, 7}),
+                                            std::pair<XY, XY>({8, 9}, {10, 11}),
+                                            std::pair<XY, XY>({10, 11}, {12, 13})));
+}
+
 TEST(GeoArrowHppTest, SetArrayMultipoint) {
   for (const auto type :
        {GEOARROW_TYPE_MULTIPOINT, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT,
