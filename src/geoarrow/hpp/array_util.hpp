@@ -849,6 +849,7 @@ struct ListSequence {
     return GEOARROW_OK;
   }
 
+  /// \brief Slice the child based on this sequence's offset/length
   T ValidChildElements() const {
     if (length == 0) {
       return child.Slice(0, 0);
@@ -870,6 +871,10 @@ struct ListSequence {
     child_p->length = offsets[offset + i + 1] - child_offset;
   }
 
+  /// \brief Return a new coordinate sequence that is a subset of this one
+  ///
+  /// Caller is responsible for ensuring that offset + length is within the bounds
+  /// of this function.
   ListSequence<T> Slice(uint32_t offset, uint32_t length) const {
     ListSequence<T> out = *this;
     out.offset += offset;
@@ -877,15 +882,17 @@ struct ListSequence {
     return out;
   }
 
+  /// \brief Call func once for each vertex in the child sequence
   template <typename CoordDst, typename Func>
   void VisitVertices(Func&& func) const {
-    for (const auto& item : *this) {
-      item.template VisitVertices<CoordDst>(func);
-    }
+    // Vertices can always just use the child array
+    ValidChildElements().template VisitVertices<CoordDst>(func);
   }
 
+  /// \brief Call func once for each edge in each child sequence
   template <typename CoordDst, typename Func>
   void VisitEdges(Func&& func) const {
+    // Edges need to treat each child element separately
     for (const auto& item : *this) {
       item.template VisitEdges<CoordDst>(func);
     }
@@ -1061,25 +1068,12 @@ struct PointArray : public Array<CoordSequence<Coord>> {
     return this->template SliceImpl<PointArray>(*this, offset, length);
   }
 
+  /// \brief Call func once for each edge in this array (excluding null elements)
+  ///
+  /// For the purposes of this function, points are considered degenerate edges.
   template <typename CoordDst, typename Func>
   void VisitEdges(Func&& func) const {
-    if (this->validity) {
-      // TODO: optimize the nullable case
-      auto it = this->value.begin();
-      uint32_t i = 0;
-      while (it != this->value.end()) {
-        if (this->is_valid(i)) {
-          const auto& item = *it;
-          item.template VisitEdges<CoordDst>(func);
-        }
-        ++i;
-        ++it;
-      }
-    } else {
-      for (const auto item : this->Coords()) {
-        func(item, item);
-      }
-    }
+    this->template VisitVertices<CoordDst>([&](Coord coord) { func(coord, coord); });
   }
 };
 
@@ -1176,7 +1170,7 @@ struct PolygonArray : public Array<ListSequence<ListSequence<CoordSequence<Coord
 
 /// \brief An Array of multipoints
 template <typename Coord>
-struct MultipointArray : public Array<CoordSequence<Coord>> {
+struct MultipointArray : public Array<ListSequence<CoordSequence<Coord>>> {
   static constexpr enum GeoArrowGeometryType geometry_type =
       GEOARROW_GEOMETRY_TYPE_MULTIPOINT;
   static constexpr enum GeoArrowDimensions dimensions = Coord::dimensions;
@@ -1194,6 +1188,14 @@ struct MultipointArray : public Array<CoordSequence<Coord>> {
   /// of this array.
   MultipointArray Slice(uint32_t offset, uint32_t length) {
     return this->template SliceImpl<MultipointArray>(*this, offset, length);
+  }
+
+  /// \brief Call func once for each edge in this array (excluding null elements)
+  ///
+  /// For the purposes of this function, points are considered degenerate edges.
+  template <typename CoordDst, typename Func>
+  void VisitEdges(Func&& func) const {
+    this->template VisitVertices<CoordDst>([&](Coord coord) { func(coord, coord); });
   }
 };
 

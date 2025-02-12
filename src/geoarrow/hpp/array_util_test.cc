@@ -578,8 +578,7 @@ TEST(GeoArrowHppTest, SetArrayPoint) {
     // Visitors
     points.clear();
     native_array.VisitVertices<XY>([&](XY v) { points.push_back(v); });
-    EXPECT_THAT(native_array.Coords(),
-                ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
+    EXPECT_THAT(points, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
 
     std::vector<std::pair<XY, XY>> edges;
     native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
@@ -637,12 +636,84 @@ TEST(GeoArrowHppTest, SetArrayLinestring) {
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
                                        XY{10, 11}, XY{12, 13}));
 
+    // Visitors
+    std::vector<XY> coords;
+    native_array.VisitVertices<XY>([&](XY v) { coords.push_back(v); });
+    EXPECT_THAT(coords, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7},
+                                               XY{8, 9}, XY{10, 11}, XY{12, 13}));
+
     std::vector<std::pair<XY, XY>> edges;
     native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
     EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {2, 3}),
                                               std::pair<XY, XY>({4, 5}, {6, 7}),
                                               std::pair<XY, XY>({8, 9}, {10, 11}),
                                               std::pair<XY, XY>({10, 11}, {12, 13})));
+
+    auto sliced_coords = native_array.Slice(1, 1).Coords();
+    EXPECT_THAT(sliced_coords, ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
+
+    std::vector<double> sliced_x(sliced_coords.dbegin(0), sliced_coords.dend(0));
+    EXPECT_THAT(sliced_x, ::testing::ElementsAre(4, 6));
+    std::vector<double> sliced_y(sliced_coords.dbegin(1), sliced_coords.dend(1));
+    EXPECT_THAT(sliced_y, ::testing::ElementsAre(5, 7));
+  }
+}
+
+TEST(GeoArrowHppTest, SetArrayMultipoint) {
+  for (const auto type :
+       {GEOARROW_TYPE_MULTIPOINT, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT,
+        GEOARROW_TYPE_MULTIPOINT_Z, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_Z,
+        GEOARROW_TYPE_MULTIPOINT_M, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_M,
+        GEOARROW_TYPE_MULTIPOINT_ZM, GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZM}) {
+    SCOPED_TRACE(geoarrow::GeometryDataType::Make(type).ToString());
+    geoarrow::ArrayWriter writer(type);
+    WKXTester tester;
+    tester.ReadWKT("MULTIPOINT (0 1, 2 3)", writer.visitor());
+    tester.ReadWKT("MULTIPOINT (4 5, 6 7)", writer.visitor());
+    tester.ReadWKT("MULTIPOINT (8 9, 10 11, 12 13)", writer.visitor());
+
+    struct ArrowArray array;
+    writer.Finish(&array);
+
+    geoarrow::ArrayReader reader(type);
+    reader.SetArray(&array);
+
+    geoarrow::array_util::MultipointArray<XY> native_array;
+    ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
+
+    std::vector<std::vector<XY>> multipoints;
+    for (const auto& multipoint : native_array.value) {
+      std::vector<XY> coords;
+      for (const auto& coord : multipoint) {
+        coords.push_back(coord);
+      }
+      multipoints.push_back(std::move(coords));
+    }
+
+    EXPECT_THAT(multipoints, ::testing::ElementsAre(
+                                 std::vector<XY>{XY{0, 1}, XY{2, 3}},
+                                 std::vector<XY>{XY{4, 5}, XY{6, 7}},
+                                 std::vector<XY>{XY{8, 9}, XY{10, 11}, XY{12, 13}}));
+
+    EXPECT_THAT(native_array.Coords(),
+                ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
+                                       XY{10, 11}, XY{12, 13}));
+
+    // Visitors
+    std::vector<XY> coords;
+    native_array.VisitVertices<XY>([&](XY v) { coords.push_back(v); });
+    EXPECT_THAT(coords, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7},
+                                               XY{8, 9}, XY{10, 11}, XY{12, 13}));
+
+    std::vector<std::pair<XY, XY>> edges;
+    native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+    EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {0, 1}),
+                                              std::pair<XY, XY>({2, 3}, {2, 3}),
+                                              std::pair<XY, XY>({4, 5}, {4, 5}),
+                                              std::pair<XY, XY>({6, 7}, {6, 7}),
+                                              std::pair<XY, XY>({8, 9}, {8, 9}),
+                                              std::pair<XY, XY>({10, 11}, {10, 11}),
+                                              std::pair<XY, XY>({12, 13}, {12, 13})));
 
     auto sliced_coords = native_array.Slice(1, 1).Coords();
     EXPECT_THAT(sliced_coords, ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
@@ -700,6 +771,21 @@ TEST(GeoArrowHppTest, SetArrayMultiLinestring) {
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
                                        XY{10, 11}, XY{12, 13}, XY{15, 16}, XY{17, 18}));
+
+    // Visitors
+    std::vector<XY> coords;
+    native_array.VisitVertices<XY>([&](XY v) { coords.push_back(v); });
+    EXPECT_THAT(coords,
+                ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
+                                       XY{10, 11}, XY{12, 13}, XY{15, 16}, XY{17, 18}));
+
+    std::vector<std::pair<XY, XY>> edges;
+    native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+    EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {2, 3}),
+                                              std::pair<XY, XY>({4, 5}, {6, 7}),
+                                              std::pair<XY, XY>({8, 9}, {10, 11}),
+                                              std::pair<XY, XY>({10, 11}, {12, 13}),
+                                              std::pair<XY, XY>({15, 16}, {17, 18})));
 
     auto sliced_coords = native_array.Slice(1, 1).Coords();
     EXPECT_THAT(native_array.Slice(1, 1).Coords(),
@@ -760,6 +846,21 @@ TEST(GeoArrowHppTest, SetArrayMultiPolygon) {
     EXPECT_THAT(native_array.Coords(),
                 ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
                                        XY{10, 11}, XY{12, 13}, XY{15, 16}, XY{17, 18}));
+
+    // Visitors
+    std::vector<XY> coords;
+    native_array.VisitVertices<XY>([&](XY v) { coords.push_back(v); });
+    EXPECT_THAT(coords,
+                ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7}, XY{8, 9},
+                                       XY{10, 11}, XY{12, 13}, XY{15, 16}, XY{17, 18}));
+
+    std::vector<std::pair<XY, XY>> edges;
+    native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+    EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {2, 3}),
+                                              std::pair<XY, XY>({4, 5}, {6, 7}),
+                                              std::pair<XY, XY>({8, 9}, {10, 11}),
+                                              std::pair<XY, XY>({10, 11}, {12, 13}),
+                                              std::pair<XY, XY>({15, 16}, {17, 18})));
 
     auto sliced_coords = native_array.Slice(1, 1).Coords();
     EXPECT_THAT(sliced_coords, ::testing::ElementsAre(XY{4, 5}, XY{6, 7}));
