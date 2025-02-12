@@ -1,8 +1,8 @@
 
 #pragma once
 
-#include <sstream>
 #include <exception>
+#include <sstream>
 #include <vector>
 
 #include <geoarrow.h>
