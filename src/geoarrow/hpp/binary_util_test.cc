@@ -118,6 +118,28 @@ TEST(GeoArrowHppTest, ValidWKBArray) {
                                             std::pair<XY, XY>({10, 11}, {10, 11})));
 }
 
+TEST(GeoArrowHppTest, ParseSwappedEndian) {
+  WKBParser parser;
+  WKBGeometry geometry;
+
+  std::basic_string<uint8_t> point_be({0x00, 0x00, 0x00, 0x00, 0x01, 0x40, 0x3e,
+                                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40,
+                                       0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+
+  uint32_t n_points = 0;
+  ASSERT_EQ(parser.Parse(point_be.data(), point_be.size(), &geometry), WKBParser::OK);
+  EXPECT_EQ(geometry.dimensions, GEOARROW_DIMENSIONS_XY);
+  EXPECT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
+  EXPECT_EQ(geometry.srid, WKBGeometry::kSridUnset);
+  EXPECT_EQ(geometry.NumSequences(), 1);
+  EXPECT_EQ(geometry.Sequence(0).endianness, 0x00);
+  geometry.VisitVertices<XY>([&](XY v) {
+    EXPECT_EQ(v, (XY{30, 10}));
+    ++n_points;
+  });
+  EXPECT_EQ(n_points, 1);
+}
+
 TEST(GeoArrowHppTest, ParseEWKB) {
   std::basic_string<uint8_t> point_z({0x01, 0x01, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
                                       0x00, 0x00, 0x00, 0x3e, 0x40, 0x00, 0x00, 0x00,

@@ -186,7 +186,7 @@ struct LoadSwapped {
   T operator()(const uint8_t* unaligned) const {
     uint8_t swapped[sizeof(T)];
     for (uint32_t i = 0; i < sizeof(T); i++) {
-      swapped[sizeof(T) - i - 1] = unaligned[0];
+      swapped[sizeof(T) - i - 1] = unaligned[i];
     }
     return internal::SafeLoadAs<T>(swapped);
   };
@@ -739,8 +739,7 @@ struct UnalignedCoordSequence {
   Coord coord(uint32_t i) const {
     Coord out;
     for (size_t j = 0; j < out.size(); j++) {
-      out[j] =
-          internal::SafeLoadAs<ordinate_type>(values[j] + ((offset + i) * stride_bytes));
+      out[j] = load_(values[j] + ((offset + i) * stride_bytes));
     }
     return out;
   }
@@ -808,6 +807,9 @@ struct UnalignedCoordSequence {
     return dimension_iterator(values[j] + ((offset + length) * stride_bytes),
                               stride_bytes);
   }
+
+ private:
+  static constexpr Load load_;
 };
 
 /// \brief View of a sequence of lists
