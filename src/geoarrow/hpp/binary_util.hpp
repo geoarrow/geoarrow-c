@@ -278,14 +278,22 @@ class WKBParser {
 
   Status Parse(const uint8_t* data, uint32_t size, WKBGeometry* out,
                const uint8_t** cursor = nullptr) {
-    cursor_ = data;
+    data_ = cursor_ = data;
     remaining_ = size;
     out->Reset();
     Status status = ParseGeometry(out);
+    if (status != OK) {
+      return status;
+    }
+
+    if (static_cast<uint32_t>(cursor_ - data_) < size) {
+      return TOO_MANY_BYTES;
+    }
+
     if (cursor != nullptr) {
       *cursor = cursor_;
     }
-    return status;
+    return OK;
   }
 
   std::string ErrorToString(Status status) {
@@ -306,6 +314,7 @@ class WKBParser {
   }
 
  private:
+  const uint8_t* data_{};
   const uint8_t* cursor_{};
   uint32_t remaining_{};
   uint8_t last_endian_;
@@ -392,7 +401,14 @@ class WKBParser {
   }
 
   Status ParsePoint(WKBGeometry* out) {
-    cursor_ += NewSequenceAtCursor(out, 1);
+    uint32_t bytes_required = 1 * last_coord_stride_ * sizeof(double);
+    Status status = CheckRemaining(bytes_required);
+    if (status != OK) {
+      return status;
+    }
+
+    NewSequenceAtCursor(out, 1);
+    Advance(bytes_required);
     return OK;
   }
 
@@ -403,12 +419,14 @@ class WKBParser {
     }
 
     uint32_t size = ReadUInt32Unchecked();
-    status = CheckRemaining(sizeof(double) * size * last_coord_stride_);
+    uint32_t bytes_required = sizeof(double) * size * last_coord_stride_;
+    status = CheckRemaining(bytes_required);
     if (status != OK) {
       return status;
     }
 
-    cursor_ += NewSequenceAtCursor(out, size);
+    NewSequenceAtCursor(out, size);
+    Advance(bytes_required);
     return OK;
   }
 
@@ -469,7 +487,7 @@ class WKBParser {
     switch (last_endian_) {
       case internal::kLittleEndian:
       case internal::kBigEndian:
-        ++cursor_;
+        Advance(sizeof(uint8_t));
         return OK;
       default:
         return INVALID_ENDIAN;
@@ -484,8 +502,13 @@ class WKBParser {
       load_uint32_be_(cursor_);
     }
 
-    cursor_ += sizeof(uint32_t);
+    Advance(sizeof(uint32_t));
     return out;
+  }
+
+  void Advance(uint32_t bytes) {
+    cursor_ += bytes;
+    remaining_ -= bytes;
   }
 };
 
