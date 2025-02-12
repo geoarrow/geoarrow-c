@@ -24,6 +24,7 @@ TEST(GeoArrowHppTest, ValidWKBArray) {
   tester.ReadWKT("LINESTRING (0 1, 2 3)", writer.visitor());
   tester.ReadWKT("POLYGON ((4 5, 6 7), (8 9, 10 11))", writer.visitor());
   tester.ReadWKT("MULTIPOINT ((8 9), (10 11))", writer.visitor());
+  tester.ReadWKT("MULTILINESTRING ((12 13, 14 15), (16 17, 18 19))", writer.visitor());
 
   struct ArrowArray array_feat;
   writer.Finish(&array_feat);
@@ -46,10 +47,10 @@ TEST(GeoArrowHppTest, ValidWKBArray) {
   EXPECT_EQ(geometry.NumGeometries(), 0);
   EXPECT_EQ(geometry.NumSequences(), 1);
   EXPECT_EQ(geometry.Sequence(0).size, 1);
-  geometry.Sequence(0).VisitVertices<XY>([&](XY val) { coords.push_back(val); });
+  geometry.VisitVertices<XY>([&](XY val) { coords.push_back(val); });
   EXPECT_THAT(coords, ::testing::ElementsAre(XY{0, 1}));
-  geometry.Sequence(0).VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
-  EXPECT_TRUE(edges.empty());
+  geometry.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {0, 1})));
 
   coords.clear();
   edges.clear();
@@ -58,9 +59,9 @@ TEST(GeoArrowHppTest, ValidWKBArray) {
   EXPECT_EQ(geometry.NumGeometries(), 0);
   EXPECT_EQ(geometry.NumSequences(), 1);
   EXPECT_EQ(geometry.Sequence(0).size, 2);
-  geometry.Sequence(0).VisitVertices<XY>([&](XY val) { coords.push_back(val); });
+  geometry.VisitVertices<XY>([&](XY val) { coords.push_back(val); });
   EXPECT_THAT(coords, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}));
-  geometry.Sequence(0).VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  geometry.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
   EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {2, 3})));
 
   coords.clear();
@@ -71,11 +72,9 @@ TEST(GeoArrowHppTest, ValidWKBArray) {
   EXPECT_EQ(geometry.NumSequences(), 2);
   EXPECT_EQ(geometry.Sequence(0).size, 2);
   EXPECT_EQ(geometry.Sequence(1).size, 2);
-  geometry.Sequence(0).VisitVertices<XY>([&](XY val) { coords.push_back(val); });
-  geometry.Sequence(1).VisitVertices<XY>([&](XY val) { coords.push_back(val); });
+  geometry.VisitVertices<XY>([&](XY val) { coords.push_back(val); });
   EXPECT_THAT(coords, ::testing::ElementsAre(XY{4, 5}, XY{6, 7}, XY{8, 9}, XY{10, 11}));
-  geometry.Sequence(0).VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
-  geometry.Sequence(1).VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  geometry.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
   EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({4, 5}, {6, 7}),
                                             std::pair<XY, XY>({8, 9}, {10, 11})));
 
@@ -86,36 +85,49 @@ TEST(GeoArrowHppTest, ValidWKBArray) {
   EXPECT_EQ(geometry.NumGeometries(), 2);
   EXPECT_EQ(geometry.NumSequences(), 0);
   EXPECT_EQ(geometry.Geometry(0).NumSequences(), 1);
+  EXPECT_EQ(geometry.Geometry(0).geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
   EXPECT_EQ(geometry.Geometry(1).NumSequences(), 1);
-  geometry.Geometry(0).Sequence(0).VisitVertices<XY>(
-      [&](XY val) { coords.push_back(val); });
-  geometry.Geometry(1).Sequence(0).VisitVertices<XY>(
-      [&](XY val) { coords.push_back(val); });
+  EXPECT_EQ(geometry.Geometry(1).geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
+  geometry.VisitVertices<XY>([&](XY val) { coords.push_back(val); });
   EXPECT_THAT(coords, ::testing::ElementsAre(XY{8, 9}, XY{10, 11}));
-  geometry.Geometry(0).Sequence(0).VisitEdges<XY>([&](XY v0, XY v1) {
-    edges.push_back({v0, v1});
-  });
-  geometry.Geometry(1).Sequence(0).VisitEdges<XY>([&](XY v0, XY v1) {
-    edges.push_back({v0, v1});
-  });
+  geometry.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({8, 9}, {8, 9}),
+                                            std::pair<XY, XY>({10, 11}, {10, 11})));
 
-  EXPECT_TRUE(edges.empty());
+  coords.clear();
+  edges.clear();
+  ASSERT_EQ(parser.Parse(array.value.blob(4), &geometry), WKBParser::OK);
+  EXPECT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_MULTILINESTRING);
+  EXPECT_EQ(geometry.NumGeometries(), 2);
+  EXPECT_EQ(geometry.NumSequences(), 0);
+  EXPECT_EQ(geometry.Geometry(0).NumSequences(), 1);
+  EXPECT_EQ(geometry.Geometry(0).geometry_type, GEOARROW_GEOMETRY_TYPE_LINESTRING);
+  EXPECT_EQ(geometry.Geometry(1).NumSequences(), 1);
+  EXPECT_EQ(geometry.Geometry(1).geometry_type, GEOARROW_GEOMETRY_TYPE_LINESTRING);
+  geometry.VisitVertices<XY>([&](XY val) { coords.push_back(val); });
+  EXPECT_THAT(coords,
+              ::testing::ElementsAre(XY{12, 13}, XY{14, 15}, XY{16, 17}, XY{18, 19}));
+  geometry.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({12, 13}, {14, 15}),
+                                            std::pair<XY, XY>({16, 17}, {18, 19})));
 
-  // Check the visitors
+  // Check the whole-array visitors
   coords.clear();
   array.VisitVertices<XY>([&](XY v) { coords.push_back(v); });
   EXPECT_THAT(coords,
               ::testing::ElementsAre(XY{0, 1}, XY{0, 1}, XY{2, 3}, XY{4, 5}, XY{6, 7},
-                                     XY{8, 9}, XY{10, 11}, XY{8, 9}, XY{10, 11}));
+                                     XY{8, 9}, XY{10, 11}, XY{8, 9}, XY{10, 11},
+                                     XY{12, 13}, XY{14, 15}, XY{16, 17}, XY{18, 19}));
 
   edges.clear();
   array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
-  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {0, 1}),
-                                            std::pair<XY, XY>({0, 1}, {2, 3}),
-                                            std::pair<XY, XY>({4, 5}, {6, 7}),
-                                            std::pair<XY, XY>({8, 9}, {10, 11}),
-                                            std::pair<XY, XY>({8, 9}, {8, 9}),
-                                            std::pair<XY, XY>({10, 11}, {10, 11})));
+  EXPECT_THAT(
+      edges,
+      ::testing::ElementsAre(
+          std::pair<XY, XY>({0, 1}, {0, 1}), std::pair<XY, XY>({0, 1}, {2, 3}),
+          std::pair<XY, XY>({4, 5}, {6, 7}), std::pair<XY, XY>({8, 9}, {10, 11}),
+          std::pair<XY, XY>({8, 9}, {8, 9}), std::pair<XY, XY>({10, 11}, {10, 11}),
+          std::pair<XY, XY>({12, 13}, {14, 15}), std::pair<XY, XY>({16, 17}, {18, 19})));
 }
 
 TEST(GeoArrowHppTest, ParseSwappedEndian) {
@@ -130,7 +142,7 @@ TEST(GeoArrowHppTest, ParseSwappedEndian) {
   ASSERT_EQ(parser.Parse(linestring_be.data(), linestring_be.size(), &geometry),
             WKBParser::OK);
   EXPECT_EQ(geometry.dimensions, GEOARROW_DIMENSIONS_XY);
-  EXPECT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
+  EXPECT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_LINESTRING);
   EXPECT_EQ(geometry.srid, WKBGeometry::kSridUnset);
   EXPECT_EQ(geometry.NumSequences(), 1);
   EXPECT_EQ(geometry.Sequence(0).endianness, 0x00);

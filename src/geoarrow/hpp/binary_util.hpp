@@ -228,18 +228,17 @@ class WKBGeometry {
   WKBSequence* AppendSequence() {
     ++num_sequences_;
     if (sequences_.size() < num_sequences_) {
-      sequences_.resize(num_sequences_);
+      sequences_.push_back({});
     }
-    return &sequences_.back();
+    return &sequences_[num_sequences_ - 1];
   }
 
   WKBGeometry* AppendGeometry() {
     ++num_geometries_;
     if (geometries_.size() < num_geometries_) {
-      geometries_.resize(num_geometries_);
+      geometries_.push_back({});
     }
-    geometries_.back().Reset();
-    return &geometries_.back();
+    return &geometries_[num_geometries_ - 1];
   }
 
   void Reset() {
@@ -280,7 +279,6 @@ class WKBParser {
                const uint8_t** cursor = nullptr) {
     data_ = cursor_ = data;
     remaining_ = size;
-    out->Reset();
     Status status = ParseGeometry(out);
     if (status != OK) {
       return status;
@@ -329,6 +327,8 @@ class WKBParser {
   static constexpr uint32_t kEWKBMask = 0x00FFFFFF;
 
   Status ParseGeometry(WKBGeometry* out) {
+    out->Reset();
+
     Status status = CheckRemaining(sizeof(uint8_t) + sizeof(uint32_t));
     if (status != OK) {
       return status;
@@ -499,7 +499,7 @@ class WKBParser {
     if (last_endian_ == internal::kLittleEndian) {
       out = load_uint32_le_(cursor_);
     } else {
-      load_uint32_be_(cursor_);
+      out = load_uint32_be_(cursor_);
     }
 
     Advance(sizeof(uint32_t));
