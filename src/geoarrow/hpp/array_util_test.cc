@@ -596,6 +596,35 @@ TEST(GeoArrowHppTest, SetArrayPoint) {
   }
 }
 
+TEST(GeoArrowHppTest, SetArrayNullablePoint) {
+  geoarrow::ArrayWriter writer(GEOARROW_TYPE_POINT);
+  WKXTester tester;
+  tester.ReadWKT("POINT (0 1)", writer.visitor());
+  tester.ReadNulls(1, writer.visitor());
+  tester.ReadWKT("POINT (2 3)", writer.visitor());
+  tester.ReadWKT("POINT (4 5)", writer.visitor());
+
+  struct ArrowArray array;
+  writer.Finish(&array);
+
+  geoarrow::ArrayReader reader(GEOARROW_TYPE_POINT);
+  reader.SetArray(&array);
+
+  geoarrow::array_util::PointArray<XY> native_array;
+  ASSERT_EQ(native_array.Init(reader.View().array_view()), GEOARROW_OK);
+
+  // Visitors
+  std::vector<XY> points;
+  native_array.VisitVertices<XY>([&](XY v) { points.push_back(v); });
+  EXPECT_THAT(points, ::testing::ElementsAre(XY{0, 1}, XY{2, 3}, XY{4, 5}));
+
+  std::vector<std::pair<XY, XY>> edges;
+  native_array.VisitEdges<XY>([&](XY v0, XY v1) { edges.push_back({v0, v1}); });
+  EXPECT_THAT(edges, ::testing::ElementsAre(std::pair<XY, XY>({0, 1}, {0, 1}),
+                                            std::pair<XY, XY>({2, 3}, {2, 3}),
+                                            std::pair<XY, XY>({4, 5}, {4, 5})));
+}
+
 TEST(GeoArrowHppTest, SetArrayLinestring) {
   for (const auto type :
        {GEOARROW_TYPE_LINESTRING, GEOARROW_TYPE_INTERLEAVED_LINESTRING,

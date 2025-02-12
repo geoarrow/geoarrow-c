@@ -545,6 +545,10 @@ struct WKBBlobSequence : public array_util::BinarySequence<Offset> {
 /// \brief An Array of WKB blobs
 template <typename Offset>
 struct WKBArray : public array_util::Array<WKBBlobSequence<Offset>> {
+  static constexpr enum GeoArrowGeometryType geometry_type =
+      GEOARROW_GEOMETRY_TYPE_GEOMETRY;
+  static constexpr enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_UNKNOWN;
+
   /// \brief Return a new array that is a subset of this one
   ///
   /// Caller is responsible for ensuring that offset + length is within the bounds
