@@ -112,13 +112,16 @@ class ListSequenceIterator : public BaseRandomAccessIterator<ListSequence> {
 template <typename BinarySequence>
 class BinarySequenceIterator : public BaseRandomAccessIterator<BinarySequence> {
  public:
+  explicit BinarySequenceIterator(const BinarySequence& outer, uint32_t i)
+      : BaseRandomAccessIterator<BinarySequence>(outer, i) {}
+
   using iterator_category = std::random_access_iterator_tag;
   using difference_type = int64_t;
   using value_type = typename BinarySequence::value_type;
 
-  value_type operator*() { return this->outer_.at(this->i_); }
+  value_type operator*() { return this->outer_.blob(this->i_); }
 
-  value_type operator[](uint32_t i) { return this->outer_.at(this->i_ + i); }
+  value_type operator[](uint32_t i) { return this->outer_.blob(this->i_ + i); }
 };
 
 // Iterator for dimension begin/end
@@ -906,8 +909,7 @@ struct ListSequence {
 /// \brief View of a sequence of blobs
 template <typename Offset>
 struct BinarySequence {
-  /// \brief For the purposes of iteration, the value type is a const reference
-  /// to the child type (stashed in the iterator).
+  /// \brief The value type of this sequence
   using value_type = GeoArrowBufferView;
 
   /// \brief The logical offset into the sequence
@@ -936,13 +938,13 @@ struct BinarySequence {
     return GEOARROW_OK;
   }
 
-  value_type at(uint32_t i) {
+  value_type blob(uint32_t i) const {
     Offset element_begin = offsets[offset + i];
     Offset element_end = offsets[offset + i + 1];
     return {data + element_begin, element_end - element_begin};
   }
 
-  using const_iterator = internal::ListSequenceIterator<BinarySequence>;
+  using const_iterator = internal::BinarySequenceIterator<BinarySequence>;
   const_iterator begin() const { return const_iterator(*this, 0); }
   const_iterator end() const { return const_iterator(*this, length); }
 };
@@ -1248,18 +1250,6 @@ struct MultiPolygonArray
   /// of this array.
   MultiPolygonArray Slice(uint32_t offset, uint32_t length) {
     return this->template SliceImpl<MultiPolygonArray>(*this, offset, length);
-  }
-};
-
-/// \brief An Array of blobs
-template <typename Offset>
-struct BinaryArray : public Array<BinarySequence<Offset>> {
-  /// \brief Return a new array that is a subset of this one
-  ///
-  /// Caller is responsible for ensuring that offset + length is within the bounds
-  /// of this array.
-  BinaryArray Slice(uint32_t offset, uint32_t length) {
-    return this->template SliceImpl<BinaryArray>(*this, offset, length);
   }
 };
 

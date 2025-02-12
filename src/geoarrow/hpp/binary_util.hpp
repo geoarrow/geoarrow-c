@@ -58,12 +58,24 @@ struct WKBSequence {
   uint8_t endianness;
 
   using NativeXYSequence = array_util::UnalignedCoordSequence<array_util::XY<double>>;
+
+  /// \brief For native-endian sequences, return an XY sequence directly
+  ///
+  /// This may be faster or more convenient than using a visitor-based approach
+  /// when only the XY dimensions are needed.
   NativeXYSequence ViewAsNativeXY() {
     NativeXYSequence seq;
     seq.InitInterleaved(size, data, stride);
     return seq;
   }
 
+  /// \brief Call func once for each vertex in this sequence
+  ///
+  /// This function is templated on the desired coordinate output type.
+  /// This allows, for example, iteration along all XYZM dimensions of an
+  /// arbitrary sequence, even if some of those dimensions don't exist
+  /// in the sequence. Similarly, one can iterate over fewer dimensions than
+  /// are strictly in the output (discarding dimensions not of interest).
   template <typename CoordDst, typename Func>
   void VisitVertices(Func&& f) const {
     switch (dimensions) {
@@ -84,6 +96,11 @@ struct WKBSequence {
     }
   }
 
+  /// \brief Call func once for each sequential pair of vertices in this sequence
+  ///
+  /// This function is templated on the desired coordinate output type, performing
+  /// the same coordinate conversion as VisitVertices. Note that sequential vertices
+  /// may not be meaningful as edges for some types of sequences.
   template <typename CoordDst, typename Func>
   void VisitEdges(Func&& f) const {
     switch (dimensions) {
@@ -140,8 +157,6 @@ struct WKBSequence {
   }
 };
 
-class WKBParser;
-
 /// \brief Tokenized WKB Geometry
 ///
 /// The result of parsing a well-known binary blob. Geometries are represented as:
@@ -154,7 +169,12 @@ class WKBParser;
 ///
 /// The motivation for this structure is to ensure that, given a single stack-allocated
 /// WKBGeometry, many well-known binary blobs can be parsed and efficiently reuse the
-/// heap-allocated vectors.
+/// heap-allocated vectors. Because of this, care is taken to private manage the
+/// storage for WKBSequence and child WKBGeometry objects to ensure we don't call any
+/// child deleters when a Reset() is requested and a new geometry is to be parsed.
+///
+/// This class can also be used to represent serialized geometries that are not WKB
+/// but follow the same structure (e.g., gserialized, DuckDB GEOMETRY).
 class WKBGeometry {
  public:
   static constexpr uint32_t kSridUnset = 0xFFFFFFFF;
@@ -171,6 +191,40 @@ class WKBGeometry {
 
   uint32_t NumGeometries() const { return num_geometries_; }
 
+  /// \brief Call func once for each vertex in this geometry
+  template <typename CoordDst, typename Func>
+  void VisitVertices(Func&& func) const {
+    for (uint32_t i = 0; i < NumSequences(); i++) {
+      Sequence(i).VisitVertices<CoordDst>(func);
+    }
+
+    for (uint32_t i = 0; i < NumGeometries(); i++) {
+      Geometry(i).VisitVertices<CoordDst>(func);
+    }
+  }
+
+  /// \brief Call func once for each edge in this geometry
+  ///
+  /// For the purposes of this function, points are considered degenerate edges.
+  template <typename CoordDst, typename Func>
+  void VisitEdges(Func&& func) const {
+    switch (geometry_type) {
+      case GEOARROW_GEOMETRY_TYPE_POINT:
+      case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+        VisitVertices<CoordDst>([&](CoordDst v0) { func(v0, v0); });
+        return;
+      default:
+        for (uint32_t i = 0; i < NumSequences(); i++) {
+          Sequence(i).VisitEdges<CoordDst>(func);
+        }
+    }
+
+    for (uint32_t i = 0; i < NumGeometries(); i++) {
+      Geometry(i).VisitEdges<CoordDst>(func);
+    }
+  }
+
+  /// \brief Append a new sequence to this WKBGeometry and return a pointer to it
   WKBSequence* AppendSequence() {
     ++num_sequences_;
     if (sequences_.size() < num_sequences_) {
@@ -232,6 +286,23 @@ class WKBParser {
       *cursor = cursor_;
     }
     return status;
+  }
+
+  std::string ErrorToString(Status status) {
+    switch (status) {
+      case OK:
+        return "OK";
+      case TOO_FEW_BYTES:
+        return "TOO_FEW_BYTES";
+      case TOO_MANY_BYTES:
+        return "TOO_MANY_BYTES";
+      case INVALID_ENDIAN:
+        return "INVALID_ENDIAN";
+      case INVALID_GEOMETRY_TYPE:
+        return "INVALID_GEOMETRY_TYPE";
+      default:
+        return "UNKNOWN";
+    }
   }
 
  private:
@@ -415,6 +486,71 @@ class WKBParser {
 
     cursor_ += sizeof(uint32_t);
     return out;
+  }
+};
+
+namespace internal {
+
+template <typename WKBSequence>
+class WKBSequenceIterator
+    : public array_util::internal::BaseRandomAccessIterator<WKBSequence> {
+ public:
+  explicit WKBSequenceIterator(const WKBSequence& outer, uint32_t i)
+      : array_util::internal::BaseRandomAccessIterator<WKBSequence>(outer, i) {}
+
+  using iterator_category = std::random_access_iterator_tag;
+  using difference_type = int64_t;
+  using value_type = const WKBGeometry&;
+
+  value_type operator*() {
+    WKBParser::Status status = parser_.Parse(this->outer_.blob(this->i_), &stashed_);
+    if (status != WKBParser::OK) {
+      throw Exception("Failed to parse WKB at index " + std::to_string(this->i_) +
+                      " with error " + parser_.ErrorToString(status));
+    }
+
+    return stashed_;
+  }
+
+ private:
+  WKBGeometry stashed_;
+  WKBParser parser_;
+};
+
+}  // namespace internal
+
+template <typename Offset>
+struct WKBBlobSequence : public array_util::BinarySequence<Offset> {
+  using value_type = const WKBGeometry&;
+
+  template <typename CoordDst, typename Func>
+  void VisitVertices(Func&& func) const {
+    for (const auto& item : *this) {
+      item.template VisitVertices<CoordDst>(func);
+    }
+  }
+
+  template <typename CoordDst, typename Func>
+  void VisitEdges(Func&& func) const {
+    for (const auto& item : *this) {
+      item.template VisitEdges<CoordDst>(func);
+    }
+  }
+
+  using const_iterator = internal::WKBSequenceIterator<WKBBlobSequence>;
+  const_iterator begin() const { return const_iterator(*this, 0); }
+  const_iterator end() const { return const_iterator(*this, this->length); }
+};
+
+/// \brief An Array of WKB blobs
+template <typename Offset>
+struct WKBArray : public array_util::Array<WKBBlobSequence<Offset>> {
+  /// \brief Return a new array that is a subset of this one
+  ///
+  /// Caller is responsible for ensuring that offset + length is within the bounds
+  /// of this array.
+  WKBArray Slice(uint32_t offset, uint32_t length) {
+    return this->template SliceImpl<WKBArray>(*this, offset, length);
   }
 };
 
