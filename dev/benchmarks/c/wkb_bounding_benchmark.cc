@@ -12,6 +12,16 @@
 #include "benchmark_util.hpp"
 #include "geometry_util_internal.hpp"
 
+/// \file wkb_bounding_benchmark.cc
+///
+/// Benchmarks related to calculating bounds. Three situations with an identical
+/// coordinate count are considered:
+///
+/// - A raw (aligned) double array. This should be the fastest/simplest.
+/// - A single linestring (where parsing overhead should be minimal)
+/// - All coordinates as their own WKB points. Here, parsing overhead should
+///   dominate
+
 // Seems to be slightly faster than std::min/std::max
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
