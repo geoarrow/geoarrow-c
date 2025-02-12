@@ -7,6 +7,10 @@
 #include "hpp/array_util.hpp"
 #include "hpp/exception.hpp"
 
+#ifndef GEOARROW_NATIVE_ENDIAN
+#define GEOARROW_NATIVE_ENDIAN 0x01
+#endif
+
 /// \defgroup hpp-binary-utility Binary iteration utilities
 ///
 /// This header provides utilities for iterating over serialized GeoArrow arrays
@@ -23,7 +27,7 @@ namespace internal {
 static constexpr uint8_t kBigEndian = 0x00;
 static constexpr uint8_t kLittleEndian = 0x01;
 
-#if defined(GEOARROW_BIG_ENDIAN)
+#if GEOARROW_NATIVE_ENDIAN == 0x00
 static constexpr uint8_t kNativeEndian = kBigEndian;
 static constexpr uint8_t kSwappedEndian = kLittleEndian;
 #else
@@ -258,6 +262,7 @@ class WKBGeometry {
   uint32_t num_geometries_;
 };
 
+/// \brief Parse Well-known binary blobs
 class WKBParser {
  public:
   enum Status {
@@ -270,11 +275,15 @@ class WKBParser {
 
   WKBParser() = default;
 
+  /// \brief Parse a GeoArrowBufferView into out, placing the end of the sequence in
+  /// cursor
   Status Parse(struct GeoArrowBufferView data, WKBGeometry* out,
                const uint8_t** cursor = nullptr) {
     return Parse(data.data, static_cast<uint32_t>(data.size_bytes), out, cursor);
   }
 
+  /// \brief Parse the specified bytes into out, placing the end of the sequence in
+  /// focursor
   Status Parse(const uint8_t* data, uint32_t size, WKBGeometry* out,
                const uint8_t** cursor = nullptr) {
     data_ = cursor_ = data;
@@ -284,13 +293,14 @@ class WKBParser {
       return status;
     }
 
+    if (cursor != nullptr) {
+      *cursor = cursor_;
+    }
+
     if (static_cast<uint32_t>(cursor_ - data_) < size) {
       return TOO_MANY_BYTES;
     }
 
-    if (cursor != nullptr) {
-      *cursor = cursor_;
-    }
     return OK;
   }
 

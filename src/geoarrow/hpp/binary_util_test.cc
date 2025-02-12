@@ -331,9 +331,14 @@ TEST(GeoArrowHppTest, InvalidWKBArray) {
   }
 
   // Check with the extra byte to see if it is detected
+  const uint8_t* end = nullptr;
   EXPECT_EQ(parser.Parse(valid_polygon_with_extra_byte.data(),
-                         valid_polygon_with_extra_byte.size(), &geometry),
+                         valid_polygon_with_extra_byte.size(), &geometry, &end),
             WKBParser::TOO_MANY_BYTES);
+  // Even with the error, the parsing should have occurred
+  EXPECT_EQ(geometry.geometry_type, GEOARROW_GEOMETRY_TYPE_POLYGON);
+  EXPECT_EQ(end - valid_polygon_with_extra_byte.data(),
+            valid_polygon_with_extra_byte.size() - 1);
 
   std::basic_string<uint8_t> bad_geometry_type({0x01, 0x01, 0x01, 0x01, 0x01});
   std::basic_string<uint8_t> bad_endian({0xff, 0x01, 0x01, 0x01, 0x01});
