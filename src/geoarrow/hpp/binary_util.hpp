@@ -276,7 +276,7 @@ class WKBParser {
     /// \brief An endian value other than 0x00 or 0x01 was encountered (e.g., corrupted
     /// data)
     INVALID_ENDIAN,
-    /// \brief An unexpected geomety type value was encountered (e.g., corrupted data or
+    /// \brief An unexpected geometry type value was encountered (e.g., corrupted data or
     /// curved/complex geometry)
     INVALID_GEOMETRY_TYPE
   };
