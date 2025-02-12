@@ -14,7 +14,7 @@ using geoarrow::binary_util::WKBGeometry;
 using geoarrow::binary_util::WKBParser;
 using XY = geoarrow::array_util::XY<double>;
 
-TEST(GeoArrowHppTest, WKBGeometryTypes) {
+TEST(GeoArrowHppTest, ValidWKBArray) {
   geoarrow::ArrayWriter writer(GEOARROW_TYPE_WKB);
   WKXTester tester;
   tester.ReadWKT("POINT (0 1)", writer.visitor());
