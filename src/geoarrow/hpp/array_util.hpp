@@ -809,7 +809,7 @@ struct UnalignedCoordSequence {
   }
 
  private:
-  static constexpr Load load_;
+  static constexpr Load load_{};
 };
 
 /// \brief View of a sequence of lists

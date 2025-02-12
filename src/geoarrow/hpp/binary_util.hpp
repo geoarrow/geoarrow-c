@@ -265,11 +265,19 @@ class WKBGeometry {
 /// \brief Parse Well-known binary blobs
 class WKBParser {
  public:
+  /// \brief Outcomes of parsing a WKB blob
   enum Status {
+    /// \brief Success!
     OK = 0,
+    /// \brief The provided size was not sufficient to complete parsing
     TOO_FEW_BYTES,
+    /// \brief Parse was successful, but the provided size was larger than the parsed WKB
     TOO_MANY_BYTES,
+    /// \brief An endian value other than 0x00 or 0x01 was encountered (e.g., corrupted
+    /// data)
     INVALID_ENDIAN,
+    /// \brief An unexpected geomety type value was encountered (e.g., corrupted data or
+    /// curved/complex geometry)
     INVALID_GEOMETRY_TYPE
   };
 
