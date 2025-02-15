@@ -3,10 +3,7 @@
 
 #include "nanoarrow/nanoarrow.h"
 
-#include "array_reader.hpp"
-#include "array_util.hpp"
-#include "array_writer.hpp"
-#include "binary_util.hpp"
+#include "geoarrow.hpp"
 
 #include "wkx_testing.hpp"
 

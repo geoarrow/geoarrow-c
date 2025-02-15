@@ -116,7 +116,9 @@ if(GEOARROW_BUNDLE)
           internal.hpp
           geometry_data_type.hpp
           array_reader.hpp
-          array_writer.hpp)
+          array_writer.hpp
+          array_util.hpp
+          binary_util.hpp)
     file(READ "src/geoarrow/hpp/${SRC_FILE}" SRC_FILE_CONTENTS)
     file(APPEND ${GEOARROW_HPP_TEMP} "${SRC_FILE_CONTENTS}")
   endforeach()
