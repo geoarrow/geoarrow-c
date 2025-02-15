@@ -281,7 +281,9 @@ class WKBParser {
     INVALID_ENDIAN,
     /// \brief An unexpected geometry type value was encountered (e.g., corrupted data or
     /// curved/complex geometry)
-    INVALID_GEOMETRY_TYPE
+    INVALID_GEOMETRY_TYPE,
+    /// \brief Some other unsuccessful parse
+    OTHER
   };
 
   WKBParser() = default;
@@ -295,10 +297,14 @@ class WKBParser {
 
   /// \brief Parse the specified bytes into out, placing the end of the sequence in
   /// focursor
-  Status Parse(const uint8_t* data, uint32_t size, WKBGeometry* out,
+  Status Parse(const uint8_t* data, size_t size, WKBGeometry* out,
                const uint8_t** cursor = nullptr) {
+    if (size > (std::numeric_limits<uint32_t>::max)()) {
+      return OTHER;
+    }
+
     data_ = cursor_ = data;
-    remaining_ = size;
+    remaining_ = static_cast<uint32_t>(size);
     Status status = ParseGeometry(out);
     if (status != OK) {
       return status;

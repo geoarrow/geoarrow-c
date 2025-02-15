@@ -42,6 +42,7 @@ class GeometryExtensionType : public ::arrow::ExtensionType {
   static ::arrow::Result<std::shared_ptr<GeometryExtensionType>> Make(
       GeometryDataType type, const std::string& metadata = "") {
     try {
+      type = GeometryDataType::Make(type.id(), metadata);
       internal::SchemaHolder schema{};
       type.InitStorageSchema(&schema.schema);
       ARROW_ASSIGN_OR_RAISE(auto storage_type, ::arrow::ImportType(&schema.schema));
@@ -77,19 +78,19 @@ class GeometryExtensionType : public ::arrow::ExtensionType {
   }
 
   std::string ToString(bool show_metadata = false) const override {
+    GEOARROW_UNUSED(show_metadata);
     return std::string("GeometryExtensionType(") + type_.ToString() + ")";
   }
 
   std::shared_ptr<::arrow::Array> MakeArray(
       std::shared_ptr<::arrow::ArrayData> data) const override {
-    return nullptr;
+    return std::make_shared<::arrow::ExtensionArray>(data);
   }
 
   ::arrow::Result<std::shared_ptr<::arrow::DataType>> Deserialize(
       std::shared_ptr<::arrow::DataType> storage_type,
       const std::string& serialized_data) const override {
     internal::SchemaHolder schema;
-    struct GeoArrowError error;
     ARROW_RETURN_NOT_OK(ExportType(*storage_type, &schema.schema));
 
     try {

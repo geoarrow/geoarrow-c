@@ -290,7 +290,11 @@ struct XY : public std::array<T, 2> {
     func(coord, coord);
   }
 
-  static XY FromXYZM(T x, T y, T z, T m) { return XY{x, y}; }
+  static XY FromXYZM(T x, T y, T z, T m) {
+    GEOARROW_UNUSED(z);
+    GEOARROW_UNUSED(m);
+    return XY{x, y};
+  }
 };
 
 /// \brief Coord implementation for XYZ
@@ -315,7 +319,10 @@ struct XYZ : public std::array<T, 3> {
     func(coord, coord);
   }
 
-  static XYZ FromXYZM(T x, T y, T z, T m) { return XYZ{x, y, z}; }
+  static XYZ FromXYZM(T x, T y, T z, T m) {
+    GEOARROW_UNUSED(m);
+    return XYZ{x, y, z};
+  }
 };
 
 /// \brief Coord implementation for XYM
@@ -340,7 +347,10 @@ struct XYM : public std::array<T, 3> {
     func(coord, coord);
   }
 
-  static XYM FromXYZM(T x, T y, T z, T m) { return XYM{x, y, m}; }
+  static XYM FromXYZM(T x, T y, T z, T m) {
+    GEOARROW_UNUSED(z);
+    return XYM{x, y, m};
+  }
 };
 
 /// \brief Coord implementation for XYZM
@@ -498,12 +508,14 @@ struct CoordSequence {
 
   /// \brief Initialize from a GeoArrowCoordView
   GeoArrowErrorCode InitFrom(const struct GeoArrowCoordView* view) {
-    if (view->n_values < coord_size || !std::is_same<ordinate_type, double>::value) {
+    if (static_cast<uint32_t>(view->n_values) < coord_size ||
+        !std::is_same<ordinate_type, double>::value ||
+        view->n_coords > (std::numeric_limits<uint32_t>::max)()) {
       return EINVAL;
     }
 
     this->offset = 0;
-    this->length = view->n_coords;
+    this->length = static_cast<uint32_t>(view->n_coords);
     this->stride = view->coords_stride;
     for (uint32_t i = 0; i < coord_size; i++) {
       this->InitValue(i, reinterpret_cast<const ordinate_type*>(view->values[i]));
@@ -518,8 +530,8 @@ struct CoordSequence {
     }
 
     GEOARROW_RETURN_NOT_OK(InitFrom(&view->coords));
-    this->offset = view->offset[level];
-    this->length = view->length[level];
+    this->offset = static_cast<uint32_t>(view->offset[level]);
+    this->length = static_cast<uint32_t>(view->length[level]);
     return GEOARROW_OK;
   }
 
@@ -849,8 +861,8 @@ struct ListSequence {
 
     this->offsets = view->offsets[level];
     GEOARROW_RETURN_NOT_OK(this->child.InitFrom(view, level + 1));
-    this->offset = view->offset[level];
-    this->length = view->length[level];
+    this->offset = static_cast<uint32_t>(view->offset[level]);
+    this->length = static_cast<uint32_t>(view->length[level]);
     return GEOARROW_OK;
   }
 
@@ -934,8 +946,8 @@ struct BinarySequence {
   /// \brief Initialize from a GeoArrowArrayView
   GeoArrowErrorCode InitFrom(const struct GeoArrowArrayView* view) {
     this->offsets = view->offsets[0];
-    this->offset = view->offset[0];
-    this->length = view->length[0];
+    this->offset = static_cast<uint32_t>(view->offset[0]);
+    this->length = static_cast<uint32_t>(view->length[0]);
     this->data = view->data;
     return GEOARROW_OK;
   }

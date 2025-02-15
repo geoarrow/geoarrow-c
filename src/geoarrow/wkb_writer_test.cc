@@ -73,6 +73,7 @@ TEST(WKBWriterTest, WKBWriterTestOneValidOneNull) {
   EXPECT_TRUE(ArrowArrayViewIsNull(&view, 1));
   EXPECT_FALSE(ArrowArrayViewIsNull(&view, 2));
   struct ArrowBufferView value = ArrowArrayViewGetBytesUnsafe(&view, 0);
+  EXPECT_GE(value.size_bytes, 0);
 
   ArrowArrayViewReset(&view);
   array.release(&array);

@@ -239,14 +239,12 @@ class GeometryDataType {
     return metadata;
   }
 
-  const enum GeoArrowType id() const { return schema_view_.type; }
+  enum GeoArrowType id() const { return schema_view_.type; }
 
-  const enum GeoArrowGeometryType geometry_type() const {
-    return schema_view_.geometry_type;
-  }
-  const enum GeoArrowCoordType coord_type() const { return schema_view_.coord_type; }
+  enum GeoArrowGeometryType geometry_type() const { return schema_view_.geometry_type; }
+  enum GeoArrowCoordType coord_type() const { return schema_view_.coord_type; }
 
-  const enum GeoArrowDimensions dimensions() const { return schema_view_.dimensions; }
+  enum GeoArrowDimensions dimensions() const { return schema_view_.dimensions; }
 
   int num_dimensions() const {
     switch (dimensions()) {
@@ -262,11 +260,11 @@ class GeometryDataType {
     }
   }
 
-  const enum GeoArrowEdgeType edge_type() const { return metadata_view_.edge_type; }
+  enum GeoArrowEdgeType edge_type() const { return metadata_view_.edge_type; }
 
-  const enum GeoArrowCrsType crs_type() const { return metadata_view_.crs_type; }
+  enum GeoArrowCrsType crs_type() const { return metadata_view_.crs_type; }
 
-  const std::string crs() const {
+  std::string crs() const {
     int64_t len = GeoArrowUnescapeCrs(metadata_view_.crs, nullptr, 0);
     char* out = reinterpret_cast<char*>(malloc(len));
     GeoArrowUnescapeCrs(metadata_view_.crs, out, len);
@@ -281,8 +279,6 @@ class GeometryDataType {
     }
 
     std::string ext_name = extension_name();
-    bool planar = edge_type() == GEOARROW_EDGE_TYPE_PLANAR;
-    bool interleaved = coord_type() == GEOARROW_COORD_TYPE_INTERLEAVED;
 
     std::string dims;
     switch (dimensions()) {

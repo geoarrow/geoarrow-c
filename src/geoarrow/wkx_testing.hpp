@@ -249,7 +249,7 @@ class TestCoords {
   void setup_view() {
     coord_view_.coords_stride = 1;
     coord_view_.n_coords = storage_[0].size();
-    coord_view_.n_values = storage_.size();
+    coord_view_.n_values = static_cast<int32_t>(storage_.size());
     for (size_t i = 0; i < storage_.size(); i++) {
       coord_view_.values[i] = storage_[i].data();
     }
@@ -257,7 +257,7 @@ class TestCoords {
     writable_coord_view_.coords_stride = 1;
     writable_coord_view_.size_coords = storage_[0].size();
     writable_coord_view_.capacity_coords = storage_[0].capacity();
-    writable_coord_view_.n_values = storage_.size();
+    writable_coord_view_.n_values = static_cast<int32_t>(storage_.size());
     for (size_t i = 0; i < storage_.size(); i++) {
       writable_coord_view_.values[i] = storage_[i].data();
     }
