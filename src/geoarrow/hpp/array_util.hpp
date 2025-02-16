@@ -38,7 +38,7 @@ T SafeLoadAs(const uint8_t* unaligned) {
 template <typename Outer>
 class BaseRandomAccessIterator {
  public:
-  explicit BaseRandomAccessIterator(const Outer& outer, uint32_t i)
+  explicit BaseRandomAccessIterator(const Outer& outer, int64_t i)
       : outer_(outer), i_(i) {}
   BaseRandomAccessIterator& operator++() {
     i_++;
@@ -66,7 +66,7 @@ class BaseRandomAccessIterator {
 
  protected:
   const Outer& outer_;
-  uint32_t i_;
+  int64_t i_;
 };
 
 /// \brief Iterator implementation for CoordSequence
@@ -79,7 +79,7 @@ class CoordSequenceIterator : public BaseRandomAccessIterator<CoordSequence> {
   using reference = value_type&;
   using pointer = value_type*;
 
-  explicit CoordSequenceIterator(const CoordSequence& outer, uint32_t i)
+  explicit CoordSequenceIterator(const CoordSequence& outer, int64_t i)
       : BaseRandomAccessIterator<CoordSequence>(outer, i) {}
   value_type operator*() const { return this->outer_.coord(this->i_); }
   value_type operator[](int64_t i) const { return this->outer_.coord(this->i_ + i); }
@@ -93,7 +93,7 @@ class ListSequenceIterator : public BaseRandomAccessIterator<ListSequence> {
   using difference_type = int64_t;
   using value_type = typename ListSequence::value_type;
 
-  explicit ListSequenceIterator(const ListSequence& outer, uint32_t i)
+  explicit ListSequenceIterator(const ListSequence& outer, int64_t i)
       : BaseRandomAccessIterator<ListSequence>(outer, i), stashed_(outer.child) {}
 
   typename ListSequence::child_type& operator*() {
@@ -128,7 +128,7 @@ class BinarySequenceIterator : public BaseRandomAccessIterator<BinarySequence> {
 template <typename T>
 class StridedIterator {
  public:
-  explicit StridedIterator(const T* ptr, ptrdiff_t stride) : ptr_(ptr), stride_(stride) {}
+  explicit StridedIterator(const T* ptr, int64_t stride) : ptr_(ptr), stride_(stride) {}
   StridedIterator& operator++() {
     ptr_ += stride_;
     return *this;
@@ -142,11 +142,11 @@ class StridedIterator {
     ptr_ -= stride_;
     return *this;
   }
-  StridedIterator& operator+=(ptrdiff_t n) {
+  StridedIterator& operator+=(int64_t n) {
     ptr_ += (n * stride_);
     return *this;
   }
-  StridedIterator& operator-=(ptrdiff_t n) {
+  StridedIterator& operator-=(int64_t n) {
     ptr_ -= (n * stride_);
     return *this;
   }
@@ -185,7 +185,7 @@ template <typename T>
 struct LoadSwapped {
   T operator()(const uint8_t* unaligned) const {
     uint8_t swapped[sizeof(T)];
-    for (uint32_t i = 0; i < sizeof(T); i++) {
+    for (size_t i = 0; i < sizeof(T); i++) {
       swapped[sizeof(T) - i - 1] = unaligned[i];
     }
     return internal::SafeLoadAs<T>(swapped);
@@ -195,7 +195,7 @@ struct LoadSwapped {
 template <typename T, typename Load>
 class UnalignedStridedIterator {
  public:
-  explicit UnalignedStridedIterator(const uint8_t* ptr, ptrdiff_t stride)
+  explicit UnalignedStridedIterator(const uint8_t* ptr, int64_t stride)
       : ptr_(ptr), stride_(stride) {}
   UnalignedStridedIterator& operator++() {
     ptr_ += stride_;
@@ -210,11 +210,11 @@ class UnalignedStridedIterator {
     ptr_ -= stride_;
     return *this;
   }
-  UnalignedStridedIterator& operator+=(ptrdiff_t n) {
+  UnalignedStridedIterator& operator+=(int64_t n) {
     ptr_ += (n * stride_);
     return *this;
   }
-  UnalignedStridedIterator& operator-=(ptrdiff_t n) {
+  UnalignedStridedIterator& operator-=(int64_t n) {
     ptr_ -= (n * stride_);
     return *this;
   }
@@ -251,7 +251,7 @@ class UnalignedStridedIterator {
 
  protected:
   const uint8_t* ptr_;
-  ptrdiff_t stride_;
+  int64_t stride_;
   static constexpr Load load_{};
 };
 
@@ -570,7 +570,7 @@ struct CoordSequence {
   }
 
   /// \brief Return a coordinate at the given position
-  Coord coord(uint32_t i) const {
+  Coord coord(int64_t i) const {
     Coord out;
     for (size_t j = 0; j < out.size(); j++) {
       out[j] = values[j][(offset + i) * stride];
@@ -748,7 +748,7 @@ struct UnalignedCoordSequence {
   }
 
   /// \brief Return a coordinate at the given position
-  Coord coord(uint32_t i) const {
+  Coord coord(int64_t i) const {
     Coord out;
     for (size_t j = 0; j < out.size(); j++) {
       out[j] = load_(values[j] + ((offset + i) * stride_bytes));
@@ -882,7 +882,7 @@ struct ListSequence {
 
   /// \brief Update a child initialized with InitChild such that it represents the
   /// ith element of the array.
-  void UpdateChild(T* child_p, uint32_t i) const {
+  void UpdateChild(T* child_p, int64_t i) const {
     int32_t child_offset = offsets[offset + i];
     child_p->offset = child.offset + child_offset;
     child_p->length = offsets[offset + i + 1] - child_offset;
@@ -952,7 +952,7 @@ struct BinarySequence {
     return GEOARROW_OK;
   }
 
-  value_type blob(uint32_t i) const {
+  value_type blob(int64_t i) const {
     Offset element_begin = offsets[offset + i];
     Offset element_end = offsets[offset + i + 1];
     return {data + element_begin, element_end - element_begin};
