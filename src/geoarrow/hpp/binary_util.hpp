@@ -446,7 +446,7 @@ class WKBParser {
     }
 
     uint32_t size = ReadUInt32Unchecked();
-    uint32_t bytes_required = sizeof(double) * size * last_coord_stride_;
+    size_t bytes_required = sizeof(double) * size * last_coord_stride_;
     status = CheckRemaining(bytes_required);
     if (status != OK) {
       return status;
@@ -501,7 +501,7 @@ class WKBParser {
     return size * last_coord_stride_ * sizeof(double);
   }
 
-  Status CheckRemaining(uint32_t bytes) {
+  Status CheckRemaining(size_t bytes) {
     if (bytes <= remaining_) {
       return OK;
     } else {
@@ -533,7 +533,7 @@ class WKBParser {
     return out;
   }
 
-  void Advance(uint32_t bytes) {
+  void Advance(size_t bytes) {
     cursor_ += bytes;
     remaining_ -= bytes;
   }
