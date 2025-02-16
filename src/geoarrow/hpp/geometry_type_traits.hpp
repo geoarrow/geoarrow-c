@@ -9,6 +9,8 @@ namespace geoarrow {
 
 namespace type_traits {
 
+namespace internal {
+
 template <enum GeoArrowDimensions dimensions>
 struct DimensionTraits;
 
@@ -70,19 +72,35 @@ struct ResolveArrayType {
   };
 };
 
+}  // namespace internal
+
+template <enum GeoArrowGeometryType geometry_type, enum GeoArrowDimensions dimensions>
+struct GeometryTypeTraits {
+  using coord_type = typename internal::DimensionTraits<dimensions>::coord_type;
+  using sequence_type = array_util::CoordSequence<coord_type>;
+  using array_type = typename internal::ResolveArrayType<dimensions>::template Inner<
+      geometry_type>::array_type;
+
+  static constexpr enum GeoArrowType type_id(enum GeoArrowCoordType coord_type =
+                                                 GEOARROW_COORD_TYPE_SEPARATE){
+      return static_cast<enum GeoArrowType>((coord_type - 1) * 10000 +
+                                            (dimensions - 1) * 1000 + geometry_type);}
+
+};  // namespace type_traits
+
 template <enum GeoArrowType type>
 struct TypeTraits {
   static constexpr enum GeoArrowCoordType coord_type_id =
       static_cast<enum GeoArrowCoordType>(type / 10000 + 1);
-  static constexpr enum GeoArrowDimensions dimensions_id =
+  static constexpr enum GeoArrowDimensions dimensions =
       static_cast<enum GeoArrowDimensions>((type % 10000) / 1000 + 1);
-  static constexpr enum GeoArrowGeometryType geometry_type_id =
+  static constexpr enum GeoArrowGeometryType geometry_type =
       static_cast<enum GeoArrowGeometryType>((type % 10000) % 1000);
 
-  using coord_type = typename DimensionTraits<dimensions_id>::coord_type;
+  using coord_type = typename internal::DimensionTraits<dimensions>::coord_type;
   using sequence_type = array_util::CoordSequence<coord_type>;
-  using array_type = typename ResolveArrayType<dimensions_id>::template Inner<
-      geometry_type_id>::array_type;
+  using array_type = typename internal::ResolveArrayType<dimensions>::template Inner<
+      geometry_type>::array_type;
 };
 
 template <>
@@ -100,7 +118,7 @@ template <>
 struct TypeTraits<GEOARROW_TYPE_LARGE_WKB> {
   using array_type = wkb_util::WKBArray<int64_t>;
 };
-}  // namespace type_traits
+}  // namespace geoarrow
 
 }  // namespace geoarrow
 
