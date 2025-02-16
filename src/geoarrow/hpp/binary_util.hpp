@@ -539,7 +539,7 @@ template <typename WKBSequence>
 class WKBSequenceIterator
     : public array_util::internal::BaseRandomAccessIterator<WKBSequence> {
  public:
-  explicit WKBSequenceIterator(const WKBSequence& outer, uint32_t i)
+  explicit WKBSequenceIterator(const WKBSequence& outer, int64_t i)
       : array_util::internal::BaseRandomAccessIterator<WKBSequence>(outer, i) {}
 
   using iterator_category = std::random_access_iterator_tag;
@@ -597,7 +597,7 @@ struct WKBArray : public array_util::Array<WKBBlobSequence<Offset>> {
   ///
   /// Caller is responsible for ensuring that offset + length is within the bounds
   /// of this array.
-  WKBArray Slice(uint32_t offset, uint32_t length) {
+  WKBArray Slice(int64_t offset, int64_t length) {
     return this->template SliceImpl<WKBArray>(*this, offset, length);
   }
 };

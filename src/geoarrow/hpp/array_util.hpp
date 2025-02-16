@@ -112,7 +112,7 @@ class ListSequenceIterator : public BaseRandomAccessIterator<ListSequence> {
 template <typename BinarySequence>
 class BinarySequenceIterator : public BaseRandomAccessIterator<BinarySequence> {
  public:
-  explicit BinarySequenceIterator(const BinarySequence& outer, uint32_t i)
+  explicit BinarySequenceIterator(const BinarySequence& outer, int64_t i)
       : BaseRandomAccessIterator<BinarySequence>(outer, i) {}
 
   using iterator_category = std::random_access_iterator_tag;
@@ -121,7 +121,7 @@ class BinarySequenceIterator : public BaseRandomAccessIterator<BinarySequence> {
 
   value_type operator*() { return this->outer_.blob(this->i_); }
 
-  value_type operator[](uint32_t i) { return this->outer_.blob(this->i_ + i); }
+  value_type operator[](int64_t i) { return this->outer_.blob(this->i_ + i); }
 };
 
 // Iterator for dimension begin/end
@@ -480,10 +480,10 @@ struct CoordSequence {
   static constexpr uint32_t coord_size = Coord().size();
 
   /// \brief The offset into values to apply
-  uint32_t offset{};
+  int64_t offset{};
 
   /// \brief The number of coordinates in the sequence
-  uint32_t length{};
+  int64_t length{};
 
   /// \brief Pointers to the first ordinate values in each dimension
   ///
@@ -501,7 +501,7 @@ struct CoordSequence {
   /// input; for separated coordinates this is 1. This does not need to be
   /// equal to coord_size (e.g., when providing a CoordSequence<XY> view
   /// of an interleaved sequence of XYZM coordinates).
-  uint32_t stride{};
+  int64_t stride{};
 
   /// \brief Initialize a dimension pointer for this array
   void InitValue(uint32_t i, const ordinate_type* value) { values[i] = value; }
@@ -509,13 +509,12 @@ struct CoordSequence {
   /// \brief Initialize from a GeoArrowCoordView
   GeoArrowErrorCode InitFrom(const struct GeoArrowCoordView* view) {
     if (static_cast<uint32_t>(view->n_values) < coord_size ||
-        !std::is_same<ordinate_type, double>::value ||
-        view->n_coords > (std::numeric_limits<uint32_t>::max)()) {
+        !std::is_same<ordinate_type, double>::value) {
       return EINVAL;
     }
 
     this->offset = 0;
-    this->length = static_cast<uint32_t>(view->n_coords);
+    this->length = view->n_coords;
     this->stride = view->coords_stride;
     for (uint32_t i = 0; i < coord_size; i++) {
       this->InitValue(i, reinterpret_cast<const ordinate_type*>(view->values[i]));
@@ -530,14 +529,14 @@ struct CoordSequence {
     }
 
     GEOARROW_RETURN_NOT_OK(InitFrom(&view->coords));
-    this->offset = static_cast<uint32_t>(view->offset[level]);
-    this->length = static_cast<uint32_t>(view->length[level]);
+    this->offset = view->offset[level];
+    this->length = view->length[level];
     return GEOARROW_OK;
   }
 
   /// \brief Initialize an interleaved coordinate sequence from a pointer to its start
-  GeoArrowErrorCode InitInterleaved(uint32_t length_elements, const ordinate_type* data,
-                                    uint32_t stride_elements = coord_size) {
+  GeoArrowErrorCode InitInterleaved(int64_t length_elements, const ordinate_type* data,
+                                    int64_t stride_elements = coord_size) {
     if (data == nullptr && length_elements != 0) {
       return EINVAL;
     }
@@ -556,9 +555,9 @@ struct CoordSequence {
 
   /// \brief Initialize a separated coordinate sequence from pointers to each
   /// dimension start
-  GeoArrowErrorCode InitSeparated(uint32_t length_elements,
+  GeoArrowErrorCode InitSeparated(int64_t length_elements,
                                   std::array<const ordinate_type*, coord_size> dimensions,
-                                  uint32_t stride_elements = 1) {
+                                  int64_t stride_elements = 1) {
     this->offset = 0;
     this->length = length_elements;
     this->stride = stride_elements;
@@ -579,13 +578,13 @@ struct CoordSequence {
   }
 
   /// \brief Return the number of coordinates in the sequence
-  uint32_t size() const { return length; }
+  int64_t size() const { return length; }
 
   /// \brief Return a new coordinate sequence that is a subset of this one
   ///
   /// Caller is responsible for ensuring that offset + length is within the bounds
   /// of this sequence.
-  CoordSequence<Coord> Slice(uint32_t offset, uint32_t length) const {
+  CoordSequence<Coord> Slice(int64_t offset, int64_t length) const {
     CoordSequence<Coord> out = *this;
     out.offset += offset;
     out.length = length;
@@ -668,17 +667,17 @@ struct UnalignedCoordSequence {
   static constexpr uint32_t coord_size_bytes = sizeof(Coord);
 
   /// \brief The offset into values to apply
-  uint32_t offset{};
+  int64_t offset{};
 
   /// \brief The number of coordinates in the sequence
-  uint32_t length{};
+  int64_t length{};
 
   /// \brief Pointers to the first ordinate values in each dimension
   std::array<const uint8_t*, coord_size> values{};
 
   /// \brief The distance (in bytes) between sequential coordinates in
   /// each values array.
-  uint32_t stride_bytes{};
+  int64_t stride_bytes{};
 
   /// \brief Initialize a dimension pointer for this array
   void InitValue(uint32_t i, const void* value) {
@@ -713,8 +712,8 @@ struct UnalignedCoordSequence {
   }
 
   /// \brief Initialize an interleaved coordinate sequence from a pointer to its start
-  GeoArrowErrorCode InitInterleaved(uint32_t length_elements, const void* data,
-                                    uint32_t stride_elements = coord_size) {
+  GeoArrowErrorCode InitInterleaved(int64_t length_elements, const void* data,
+                                    int64_t stride_elements = coord_size) {
     if (data == nullptr && length_elements != 0) {
       return EINVAL;
     }
@@ -734,9 +733,9 @@ struct UnalignedCoordSequence {
 
   /// \brief Initialize a separated coordinate sequence from pointers to each
   /// dimension start
-  GeoArrowErrorCode InitSeparated(uint32_t length_elements,
+  GeoArrowErrorCode InitSeparated(int64_t length_elements,
                                   std::array<const void*, coord_size> dimensions,
-                                  uint32_t stride_elements = 1) {
+                                  int64_t stride_elements = 1) {
     this->offset = 0;
     this->length = length_elements;
     this->stride_bytes = stride_elements * sizeof(ordinate_type);
@@ -757,13 +756,13 @@ struct UnalignedCoordSequence {
   }
 
   /// \brief Return the number of coordinates in the sequence
-  uint32_t size() const { return length; }
+  int64_t size() const { return length; }
 
   /// \brief Return a new coordinate sequence that is a subset of this one
   ///
   /// Caller is responsible for ensuring that offset + length is within the bounds
   /// of this function.
-  UnalignedCoordSequence<Coord> Slice(uint32_t offset, uint32_t length) const {
+  UnalignedCoordSequence<Coord> Slice(int64_t offset, int64_t length) const {
     UnalignedCoordSequence<Coord> out = *this;
     out.offset += offset;
     out.length = length;
@@ -835,10 +834,10 @@ struct ListSequence {
   using value_type = const T&;
 
   /// \brief The logical offset into the sequence
-  uint32_t offset{};
+  int64_t offset{};
 
   /// \brief The number of lists in the sequence
-  uint32_t length{};
+  int64_t length{};
 
   /// \brief The pointer to the first offset
   ///
@@ -861,8 +860,8 @@ struct ListSequence {
 
     this->offsets = view->offsets[level];
     GEOARROW_RETURN_NOT_OK(this->child.InitFrom(view, level + 1));
-    this->offset = static_cast<uint32_t>(view->offset[level]);
-    this->length = static_cast<uint32_t>(view->length[level]);
+    this->offset = view->offset[level];
+    this->length = view->length[level];
     return GEOARROW_OK;
   }
 
@@ -871,8 +870,8 @@ struct ListSequence {
     if (length == 0) {
       return child.Slice(0, 0);
     } else {
-      uint32_t first_offset = offsets[offset];
-      uint32_t last_offset = offsets[offset + length];
+      int64_t first_offset = offsets[offset];
+      int64_t last_offset = offsets[offset + length];
       return child.Slice(first_offset, last_offset - first_offset);
     }
   }
@@ -892,7 +891,7 @@ struct ListSequence {
   ///
   /// Caller is responsible for ensuring that offset + length is within the bounds
   /// of this function.
-  ListSequence<T> Slice(uint32_t offset, uint32_t length) const {
+  ListSequence<T> Slice(int64_t offset, int64_t length) const {
     ListSequence<T> out = *this;
     out.offset += offset;
     out.length = length;
@@ -927,10 +926,10 @@ struct BinarySequence {
   using value_type = GeoArrowBufferView;
 
   /// \brief The logical offset into the sequence
-  uint32_t offset{};
+  int64_t offset{};
 
   /// \brief The number of blobs in the sequence
-  uint32_t length{};
+  int64_t length{};
 
   /// \brief The pointer to the first offset
   ///
@@ -946,8 +945,8 @@ struct BinarySequence {
   /// \brief Initialize from a GeoArrowArrayView
   GeoArrowErrorCode InitFrom(const struct GeoArrowArrayView* view) {
     this->offsets = view->offsets[0];
-    this->offset = static_cast<uint32_t>(view->offset[0]);
-    this->length = static_cast<uint32_t>(view->length[0]);
+    this->offset = view->offset[0];
+    this->length = view->length[0];
     this->data = view->data;
     return GEOARROW_OK;
   }
@@ -989,7 +988,7 @@ struct Array {
   /// \brief Return the validity of a given element
   ///
   /// Note that this is not an efficient mechanism to check for nullability in a loop.
-  bool is_valid(uint32_t i) const {
+  bool is_valid(int64_t i) const {
     i += value.offset;
     return validity == nullptr || validity[i / 8] & (1 << (i % 8));
   }
@@ -997,7 +996,7 @@ struct Array {
   /// \brief Return the nullness of a given element
   ///
   /// Note that this is not an efficient mechanism to check for nullability in a loop.
-  bool is_null(uint32_t i) const {
+  bool is_null(int64_t i) const {
     i += value.offset;
     return validity != nullptr && !(validity[i / 8] & (1 << (i % 8)));
   }
@@ -1008,7 +1007,7 @@ struct Array {
     if (this->validity) {
       // TODO: optimize the nullable case
       auto it = this->value.begin();
-      uint32_t i = 0;
+      int64_t i = 0;
       while (it != this->value.end()) {
         if (this->is_valid(i)) {
           const auto& item = *it;
@@ -1030,7 +1029,7 @@ struct Array {
     if (this->validity) {
       // TODO: optimize the nullable case
       auto it = this->value.begin();
-      uint32_t i = 0;
+      int64_t i = 0;
       while (it != this->value.end()) {
         if (this->is_valid(i)) {
           const auto& item = *it;
@@ -1056,7 +1055,7 @@ struct Array {
 
  protected:
   template <typename Impl>
-  Impl SliceImpl(Impl self, uint32_t offset, uint32_t length) {
+  Impl SliceImpl(Impl self, int64_t offset, int64_t length) {
     self.value.offset += offset;
     self.value.length = length;
     return self;
@@ -1080,7 +1079,7 @@ struct PointArray : public Array<CoordSequence<Coord>> {
   ///
   /// Caller is responsible for ensuring that offset + length is within the bounds
   /// of this array.
-  PointArray Slice(uint32_t offset, uint32_t length) {
+  PointArray Slice(int64_t offset, int64_t length) {
     return this->template SliceImpl<PointArray>(*this, offset, length);
   }
 
@@ -1131,7 +1130,7 @@ struct BoxArray : public Array<CoordSequence<typename Coord::box_type>> {
   ///
   /// Caller is responsible for ensuring that offset + length is within the bounds
   /// of this array.
-  BoxArray Slice(uint32_t offset, uint32_t length) {
+  BoxArray Slice(int64_t offset, int64_t length) {
     return this->template SliceImpl<BoxArray>(*this, offset, length);
   }
 };
@@ -1154,7 +1153,7 @@ struct LinestringArray : public Array<ListSequence<CoordSequence<Coord>>> {
   ///
   /// Caller is responsible for ensuring that offset + length is within the bounds
   /// of this array.
-  LinestringArray Slice(uint32_t offset, uint32_t length) {
+  LinestringArray Slice(int64_t offset, int64_t length) {
     return this->template SliceImpl<LinestringArray>(*this, offset, length);
   }
 };
@@ -1179,7 +1178,7 @@ struct PolygonArray : public Array<ListSequence<ListSequence<CoordSequence<Coord
   ///
   /// Caller is responsible for ensuring that offset + length is within the bounds
   /// of this array.
-  PolygonArray Slice(uint32_t offset, uint32_t length) {
+  PolygonArray Slice(int64_t offset, int64_t length) {
     return this->template SliceImpl<PolygonArray>(*this, offset, length);
   }
 };
@@ -1202,7 +1201,7 @@ struct MultipointArray : public Array<ListSequence<CoordSequence<Coord>>> {
   ///
   /// Caller is responsible for ensuring that offset + length is within the bounds
   /// of this array.
-  MultipointArray Slice(uint32_t offset, uint32_t length) {
+  MultipointArray Slice(int64_t offset, int64_t length) {
     return this->template SliceImpl<MultipointArray>(*this, offset, length);
   }
 
@@ -1236,7 +1235,7 @@ struct MultiLinestringArray
   ///
   /// Caller is responsible for ensuring that offset + length is within the bounds
   /// of this array.
-  MultiLinestringArray Slice(uint32_t offset, uint32_t length) {
+  MultiLinestringArray Slice(int64_t offset, int64_t length) {
     return this->template SliceImpl<MultiLinestringArray>(*this, offset, length);
   }
 };
@@ -1262,7 +1261,7 @@ struct MultiPolygonArray
   ///
   /// Caller is responsible for ensuring that offset + length is within the bounds
   /// of this array.
-  MultiPolygonArray Slice(uint32_t offset, uint32_t length) {
+  MultiPolygonArray Slice(int64_t offset, int64_t length) {
     return this->template SliceImpl<MultiPolygonArray>(*this, offset, length);
   }
 };
