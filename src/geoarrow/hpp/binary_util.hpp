@@ -281,9 +281,7 @@ class WKBParser {
     INVALID_ENDIAN,
     /// \brief An unexpected geometry type value was encountered (e.g., corrupted data or
     /// curved/complex geometry)
-    INVALID_GEOMETRY_TYPE,
-    /// \brief Some other unsuccessful parse
-    OTHER
+    INVALID_GEOMETRY_TYPE
   };
 
   WKBParser() = default;
@@ -299,12 +297,8 @@ class WKBParser {
   /// focursor
   Status Parse(const uint8_t* data, size_t size, WKBGeometry* out,
                const uint8_t** cursor = nullptr) {
-    if (size > (std::numeric_limits<uint32_t>::max)()) {
-      return OTHER;
-    }
-
     data_ = cursor_ = data;
-    remaining_ = static_cast<uint32_t>(size);
+    remaining_ = size;
     Status status = ParseGeometry(out);
     if (status != OK) {
       return status;
@@ -314,7 +308,7 @@ class WKBParser {
       *cursor = cursor_;
     }
 
-    if (static_cast<uint32_t>(cursor_ - data_) < size) {
+    if (static_cast<size_t>(cursor_ - data_) < size) {
       return TOO_MANY_BYTES;
     }
 
@@ -341,7 +335,7 @@ class WKBParser {
  private:
   const uint8_t* data_{};
   const uint8_t* cursor_{};
-  uint32_t remaining_{};
+  size_t remaining_{};
   uint8_t last_endian_;
   enum GeoArrowDimensions last_dimensions_;
   uint32_t last_coord_stride_;
