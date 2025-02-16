@@ -1,6 +1,6 @@
 
-#ifndef GEOARROW_HPP_BINARY_UTIL_INCLUDED
-#define GEOARROW_HPP_BINARY_UTIL_INCLUDED
+#ifndef GEOARROW_HPP_wkb_util_INCLUDED
+#define GEOARROW_HPP_wkb_util_INCLUDED
 
 #include <vector>
 
@@ -20,7 +20,7 @@
 
 namespace geoarrow {
 
-namespace binary_util {
+namespace wkb_util {
 
 namespace internal {
 
@@ -602,7 +602,7 @@ struct WKBArray : public array_util::Array<WKBBlobSequence<Offset>> {
   }
 };
 
-}  // namespace binary_util
+}  // namespace wkb_util
 
 }  // namespace geoarrow
 
