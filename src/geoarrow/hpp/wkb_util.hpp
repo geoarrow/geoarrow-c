@@ -1,6 +1,6 @@
 
-#ifndef GEOARROW_HPP_wkb_util_INCLUDED
-#define GEOARROW_HPP_wkb_util_INCLUDED
+#ifndef GEOARROW_HPP_WKB_UTIL_INCLUDED
+#define GEOARROW_HPP_WKB_UTIL_INCLUDED
 
 #include <vector>
 
