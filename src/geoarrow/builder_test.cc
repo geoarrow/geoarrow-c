@@ -7,6 +7,8 @@
 #include "wkx_testing.hpp"
 
 static void CustomFreeDoubleVector(uint8_t* ptr, int64_t size, void* private_data) {
+  GEOARROW_UNUSED(ptr);
+  GEOARROW_UNUSED(size);
   auto vector = reinterpret_cast<std::vector<double>*>(private_data);
   delete vector;
 }

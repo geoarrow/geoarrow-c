@@ -27,6 +27,8 @@ struct ArrayHolder {
 
 template <typename T>
 static inline void FreeWrappedBuffer(uint8_t* ptr, int64_t size, void* private_data) {
+  GEOARROW_UNUSED(ptr);
+  GEOARROW_UNUSED(size);
   auto obj = reinterpret_cast<T*>(private_data);
   delete obj;
 }

@@ -3,9 +3,7 @@
 
 #include "nanoarrow/nanoarrow.h"
 
-#include "array_reader.hpp"
-#include "array_util.hpp"
-#include "array_writer.hpp"
+#include "geoarrow.hpp"
 
 #include "wkx_testing.hpp"
 
@@ -39,9 +37,9 @@ TEST(GeoArrowHppTest, CoordXY) {
   EXPECT_TRUE(std::isnan(xyz.z()));
 
   auto xym = CoordCast<XY, XYM>(coord);
-  EXPECT_EQ(xyz.x(), 0);
-  EXPECT_EQ(xyz.y(), 1);
-  EXPECT_TRUE(std::isnan(xyz.m()));
+  EXPECT_EQ(xym.x(), 0);
+  EXPECT_EQ(xym.y(), 1);
+  EXPECT_TRUE(std::isnan(xyz.z()));
 
   auto xyzm = CoordCast<XY, XYZM>(coord);
   EXPECT_EQ(xyzm.x(), 0);

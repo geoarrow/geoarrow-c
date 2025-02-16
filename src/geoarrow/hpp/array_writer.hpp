@@ -69,9 +69,9 @@ class ArrayBuilder {
 
   template <typename T>
   void AppendToOffsetBuffer(int64_t i, const T& obj) {
-    GEOARROW_THROW_NOT_OK(nullptr,
-                          GeoArrowBuilderOffsetAppend(&builder_, i, obj.data(),
-                                                      static_cast<int64_t>(obj.size())));
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowBuilderOffsetAppend(
+                                       &builder_, static_cast<int32_t>(i), obj.data(),
+                                       static_cast<int64_t>(obj.size())));
   }
 
   void AppendCoords(const GeoArrowCoordView* coords, enum GeoArrowDimensions dimensions,

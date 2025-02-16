@@ -32,7 +32,8 @@ std::shared_ptr<DataType> coord_type(std::string dims) {
 }
 
 std::shared_ptr<DataType> interleaved_coord_type(std::string dims) {
-  return fixed_size_list(field(dims, float64(), false), dims.size());
+  return fixed_size_list(field(dims, float64(), false),
+                         static_cast<int32_t>(dims.size()));
 }
 
 std::shared_ptr<Field> coord_field(std::string name, std::string dims,

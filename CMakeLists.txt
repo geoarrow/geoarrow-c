@@ -116,7 +116,9 @@ if(GEOARROW_BUNDLE)
           internal.hpp
           geometry_data_type.hpp
           array_reader.hpp
-          array_writer.hpp)
+          array_writer.hpp
+          array_util.hpp
+          binary_util.hpp)
     file(READ "src/geoarrow/hpp/${SRC_FILE}" SRC_FILE_CONTENTS)
     file(APPEND ${GEOARROW_HPP_TEMP} "${SRC_FILE_CONTENTS}")
   endforeach()
@@ -184,28 +186,37 @@ if(TARGET geoarrow)
 
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-      target_compile_options(geoarrow
-                             PRIVATE -Wall
-                                     -Werror
-                                     -Wextra
-                                     -Wpedantic
-                                     -Wno-type-limits
-                                     -Wmaybe-uninitialized
-                                     -Wunused-result
-                                     -Wconversion
-                                     -Wno-sign-conversion)
+      set(GEOARROW_EXTRA_WARNINGS
+          -Wall
+          -Werror
+          -Wextra
+          -Wpedantic
+          -Wno-type-limits
+          -Wmaybe-uninitialized
+          -Wunused-result
+          -Wconversion
+          -Wno-sign-conversion)
     elseif(CMAKE_C_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_C_COMPILER_ID STREQUAL
                                                         "Clang")
-      target_compile_options(geoarrow
-                             PRIVATE -Wall
-                                     -Werror
-                                     -Wextra
-                                     -Wpedantic
-                                     -Wdocumentation
-                                     -Wconversion
-                                     -Wno-sign-conversion)
+      set(GEOARROW_EXTRA_WARNINGS
+          -Wall
+          -Werror
+          -Wextra
+          -Wpedantic
+          -Wdocumentation
+          -Wconversion
+          -Wno-sign-conversion)
+
     endif()
   endif()
+endif()
+
+# If building tests, ensure the tests also are compiled with these warnings.
+# If not (but still in debug), still compile geoarrow sources with these warnings.
+if(GEOARROW_BUILD_TESTS AND GEOARROW_EXTRA_WARNINGS)
+  target_compile_options(geoarrow PUBLIC ${GEOARROW_EXTRA_WARNINGS})
+elseif(GEOARROW_EXTRA_WARNINGS)
+  target_compile_options(geoarrow PRIVATE ${GEOARROW_EXTRA_WARNINGS})
 endif()
 
 if(GEOARROW_BUILD_TESTS)

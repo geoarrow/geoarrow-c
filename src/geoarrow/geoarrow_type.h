@@ -115,6 +115,8 @@ struct ArrowArrayStream {
 #define GEOARROW_RETURN_NOT_OK(EXPR) \
   _GEOARROW_RETURN_NOT_OK_IMPL(_GEOARROW_MAKE_NAME(errno_status_, __COUNTER__), EXPR)
 
+#define GEOARROW_UNUSED(expr) ((void)expr)
+
 /// \brief Represents an errno-compatible error code
 /// \ingroup geoarrow-utility
 typedef int GeoArrowErrorCode;

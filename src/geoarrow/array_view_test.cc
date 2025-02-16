@@ -261,7 +261,6 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidBox) {
 
 TEST(ArrayViewTest, ArrayViewTestSetArrayValidBoxNonXY) {
   struct ArrowSchema schema;
-  struct ArrowArray array;
   struct GeoArrowError error;
 
   ASSERT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_BOX_Z), GEOARROW_OK);

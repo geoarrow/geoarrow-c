@@ -295,7 +295,7 @@ class WKBParser {
 
   /// \brief Parse the specified bytes into out, placing the end of the sequence in
   /// focursor
-  Status Parse(const uint8_t* data, uint32_t size, WKBGeometry* out,
+  Status Parse(const uint8_t* data, size_t size, WKBGeometry* out,
                const uint8_t** cursor = nullptr) {
     data_ = cursor_ = data;
     remaining_ = size;
@@ -308,7 +308,7 @@ class WKBParser {
       *cursor = cursor_;
     }
 
-    if (static_cast<uint32_t>(cursor_ - data_) < size) {
+    if (static_cast<size_t>(cursor_ - data_) < size) {
       return TOO_MANY_BYTES;
     }
 
@@ -335,7 +335,7 @@ class WKBParser {
  private:
   const uint8_t* data_{};
   const uint8_t* cursor_{};
-  uint32_t remaining_{};
+  size_t remaining_{};
   uint8_t last_endian_;
   enum GeoArrowDimensions last_dimensions_;
   uint32_t last_coord_stride_;
@@ -440,7 +440,7 @@ class WKBParser {
     }
 
     uint32_t size = ReadUInt32Unchecked();
-    uint32_t bytes_required = sizeof(double) * size * last_coord_stride_;
+    size_t bytes_required = sizeof(double) * size * last_coord_stride_;
     status = CheckRemaining(bytes_required);
     if (status != OK) {
       return status;
@@ -495,7 +495,7 @@ class WKBParser {
     return size * last_coord_stride_ * sizeof(double);
   }
 
-  Status CheckRemaining(uint32_t bytes) {
+  Status CheckRemaining(size_t bytes) {
     if (bytes <= remaining_) {
       return OK;
     } else {
@@ -527,7 +527,7 @@ class WKBParser {
     return out;
   }
 
-  void Advance(uint32_t bytes) {
+  void Advance(size_t bytes) {
     cursor_ += bytes;
     remaining_ -= bytes;
   }
@@ -539,7 +539,7 @@ template <typename WKBSequence>
 class WKBSequenceIterator
     : public array_util::internal::BaseRandomAccessIterator<WKBSequence> {
  public:
-  explicit WKBSequenceIterator(const WKBSequence& outer, uint32_t i)
+  explicit WKBSequenceIterator(const WKBSequence& outer, int64_t i)
       : array_util::internal::BaseRandomAccessIterator<WKBSequence>(outer, i) {}
 
   using iterator_category = std::random_access_iterator_tag;
@@ -597,7 +597,7 @@ struct WKBArray : public array_util::Array<WKBBlobSequence<Offset>> {
   ///
   /// Caller is responsible for ensuring that offset + length is within the bounds
   /// of this array.
-  WKBArray Slice(uint32_t offset, uint32_t length) {
+  WKBArray Slice(int64_t offset, int64_t length) {
     return this->template SliceImpl<WKBArray>(*this, offset, length);
   }
 };

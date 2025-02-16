@@ -549,7 +549,6 @@ TEST(KernelTest, KernelTestAsGeoArrow) {
   EXPECT_EQ(array_out2.null_count, 1);
 
   struct ArrowArrayView array_view;
-  struct ArrowStringView item;
   ASSERT_EQ(ArrowArrayViewInitFromSchema(&array_view, &schema_out, nullptr), GEOARROW_OK);
 
   ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array_out1, nullptr), GEOARROW_OK);
