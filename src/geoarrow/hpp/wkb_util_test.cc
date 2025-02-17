@@ -7,8 +7,8 @@
 
 #include "wkx_testing.hpp"
 
-using geoarrow::binary_util::WKBGeometry;
-using geoarrow::binary_util::WKBParser;
+using geoarrow::wkb_util::WKBGeometry;
+using geoarrow::wkb_util::WKBParser;
 using XY = geoarrow::array_util::XY<double>;
 using XYZ = geoarrow::array_util::XYZ<double>;
 using XYM = geoarrow::array_util::XYM<double>;
@@ -29,7 +29,7 @@ TEST(GeoArrowHppTest, ValidWKBArray) {
   geoarrow::ArrayReader reader(GEOARROW_TYPE_WKB);
   reader.SetArray(&array_feat);
 
-  geoarrow::binary_util::WKBArray<int32_t> array;
+  geoarrow::wkb_util::WKBArray<int32_t> array;
   array.Init(reader.View().array_view());
 
   WKBGeometry geometry;

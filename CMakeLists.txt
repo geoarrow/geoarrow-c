@@ -118,7 +118,8 @@ if(GEOARROW_BUNDLE)
           array_reader.hpp
           array_writer.hpp
           array_util.hpp
-          binary_util.hpp)
+          wkb_util.hpp
+          geometry_type_traits.hpp)
     file(READ "src/geoarrow/hpp/${SRC_FILE}" SRC_FILE_CONTENTS)
     file(APPEND ${GEOARROW_HPP_TEMP} "${SRC_FILE_CONTENTS}")
   endforeach()
@@ -288,7 +289,9 @@ if(GEOARROW_BUILD_TESTS)
   add_executable(hpp_arrow_extension_type_test
                  src/geoarrow/hpp/arrow_extension_type_test.cc)
   add_executable(hpp_array_util_test src/geoarrow/hpp/array_util_test.cc)
-  add_executable(hpp_binary_util_test src/geoarrow/hpp/binary_util_test.cc)
+  add_executable(hpp_wkb_util_test src/geoarrow/hpp/wkb_util_test.cc)
+  add_executable(hpp_geometry_type_traits_test
+                 src/geoarrow/hpp/geometry_type_traits_test.cc)
 
   target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main
                         nanoarrow::nanoarrow)
@@ -323,7 +326,12 @@ if(GEOARROW_BUILD_TESTS)
                         gtest_main
                         gmock_main
                         nanoarrow::nanoarrow)
-  target_link_libraries(hpp_binary_util_test
+  target_link_libraries(hpp_wkb_util_test
+                        geoarrow
+                        gtest_main
+                        gmock_main
+                        nanoarrow::nanoarrow)
+  target_link_libraries(hpp_geometry_type_traits_test
                         geoarrow
                         gtest_main
                         gmock_main
@@ -352,5 +360,6 @@ if(GEOARROW_BUILD_TESTS)
   gtest_discover_tests(hpp_geometry_data_type_test)
   gtest_discover_tests(hpp_arrow_extension_type_test)
   gtest_discover_tests(hpp_array_util_test)
-  gtest_discover_tests(hpp_binary_util_test)
+  gtest_discover_tests(hpp_wkb_util_test)
+  gtest_discover_tests(hpp_geometry_type_traits_test)
 endif()

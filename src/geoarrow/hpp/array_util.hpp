@@ -876,6 +876,9 @@ struct ListSequence {
     }
   }
 
+  /// \brief Return the number of elements in the sequence
+  int64_t size() const { return length; }
+
   /// \brief Initialize a child whose offset and length are unset.
   void InitChild(T* child_p) const { *child_p = child; }
 
