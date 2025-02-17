@@ -33,43 +33,30 @@ struct DimensionTraits<GEOARROW_DIMENSIONS_XYZM> {
   using coord_type = array_util::XYZM<double>;
 };
 
-template <enum GeoArrowDimensions dimensions_id>
-struct ResolveArrayType {
-  using coord_type = typename DimensionTraits<dimensions_id>::coord_type;
+template <enum GeoArrowGeometryType geometry_type, enum GeoArrowDimensions dimensions>
+struct ResolveArrayType;
 
-  template <enum GeoArrowGeometryType geometry_type>
-  struct Inner;
+#define _GEOARROW_SPECIALIZE_ARRAY_TYPE(geometry_type, dimensions, array_cls) \
+  template <>                                                                 \
+  struct ResolveArrayType<geometry_type, dimensions> {                        \
+    using coord_type = typename DimensionTraits<dimensions>::coord_type;      \
+    using array_type = array_util::array_cls<coord_type>;                     \
+  }
 
-  template <>
-  struct Inner<GEOARROW_GEOMETRY_TYPE_POINT> {
-    using array_type = array_util::PointArray<coord_type>;
-  };
+#define _GEOARROW_SPECIALIZE_GEOMETRY_TYPE(geometry_type, array_cls)                  \
+  _GEOARROW_SPECIALIZE_ARRAY_TYPE(geometry_type, GEOARROW_DIMENSIONS_XY, array_cls);  \
+  _GEOARROW_SPECIALIZE_ARRAY_TYPE(geometry_type, GEOARROW_DIMENSIONS_XYZ, array_cls); \
+  _GEOARROW_SPECIALIZE_ARRAY_TYPE(geometry_type, GEOARROW_DIMENSIONS_XYM, array_cls); \
+  _GEOARROW_SPECIALIZE_ARRAY_TYPE(geometry_type, GEOARROW_DIMENSIONS_XYZM, array_cls);
 
-  template <>
-  struct Inner<GEOARROW_GEOMETRY_TYPE_LINESTRING> {
-    using array_type = array_util::LinestringArray<coord_type>;
-  };
-
-  template <>
-  struct Inner<GEOARROW_GEOMETRY_TYPE_POLYGON> {
-    using array_type = array_util::PolygonArray<coord_type>;
-  };
-
-  template <>
-  struct Inner<GEOARROW_GEOMETRY_TYPE_MULTIPOINT> {
-    using array_type = array_util::MultipointArray<coord_type>;
-  };
-
-  template <>
-  struct Inner<GEOARROW_GEOMETRY_TYPE_MULTILINESTRING> {
-    using array_type = array_util::MultiLinestringArray<coord_type>;
-  };
-
-  template <>
-  struct Inner<GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON> {
-    using array_type = array_util::MultiPolygonArray<coord_type>;
-  };
-};
+_GEOARROW_SPECIALIZE_GEOMETRY_TYPE(GEOARROW_GEOMETRY_TYPE_POINT, PointArray);
+_GEOARROW_SPECIALIZE_GEOMETRY_TYPE(GEOARROW_GEOMETRY_TYPE_LINESTRING, LinestringArray);
+_GEOARROW_SPECIALIZE_GEOMETRY_TYPE(GEOARROW_GEOMETRY_TYPE_POLYGON, PolygonArray);
+_GEOARROW_SPECIALIZE_GEOMETRY_TYPE(GEOARROW_GEOMETRY_TYPE_MULTIPOINT, MultipointArray);
+_GEOARROW_SPECIALIZE_GEOMETRY_TYPE(GEOARROW_GEOMETRY_TYPE_MULTILINESTRING,
+                                   MultiLinestringArray);
+_GEOARROW_SPECIALIZE_GEOMETRY_TYPE(GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON,
+                                   MultiPolygonArray);
 
 }  // namespace internal
 
@@ -77,8 +64,8 @@ template <enum GeoArrowGeometryType geometry_type, enum GeoArrowDimensions dimen
 struct GeometryTypeTraits {
   using coord_type = typename internal::DimensionTraits<dimensions>::coord_type;
   using sequence_type = array_util::CoordSequence<coord_type>;
-  using array_type = typename internal::ResolveArrayType<dimensions>::template Inner<
-      geometry_type>::array_type;
+  using array_type =
+      typename internal::ResolveArrayType<geometry_type, dimensions>::array_type;
 
   static constexpr enum GeoArrowType type_id(enum GeoArrowCoordType coord_type =
                                                  GEOARROW_COORD_TYPE_SEPARATE){
@@ -98,8 +85,8 @@ struct TypeTraits {
 
   using coord_type = typename internal::DimensionTraits<dimensions>::coord_type;
   using sequence_type = array_util::CoordSequence<coord_type>;
-  using array_type = typename internal::ResolveArrayType<dimensions>::template Inner<
-      geometry_type>::array_type;
+  using array_type =
+      typename internal::ResolveArrayType<geometry_type, dimensions>::array_type;
 };
 
 template <>
