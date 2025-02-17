@@ -5,7 +5,6 @@
 #include "nanoarrow/nanoarrow.h"
 
 #include "geoarrow.hpp"
-#include "geometry_type_traits.hpp"
 #include "wkx_testing.hpp"
 
 template <typename Array>
