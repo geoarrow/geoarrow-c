@@ -29,8 +29,8 @@ static inline uint32_t ByteSwap(uint32_t value) {
   throw std::runtime_error("we don't benchmark byte swapping here");
 }
 static inline double ByteSwap(double value) {
-    throw std::runtime_error("we don't benchmark byte swapping here");
-  }
+  throw std::runtime_error("we don't benchmark byte swapping here");
+}
 }  // namespace arrow::bit_util
 
 #define ARROW_LITTLE_ENDIAN

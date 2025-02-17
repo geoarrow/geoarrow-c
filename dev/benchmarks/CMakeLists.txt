@@ -74,7 +74,7 @@ include(CTest)
 enable_testing()
 
 foreach(ITEM coord_view hpp_coord_sequence wkb_bounding)
-  add_executable(${ITEM}_benchmark "c/${ITEM}_benchmark.cc")
+  add_executable(${ITEM}_benchmark "c/${ITEM}_benchmark.cc" "c/geometry_util_internal2.cc")
   target_link_libraries(${ITEM}_benchmark PRIVATE geoarrow benchmark::benchmark_main)
   add_test(NAME ${ITEM}_benchmark COMMAND ${ITEM}_benchmark
                                           --benchmark_out=${ITEM}_benchmark.json)
