@@ -58,6 +58,9 @@ _GEOARROW_SPECIALIZE_GEOMETRY_TYPE(GEOARROW_GEOMETRY_TYPE_MULTILINESTRING,
 _GEOARROW_SPECIALIZE_GEOMETRY_TYPE(GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON,
                                    MultiPolygonArray);
 
+#undef _GEOARROW_SPECIALIZE_GEOMETRY_TYPE
+#undef _GEOARROW_SPECIALIZE_ARRAY_TYPE
+
 }  // namespace internal
 
 template <enum GeoArrowGeometryType geometry_type, enum GeoArrowDimensions dimensions>
