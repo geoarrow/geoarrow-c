@@ -413,12 +413,8 @@ struct BoxXY : public std::array<T, 4> {
   bound_type lower_bound() const { return {xmin(), ymin()}; }
   bound_type upper_bound() const { return {xmax(), ymax()}; }
   static BoxXY Empty() {
-    return {
-      std::numeric_limits<T>::infinity(),
-      std::numeric_limits<T>::infinity(),
-      -std::numeric_limits<T>::infinity(),
-      -std::numeric_limits<T>::infinity()
-    };
+    return {std::numeric_limits<T>::infinity(), std::numeric_limits<T>::infinity(),
+            -std::numeric_limits<T>::infinity(), -std::numeric_limits<T>::infinity()};
   }
 };
 
@@ -437,12 +433,8 @@ struct BoxXYZ : public std::array<T, 6> {
   bound_type lower_bound() const { return {xmin(), ymin(), zmin()}; }
   bound_type upper_bound() const { return {xmax(), ymax(), zmax()}; }
   static BoxXYZ Empty() {
-    return {
-      std::numeric_limits<T>::infinity(),
-      std::numeric_limits<T>::infinity(),
-      -std::numeric_limits<T>::infinity(),
-      -std::numeric_limits<T>::infinity()
-    };
+    return {std::numeric_limits<T>::infinity(), std::numeric_limits<T>::infinity(),
+            -std::numeric_limits<T>::infinity(), -std::numeric_limits<T>::infinity()};
   }
 };
 
@@ -461,12 +453,8 @@ struct BoxXYM : public std::array<T, 6> {
   bound_type lower_bound() const { return {xmin(), ymin(), mmin()}; }
   bound_type upper_bound() const { return {xmax(), ymax(), mmax()}; }
   static BoxXYM Empty() {
-    return {
-      std::numeric_limits<T>::infinity(),
-      std::numeric_limits<T>::infinity(),
-      -std::numeric_limits<T>::infinity(),
-      -std::numeric_limits<T>::infinity()
-    };
+    return {std::numeric_limits<T>::infinity(), std::numeric_limits<T>::infinity(),
+            -std::numeric_limits<T>::infinity(), -std::numeric_limits<T>::infinity()};
   }
 };
 
@@ -485,16 +473,10 @@ struct BoxXYZM : public std::array<T, 8> {
   bound_type lower_bound() const { return {xmin(), ymin(), zmin(), mmin()}; }
   bound_type upper_bound() const { return {xmax(), ymax(), zmax(), mmax()}; }
   static BoxXYZM Empty() {
-    return {
-      std::numeric_limits<T>::infinity(),
-      std::numeric_limits<T>::infinity(),
-      std::numeric_limits<T>::infinity(),
-      std::numeric_limits<T>::infinity(),
-      -std::numeric_limits<T>::infinity(),
-      -std::numeric_limits<T>::infinity(),
-      -std::numeric_limits<T>::infinity(),
-      -std::numeric_limits<T>::infinity()
-    };
+    return {std::numeric_limits<T>::infinity(),  std::numeric_limits<T>::infinity(),
+            std::numeric_limits<T>::infinity(),  std::numeric_limits<T>::infinity(),
+            -std::numeric_limits<T>::infinity(), -std::numeric_limits<T>::infinity(),
+            -std::numeric_limits<T>::infinity(), -std::numeric_limits<T>::infinity()};
   }
 };
 
