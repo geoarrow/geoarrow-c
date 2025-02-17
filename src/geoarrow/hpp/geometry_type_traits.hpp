@@ -10,6 +10,11 @@ namespace type_traits {
 
 namespace internal {
 
+/// \brief A template to resolve the coordinate type based on a dimensions constant
+///
+/// This may change in the future if more coordinate storage options are added
+/// (e.g., float) or if the coordinate sequence is updated such that the Coord level
+/// of templating is no longer needed.
 template <enum GeoArrowDimensions dimensions>
 struct DimensionTraits;
 
@@ -63,6 +68,8 @@ _GEOARROW_SPECIALIZE_GEOMETRY_TYPE(GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON,
 
 }  // namespace internal
 
+/// \brief Resolve compile-time type definitions and constants from a geometry type and
+/// dimension identifier.
 template <enum GeoArrowGeometryType geometry_type, enum GeoArrowDimensions dimensions>
 struct GeometryTypeTraits {
   using coord_type = typename internal::DimensionTraits<dimensions>::coord_type;
@@ -77,6 +84,7 @@ struct GeometryTypeTraits {
 
 };  // namespace type_traits
 
+/// \brief Resolve compile-time type definitions and constants from a type identifier
 template <enum GeoArrowType type>
 struct TypeTraits {
   static constexpr enum GeoArrowCoordType coord_type_id =
@@ -146,6 +154,13 @@ struct TypeTraits<GEOARROW_TYPE_LARGE_WKB> {
     }                                                                                    \
   } while (false)
 
+/// \brief Dispatch a call to a function accepting an Array specialization
+///
+/// This allows writing generic code against any Array type in the form
+/// `template <typename Array> DoSomething(Array& array, ...) { ... }`, which can be
+/// dispatched using `GEOARROW_DISPATCH_NATIVE_ARRAY_CALL(type_id, DoSomething, ...);`.
+/// Currently requires that `DoSomething` handles all native array types and accepts
+/// a parameter other than array (e.g., a `GeoArrowArrayView`).
 #define GEOARROW_DISPATCH_NATIVE_ARRAY_CALL(type_id, expr, ...)                         \
   do {                                                                                  \
     auto geometry_type_internal = GeoArrowGeometryTypeFromType(type_id);                \
