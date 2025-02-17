@@ -289,7 +289,8 @@ if(GEOARROW_BUILD_TESTS)
                  src/geoarrow/hpp/arrow_extension_type_test.cc)
   add_executable(hpp_array_util_test src/geoarrow/hpp/array_util_test.cc)
   add_executable(hpp_wkb_util_test src/geoarrow/hpp/wkb_util_test.cc)
-  add_executable(hpp_geometry_type_traits_test src/geoarrow/hpp/geometry_type_traits_test.cc)
+  add_executable(hpp_geometry_type_traits_test
+                 src/geoarrow/hpp/geometry_type_traits_test.cc)
 
   target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main
                         nanoarrow::nanoarrow)
