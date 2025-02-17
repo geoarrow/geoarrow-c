@@ -6,8 +6,7 @@
 
 #include <benchmark/benchmark.h>
 
-#include "hpp/array_util.hpp"
-#include "hpp/binary_util.hpp"
+#include "geoarrow.hpp"
 
 #include "benchmark_util.hpp"
 #include "geometry_util_internal.hpp"
@@ -113,8 +112,8 @@ void BenchBoundDoublesWithEmptyCheck(benchmark::State& state) {
 BoxXY BoundWKBLinestringUsingGeoArrowHpp(const std::vector<uint8_t>& wkb) {
   BoxXY bounds = BoxXY::Empty();
 
-  geoarrow::binary_util::WKBGeometry geometry;
-  geoarrow::binary_util::WKBParser parser;
+  geoarrow::wkb_util::WKBGeometry geometry;
+  geoarrow::wkb_util::WKBParser parser;
   if (parser.Parse(wkb.data(), wkb.size(), &geometry) != parser.OK) {
     throw std::runtime_error("Error parsing WKB");
   }
@@ -178,8 +177,8 @@ BoxXY BoundWKBPointsUsingGeoArrowHpp(const std::vector<uint8_t>& wkb,
 
   BoxXY bounds = BoxXY::Empty();
 
-  geoarrow::binary_util::WKBGeometry geometry;
-  geoarrow::binary_util::WKBParser parser;
+  geoarrow::wkb_util::WKBGeometry geometry;
+  geoarrow::wkb_util::WKBParser parser;
 
   for (uint32_t i = 0; i < num_points; i++) {
     if (parser.Parse(wkb.data() + (i * xy_point_bytes), xy_point_bytes, &geometry) !=
@@ -257,8 +256,8 @@ BoxXY BoundWKBPointsUsingUnalignedSequence(const std::vector<uint8_t>& wkb,
 
   BoxXY bounds = BoxXY::Empty();
 
-  geoarrow::binary_util::WKBGeometry geometry;
-  geoarrow::binary_util::WKBParser parser;
+  geoarrow::wkb_util::WKBGeometry geometry;
+  geoarrow::wkb_util::WKBParser parser;
 
   uint32_t endian_bytes_le = 0;
   for (uint32_t i = 0; i < num_points; i++) {
