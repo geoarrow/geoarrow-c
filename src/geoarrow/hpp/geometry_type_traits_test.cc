@@ -75,29 +75,35 @@ void GenericBoundsXYZM(Array& array, const struct GeoArrowArrayView* array_view,
 }
 
 TEST(GeoArrowHppTest, DispatchBounds) {
-  enum GeoArrowType type_id = GEOARROW_TYPE_POINT;
-  geoarrow::ArrayWriter writer(GEOARROW_TYPE_POINT);
-  WKXTester tester;
-  tester.ReadWKT("POINT (0 1)", writer.visitor());
-  tester.ReadWKT("POINT (2 3)", writer.visitor());
-  tester.ReadNulls(2, writer.visitor());
+  for (enum GeoArrowType type_id : {GEOARROW_TYPE_POINT, GEOARROW_TYPE_WKB}) {
+    geoarrow::ArrayWriter writer(type_id);
+    WKXTester tester;
+    tester.ReadWKT("POINT (0 1)", writer.visitor());
+    tester.ReadWKT("POINT (2 3)", writer.visitor());
+    tester.ReadNulls(2, writer.visitor());
 
-  struct ArrowArray array_feat;
-  writer.Finish(&array_feat);
+    struct ArrowArray array_feat;
+    writer.Finish(&array_feat);
 
-  geoarrow::ArrayReader reader(GEOARROW_TYPE_POINT);
-  reader.SetArray(&array_feat);
+    geoarrow::ArrayReader reader(type_id);
+    reader.SetArray(&array_feat);
 
-  BoxXYZM bounds{
-      std::numeric_limits<double>::infinity(),  std::numeric_limits<double>::infinity(),
-      std::numeric_limits<double>::infinity(),  std::numeric_limits<double>::infinity(),
-      -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity(),
-      -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
+    BoxXYZM bounds{std::numeric_limits<double>::infinity(),
+                   std::numeric_limits<double>::infinity(),
+                   std::numeric_limits<double>::infinity(),
+                   std::numeric_limits<double>::infinity(),
+                   -std::numeric_limits<double>::infinity(),
+                   -std::numeric_limits<double>::infinity(),
+                   -std::numeric_limits<double>::infinity(),
+                   -std::numeric_limits<double>::infinity()};
 
-  GEOARROW_DISPATCH_NATIVE_ARRAY_CALL(type_id, GenericBoundsXYZM,
-                                      reader.View().array_view(), &bounds);
-  ASSERT_EQ(bounds.xmin(), 0);
-  ASSERT_EQ(bounds.ymin(), 1);
-  ASSERT_EQ(bounds.xmax(), 2);
-  ASSERT_EQ(bounds.ymax(), 3);
+    GEOARROW_DISPATCH_ARRAY_CALL(type_id, GenericBoundsXYZM, reader.View().array_view(),
+                                 &bounds);
+    ASSERT_EQ(bounds.xmin(), 0);
+    ASSERT_EQ(bounds.ymin(), 1);
+    ASSERT_EQ(bounds.xmax(), 2);
+    ASSERT_EQ(bounds.ymax(), 3);
+    ASSERT_EQ(bounds.zmin(), std::numeric_limits<double>::infinity());
+    ASSERT_EQ(bounds.zmax(), -std::numeric_limits<double>::infinity());
+  }
 }

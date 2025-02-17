@@ -41,6 +41,8 @@ struct DimensionTraits<GEOARROW_DIMENSIONS_XYZM> {
 template <enum GeoArrowGeometryType geometry_type, enum GeoArrowDimensions dimensions>
 struct ResolveArrayType;
 
+// GCC Won't compile template specializations within a template, so we stamp this
+// out using a macro (there may be a better way).
 #define _GEOARROW_SPECIALIZE_ARRAY_TYPE(geometry_type, dimensions, array_cls) \
   template <>                                                                 \
   struct ResolveArrayType<geometry_type, dimensions> {                        \
@@ -95,7 +97,6 @@ struct TypeTraits {
       static_cast<enum GeoArrowGeometryType>((type % 10000) % 1000);
 
   using coord_type = typename internal::DimensionTraits<dimensions>::coord_type;
-  using sequence_type = array_util::CoordSequence<coord_type>;
   using array_type =
       typename internal::ResolveArrayType<geometry_type, dimensions>::array_type;
 };
@@ -109,11 +110,13 @@ struct TypeTraits<GEOARROW_TYPE_LARGE_WKT> {};
 template <>
 struct TypeTraits<GEOARROW_TYPE_WKB> {
   using array_type = wkb_util::WKBArray<int32_t>;
+  using coord_type = array_util::XYZM<double>;
 };
 
 template <>
 struct TypeTraits<GEOARROW_TYPE_LARGE_WKB> {
   using array_type = wkb_util::WKBArray<int64_t>;
+  using coord_type = array_util::XYZM<double>;
 };
 
 }  // namespace geoarrow
@@ -154,13 +157,16 @@ struct TypeTraits<GEOARROW_TYPE_LARGE_WKB> {
     }                                                                                    \
   } while (false)
 
-/// \brief Dispatch a call to a function accepting an Array specialization
+/// \brief Dispatch a call to a function accepting a native Array specialization
 ///
 /// This allows writing generic code against any Array type in the form
 /// `template <typename Array> DoSomething(Array& array, ...) { ... }`, which can be
 /// dispatched using `GEOARROW_DISPATCH_NATIVE_ARRAY_CALL(type_id, DoSomething, ...);`.
 /// Currently requires that `DoSomething` handles all native array types and accepts
 /// a parameter other than array (e.g., a `GeoArrowArrayView`).
+///
+/// This version only dispatches to "native" array types. Use
+/// `GEOARROW_DISPATCH_ARRAY_CALL` to also dispatch serialized types.
 #define GEOARROW_DISPATCH_NATIVE_ARRAY_CALL(type_id, expr, ...)                         \
   do {                                                                                  \
     auto geometry_type_internal = GeoArrowGeometryTypeFromType(type_id);                \
@@ -195,6 +201,32 @@ struct TypeTraits<GEOARROW_TYPE_LARGE_WKB> {
       default:                                                                          \
         throw ::geoarrow::Exception("Unknown geometry type");                           \
     }                                                                                   \
+  } while (false)
+
+/// \brief Dispatch a call to a function accepting a native or serialized Array
+/// specialization
+///
+/// Identical to `GEOARROW_DISPATCH_NATIVE_ARRAY_CALL()`, but also handles dispatching to
+/// WKB arrays. WKB arrays might not support the same operations or have the same syntax
+/// and may need to be dispatched separately for anything that can't use VisitEdges()
+/// or VisitVertices().
+#define GEOARROW_DISPATCH_ARRAY_CALL(type_id, expr, ...)                                 \
+  do {                                                                                   \
+    switch (type_id) {                                                                   \
+      case GEOARROW_TYPE_WKB: {                                                          \
+        using array_type_internal =                                                      \
+            typename ::geoarrow::type_traits::TypeTraits<GEOARROW_TYPE_WKB>::array_type; \
+        array_type_internal array_instance_internal;                                     \
+        expr(array_instance_internal, __VA_ARGS__);                                      \
+        break;                                                                           \
+      }                                                                                  \
+      case GEOARROW_TYPE_LARGE_WKB:                                                      \
+      case GEOARROW_TYPE_WKT:                                                            \
+      case GEOARROW_TYPE_LARGE_WKT:                                                      \
+        throw ::geoarrow::Exception("WKT/Large WKB not handled by generic dispatch");    \
+      default:                                                                           \
+        GEOARROW_DISPATCH_NATIVE_ARRAY_CALL(type_id, expr, __VA_ARGS__);                 \
+    }                                                                                    \
   } while (false)
 
 #endif
