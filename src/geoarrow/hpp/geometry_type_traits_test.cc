@@ -7,11 +7,15 @@
 #include "geoarrow.hpp"
 #include "geometry_type_traits.hpp"
 
-namespace geoarrow::type_traits {
-
-TEST(GeoArrowHppTest, GeometryTypeTraits) {
-  using array_type = typename TypeTraits<GEOARROW_TYPE_POINT>::array_type;
-  ASSERT_EQ(array_type::geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
+template <typename Array>
+void DoSomethingWithArray(const Array& array, bool* was_called = nullptr) {
+  EXPECT_EQ(array.value.size(), 0);
+  *was_called = true;
 }
 
-}  // namespace geoarrow::type_traits
+TEST(GeoArrowHppTest, DispatchNativeArray) {
+  bool was_called = false;
+  GEOARROW_DISPATCH_NATIVE_ARRAY_CALL(GEOARROW_TYPE_POINT, DoSomethingWithArray,
+                                      &was_called);
+  EXPECT_TRUE(was_called);
+}

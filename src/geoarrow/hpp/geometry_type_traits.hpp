@@ -118,8 +118,44 @@ template <>
 struct TypeTraits<GEOARROW_TYPE_LARGE_WKB> {
   using array_type = wkb_util::WKBArray<int64_t>;
 };
+
 }  // namespace geoarrow
 
 }  // namespace geoarrow
+
+#define _GEOARROW_NATIVE_ARRAY_CALL_INTERNAL(geometry_type, dimensions, expr, ...)    \
+  do {                                                                                \
+    using array_type_internal = typename ::geoarrow::type_traits::GeometryTypeTraits< \
+        GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY>::array_type;            \
+    array_type_internal array_instance_internal;                                      \
+    expr(array_instance_internal, __VA_ARGS__);                                       \
+  } while (false)
+
+#define _GEOARROW_DISPATCH_NATIVE_ARRAY_CALL_DIMENSIONS(geometry_type, dimensions, expr, \
+                                                        ...)                             \
+  do {                                                                                   \
+    switch (dimensions) {                                                                \
+      case GEOARROW_DIMENSIONS_XY:                                                       \
+        _GEOARROW_NATIVE_ARRAY_CALL_INTERNAL(geometry_type, dimensions, expr,            \
+                                             __VA_ARGS__);                               \
+        break;                                                                           \
+      default:                                                                           \
+        throw ::geoarrow::Exception("Unknown dimension type");                           \
+    }                                                                                    \
+  } while (false)
+
+#define GEOARROW_DISPATCH_NATIVE_ARRAY_CALL(type_id, expr, ...)                    \
+  do {                                                                             \
+    auto geometry_type_internal = GeoArrowGeometryTypeFromType(type_id);           \
+    auto dimensions_internal = GeoArrowDimensionsFromType(type_id);                \
+    switch (geometry_type_internal) {                                              \
+      case GEOARROW_GEOMETRY_TYPE_POINT:                                           \
+        _GEOARROW_DISPATCH_NATIVE_ARRAY_CALL_DIMENSIONS(                           \
+            GEOARROW_GEOMETRY_TYPE_POINT, dimensions_internal, expr, __VA_ARGS__); \
+        break;                                                                     \
+      default:                                                                     \
+        throw ::geoarrow::Exception("Unknown geometry type");                      \
+    }                                                                              \
+  } while (false)
 
 #endif
