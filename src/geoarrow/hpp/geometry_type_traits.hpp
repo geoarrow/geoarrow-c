@@ -125,8 +125,9 @@ struct TypeTraits<GEOARROW_TYPE_LARGE_WKB> {
 
 #define _GEOARROW_NATIVE_ARRAY_CALL_INTERNAL(geometry_type, dimensions, expr, ...)    \
   do {                                                                                \
-    using array_type_internal = typename ::geoarrow::type_traits::GeometryTypeTraits< \
-        GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY>::array_type;            \
+    using array_type_internal =                                                       \
+        typename ::geoarrow::type_traits::GeometryTypeTraits<geometry_type,           \
+                                                             dimensions>::array_type; \
     array_type_internal array_instance_internal;                                      \
     expr(array_instance_internal, __VA_ARGS__);                                       \
   } while (false)
@@ -136,26 +137,60 @@ struct TypeTraits<GEOARROW_TYPE_LARGE_WKB> {
   do {                                                                                   \
     switch (dimensions) {                                                                \
       case GEOARROW_DIMENSIONS_XY:                                                       \
-        _GEOARROW_NATIVE_ARRAY_CALL_INTERNAL(geometry_type, dimensions, expr,            \
-                                             __VA_ARGS__);                               \
+        _GEOARROW_NATIVE_ARRAY_CALL_INTERNAL(geometry_type, GEOARROW_DIMENSIONS_XY,      \
+                                             expr, __VA_ARGS__);                         \
+        break;                                                                           \
+      case GEOARROW_DIMENSIONS_XYZ:                                                      \
+        _GEOARROW_NATIVE_ARRAY_CALL_INTERNAL(geometry_type, GEOARROW_DIMENSIONS_XYZ,     \
+                                             expr, __VA_ARGS__);                         \
+        break;                                                                           \
+      case GEOARROW_DIMENSIONS_XYM:                                                      \
+        _GEOARROW_NATIVE_ARRAY_CALL_INTERNAL(geometry_type, GEOARROW_DIMENSIONS_XYM,     \
+                                             expr, __VA_ARGS__);                         \
+        break;                                                                           \
+      case GEOARROW_DIMENSIONS_XYZM:                                                     \
+        _GEOARROW_NATIVE_ARRAY_CALL_INTERNAL(geometry_type, GEOARROW_DIMENSIONS_XYZM,    \
+                                             expr, __VA_ARGS__);                         \
         break;                                                                           \
       default:                                                                           \
         throw ::geoarrow::Exception("Unknown dimension type");                           \
     }                                                                                    \
   } while (false)
 
-#define GEOARROW_DISPATCH_NATIVE_ARRAY_CALL(type_id, expr, ...)                    \
-  do {                                                                             \
-    auto geometry_type_internal = GeoArrowGeometryTypeFromType(type_id);           \
-    auto dimensions_internal = GeoArrowDimensionsFromType(type_id);                \
-    switch (geometry_type_internal) {                                              \
-      case GEOARROW_GEOMETRY_TYPE_POINT:                                           \
-        _GEOARROW_DISPATCH_NATIVE_ARRAY_CALL_DIMENSIONS(                           \
-            GEOARROW_GEOMETRY_TYPE_POINT, dimensions_internal, expr, __VA_ARGS__); \
-        break;                                                                     \
-      default:                                                                     \
-        throw ::geoarrow::Exception("Unknown geometry type");                      \
-    }                                                                              \
+#define GEOARROW_DISPATCH_NATIVE_ARRAY_CALL(type_id, expr, ...)                         \
+  do {                                                                                  \
+    auto geometry_type_internal = GeoArrowGeometryTypeFromType(type_id);                \
+    auto dimensions_internal = GeoArrowDimensionsFromType(type_id);                     \
+    switch (geometry_type_internal) {                                                   \
+      case GEOARROW_GEOMETRY_TYPE_POINT:                                                \
+        _GEOARROW_DISPATCH_NATIVE_ARRAY_CALL_DIMENSIONS(                                \
+            GEOARROW_GEOMETRY_TYPE_POINT, dimensions_internal, expr, __VA_ARGS__);      \
+        break;                                                                          \
+      case GEOARROW_GEOMETRY_TYPE_LINESTRING:                                           \
+        _GEOARROW_DISPATCH_NATIVE_ARRAY_CALL_DIMENSIONS(                                \
+            GEOARROW_GEOMETRY_TYPE_LINESTRING, dimensions_internal, expr, __VA_ARGS__); \
+        break;                                                                          \
+      case GEOARROW_GEOMETRY_TYPE_POLYGON:                                              \
+        _GEOARROW_DISPATCH_NATIVE_ARRAY_CALL_DIMENSIONS(                                \
+            GEOARROW_GEOMETRY_TYPE_POLYGON, dimensions_internal, expr, __VA_ARGS__);    \
+        break;                                                                          \
+      case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:                                           \
+        _GEOARROW_DISPATCH_NATIVE_ARRAY_CALL_DIMENSIONS(                                \
+            GEOARROW_GEOMETRY_TYPE_MULTIPOINT, dimensions_internal, expr, __VA_ARGS__); \
+        break;                                                                          \
+      case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:                                      \
+        _GEOARROW_DISPATCH_NATIVE_ARRAY_CALL_DIMENSIONS(                                \
+            GEOARROW_GEOMETRY_TYPE_MULTILINESTRING, dimensions_internal, expr,          \
+            __VA_ARGS__);                                                               \
+        break;                                                                          \
+      case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:                                         \
+        _GEOARROW_DISPATCH_NATIVE_ARRAY_CALL_DIMENSIONS(                                \
+            GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON, dimensions_internal, expr,             \
+            __VA_ARGS__);                                                               \
+        break;                                                                          \
+      default:                                                                          \
+        throw ::geoarrow::Exception("Unknown geometry type");                           \
+    }                                                                                   \
   } while (false)
 
 #endif
