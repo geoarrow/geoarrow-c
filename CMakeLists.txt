@@ -38,7 +38,7 @@ endif()
 
 if(GEOARROW_USE_FAST_FLOAT)
   if(NOT DEFINED CMAKE_CXX_STANDARD)
-    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD 17)
   endif()
 
   set(GEOARROW_DOUBLE_PARSE_SOURCE src/geoarrow/double_parse_fast_float.cc)
@@ -227,13 +227,7 @@ if(GEOARROW_BUILD_TESTS)
   include(FetchContent)
 
   find_package(Arrow REQUIRED)
-
-  if(${ARROW_VERSION} VERSION_GREATER_EQUAL "10.0.0")
-    set(CMAKE_CXX_STANDARD 17)
-  else()
-    set(CMAKE_CXX_STANDARD 11)
-  endif()
-
+  set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.23")
@@ -289,7 +283,8 @@ if(GEOARROW_BUILD_TESTS)
                  src/geoarrow/hpp/arrow_extension_type_test.cc)
   add_executable(hpp_array_util_test src/geoarrow/hpp/array_util_test.cc)
   add_executable(hpp_wkb_util_test src/geoarrow/hpp/wkb_util_test.cc)
-  add_executable(hpp_geometry_type_traits_test src/geoarrow/hpp/geometry_type_traits_test.cc)
+  add_executable(hpp_geometry_type_traits_test
+                 src/geoarrow/hpp/geometry_type_traits_test.cc)
 
   target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main
                         nanoarrow::nanoarrow)

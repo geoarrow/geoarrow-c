@@ -14,6 +14,22 @@ void DoSomethingWithArray(const Array& array, bool* was_called,
   EXPECT_EQ(array.value.size(), 0);
   EXPECT_EQ(Array::geometry_type, expected_geometry_type);
   EXPECT_EQ(Array::dimensions, expected_dimensions);
+
+  constexpr enum GeoArrowType type_id = geoarrow::type_traits::GeometryTypeTraits<
+      Array::geometry_type, Array::dimensions>::type_id(GEOARROW_COORD_TYPE_SEPARATE);
+  using type_traits = geoarrow::type_traits::TypeTraits<type_id>;
+  EXPECT_EQ(type_traits::geometry_type, expected_geometry_type);
+  EXPECT_EQ(type_traits::dimensions, expected_dimensions);
+  EXPECT_EQ(type_traits::coord_type_id, GEOARROW_COORD_TYPE_SEPARATE);
+
+  constexpr enum GeoArrowType type_id_interleaved =
+      geoarrow::type_traits::GeometryTypeTraits<Array::geometry_type, Array::dimensions>::
+          type_id(GEOARROW_COORD_TYPE_INTERLEAVED);
+  using type_traits_interleaved = geoarrow::type_traits::TypeTraits<type_id_interleaved>;
+  EXPECT_EQ(type_traits_interleaved::geometry_type, expected_geometry_type);
+  EXPECT_EQ(type_traits_interleaved::dimensions, expected_dimensions);
+  EXPECT_EQ(type_traits_interleaved::coord_type_id, GEOARROW_COORD_TYPE_INTERLEAVED);
+
   *was_called = true;
 }
 
