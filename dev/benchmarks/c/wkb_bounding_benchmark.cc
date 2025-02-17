@@ -10,6 +10,7 @@
 
 #include "benchmark_util.hpp"
 #include "geometry_util_internal.hpp"
+#include "geometry_util_internal2.h"
 
 /// \file wkb_bounding_benchmark.cc
 ///
@@ -167,6 +168,54 @@ void BenchBoundWKBLinestringUsingParquetBounder(benchmark::State& state) {
   CheckResult(bounds);
 }
 
+BoxXY BoundWKBLinestringUsingNewParquetBounder(const std::vector<uint8_t>& wkb) {
+  parquet2::geometry::WKBGeometryBounder bounder;
+  bounder.ReadGeometry(wkb.data(), wkb.size());
+  auto result = bounder.Bounds();
+  return {result.min[0], result.min[1], result.max[0], result.max[1]};
+}
+
+void BenchBoundWKBLinestringUsingNewParquetBounder(benchmark::State& state) {
+  std::vector<double> coords = MakeInterleavedCoords(kNumCoordsPrettyBig);
+  std::vector<uint8_t> wkb = MakeLinestringWKB(coords);
+  BoxXY bounds{};
+
+  for (auto _ : state) {
+    bounds = BoundWKBLinestringUsingNewParquetBounder(wkb);
+    benchmark::DoNotOptimize(bounds);
+  }
+
+  state.SetItemsProcessed(kNumCoordsPrettyBig * state.iterations());
+  CheckResult(bounds);
+}
+
+BoxXY BoundWKBPointsUsingNewParquetBounder(const std::vector<uint8_t>& wkb,
+                                           uint32_t num_points) {
+  uint32_t xy_point_bytes = 21;
+  parquet2::geometry::WKBGeometryBounder bounder;
+
+  for (uint32_t i = 0; i < num_points; i++) {
+    bounder.ReadGeometry(wkb.data() + (i * xy_point_bytes), xy_point_bytes);
+  }
+
+  auto result = bounder.Bounds();
+  return {result.min[0], result.min[1], result.max[0], result.max[1]};
+}
+
+void BenchBoundWKBPointsUsingNewParquetBounder(benchmark::State& state) {
+  std::vector<double> coords = MakeInterleavedCoords(kNumCoordsPrettyBig);
+  std::vector<uint8_t> wkb = MakePointsWKB(coords);
+  BoxXY bounds{};
+
+  for (auto _ : state) {
+    bounds = BoundWKBPointsUsingNewParquetBounder(wkb, kNumCoordsPrettyBig);
+    benchmark::DoNotOptimize(bounds);
+  }
+
+  state.SetItemsProcessed(kNumCoordsPrettyBig * state.iterations());
+  CheckResult(bounds);
+}
+
 BoxXY BoundWKBPointsUsingGeoArrowHpp(const std::vector<uint8_t>& wkb,
                                      uint32_t num_points) {
   uint32_t xy_point_bytes = 21;
@@ -315,8 +364,10 @@ BENCHMARK(BenchBoundDoubles);
 BENCHMARK(BenchBoundDoublesWithEmptyCheck);
 BENCHMARK(BenchBoundWKBLinestringUsingGeoArrowHpp);
 BENCHMARK(BenchBoundWKBLinestringUsingParquetBounder);
+BENCHMARK(BenchBoundWKBLinestringUsingNewParquetBounder);
 BENCHMARK(BenchBoundWKBPointsUsingGeoArrowHpp);
 BENCHMARK(BenchBoundWKBPointsUsingParquetBounder);
+BENCHMARK(BenchBoundWKBPointsUsingNewParquetBounder);
 BENCHMARK(BenchBoundWKBPointsUsingUnalignedSequence);
 
 std::vector<double> MakeInterleavedCoords(uint32_t num_coords) {
