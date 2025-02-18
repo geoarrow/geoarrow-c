@@ -11,8 +11,7 @@ on:
       - 'examples/**'
       - 'CMakeLists.txt'
       - '.github/workflows/examples.yaml'
-      - 'src/nanoarrow/**'
-      - 'src/extensions/**'
+      - 'src/geoarrow/**'
 
 jobs:
   examples:
