@@ -6,7 +6,7 @@
 
 #include "geoarrow/geoarrow.hpp"
 
-#include "wkx_testing.hpp"
+#include "geoarrow/wkx_testing.hpp"
 
 TEST(GeoArrowHppTest, ArrayWriterByBuffer) {
   geoarrow::ArrayBuilder writer(geoarrow::Point());

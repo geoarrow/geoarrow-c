@@ -5,7 +5,7 @@
 
 #include "geoarrow/geoarrow.hpp"
 
-#include "wkx_testing.hpp"
+#include "geoarrow/wkx_testing.hpp"
 
 using geoarrow::array_util::CoordCast;
 using geoarrow::array_util::CoordSequence;

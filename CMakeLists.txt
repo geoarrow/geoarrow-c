@@ -63,11 +63,10 @@ configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow/geoarrow_con
 
 if(NOT TARGET nanoarrow::nanoarrow)
   set(GEOARROW_NANOARROW_TARGET geoarrow_nanoarrow)
-  add_library(geoarrow_nanoarrow STATIC EXCLUDE_FROM_ALL
-              src/geoarrow/nanoarrow/nanoarrow.c)
+  add_library(geoarrow_nanoarrow STATIC EXCLUDE_FROM_ALL src/vendor/nanoarrow/nanoarrow.c)
   target_include_directories(geoarrow_nanoarrow
                              PUBLIC
-                             PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/geoarrow>"
+                             PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/vendor>"
   )
   target_compile_definitions(geoarrow_nanoarrow
                              PUBLIC "$<$<CONFIG:Debug>:NANOARROW_DEBUG>"
