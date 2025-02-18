@@ -6,7 +6,7 @@
 #include "geoarrow/geoarrow.h"
 #include "nanoarrow/nanoarrow.h"
 
-#include "wkx_testing.hpp"
+#include "geoarrow/wkx_testing.hpp"
 
 // Such that kNumOffsets[geometry_type] gives the right answer
 static int kNumOffsets[] = {-1, 0, 1, 2, 1, 2, 3, -1};

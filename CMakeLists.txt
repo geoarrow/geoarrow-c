@@ -161,6 +161,11 @@ if(GEOARROW_BUNDLE)
 
   # If building tests, add the geoarrow target so we can test against it
   if(GEOARROW_BUILD_TESTS)
+    # Make sure wkx_testing.hpp is also copied
+    file(READ src/geoarrow/wkx_testing.hpp SRC_FILE_CONTENTS)
+    file(WRITE ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/wkx_testing.hpp
+         "${SRC_FILE_CONTENTS}")
+
     add_library(geoarrow ${GEOARROW_C_TEMP})
 
     target_include_directories(geoarrow

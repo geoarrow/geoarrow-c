@@ -4,7 +4,7 @@
 #include "geoarrow/geoarrow.h"
 #include "nanoarrow/nanoarrow.h"
 
-#include "wkx_testing.hpp"
+#include "geoarrow/wkx_testing.hpp"
 
 TEST(WKBWriterTest, WKBWriterTestBasic) {
   struct GeoArrowWKBWriter writer;

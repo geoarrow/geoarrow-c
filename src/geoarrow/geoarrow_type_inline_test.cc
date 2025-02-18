@@ -5,7 +5,7 @@
 
 #include "geoarrow/geoarrow.h"
 
-#include "wkx_testing.hpp"
+#include "geoarrow/wkx_testing.hpp"
 
 TEST(TypeInlineTest, TypeInlineTestGeometryTypeFromType) {
   EXPECT_EQ(GeoArrowGeometryTypeFromType(GEOARROW_TYPE_WKB),

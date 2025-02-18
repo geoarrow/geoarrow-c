@@ -3,7 +3,7 @@
 
 #include "geoarrow/geoarrow.h"
 
-#include "wkx_testing.hpp"
+#include "geoarrow/wkx_testing.hpp"
 
 TEST(ArrayReaderTest, ArrayReaderTestInit) {
   struct GeoArrowArrayReader reader;
