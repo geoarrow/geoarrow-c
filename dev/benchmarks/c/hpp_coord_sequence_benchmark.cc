@@ -51,8 +51,8 @@ std::array<double, 4> BoundsUsingPointers(const Sequence& seq) {
     xmax = MAX(xmax, *x);
     ++x;
 
-    ymin = MIN(xmin, *y);
-    ymax = MAX(xmax, *y);
+    ymin = MIN(ymin, *y);
+    ymax = MAX(ymax, *y);
     ++y;
   }
 
