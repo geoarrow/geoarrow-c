@@ -189,12 +189,13 @@ else()
                         PUBLIC geoarrow_coverage_config)
 
   install(DIRECTORY src/geoarrow/hpp
-          DESTINATION include/geoarrow/hpp
+          DESTINATION include/geoarrow
           FILES_MATCHING
           PATTERN "*.hpp")
   install(FILES src/geoarrow/geoarrow.h src/geoarrow/geoarrow_type.h
-                src/geoarrow/geoarrow_type_inline.h DESTINATION include/geoarrow)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/geoarrow_config.h
+                src/geoarrow/geoarrow_type_inline.h src/geoarrow/geoarrow.hpp
+          DESTINATION include/geoarrow)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/geoarrow/geoarrow_config.h
           DESTINATION include/geoarrow)
 endif()
 
