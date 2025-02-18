@@ -4,7 +4,7 @@
 
 #include "nanoarrow/nanoarrow.h"
 
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 
 #define CHECK_POS(n)                               \
   if ((pos + (int32_t)(n)) > ((int32_t)pos_max)) { \

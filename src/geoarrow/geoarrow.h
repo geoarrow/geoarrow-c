@@ -2,7 +2,7 @@
 #ifndef GEOARROW_H_INCLUDED
 #define GEOARROW_H_INCLUDED
 
-#include "geoarrow_type.h"
+#include "geoarrow/geoarrow_type.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -559,6 +559,6 @@ void GeoArrowArrayWriterReset(struct GeoArrowArrayWriter* writer);
 }
 #endif
 
-#include "geoarrow_type_inline.h"
+#include "geoarrow/geoarrow_type_inline.h"
 
 #endif

@@ -50,6 +50,7 @@ sources += [
     if f.endswith(".c")
 ]
 
+
 # Workaround because setuptools has no easy way to mix C and C++ sources
 # if extra flags are required (e.g., -std=c++11 like we need here).
 class build_ext_subclass(build_ext):
@@ -86,7 +87,11 @@ setup(
     ext_modules=[
         Extension(
             name="geoarrow.c._lib",
-            include_dirs=["src/geoarrow/c/geoarrow", "src/geoarrow/c/geoarrow_python"],
+            include_dirs=[
+                "src/geoarrow/c",
+                "src/geoarrow/c/geoarrow",
+                "src/geoarrow/c/geoarrow_python",
+            ],
             language="c++",
             sources=["src/geoarrow/c/_lib.pyx"] + sources,
             extra_compile_args=["-std=c++11"] + extra_compile_args,

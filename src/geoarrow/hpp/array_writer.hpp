@@ -1,9 +1,9 @@
 #ifndef GEOARROW_HPP_ARRAY_WRITER_INCLUDED
 #define GEOARROW_HPP_ARRAY_WRITER_INCLUDED
 
-#include "hpp/exception.hpp"
-#include "hpp/geometry_data_type.hpp"
-#include "hpp/internal.hpp"
+#include "geoarrow/hpp/exception.hpp"
+#include "geoarrow/hpp/geometry_data_type.hpp"
+#include "geoarrow/hpp/internal.hpp"
 
 namespace geoarrow {
 

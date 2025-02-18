@@ -46,3 +46,8 @@ if __name__ == "__main__":
     for source_file in vendor_source_files:
         dst_file = source_file.replace(os.path.join(vendor_source_dir, ""), "")
         shutil.copyfile(source_file, os.path.join(vendor_dir, dst_file))
+
+    shutil.copyfile(
+        os.path.join(this_dir, "src/geoarrow/c/geoarrow_python/geoarrow_config.h"),
+        os.path.join(vendor_dir, "geoarrow_config.h"),
+    )

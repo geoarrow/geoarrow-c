@@ -5,7 +5,7 @@
 #include <sstream>
 #include <vector>
 
-#include <geoarrow.h>
+#include "geoarrow/geoarrow.h"
 #include "nanoarrow/nanoarrow.h"
 
 class WKXTestException : public std::exception {

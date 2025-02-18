@@ -4,7 +4,7 @@
 
 #include "nanoarrow/nanoarrow.h"
 
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 
 static GeoArrowErrorCode GeoArrowSchemaInitCoordFixedSizeList(struct ArrowSchema* schema,
                                                               const char* dims) {

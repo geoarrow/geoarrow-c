@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "geoarrow_type.h"
+#include "geoarrow/geoarrow_type.h"
 
 #ifdef __cplusplus
 extern "C" {

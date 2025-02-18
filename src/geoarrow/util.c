@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 
 const char* GeoArrowVersion(void) { return GEOARROW_VERSION; }
 

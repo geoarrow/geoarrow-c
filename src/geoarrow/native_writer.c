@@ -3,7 +3,7 @@
 
 #include "nanoarrow/nanoarrow.h"
 
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 
 // Bytes for four quiet (little-endian) NANs
 static uint8_t kEmptyPointCoords[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f,

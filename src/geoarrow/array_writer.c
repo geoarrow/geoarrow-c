@@ -3,7 +3,7 @@
 
 #include "nanoarrow/nanoarrow.h"
 
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 
 struct GeoArrowArrayWriterPrivate {
   struct GeoArrowNativeWriter native_writer;

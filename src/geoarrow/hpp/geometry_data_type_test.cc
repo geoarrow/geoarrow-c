@@ -3,7 +3,7 @@
 
 #include "nanoarrow/nanoarrow.h"
 
-#include "geometry_data_type.hpp"
+#include "geoarrow/geoarrow.hpp"
 
 TEST(GeoArrowHppTest, GeometryDataTypeMakeType) {
   auto type = geoarrow::GeometryDataType::Make(GEOARROW_TYPE_MULTIPOINT);

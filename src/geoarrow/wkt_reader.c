@@ -4,7 +4,7 @@
 
 #include "nanoarrow/nanoarrow.h"
 
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 
 #define COORD_CACHE_SIZE_COORDS 64
 

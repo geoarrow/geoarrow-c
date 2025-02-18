@@ -4,7 +4,7 @@
 
 #include <Python.h>
 #include <stdint.h>
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 
 static void PyGeoArrowBufferFree(uint8_t* ptr, int64_t size, void* private_data) {
   // Acquire the GIL? This buffer very well maybe freed from another thread.

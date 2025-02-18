@@ -7,7 +7,7 @@
 
 #include "nanoarrow/nanoarrow.h"
 
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 
 static int kernel_start_void(struct GeoArrowKernel* kernel, struct ArrowSchema* schema,
                              const char* options, struct ArrowSchema* out,

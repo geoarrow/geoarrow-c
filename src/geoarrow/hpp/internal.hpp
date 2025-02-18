@@ -2,7 +2,7 @@
 #ifndef GEOARROW_HPP_INTERNAL_INCLUDED
 #define GEOARROW_HPP_INTERNAL_INCLUDED
 
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 
 namespace geoarrow {
 

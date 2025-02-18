@@ -3,7 +3,7 @@
 
 #include "nanoarrow/nanoarrow.h"
 
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 
 struct BuilderPrivate {
   // The ArrowSchema (without extension) for this builder
