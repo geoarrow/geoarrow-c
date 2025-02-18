@@ -5,7 +5,7 @@
 #include <exception>
 #include <string>
 
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 
 #if defined(GEOARROW_DEBUG)
 #define _GEOARROW_THROW_NOT_OK_IMPL(NAME, EXPR, EXPR_STR, ERR)                      \

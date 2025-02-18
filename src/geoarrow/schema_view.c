@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 #include "nanoarrow/nanoarrow.h"
 
 static int GeoArrowParsePointFixedSizeList(const struct ArrowSchema* schema,

@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-#include <geoarrow.h>
+#include "geoarrow/geoarrow.h"
 #include "nanoarrow/nanoarrow.h"
 
 #include "wkx_testing.hpp"

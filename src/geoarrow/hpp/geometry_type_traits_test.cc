@@ -4,7 +4,7 @@
 
 #include "nanoarrow/nanoarrow.h"
 
-#include "geoarrow.hpp"
+#include "geoarrow/geoarrow.hpp"
 #include "wkx_testing.hpp"
 
 template <typename Array>

@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 
-#include "hpp/exception.hpp"
+#include "geoarrow/hpp/exception.hpp"
 
 namespace geoarrow {
 

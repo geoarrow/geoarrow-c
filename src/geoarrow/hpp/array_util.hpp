@@ -7,7 +7,7 @@
 #include <limits>
 #include <type_traits>
 
-#include "geoarrow_type.h"
+#include "geoarrow/geoarrow_type.h"
 
 /// \defgroup hpp-array-utility Array iteration utilities
 ///

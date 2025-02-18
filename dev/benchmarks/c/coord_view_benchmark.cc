@@ -3,7 +3,7 @@
 
 #include <benchmark/benchmark.h>
 
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 
 #include "benchmark_util.hpp"
 

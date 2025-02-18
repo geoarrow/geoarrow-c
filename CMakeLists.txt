@@ -140,9 +140,9 @@ if(GEOARROW_BUNDLE)
   # Update includes for concatenated sources
   foreach(SRC_FILE ${GEOARROW_HPP_TEMP} ${GEOARROW_H_TEMP} ${GEOARROW_C_TEMP})
     file(READ ${SRC_FILE} SRC_FILE_CONTENTS)
-    string(REGEX REPLACE "#include \"[a-z_.]+\"" "" SRC_FILE_CONTENTS
+    string(REGEX REPLACE "#include \"geoarrow/[a-z_.]+\"" "" SRC_FILE_CONTENTS
                          "${SRC_FILE_CONTENTS}")
-    string(REGEX REPLACE "#include \"hpp/[a-z_.]+\"" "" SRC_FILE_CONTENTS
+    string(REGEX REPLACE "#include \"geoarrow/hpp/[a-z_.]+\"" "" SRC_FILE_CONTENTS
                          "${SRC_FILE_CONTENTS}")
     file(WRITE ${SRC_FILE} "${SRC_FILE_CONTENTS}")
   endforeach()
@@ -177,7 +177,7 @@ else()
                        ${GEOARROW_DOUBLE_PRINT_SOURCE})
 
   target_include_directories(geoarrow
-                             PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/geoarrow>"
+                             PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
                                     "$<INSTALL_INTERFACE:include>")
   target_include_directories(geoarrow
                              PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>

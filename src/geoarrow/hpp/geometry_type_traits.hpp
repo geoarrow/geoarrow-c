@@ -1,8 +1,8 @@
 #ifndef GEOARROW_HPP_TYPE_TRAITS_INCLUDED
 #define GEOARROW_HPP_TYPE_TRAITS_INCLUDED
 
-#include "hpp/array_util.hpp"
-#include "hpp/wkb_util.hpp"
+#include "geoarrow/hpp/array_util.hpp"
+#include "geoarrow/hpp/wkb_util.hpp"
 
 namespace geoarrow {
 

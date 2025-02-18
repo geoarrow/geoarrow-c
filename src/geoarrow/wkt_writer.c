@@ -4,7 +4,7 @@
 
 #include "nanoarrow/nanoarrow.h"
 
-#include "geoarrow.h"
+#include "geoarrow/geoarrow.h"
 
 struct WKTWriterPrivate {
   enum ArrowType storage_type;

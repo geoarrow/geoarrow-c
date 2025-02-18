@@ -4,8 +4,8 @@
 
 #include <vector>
 
-#include "hpp/array_util.hpp"
-#include "hpp/exception.hpp"
+#include "geoarrow/hpp/array_util.hpp"
+#include "geoarrow/hpp/exception.hpp"
 
 #ifndef GEOARROW_NATIVE_ENDIAN
 #define GEOARROW_NATIVE_ENDIAN 0x01
