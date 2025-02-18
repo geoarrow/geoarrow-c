@@ -1,0 +1,42 @@
+name: examples
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'examples/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/examples.yaml'
+      - 'src/nanoarrow/**'
+      - 'src/extensions/**'
+
+jobs:
+  examples:
+
+    runs-on: ubuntu-latest
+    env:
+      VERBOSE: 1
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y cmake
+
+      - name: Comprehensive CMake example
+        run: |
+          cd examples/cmake-scenarios
+          ./build.sh
+          for dir in scratch/build*; do
+            ./${dir}/minimal_cpp_app;
+            echo ;
+          done
