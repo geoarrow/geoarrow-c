@@ -4,7 +4,7 @@
 #include "geoarrow/geoarrow.h"
 #include "nanoarrow/nanoarrow.h"
 
-#include "wkx_testing.hpp"
+#include "geoarrow/wkx_testing.hpp"
 
 static void CustomFreeDoubleVector(uint8_t* ptr, int64_t size, void* private_data) {
   GEOARROW_UNUSED(ptr);

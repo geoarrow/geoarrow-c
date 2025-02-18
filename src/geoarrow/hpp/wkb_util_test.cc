@@ -5,7 +5,7 @@
 
 #include "geoarrow/geoarrow.hpp"
 
-#include "wkx_testing.hpp"
+#include "geoarrow/wkx_testing.hpp"
 
 using geoarrow::wkb_util::WKBGeometry;
 using geoarrow::wkb_util::WKBParser;

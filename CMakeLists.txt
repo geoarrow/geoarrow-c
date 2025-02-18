@@ -63,11 +63,10 @@ configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow/geoarrow_con
 
 if(NOT TARGET nanoarrow::nanoarrow)
   set(GEOARROW_NANOARROW_TARGET geoarrow_nanoarrow)
-  add_library(geoarrow_nanoarrow STATIC EXCLUDE_FROM_ALL
-              src/geoarrow/nanoarrow/nanoarrow.c)
+  add_library(geoarrow_nanoarrow STATIC EXCLUDE_FROM_ALL src/vendor/nanoarrow/nanoarrow.c)
   target_include_directories(geoarrow_nanoarrow
                              PUBLIC
-                             PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/geoarrow>"
+                             PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/vendor>"
   )
   target_compile_definitions(geoarrow_nanoarrow
                              PUBLIC "$<$<CONFIG:Debug>:NANOARROW_DEBUG>"
@@ -162,6 +161,11 @@ if(GEOARROW_BUNDLE)
 
   # If building tests, add the geoarrow target so we can test against it
   if(GEOARROW_BUILD_TESTS)
+    # Make sure wkx_testing.hpp is also copied
+    file(READ src/geoarrow/wkx_testing.hpp SRC_FILE_CONTENTS)
+    file(WRITE ${CMAKE_BINARY_DIR}/amalgamation/geoarrow/wkx_testing.hpp
+         "${SRC_FILE_CONTENTS}")
+
     add_library(geoarrow ${GEOARROW_C_TEMP})
 
     target_include_directories(geoarrow

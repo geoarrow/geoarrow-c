@@ -4,7 +4,7 @@
 #include "geoarrow/geoarrow.h"
 #include "nanoarrow/nanoarrow.h"
 
-#include "wkx_testing.hpp"
+#include "geoarrow/wkx_testing.hpp"
 
 #define EXPECT_WKT_ROUNDTRIP(tester_, wkt_) EXPECT_EQ(tester_.AsWKT(wkt_), wkt_)
 

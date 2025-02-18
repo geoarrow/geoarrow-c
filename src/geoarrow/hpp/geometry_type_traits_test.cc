@@ -5,7 +5,7 @@
 #include "nanoarrow/nanoarrow.h"
 
 #include "geoarrow/geoarrow.hpp"
-#include "wkx_testing.hpp"
+#include "geoarrow/wkx_testing.hpp"
 
 template <typename Array>
 void DoSomethingWithArray(const Array& array, bool* was_called,

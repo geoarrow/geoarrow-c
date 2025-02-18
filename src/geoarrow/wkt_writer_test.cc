@@ -7,7 +7,7 @@
 #include "geoarrow/geoarrow.h"
 #include "nanoarrow/nanoarrow.h"
 
-#include "wkx_testing.hpp"
+#include "geoarrow/wkx_testing.hpp"
 
 std::string WKTEmpty(enum GeoArrowGeometryType geometry_type,
                      enum GeoArrowDimensions dimensions) {
