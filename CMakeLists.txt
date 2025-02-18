@@ -59,7 +59,7 @@ else()
   set(GEOARROW_USE_RYU_DEFINE "#define GEOARROW_USE_RYU 0")
 endif()
 
-configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow_config.h)
+configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow/geoarrow_config.h)
 
 if(NOT TARGET nanoarrow::nanoarrow)
   set(GEOARROW_NANOARROW_TARGET geoarrow_nanoarrow)
@@ -97,8 +97,9 @@ set(GEOARROW_SOURCES
     src/geoarrow/array_writer.c)
 
 set(GEOARROW_PUBLIC_HEADERS
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/geoarrow_config.h src/geoarrow/geoarrow_type.h
-    src/geoarrow/geoarrow.h src/geoarrow/geoarrow_type_inline.h)
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/geoarrow/geoarrow_config.h
+    src/geoarrow/geoarrow_type.h src/geoarrow/geoarrow.h
+    src/geoarrow/geoarrow_type_inline.h)
 
 if(GEOARROW_BUNDLE)
   # Bundle sources + headers, and if building tests, add a target the tests can link against
@@ -150,7 +151,7 @@ if(GEOARROW_BUNDLE)
   # Make sure geoarrow.h is included from geoarrow.c and geoarrow.hpp
   foreach(SRC_FILE ${GEOARROW_HPP_TEMP} ${GEOARROW_C_TEMP})
     file(READ ${SRC_FILE} SRC_FILE_CONTENTS)
-    file(WRITE ${SRC_FILE} "#include \"geoarrow.h\"\n")
+    file(WRITE ${SRC_FILE} "#include \"geoarrow/geoarrow.h\"\n")
     file(APPEND ${SRC_FILE} "${SRC_FILE_CONTENTS}")
   endforeach()
 
@@ -164,7 +165,7 @@ if(GEOARROW_BUNDLE)
     add_library(geoarrow ${GEOARROW_C_TEMP})
 
     target_include_directories(geoarrow
-                               PUBLIC "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/amalgamation/geoarrow>"
+                               PUBLIC "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/amalgamation>"
                                       "$<INSTALL_INTERFACE:include>")
     target_compile_definitions(geoarrow PUBLIC "$<$<CONFIG:Debug>:GEOARROW_DEBUG>")
     target_link_libraries(geoarrow

@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 
-#include "geoarrow_config.h"
+#include "geoarrow/geoarrow_config.h"
 
 #ifdef __cplusplus
 extern "C" {

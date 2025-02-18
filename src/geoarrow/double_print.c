@@ -1,5 +1,5 @@
 
-#include "geoarrow_type.h"
+#include "geoarrow/geoarrow_type.h"
 
 #include <stdio.h>
 
