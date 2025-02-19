@@ -46,10 +46,14 @@ class ArrayReader {
   }
 
   void SetArray(struct ArrowArray* array) {
-    struct GeoArrowError error {};
-    GEOARROW_THROW_NOT_OK(&error, GeoArrowArrayReaderSetArray(&reader_, array, &error));
     std::memcpy(&array_.array, array, sizeof(struct ArrowArray));
     array->release = nullptr;
+    SetArrayNonOwning(&array_.array);
+  }
+
+  void SetArrayNonOwning(const struct ArrowArray* array) {
+    struct GeoArrowError error {};
+    GEOARROW_THROW_NOT_OK(&error, GeoArrowArrayReaderSetArray(&reader_, array, &error));
   }
 
   GeoArrowErrorCode Visit(struct GeoArrowVisitor* visitor, int64_t offset, int64_t length,
