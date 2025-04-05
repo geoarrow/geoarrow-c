@@ -73,7 +73,7 @@ endif()
 include(CTest)
 enable_testing()
 
-foreach(ITEM coord_view hpp_coord_sequence)
+foreach(ITEM coord_view hpp_coord_sequence wkb_bounding)
   add_executable(${ITEM}_benchmark "c/${ITEM}_benchmark.cc")
   target_link_libraries(${ITEM}_benchmark PRIVATE geoarrow benchmark::benchmark_main)
   add_test(NAME ${ITEM}_benchmark COMMAND ${ITEM}_benchmark
