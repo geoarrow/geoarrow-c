@@ -53,6 +53,15 @@ struct Endian<kSwappedEndian> {
 
 }  // namespace internal
 
+struct Sequence {
+  const uint8_t* data[4]{};
+  uint64_t length{};
+  uint32_t stride[4]{};
+  uint16_t reserved;
+  uint8_t dimensions;
+  uint8_t swap;
+};
+
 /// \brief Location and structure of a coordinate sequence within a WKB blob
 struct WKBSequence {
   const uint8_t* data{};
