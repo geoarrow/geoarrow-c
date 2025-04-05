@@ -6,11 +6,9 @@
 
 #include <benchmark/benchmark.h>
 
-#include "geoarrow.hpp"
+#include "geoarrow/geoarrow.hpp"
 
 #include "benchmark_util.hpp"
-#include "geometry_util_internal.hpp"
-#include "geometry_util_internal2.h"
 
 /// \file wkb_bounding_benchmark.cc
 ///
@@ -33,14 +31,6 @@ using geoarrow::benchmark_util::kNumCoordsPrettyBig;
 std::vector<double> MakeInterleavedCoords(uint32_t num_coords);
 std::vector<uint8_t> MakePointsWKB(const std::vector<double>& coords);
 std::vector<uint8_t> MakeLinestringWKB(const std::vector<double>& coords);
-
-bool AllNaN(XY coord) {
-  int sum_na = 0;
-  for (const double x : coord) {
-    sum_na += std::isnan(x);
-  }
-  return sum_na == coord.size();
-}
 
 // Coarse check to make sure we're benchmarking the same thing
 void CheckResult(const BoxXY& bounds) {
@@ -81,35 +71,6 @@ void BenchBoundDoubles(benchmark::State& state) {
   CheckResult(bounds);
 }
 
-BoxXY BoundDoublesWithEmptyCheck(const std::vector<double>& coords) {
-  BoxXY bounds = BoxXY::Empty();
-  XY xy;
-  for (size_t i = 0; i < coords.size(); i += 2) {
-    xy = {coords[i], coords[i + 1]};
-    if (!AllNaN(xy)) {
-      bounds[0] = MIN(bounds[0], coords[i]);
-      bounds[1] = MIN(bounds[1], coords[i + 1]);
-      bounds[2] = MAX(bounds[2], coords[i]);
-      bounds[3] = MAX(bounds[3], coords[i + 1]);
-    }
-  }
-
-  return bounds;
-}
-
-void BenchBoundDoublesWithEmptyCheck(benchmark::State& state) {
-  std::vector<double> coords = MakeInterleavedCoords(kNumCoordsPrettyBig);
-  BoxXY bounds{};
-
-  for (auto _ : state) {
-    bounds = BoundDoublesWithEmptyCheck(coords);
-    benchmark::DoNotOptimize(bounds);
-  }
-
-  state.SetItemsProcessed(kNumCoordsPrettyBig * state.iterations());
-  CheckResult(bounds);
-}
-
 BoxXY BoundWKBLinestringUsingGeoArrowHpp(const std::vector<uint8_t>& wkb) {
   BoxXY bounds = BoxXY::Empty();
 
@@ -143,79 +104,6 @@ void BenchBoundWKBLinestringUsingGeoArrowHpp(benchmark::State& state) {
   CheckResult(bounds);
 }
 
-BoxXY BoundWKBLinestringUsingParquetBounder(const std::vector<uint8_t>& wkb) {
-  parquet::geometry::WKBBuffer buffer;
-  parquet::geometry::WKBGeometryBounder bounder;
-
-  buffer.Init(wkb.data(), wkb.size());
-  bounder.ReadGeometry(&buffer);
-  bounder.Flush();
-  auto result = bounder.Bounds();
-  return {result.min[0], result.min[1], result.max[0], result.max[1]};
-}
-
-void BenchBoundWKBLinestringUsingParquetBounder(benchmark::State& state) {
-  std::vector<double> coords = MakeInterleavedCoords(kNumCoordsPrettyBig);
-  std::vector<uint8_t> wkb = MakeLinestringWKB(coords);
-  BoxXY bounds{};
-
-  for (auto _ : state) {
-    bounds = BoundWKBLinestringUsingParquetBounder(wkb);
-    benchmark::DoNotOptimize(bounds);
-  }
-
-  state.SetItemsProcessed(kNumCoordsPrettyBig * state.iterations());
-  CheckResult(bounds);
-}
-
-BoxXY BoundWKBLinestringUsingNewParquetBounder(const std::vector<uint8_t>& wkb) {
-  parquet2::geometry::WKBGeometryBounder bounder;
-  bounder.ReadGeometry(wkb.data(), wkb.size());
-  auto result = bounder.Bounds();
-  return {result.min[0], result.min[1], result.max[0], result.max[1]};
-}
-
-void BenchBoundWKBLinestringUsingNewParquetBounder(benchmark::State& state) {
-  std::vector<double> coords = MakeInterleavedCoords(kNumCoordsPrettyBig);
-  std::vector<uint8_t> wkb = MakeLinestringWKB(coords);
-  BoxXY bounds{};
-
-  for (auto _ : state) {
-    bounds = BoundWKBLinestringUsingNewParquetBounder(wkb);
-    benchmark::DoNotOptimize(bounds);
-  }
-
-  state.SetItemsProcessed(kNumCoordsPrettyBig * state.iterations());
-  CheckResult(bounds);
-}
-
-BoxXY BoundWKBPointsUsingNewParquetBounder(const std::vector<uint8_t>& wkb,
-                                           uint32_t num_points) {
-  uint32_t xy_point_bytes = 21;
-  parquet2::geometry::WKBGeometryBounder bounder;
-
-  for (uint32_t i = 0; i < num_points; i++) {
-    bounder.ReadGeometry(wkb.data() + (i * xy_point_bytes), xy_point_bytes);
-  }
-
-  auto result = bounder.Bounds();
-  return {result.min[0], result.min[1], result.max[0], result.max[1]};
-}
-
-void BenchBoundWKBPointsUsingNewParquetBounder(benchmark::State& state) {
-  std::vector<double> coords = MakeInterleavedCoords(kNumCoordsPrettyBig);
-  std::vector<uint8_t> wkb = MakePointsWKB(coords);
-  BoxXY bounds{};
-
-  for (auto _ : state) {
-    bounds = BoundWKBPointsUsingNewParquetBounder(wkb, kNumCoordsPrettyBig);
-    benchmark::DoNotOptimize(bounds);
-  }
-
-  state.SetItemsProcessed(kNumCoordsPrettyBig * state.iterations());
-  CheckResult(bounds);
-}
-
 BoxXY BoundWKBPointsUsingGeoArrowHpp(const std::vector<uint8_t>& wkb,
                                      uint32_t num_points) {
   uint32_t xy_point_bytes = 21;
@@ -236,10 +124,6 @@ BoxXY BoundWKBPointsUsingGeoArrowHpp(const std::vector<uint8_t>& wkb,
     }
 
     geometry.VisitVertices<XY>([&](XY xy) {
-      if (AllNaN(xy)) {
-        return;
-      }
-
       bounds[0] = MIN(bounds[0], xy.x());
       bounds[1] = MIN(bounds[1], xy.y());
       bounds[2] = MAX(bounds[2], xy.x());
@@ -257,37 +141,6 @@ void BenchBoundWKBPointsUsingGeoArrowHpp(benchmark::State& state) {
 
   for (auto _ : state) {
     bounds = BoundWKBPointsUsingGeoArrowHpp(wkb, kNumCoordsPrettyBig);
-    benchmark::DoNotOptimize(bounds);
-  }
-
-  state.SetItemsProcessed(kNumCoordsPrettyBig * state.iterations());
-  CheckResult(bounds);
-}
-
-BoxXY BoundWKBPointsUsingParquetBounder(const std::vector<uint8_t>& wkb,
-                                        uint32_t num_points) {
-  uint32_t xy_point_bytes = 21;
-
-  parquet::geometry::WKBBuffer buffer;
-  parquet::geometry::WKBGeometryBounder bounder;
-
-  for (uint32_t i = 0; i < num_points; i++) {
-    buffer.Init(wkb.data() + (i * xy_point_bytes), xy_point_bytes);
-    bounder.ReadGeometry(&buffer);
-  }
-
-  bounder.Flush();
-  auto result = bounder.Bounds();
-  return {result.min[0], result.min[1], result.max[0], result.max[1]};
-}
-
-void BenchBoundWKBPointsUsingParquetBounder(benchmark::State& state) {
-  std::vector<double> coords = MakeInterleavedCoords(kNumCoordsPrettyBig);
-  std::vector<uint8_t> wkb = MakePointsWKB(coords);
-  BoxXY bounds{};
-
-  for (auto _ : state) {
-    bounds = BoundWKBPointsUsingParquetBounder(wkb, kNumCoordsPrettyBig);
     benchmark::DoNotOptimize(bounds);
   }
 
@@ -333,10 +186,6 @@ BoxXY BoundWKBPointsUsingUnalignedSequence(const std::vector<uint8_t>& wkb,
   seq.InitInterleaved(num_points, wkb.data() + sizeof(uint8_t) + sizeof(uint32_t));
   seq.stride_bytes = xy_point_bytes;
   seq.VisitVertices<XY>([&](XY xy) {
-    if (AllNaN(xy)) {
-      return;
-    }
-
     bounds[0] = MIN(bounds[0], xy.x());
     bounds[1] = MIN(bounds[1], xy.y());
     bounds[2] = MAX(bounds[2], xy.x());
@@ -361,13 +210,8 @@ void BenchBoundWKBPointsUsingUnalignedSequence(benchmark::State& state) {
 }
 
 BENCHMARK(BenchBoundDoubles);
-BENCHMARK(BenchBoundDoublesWithEmptyCheck);
 BENCHMARK(BenchBoundWKBLinestringUsingGeoArrowHpp);
-BENCHMARK(BenchBoundWKBLinestringUsingParquetBounder);
-BENCHMARK(BenchBoundWKBLinestringUsingNewParquetBounder);
 BENCHMARK(BenchBoundWKBPointsUsingGeoArrowHpp);
-BENCHMARK(BenchBoundWKBPointsUsingParquetBounder);
-BENCHMARK(BenchBoundWKBPointsUsingNewParquetBounder);
 BENCHMARK(BenchBoundWKBPointsUsingUnalignedSequence);
 
 std::vector<double> MakeInterleavedCoords(uint32_t num_coords) {
