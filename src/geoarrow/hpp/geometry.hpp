@@ -81,37 +81,49 @@ struct GeometryNode {
   uint8_t geometry_type{};
   uint8_t dimensions{};
   uint8_t endian{internal::kNativeEndian};
-  uint8_t flags{};
+  uint8_t level{};
   struct GeometryNode* next{};
+};
 
-  template <typename Visit>
-  void VisitVertices(Visit&& fun) {
-    switch (geometry_type) {
+template <typename Visit>
+void VisitVertices(GeometryNode* n, Visit&& fun) {
+  while (n) {
+    switch (n->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING: {
         array_util::XY<double> c;
         const uint8_t* ptrs[4];
-        memcpy(ptrs, data, sizeof(data));
-        auto load = array_util::internal::LoadIdentity<double>();
+        memcpy(ptrs, n->data, sizeof(n->data));
 
-        for (uint32_t i = 0; i < size; i++) {
-          for (uint32_t j = 0; j < c.size(); j++) {
-            c[j] = load(ptrs[j]);
-            ptrs[j] += stride[j];
+        if (n->endian == internal::kNativeEndian) {
+          auto load = array_util::internal::LoadIdentity<double>();
+          for (uint32_t i = 0; i < n->size; i++) {
+            for (uint32_t j = 0; j < c.size(); j++) {
+              c[j] = load(ptrs[j]);
+              ptrs[j] += n->stride[j];
+            }
+
+            fun(c);
           }
+        } else {
+          auto load = array_util::internal::LoadSwapped<double>();
+          for (uint32_t i = 0; i < n->size; i++) {
+            for (uint32_t j = 0; j < c.size(); j++) {
+              c[j] = load(ptrs[j]);
+              ptrs[j] += n->stride[j];
+            }
 
-          fun(c);
+            fun(c);
+          }
         }
       } break;
       default:
         break;
     }
 
-    if (next != nullptr) {
-      next->VisitVertices(fun);
-    }
+    n = n->next;
   }
-};
+}
 
 class Geometry {
  public:
@@ -172,6 +184,7 @@ class WKBParser {
                const uint8_t** cursor = nullptr) {
     data_ = cursor_ = data;
     remaining_ = size;
+    level_ = 0;
     root->clear();
     Status status = ParseGeometry(root, root->data());
     if (status != OK) {
@@ -214,6 +227,7 @@ class WKBParser {
   uint8_t last_endian_;
   uint8_t last_dimensions_;
   uint32_t last_coord_stride_;
+  int16_t level_;
   internal::Endian<internal::kBigEndian>::LoadUInt32 load_uint32_be_;
   internal::Endian<internal::kLittleEndian>::LoadUInt32 load_uint32_le_;
 
@@ -261,9 +275,11 @@ class WKBParser {
         break;
     }
 
+    out->level = level_;
+
     last_coord_stride_ = 2 + has_z + has_m;
     if (has_z && has_m) {
-      last_dimensions_ = out->dimensions = static_cast<uint8_t>(GEOARROW_DIMENSIONS_XYZM);
+      last_dimensions_ = out->dimensions = GEOARROW_DIMENSIONS_XYZM;
     } else if (has_z) {
       last_dimensions_ = out->dimensions = GEOARROW_DIMENSIONS_XYZ;
     } else if (has_m) {
@@ -331,6 +347,7 @@ class WKBParser {
     }
 
     out->size = ReadUInt32Unchecked();
+    level_++;
     for (uint32_t i = 0; i < out->size; ++i) {
       status = ParseSequence(root->AppendNode());
       if (status != OK) {
@@ -338,6 +355,7 @@ class WKBParser {
       }
     }
 
+    level_--;
     return OK;
   }
 
@@ -348,6 +366,7 @@ class WKBParser {
     }
 
     out->size = ReadUInt32Unchecked();
+    level_++;
     for (uint32_t i = 0; i < out->size; ++i) {
       status = ParseGeometry(root, root->AppendNode());
       if (status != OK) {
@@ -355,6 +374,7 @@ class WKBParser {
       }
     }
 
+    level_--;
     return OK;
   }
 

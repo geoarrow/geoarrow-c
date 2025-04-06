@@ -39,6 +39,7 @@ TEST(GeoArrowHppTest, ValidWKBArray) {
 
   auto& root = *geometry.data();
   EXPECT_EQ(root.geometry_type, GEOARROW_GEOMETRY_TYPE_POINT);
-  root.VisitVertices([&](XY val) { coords.push_back(val); });
+  geoarrow::geometry::VisitVertices(geometry.data(),
+                                    [&](XY val) { coords.push_back(val); });
   EXPECT_THAT(coords, ::testing::ElementsAre(XY{0, 1}));
 }

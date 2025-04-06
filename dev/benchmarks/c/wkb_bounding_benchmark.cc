@@ -157,7 +157,7 @@ BoxXY BoundWKBLinestringUsingNewGeoArrowHpp(const std::vector<uint8_t>& wkb) {
     throw std::runtime_error("Error parsing WKB");
   }
 
-  geometry.data()->VisitVertices([&](XY xy) {
+  VisitVertices(geometry.data(), [&](XY xy) {
     bounds[0] = MIN(bounds[0], xy.x());
     bounds[1] = MIN(bounds[1], xy.y());
     bounds[2] = MAX(bounds[2], xy.x());
@@ -200,7 +200,7 @@ BoxXY BoundWKBPointsUsingNewGeoArrowHpp(const std::vector<uint8_t>& wkb,
       throw std::runtime_error("Error parsing WKB at index " + std::to_string(i));
     }
 
-    geometry.data()->VisitVertices([&](XY xy) {
+    VisitVertices(geometry.data(), [&](XY xy) {
       bounds[0] = MIN(bounds[0], xy.x());
       bounds[1] = MIN(bounds[1], xy.y());
       bounds[2] = MAX(bounds[2], xy.x());
