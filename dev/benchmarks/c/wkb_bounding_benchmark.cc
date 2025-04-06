@@ -148,6 +148,83 @@ void BenchBoundWKBPointsUsingGeoArrowHpp(benchmark::State& state) {
   CheckResult(bounds);
 }
 
+BoxXY BoundWKBLinestringUsingNewGeoArrowHpp(const std::vector<uint8_t>& wkb) {
+  BoxXY bounds = BoxXY::Empty();
+
+  geoarrow::geometry::Geometry geometry;
+  geoarrow::geometry::WKBParser parser;
+  if (parser.Parse(wkb.data(), wkb.size(), &geometry) != parser.OK) {
+    throw std::runtime_error("Error parsing WKB");
+  }
+
+  geometry.data()->VisitVertices([&](XY xy) {
+    bounds[0] = MIN(bounds[0], xy.x());
+    bounds[1] = MIN(bounds[1], xy.y());
+    bounds[2] = MAX(bounds[2], xy.x());
+    bounds[3] = MAX(bounds[3], xy.y());
+  });
+
+  return bounds;
+}
+
+void BenchBoundWKBLinestringUsingNewGeoArrowHpp(benchmark::State& state) {
+  std::vector<double> coords = MakeInterleavedCoords(kNumCoordsPrettyBig);
+  std::vector<uint8_t> wkb = MakeLinestringWKB(coords);
+  BoxXY bounds{};
+
+  for (auto _ : state) {
+    bounds = BoundWKBLinestringUsingNewGeoArrowHpp(wkb);
+    benchmark::DoNotOptimize(bounds);
+  }
+
+  state.SetItemsProcessed(kNumCoordsPrettyBig * state.iterations());
+  CheckResult(bounds);
+}
+
+BoxXY BoundWKBPointsUsingNewGeoArrowHpp(const std::vector<uint8_t>& wkb,
+                                        uint32_t num_points) {
+  uint32_t xy_point_bytes = 21;
+  if (wkb.size() != (num_points * xy_point_bytes)) {
+    throw std::runtime_error("Expected " + std::to_string(num_points * xy_point_bytes) +
+                             " bytes but got " + std::to_string(wkb.size()));
+  }
+
+  BoxXY bounds = BoxXY::Empty();
+
+  geoarrow::geometry::Geometry geometry;
+  geoarrow::geometry::WKBParser parser;
+
+  for (uint32_t i = 0; i < num_points; i++) {
+    if (parser.Parse(wkb.data() + (i * xy_point_bytes), xy_point_bytes, &geometry) !=
+        parser.OK) {
+      throw std::runtime_error("Error parsing WKB at index " + std::to_string(i));
+    }
+
+    geometry.data()->VisitVertices([&](XY xy) {
+      bounds[0] = MIN(bounds[0], xy.x());
+      bounds[1] = MIN(bounds[1], xy.y());
+      bounds[2] = MAX(bounds[2], xy.x());
+      bounds[3] = MAX(bounds[3], xy.y());
+    });
+  }
+
+  return bounds;
+}
+
+void BenchBoundWKBPointsUsingNewGeoArrowHpp(benchmark::State& state) {
+  std::vector<double> coords = MakeInterleavedCoords(kNumCoordsPrettyBig);
+  std::vector<uint8_t> wkb = MakePointsWKB(coords);
+  BoxXY bounds{};
+
+  for (auto _ : state) {
+    bounds = BoundWKBPointsUsingNewGeoArrowHpp(wkb, kNumCoordsPrettyBig);
+    benchmark::DoNotOptimize(bounds);
+  }
+
+  state.SetItemsProcessed(kNumCoordsPrettyBig * state.iterations());
+  CheckResult(bounds);
+}
+
 BoxXY BoundWKBPointsUsingUnalignedSequence(const std::vector<uint8_t>& wkb,
                                            uint32_t num_points) {
   uint32_t xy_point_bytes = 21;
@@ -212,6 +289,8 @@ void BenchBoundWKBPointsUsingUnalignedSequence(benchmark::State& state) {
 BENCHMARK(BenchBoundDoubles);
 BENCHMARK(BenchBoundWKBLinestringUsingGeoArrowHpp);
 BENCHMARK(BenchBoundWKBPointsUsingGeoArrowHpp);
+BENCHMARK(BenchBoundWKBPointsUsingNewGeoArrowHpp);
+BENCHMARK(BenchBoundWKBLinestringUsingNewGeoArrowHpp);
 BENCHMARK(BenchBoundWKBPointsUsingUnalignedSequence);
 
 std::vector<double> MakeInterleavedCoords(uint32_t num_coords) {
