@@ -7,3 +7,4 @@
 #include "geoarrow/hpp/geometry_type_traits.hpp"
 #include "geoarrow/hpp/internal.hpp"
 #include "geoarrow/hpp/wkb_util.hpp"
+#include "geoarrow/hpp/geometry.hpp"
