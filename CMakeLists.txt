@@ -315,6 +315,8 @@ if(GEOARROW_BUILD_TESTS)
   add_executable(hpp_wkb_util_test src/geoarrow/hpp/wkb_util_test.cc)
   add_executable(hpp_geometry_type_traits_test
                  src/geoarrow/hpp/geometry_type_traits_test.cc)
+  add_executable(hpp_geometry_test
+                 src/geoarrow/hpp/geometry_test.cc)
 
   target_link_libraries(geoarrow_type_inline_test geoarrow gtest_main
                         ${GEOARROW_NANOARROW_TARGET})
@@ -362,6 +364,11 @@ if(GEOARROW_BUILD_TESTS)
                         gtest_main
                         gmock_main
                         ${GEOARROW_NANOARROW_TARGET})
+  target_link_libraries(hpp_geometry_test
+                        geoarrow
+                        gtest_main
+                        gmock_main
+                        ${GEOARROW_NANOARROW_TARGET})
 
   include(GoogleTest)
   gtest_discover_tests(geoarrow_type_inline_test)
@@ -388,6 +395,7 @@ if(GEOARROW_BUILD_TESTS)
   gtest_discover_tests(hpp_array_util_test)
   gtest_discover_tests(hpp_wkb_util_test)
   gtest_discover_tests(hpp_geometry_type_traits_test)
+  gtest_discover_tests(hpp_geometry_test)
 endif()
 
 # Add the geoarrow alias target
