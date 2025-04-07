@@ -76,7 +76,7 @@ static const uint8_t* kNaNBytes = reinterpret_cast<uint8_t*>(&internal::kNaN);
 struct GeometryNode {
   const uint8_t* data[4]{internal::kNaNBytes, internal::kNaNBytes, internal::kNaNBytes,
                          internal::kNaNBytes};
-  uint32_t stride[4]{};
+  int32_t stride[4]{};
   uint32_t size{};
   uint8_t geometry_type{};
   uint8_t dimensions{};
@@ -166,7 +166,10 @@ class WKBParser {
     INVALID_ENDIAN,
     /// \brief An unexpected geometry type value was encountered (e.g., corrupted data or
     /// curved/complex geometry)
-    INVALID_GEOMETRY_TYPE
+    INVALID_GEOMETRY_TYPE,
+    /// \brief Occurs if the geometry was nested too deeply for this parser to handle.
+    /// This parser can handle a maximum recursion depth of 255.
+    TOO_RECURSIVE
   };
 
   WKBParser() = default;
@@ -275,7 +278,7 @@ class WKBParser {
         break;
     }
 
-    out->level = level_;
+    out->level = static_cast<uint8_t>(level_);
 
     last_coord_stride_ = 2 + has_z + has_m;
     if (has_z && has_m) {
@@ -348,6 +351,10 @@ class WKBParser {
 
     out->size = ReadUInt32Unchecked();
     level_++;
+    if (level_ > 255) {
+      return TOO_RECURSIVE;
+    }
+
     for (uint32_t i = 0; i < out->size; ++i) {
       status = ParseSequence(root->AppendNode());
       if (status != OK) {
@@ -367,6 +374,10 @@ class WKBParser {
 
     out->size = ReadUInt32Unchecked();
     level_++;
+    if (level_ > 255) {
+      return TOO_RECURSIVE;
+    }
+
     for (uint32_t i = 0; i < out->size; ++i) {
       status = ParseGeometry(root, root->AppendNode());
       if (status != OK) {
