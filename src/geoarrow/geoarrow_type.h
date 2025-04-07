@@ -277,6 +277,92 @@ enum GeoArrowCrsType {
   GEOARROW_CRS_TYPE_SRID
 };
 
+/// \brief Generic Geometry representation
+///
+/// This structure represents a generic view on a geometry, inspired by
+/// DuckDB-spatial's sgl::geometry. The ownership of this struct is
+/// typically managed by a GeoArrowGeometryRoot or a generic sequence
+/// type (e.g., std::vector). Its design allows for efficient iteration
+/// over a wide variety of underlying structures without the need for
+/// recursive stuctures (but allowing for recursive iteration where
+/// required).
+struct GeoArrowGeometry {
+  /// \brief Coordinate data
+  ///
+  /// Each pointer in coords points to the first coordinate in the sequence
+  /// when geometry_type is GEOARROW_GEOMETRY_TYPE_POINT or
+  /// GEOARROW_GEOMETRY_TYPE_LINESTRING ordered according to the dimensions
+  /// specified in dimensions.
+  ///
+  /// The pointers need not be aligned. The data type must be a float,
+  /// double, or signed 32-bit integer, communicated by a parent
+  /// structure. Producers should produce double coordinates unless absolutely
+  /// necessary; consumers may choose to only support double coordinates.
+  /// Unless specified by a parent structure coordinates are C doubles.
+  ///
+  /// For dimension j, it must be safe to access the range
+  /// [coords[j], coords[j] + size * stride[j] + sizeof(T)].
+  ///
+  /// The pointers in coords must never be NULL. Empty dimensions must point
+  /// to a valid address whose value is NaN (for floating point types) or
+  /// the most negative possible value (for integer types). This is true even
+  /// when size is 0 (i.e., it must always be safe to access at least one value).
+  const uint8_t* coords[4];
+
+  /// \brief Number of bytes between adjacent coordinate values in coords, respectively
+  ///
+  /// The number of bytes to advance each pointer in coords when moving to the next
+  /// coordinate. This allow representing a wide variety of coordinate layouts:
+  ///
+  /// - Interleaved coordinates: coord_stride is n_dimensions * sizeof(T). For
+  ///   example, interleaved XY coordinates with double precision would have
+  ///   coords set to {data, data + 8, &kNaN, &kNaN} and coord_stride set to
+  ///   {16, 16, 0, 0}
+  /// - Separated coordinates: coord_stride is sizeof(T). For example, separated
+  ///   XY coordinates would have coords set to {x, y, &kNaN, &kNaN} and
+  ///   coord_stride set to {8, 8, 0, 0}.
+  /// - A constant value: coord_stride is 0. For example, the value 30, 10 as
+  ///   a constant would have coords set to {&thirty, &ten, &kNaN, &kNaN} and
+  ///   coord_stride set to {0, 0, 0, 0}.
+  /// - WKB values with constant length packed end-to-end contiguously in memory
+  ///   (e.g., in an Arrow array as the data bufer in an Array that does not
+  ///   contain nulls): coord_stride is the size of one WKB item. For example,
+  ///   an Arrow array of XY points would have coords set to {data + 1 + 4,
+  ///   data + 1 + 4 + 8, &kNaN, &kNaN} and stride set to {21, 21, 0, 0}.
+  uint32_t coord_stride[4];
+
+  /// \brief The number of coordinates or children in this geometry
+  ///
+  /// When geometry_type is GEOARROW_GEOMETRY_TYPE_POINT or
+  /// GEOARROW_GEOMETRY_TYPE_LINESTRING, the number of coodinates in the
+  /// sequence. Otherwise, the number of child geometries.
+  uint32_t size;
+
+  /// \brief The GeoArrowGeometryType
+  uint8_t geometry_type;
+
+  /// \brief The GeoArrowDimensions
+  uint8_t dimensions;
+
+  /// \brief The endianness of the values in coords
+  ///
+  /// 0x01 for little endian, 0x00 for big endian.
+  uint8_t endian;
+
+  /// \brief The recursion level
+  ///
+  /// A level of 0 represets a top-level geometry in an Array.
+  uint8_t level;
+
+  /// \brief The next geometry
+  ///
+  /// Points either to the first child (if size > 0) or the next geometry.
+  /// This will be NULL when there are no more geometries. This allows
+  /// iterating over all coordinates in a given geometry nonrecursively.
+  /// Use level to build a recursive tree of geometries if this is required.
+  struct GeoArrowGeometry* next;
+};
+
 /// \brief Parsed view of an ArrowSchema representation of a GeoArrowType
 ///
 /// This structure can be initialized from an ArrowSchema or a GeoArrowType.
