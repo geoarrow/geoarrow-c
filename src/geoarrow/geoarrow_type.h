@@ -279,34 +279,30 @@ enum GeoArrowCrsType {
 
 /// \brief Generic Geometry representation
 ///
-/// This structure represents a generic view on a geometry, inspired by
-/// DuckDB-spatial's sgl::geometry. The ownership of this struct is
-/// typically managed by a GeoArrowGeometryRoot or a generic sequence
-/// type (e.g., std::vector). Its design allows for efficient iteration
-/// over a wide variety of underlying structures without the need for
-/// recursive stuctures (but allowing for recursive iteration where
-/// required).
+/// This structure represents a generic view on a geometry, inspired by DuckDB-spatial's
+/// sgl::geometry. The ownership of this struct is typically managed by a
+/// GeoArrowGeometryRoot or a generic sequence type (e.g., std::vector). Its design allows
+/// for efficient iteration over a wide variety of underlying structures without the need
+/// for recursive stuctures (but allowing for recursive iteration where required).
 struct GeoArrowGeometry {
   /// \brief Coordinate data
   ///
-  /// Each pointer in coords points to the first coordinate in the sequence
-  /// when geometry_type is GEOARROW_GEOMETRY_TYPE_POINT or
-  /// GEOARROW_GEOMETRY_TYPE_LINESTRING ordered according to the dimensions
-  /// specified in dimensions.
+  /// Each pointer in coords points to the first coordinate in the sequence when
+  /// geometry_type is GEOARROW_GEOMETRY_TYPE_POINT or GEOARROW_GEOMETRY_TYPE_LINESTRING
+  /// ordered according to the dimensions specified in dimensions.
   ///
-  /// The pointers need not be aligned. The data type must be a float,
-  /// double, or signed 32-bit integer, communicated by a parent
-  /// structure. Producers should produce double coordinates unless absolutely
-  /// necessary; consumers may choose to only support double coordinates.
-  /// Unless specified by a parent structure coordinates are C doubles.
+  /// The pointers need not be aligned. The data type must be a float, double, or signed
+  /// 32-bit integer, communicated by a parent structure. Producers should produce double
+  /// coordinates unless absolutely necessary; consumers may choose to only support double
+  /// coordinates. Unless specified by a parent structure coordinates are C doubles.
   ///
   /// For dimension j, it must be safe to access the range
   /// [coords[j], coords[j] + size * stride[j] + sizeof(T)].
   ///
-  /// The pointers in coords must never be NULL. Empty dimensions must point
-  /// to a valid address whose value is NaN (for floating point types) or
-  /// the most negative possible value (for integer types). This is true even
-  /// when size is 0 (i.e., it must always be safe to access at least one value).
+  /// The pointers in coords must never be NULL. Empty dimensions must point to a valid
+  /// address whose value is NaN (for floating point types) or the most negative possible
+  /// value (for integer types). This is true even when size is 0 (i.e., it must always be
+  /// safe to access at least one value).
   const uint8_t* coords[4];
 
   /// \brief Number of bytes between adjacent coordinate values in coords, respectively
@@ -329,16 +325,22 @@ struct GeoArrowGeometry {
   ///   contain nulls): coord_stride is the size of one WKB item. For example,
   ///   an Arrow array of XY points would have coords set to {data + 1 + 4,
   ///   data + 1 + 4 + 8, &kNaN, &kNaN} and stride set to {21, 21, 0, 0}.
-  uint32_t coord_stride[4];
+  /// - Any of the above but reversed (by pointing to the last coordinate
+  ///   and setting the stride to a negative value).
+  int32_t coord_stride[4];
 
   /// \brief The number of coordinates or children in this geometry
   ///
   /// When geometry_type is GEOARROW_GEOMETRY_TYPE_POINT or
-  /// GEOARROW_GEOMETRY_TYPE_LINESTRING, the number of coodinates in the
-  /// sequence. Otherwise, the number of child geometries.
+  /// GEOARROW_GEOMETRY_TYPE_LINESTRING, the number of coodinates in the sequence.
+  /// Otherwise, the number of child geometries.
   uint32_t size;
 
-  /// \brief The GeoArrowGeometryType
+  /// \brief The GeoArrowGeometryType of this geometry
+  ///
+  /// For the purposes of this structure, rings of a polygon are considered a
+  /// GEOARROW_GEOMETRY_TYPE_LINESTRING. The value GEOARROW_GEOMETRY_TYPE_UNINITIALIZED
+  /// can be used to communicate an invalid or null value but must set size to zero.
   uint8_t geometry_type;
 
   /// \brief The GeoArrowDimensions
@@ -351,15 +353,18 @@ struct GeoArrowGeometry {
 
   /// \brief The recursion level
   ///
-  /// A level of 0 represets a top-level geometry in an Array.
+  /// A level of 0 represents the root geometry and is incremented for
+  /// child geometries (e.g., polygon ring or child of a multi geometry
+  /// or collection).
   uint8_t level;
 
   /// \brief The next geometry
   ///
-  /// Points either to the first child (if size > 0) or the next geometry.
-  /// This will be NULL when there are no more geometries. This allows
-  /// iterating over all coordinates in a given geometry nonrecursively.
-  /// Use level to build a recursive tree of geometries if this is required.
+  /// Points either to the first child (if size > 0), the next sibling of the parent
+  /// (if this is the last child), or NULL when there are no more geometries. This allows
+  /// iterating over all coordinates in a given geometry non-recursively. It is possible
+  /// to check which of these cases occurred using level, which for example, can be used
+  /// to build a recursive tree of geometries if this is required.
   struct GeoArrowGeometry* next;
 };
 
