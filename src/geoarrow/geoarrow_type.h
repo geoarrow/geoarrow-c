@@ -277,14 +277,22 @@ enum GeoArrowCrsType {
   GEOARROW_CRS_TYPE_SRID
 };
 
-/// \brief Generic Geometry representation
+/// \brief Generic Geometry node representation
 ///
 /// This structure represents a generic view on a geometry, inspired by DuckDB-spatial's
 /// sgl::geometry. The ownership of this struct is typically managed by a
 /// GeoArrowGeometryRoot or a generic sequence type (e.g., std::vector). Its design allows
 /// for efficient iteration over a wide variety of underlying structures without the need
 /// for recursive stuctures (but allowing for recursive iteration where required).
-struct GeoArrowGeometry {
+///
+/// A typical geometry is represented by one or more GeoArrowGeometryNodes arranged
+/// sequentially in memory depth-first such that a node is followed by its children (if
+/// any), then any remaining siblings from a common parent (if any), and so on. Nodes
+/// should be passed by pointer such that a function can iterate over children; however,
+/// function signatures should make this expectation clear.
+///
+/// This structure is packed such that it is pointer-aligned and occupies 64 bytes.
+struct GeoArrowGeometryNode {
   /// \brief Coordinate data
   ///
   /// Each pointer in coords points to the first coordinate in the sequence when
@@ -358,14 +366,30 @@ struct GeoArrowGeometry {
   /// or collection).
   uint8_t level;
 
-  /// \brief The next geometry
+  /// \brief User data
   ///
-  /// Points either to the first child (if size > 0), the next sibling of the parent
-  /// (if this is the last child), or NULL when there are no more geometries. This allows
-  /// iterating over all coordinates in a given geometry non-recursively. It is possible
-  /// to check which of these cases occurred using level, which for example, can be used
-  /// to build a recursive tree of geometries if this is required.
-  struct GeoArrowGeometry* next;
+  /// The user data is an opportunity for the producer to attach additional
+  /// information to a node or for the consumer to cache information during
+  /// processing. The producer nor the consumer must not rely on the value of this
+  /// pointer for memory management (i.e., bookkeeping details must be handled
+  /// elsewhere).
+  const void* user_data;
+};
+
+/// \brief Container for a geometry represented by a sequence of GeoArrowGeometryNode
+struct GeoArrowGeometry {
+  /// \brief A pointer to the root geometry node
+  ///
+  /// The memory is managed by the producer of the struct (e.g., a WKBReader
+  /// will hold the array of GeoArrowGeometryNode and populate this struct
+  /// to communicate the result.
+  struct GeoArrowGeometryNode* root;
+
+  /// \brief The number of valid nodes in the root array
+  ///
+  /// This can be used when iterating over the geometry to ensure the sizes of
+  /// the children are correctly set.
+  int64_t n_nodes;
 };
 
 /// \brief Parsed view of an ArrowSchema representation of a GeoArrowType
