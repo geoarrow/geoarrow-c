@@ -277,6 +277,10 @@ enum GeoArrowCrsType {
   GEOARROW_CRS_TYPE_SRID
 };
 
+/// \brief Flag to indicate that coordinates must be endian-swapped before being
+/// interpreted on the current platform
+#define GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN 0x01
+
 /// \brief Generic Geometry node representation
 ///
 /// This structure represents a generic view on a geometry, inspired by DuckDB-spatial's
@@ -354,10 +358,12 @@ struct GeoArrowGeometryNode {
   /// \brief The GeoArrowDimensions
   uint8_t dimensions;
 
-  /// \brief The endianness of the values in coords
+  /// \brief Flags
   ///
-  /// 0x01 for little endian, 0x00 for big endian.
-  uint8_t endian;
+  /// The only currently supported flag is GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN
+  /// to indicate that coords must be endian-swapped before being interpreted
+  /// on the current platform.
+  uint8_t flags;
 
   /// \brief The recursion level
   ///

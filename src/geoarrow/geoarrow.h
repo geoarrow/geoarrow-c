@@ -457,6 +457,11 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowBufferView src,
                                          struct GeoArrowVisitor* v);
 
+GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
+                                        struct GeoArrowBufferView src,
+                                        struct GeoArrowGeometry* out,
+                                        struct GeoArrowError* error);
+
 /// \brief Free resources held by a GeoArrowWKBWriter
 void GeoArrowWKBReaderReset(struct GeoArrowWKBReader* reader);
 
