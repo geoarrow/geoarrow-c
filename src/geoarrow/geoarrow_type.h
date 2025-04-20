@@ -287,7 +287,7 @@ enum GeoArrowCrsType {
 /// sgl::geometry. The ownership of this struct is typically managed by a
 /// GeoArrowGeometryRoot or a generic sequence type (e.g., std::vector). Its design allows
 /// for efficient iteration over a wide variety of underlying structures without the need
-/// for recursive stuctures (but allowing for recursive iteration where required).
+/// for recursive structures (but allowing for recursive iteration where required).
 ///
 /// A typical geometry is represented by one or more GeoArrowGeometryNodes arranged
 /// sequentially in memory depth-first such that a node is followed by its children (if
@@ -333,7 +333,7 @@ struct GeoArrowGeometryNode {
   ///   a constant would have coords set to {&thirty, &ten, &kNaN, &kNaN} and
   ///   coord_stride set to {0, 0, 0, 0}.
   /// - WKB values with constant length packed end-to-end contiguously in memory
-  ///   (e.g., in an Arrow array as the data bufer in an Array that does not
+  ///   (e.g., in an Arrow array as the data buffer in an Array that does not
   ///   contain nulls): coord_stride is the size of one WKB item. For example,
   ///   an Arrow array of XY points would have coords set to {data + 1 + 4,
   ///   data + 1 + 4 + 8, &kNaN, &kNaN} and stride set to {21, 21, 0, 0}.
@@ -344,7 +344,7 @@ struct GeoArrowGeometryNode {
   /// \brief The number of coordinates or children in this geometry
   ///
   /// When geometry_type is GEOARROW_GEOMETRY_TYPE_POINT or
-  /// GEOARROW_GEOMETRY_TYPE_LINESTRING, the number of coodinates in the sequence.
+  /// GEOARROW_GEOMETRY_TYPE_LINESTRING, the number of coordinates in the sequence.
   /// Otherwise, the number of child geometries.
   uint32_t size;
 
