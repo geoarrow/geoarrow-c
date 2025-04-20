@@ -89,49 +89,63 @@ static GeoArrowErrorCode GeoArrowGeometryVisitSequence(struct GeoArrowGeometryNo
   return GEOARROW_OK;
 }
 
-GeoArrowErrorCode GeoArrowGeometryVisit(struct GeoArrowGeometry geometry,
-                                        struct GeoArrowVisitor* v) {
-  GEOARROW_RETURN_NOT_OK(
-      v->geom_start(v, (enum GeoArrowGeometryType)geometry.root->geometry_type,
-                    (enum GeoArrowDimensions)geometry.root->dimensions));
-  switch (geometry.root->geometry_type) {
+static GeoArrowErrorCode GeoArrowGeometryVisitNode(struct GeoArrowGeometryNode* node,
+                                                   int64_t* n_nodes,
+                                                   struct GeoArrowVisitor* v) {
+  if ((*n_nodes)-- <= 0) {
+    GeoArrowErrorSet(v->error, "Too few nodes provided to GeoArrowGeometryVisit()");
+  }
+
+  GEOARROW_RETURN_NOT_OK(v->geom_start(v, (enum GeoArrowGeometryType)node->geometry_type,
+                                       (enum GeoArrowDimensions)node->dimensions));
+  switch (node->geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_POINT:
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
-      GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisitSequence(geometry.root, v));
+      GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisitSequence(node, v));
       break;
     case GEOARROW_GEOMETRY_TYPE_POLYGON:
-      if (geometry.n_nodes < ((int64_t)geometry.root->size + 1)) {
+      if (*n_nodes < ((int64_t)node->size)) {
         return EINVAL;
       }
 
-      for (uint32_t i = 0; i < geometry.root->size; i++) {
+      for (uint32_t i = 0; i < node->size; i++) {
         GEOARROW_RETURN_NOT_OK(v->ring_start(v));
-        GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisitSequence(geometry.root + i + 1, v));
+        GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisitSequence(node + i + 1, v));
         GEOARROW_RETURN_NOT_OK(v->ring_end(v));
       }
+
+      (*n_nodes) -= node->size;
       break;
     case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
     case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
     case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
     case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION: {
-      if (geometry.n_nodes < ((int64_t)geometry.root->size + 1)) {
-        return EINVAL;
-      }
-
-      struct GeoArrowGeometry child = geometry;
-      for (uint32_t i = 0; i < geometry.root->size; i++) {
-        child.root++;
-        child.n_nodes--;
-        GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisit(geometry, v));
+      struct GeoArrowGeometryNode* child = node + 1;
+      for (uint32_t i = 0; i < node->size; i++) {
+        int64_t n_nodes_before_child = *n_nodes;
+        GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisitNode(child, n_nodes, v));
+        int64_t nodes_consumed = n_nodes_before_child - *n_nodes;
+        child += nodes_consumed;
       }
       break;
     }
     default:
-      GeoArrowErrorSet(v->error, "Invalid geometry_type: %d",
-                       (int)geometry.root->geometry_type);
+      GeoArrowErrorSet(v->error, "Invalid geometry_type: %d", (int)node->geometry_type);
       return EINVAL;
   }
 
   GEOARROW_RETURN_NOT_OK(v->geom_end(v));
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowGeometryVisit(struct GeoArrowGeometry geometry,
+                                        struct GeoArrowVisitor* v) {
+  int64_t n_nodes = geometry.n_nodes;
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisitNode(geometry.root, &n_nodes, v));
+  if (n_nodes != 0) {
+    GeoArrowErrorSet(
+        v->error, "Too many nodes provided to GeoArrowGeometryVisit() for root geometry");
+    return EINVAL;
+  }
   return GEOARROW_OK;
 }
