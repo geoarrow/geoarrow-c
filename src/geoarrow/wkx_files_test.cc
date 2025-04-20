@@ -47,15 +47,15 @@ TEST(WKXFilesTest, WKXFilesTestFiles) {
     std::string line_wkt;
     while (std::getline(infile, line_wkt)) {
       std::cout << path << "\n" << std::flush;
-      std::basic_string<uint8_t> wkb_from_line_wkt = tester.AsWKB(line_wkt);
+      std::vector<uint8_t> wkb_from_line_wkt = tester.AsWKB(line_wkt);
       // For all current examples, the ISO wkb size is the same as the EWKB size
       int64_t wkb_size = wkb_from_line_wkt.size();
 
       infile_wkb.read((char*)read_buffer, wkb_size);
-      std::basic_string<uint8_t> line_wkb(read_buffer, wkb_size);
+      std::vector<uint8_t> line_wkb(read_buffer, read_buffer + wkb_size);
 
       infile_ewkb.read((char*)read_buffer, wkb_size);
-      std::basic_string<uint8_t> line_ewkb(read_buffer, wkb_size);
+      std::vector<uint8_t> line_ewkb(read_buffer, read_buffer + wkb_size);
 
       ASSERT_EQ(wkb_from_line_wkt, line_wkb);
       EXPECT_EQ(tester.AsWKT(line_wkt), line_wkt);

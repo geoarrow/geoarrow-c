@@ -62,21 +62,31 @@ class WKXTester {
   }
 
   std::string AsWKT(const std::basic_string<uint8_t>& str) {
+    ReadWKB({str.begin(), str.end()}, WKTVisitor());
+    return WKTValue();
+  }
+
+  std::string AsWKT(const std::vector<uint8_t>& str) {
     ReadWKB(str, WKTVisitor());
     return WKTValue();
   }
 
-  std::basic_string<uint8_t> AsWKB(const std::string& str) {
+  std::vector<uint8_t> AsWKB(const std::string& str) {
     ReadWKT(str, WKBVisitor());
     return WKBValue();
   }
 
-  std::basic_string<uint8_t> AsWKB(const std::basic_string<uint8_t>& str) {
+  std::vector<uint8_t> AsWKB(const std::basic_string<uint8_t>& str) {
+    ReadWKB({str.begin(), str.end()}, WKBVisitor());
+    return WKBValue();
+  }
+
+  std::vector<uint8_t> AsWKB(const std::vector<uint8_t>& str) {
     ReadWKB(str, WKBVisitor());
     return WKBValue();
   }
 
-  void ReadWKB(const std::basic_string<uint8_t>& str, struct GeoArrowVisitor* v) {
+  void ReadWKB(const std::vector<uint8_t>& str, struct GeoArrowVisitor* v) {
     struct GeoArrowBufferView str_view;
     str_view.data = str.data();
     str_view.size_bytes = str.size();
@@ -161,8 +171,8 @@ class WKXTester {
     return values[i];
   }
 
-  std::vector<std::basic_string<uint8_t>> WKBValues(
-      const std::basic_string<uint8_t>& null_sentinel = {}) {
+  std::vector<std::vector<uint8_t>> WKBValues(
+      const std::vector<uint8_t>& null_sentinel = {}) {
     if (array_.release != nullptr) {
       array_.release(&array_);
     }
@@ -178,21 +188,22 @@ class WKXTester {
       throw WKXTestException("ArrowArrayViewSetArray", result, error_.message);
     }
 
-    std::vector<std::basic_string<uint8_t>> out(array_.length);
+    std::vector<std::vector<uint8_t>> out(array_.length);
     for (int64_t i = 0; i < array_.length; i++) {
       if (ArrowArrayViewIsNull(&wkb_array_view_, i)) {
         out[i] = null_sentinel;
       } else {
         struct ArrowBufferView answer = ArrowArrayViewGetBytesUnsafe(&wkb_array_view_, i);
-        out[i] = std::basic_string<uint8_t>(answer.data.as_uint8, answer.size_bytes);
+        out[i] = std::vector<uint8_t>(answer.data.as_uint8,
+                                      answer.data.as_uint8 + answer.size_bytes);
       }
     }
 
     return out;
   }
 
-  std::basic_string<uint8_t> WKBValue(
-      int64_t i = 0, const std::basic_string<uint8_t>& null_sentinel = {}) {
+  std::vector<uint8_t> WKBValue(int64_t i = 0,
+                                const std::vector<uint8_t>& null_sentinel = {}) {
     auto values = WKBValues(null_sentinel);
     return values[i];
   }
