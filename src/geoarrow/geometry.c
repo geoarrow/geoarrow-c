@@ -106,7 +106,7 @@ GeoArrowErrorCode GeoArrowGeometryVisit(struct GeoArrowGeometry geometry,
 
       for (uint32_t i = 0; i < geometry.root->size; i++) {
         GEOARROW_RETURN_NOT_OK(v->ring_start(v));
-        GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisitSequence(geometry.root + i, v));
+        GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisitSequence(geometry.root + i + 1, v));
         GEOARROW_RETURN_NOT_OK(v->ring_end(v));
       }
       break;

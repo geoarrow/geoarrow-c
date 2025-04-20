@@ -193,16 +193,18 @@ static inline GeoArrowErrorCode WKBReaderReadNodeGeometry(
         return ENOTSUP;
       }
 
+      struct GeoArrowGeometryNode ring_template = *node;
+      ring_template.geometry_type = (uint8_t)GEOARROW_GEOMETRY_TYPE_LINESTRING;
+      ring_template.level++;
+
       struct GeoArrowGeometryNode* ring;
       uint32_t ring_size;
       for (uint32_t i = 0; i < size; i++) {
         GEOARROW_RETURN_NOT_OK(WKBReaderReadUInt32(s, &ring_size, error));
         GEOARROW_RETURN_NOT_OK(WKBReaderNextNode(s, &ring, error));
-        ring->geometry_type = (uint8_t)GEOARROW_GEOMETRY_TYPE_LINESTRING;
-        ring->dimensions = node->dimensions;
+        *ring = ring_template;
         ring->size = ring_size;
-        ring->level = node->level + 1;
-        ring->flags = node->flags;
+
         GEOARROW_RETURN_NOT_OK(
             WKBReaderReadNodeCoordinates(s, ring_size, coord_size_elements, ring, error));
       }
@@ -216,10 +218,11 @@ static inline GeoArrowErrorCode WKBReaderReadNodeGeometry(
         return ENOTSUP;
       }
 
+      uint8_t child_level = node->level + 1;
       struct GeoArrowGeometryNode* child;
       for (uint32_t i = 0; i < size; i++) {
         GEOARROW_RETURN_NOT_OK(WKBReaderNextNode(s, &child, error));
-        child->level = node->level + 1;
+        child->level = child_level;
         GEOARROW_RETURN_NOT_OK(WKBReaderReadNodeGeometry(s, child, error));
       }
       break;
@@ -290,7 +293,7 @@ GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
   GEOARROW_RETURN_NOT_OK(WKBReaderReadNodeGeometry(s, node, error));
 
   // Populate output on success
-  out->root = node;
+  out->root = (struct GeoArrowGeometryNode*)s->nodes.data;
   out->n_nodes = s->nodes.size_bytes / sizeof(struct GeoArrowGeometryNode);
   return GEOARROW_OK;
 }
