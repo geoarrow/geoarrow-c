@@ -298,6 +298,9 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 /// \brief Initialize a GeoArrowVisitor with a visitor that does nothing
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
 
+GeoArrowErrorCode GeoArrowGeometryVisit(struct GeoArrowGeometry geometry,
+                                        struct GeoArrowVisitor* v);
+
 /// \brief Visit the features of a native GeoArrowArrayView
 ///
 /// The caller must have initialized the GeoArrowVisitor with the appropriate
