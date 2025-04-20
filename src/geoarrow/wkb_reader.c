@@ -98,7 +98,7 @@ static inline GeoArrowErrorCode WKBReaderReadNodeCoordinates(
 
   if (n_coords > 0) {
     for (uint32_t i = 0; i < coord_size_elements; i++) {
-      node->coord_stride[i] = coord_size_elements * sizeof(double);
+      node->coord_stride[i] = (int32_t)coord_size_elements * sizeof(double);
       node->coords[i] = s->data + (i * sizeof(double));
     }
   }
