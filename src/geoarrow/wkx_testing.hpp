@@ -61,11 +61,6 @@ class WKXTester {
     return WKTValue();
   }
 
-  std::string AsWKT(const std::basic_string<uint8_t>& str) {
-    ReadWKB({str.begin(), str.end()}, WKTVisitor());
-    return WKTValue();
-  }
-
   std::string AsWKT(const std::vector<uint8_t>& str) {
     ReadWKB(str, WKTVisitor());
     return WKTValue();
@@ -73,11 +68,6 @@ class WKXTester {
 
   std::vector<uint8_t> AsWKB(const std::string& str) {
     ReadWKT(str, WKBVisitor());
-    return WKBValue();
-  }
-
-  std::vector<uint8_t> AsWKB(const std::basic_string<uint8_t>& str) {
-    ReadWKB({str.begin(), str.end()}, WKBVisitor());
     return WKBValue();
   }
 

@@ -1,7 +1,54 @@
 
 #include <errno.h>
+// #include <math.h>
 
 #include "geoarrow/geoarrow.h"
+#include "nanoarrow/nanoarrow.h"
+
+// static const double kNaN = NAN;
+
+struct GeoArrowOwningGeometryPrivate {
+  struct ArrowBuffer nodes;
+  struct ArrowBuffer coords;
+};
+
+GeoArrowErrorCode GeoArrowOwningGeometryInit(struct GeoArrowOwningGeometry* owning) {
+  struct GeoArrowOwningGeometryPrivate* private_data =
+      (struct GeoArrowOwningGeometryPrivate*)ArrowMalloc(
+          sizeof(struct GeoArrowOwningGeometryPrivate));
+  if (private_data == NULL) {
+    return ENOMEM;
+  }
+
+  owning->geometry.root = NULL;
+  owning->geometry.n_nodes = 0;
+  owning->private_data = private_data;
+
+  return GEOARROW_OK;
+}
+
+void GeoArrowOwningGeometryReset(struct GeoArrowOwningGeometry* owning) {
+  ArrowFree(owning->private_data);
+  owning->private_data = NULL;
+}
+
+// static inline GeoArrowErrorCode GeoArrowOwningGeometryNextNode(
+//     struct GeoArrowOwningGeometryPrivate* s, struct GeoArrowGeometryNode** out,
+//     struct GeoArrowError* error) {
+//   ArrowErrorCode status =
+//       ArrowBufferAppendFill(&s->nodes, 0, sizeof(struct GeoArrowGeometryNode));
+//   if (status != NANOARROW_OK) {
+//     GeoArrowErrorSet(error, "ArrowBufferAppendFill() failed");
+//     return status;
+//   }
+
+//   *out = (struct GeoArrowGeometryNode*)(s->nodes.data + s->nodes.size_bytes -
+//                                         sizeof(struct GeoArrowGeometryNode));
+//   for (uint32_t i = 0; i < 4; i++) {
+//     (*out)->coords[i] = (uint8_t*)&kNaN;
+//   }
+//   return GEOARROW_OK;
+// }
 
 #ifndef GEOARROW_BSWAP64
 static inline uint64_t bswap_64(uint64_t x) {

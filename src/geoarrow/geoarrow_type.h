@@ -398,6 +398,16 @@ struct GeoArrowGeometry {
   int64_t n_nodes;
 };
 
+/// \brief Variant of the GeoArrowGeometry that owns its GeoArrowGeometryNode and/or
+/// its coordinates
+struct GeoArrowOwningGeometry {
+  /// \brief A view of the geometry that is owned
+  struct GeoArrowGeometry geometry;
+
+  /// \brief Opaque data
+  void* private_data;
+};
+
 /// \brief Parsed view of an ArrowSchema representation of a GeoArrowType
 ///
 /// This structure can be initialized from an ArrowSchema or a GeoArrowType.
