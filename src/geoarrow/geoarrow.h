@@ -278,6 +278,35 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 
 /// @}
 
+/// \defgroup geoarrow-geometry Zero-copy friendly scalar geometries
+///
+/// The GeoArrowGeometry, GeoArrowOwningGeometry, and GeoArrowGeometryNode form the
+/// basis for iterating over single geometries in the GeoArrow C library. Whereas
+/// GeoArrow allows a more efficient implementation of many algorithms by treating
+/// Arrays as a whole, sometimes the concept of a scalar is needed to interact
+/// with other libraries or reduce the complexity of an operation.
+///
+/// - A GeoArrowGeometryNode is a view of a coordinate sequence (point, linestring, or
+///   polygon ring) or size (with children immediately following in depth-first order).
+/// - A GeoArrowGeometry is a view of a continguous sequence of GeoArrowGeometryNodes,
+///   and owns neither the array of nodes nor the underlying coordinates.
+/// - A GeoArrowOwningGeometry owns its array of nodes and optionally the underlying
+///   coordinates.
+///
+/// This approach is friendly to iteration over a potentially many items with few
+/// if any dynamic allocations.
+///
+/// @{
+
+GeoArrowErrorCode GeoArrowOwningGeometryInit(struct GeoArrowOwningGeometry* owning);
+
+void GeoArrowOwningGeometryReset(struct GeoArrowOwningGeometry* owning);
+
+GeoArrowErrorCode GeoArrowGeometryVisit(struct GeoArrowGeometry geometry,
+                                        struct GeoArrowVisitor* v);
+
+/// @}
+
 /// \defgroup geoarrow-visitor Low-level reader/visitor interfaces
 ///
 /// The GeoArrow specification defines memory layouts for many types.
@@ -297,9 +326,6 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 
 /// \brief Initialize a GeoArrowVisitor with a visitor that does nothing
 void GeoArrowVisitorInitVoid(struct GeoArrowVisitor* v);
-
-GeoArrowErrorCode GeoArrowGeometryVisit(struct GeoArrowGeometry geometry,
-                                        struct GeoArrowVisitor* v);
 
 /// \brief Visit the features of a native GeoArrowArrayView
 ///

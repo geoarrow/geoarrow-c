@@ -22,12 +22,18 @@ GeoArrowErrorCode GeoArrowOwningGeometryInit(struct GeoArrowOwningGeometry* owni
 
   owning->geometry.root = NULL;
   owning->geometry.n_nodes = 0;
+  ArrowBufferInit(&private_data->nodes);
+  ArrowBufferInit(&private_data->coords);
   owning->private_data = private_data;
 
   return GEOARROW_OK;
 }
 
 void GeoArrowOwningGeometryReset(struct GeoArrowOwningGeometry* owning) {
+  struct GeoArrowOwningGeometryPrivate* private_data =
+      (struct GeoArrowOwningGeometryPrivate*)owning->private_data;
+  ArrowBufferReset(&private_data->coords);
+  ArrowBufferReset(&private_data->nodes);
   ArrowFree(owning->private_data);
   owning->private_data = NULL;
 }
