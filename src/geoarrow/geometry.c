@@ -5,14 +5,14 @@
 #include "geoarrow/geoarrow.h"
 #include "nanoarrow/nanoarrow.h"
 
-// static const double kNaN = NAN;
+static const double kNaN = NAN;
 
 struct GeoArrowOwningGeometryPrivate {
   struct ArrowBuffer nodes;
   struct ArrowBuffer coords;
 };
 
-GeoArrowErrorCode GeoArrowOwningGeometryInit(struct GeoArrowOwningGeometry* owning) {
+GeoArrowErrorCode GeoArrowOwningGeometryInit(struct GeoArrowOwningGeometry* geom) {
   struct GeoArrowOwningGeometryPrivate* private_data =
       (struct GeoArrowOwningGeometryPrivate*)ArrowMalloc(
           sizeof(struct GeoArrowOwningGeometryPrivate));
@@ -20,41 +20,48 @@ GeoArrowErrorCode GeoArrowOwningGeometryInit(struct GeoArrowOwningGeometry* owni
     return ENOMEM;
   }
 
-  owning->geometry.root = NULL;
-  owning->geometry.n_nodes = 0;
+  geom->geometry.root = NULL;
+  geom->geometry.n_nodes = 0;
   ArrowBufferInit(&private_data->nodes);
   ArrowBufferInit(&private_data->coords);
-  owning->private_data = private_data;
+  geom->private_data = private_data;
 
   return GEOARROW_OK;
 }
 
-void GeoArrowOwningGeometryReset(struct GeoArrowOwningGeometry* owning) {
+void GeoArrowOwningGeometryReset(struct GeoArrowOwningGeometry* geom) {
   struct GeoArrowOwningGeometryPrivate* private_data =
-      (struct GeoArrowOwningGeometryPrivate*)owning->private_data;
+      (struct GeoArrowOwningGeometryPrivate*)geom->private_data;
   ArrowBufferReset(&private_data->coords);
   ArrowBufferReset(&private_data->nodes);
-  ArrowFree(owning->private_data);
-  owning->private_data = NULL;
+  ArrowFree(geom->private_data);
+  geom->private_data = NULL;
 }
 
-// static inline GeoArrowErrorCode GeoArrowOwningGeometryNextNode(
-//     struct GeoArrowOwningGeometryPrivate* s, struct GeoArrowGeometryNode** out,
-//     struct GeoArrowError* error) {
-//   ArrowErrorCode status =
-//       ArrowBufferAppendFill(&s->nodes, 0, sizeof(struct GeoArrowGeometryNode));
-//   if (status != NANOARROW_OK) {
-//     GeoArrowErrorSet(error, "ArrowBufferAppendFill() failed");
-//     return status;
-//   }
+GeoArrowErrorCode GeoArrowOwningGeometryResize(struct GeoArrowOwningGeometry* geom, int64_t n_nodes) {
+  struct GeoArrowOwningGeometryPrivate* private_data =
+      (struct GeoArrowOwningGeometryPrivate*)geom->private_data;
+  GEOARROW_RETURN_NOT_OK(ArrowBufferResize(&private_data->nodes, n_nodes, 0));
+  geom->geometry.root = (struct GeoArrowGeometryNode*)private_data->nodes.data;
+  geom->geometry.n_nodes = n_nodes;
+  return GEOARROW_OK;
+}
 
-//   *out = (struct GeoArrowGeometryNode*)(s->nodes.data + s->nodes.size_bytes -
-//                                         sizeof(struct GeoArrowGeometryNode));
-//   for (uint32_t i = 0; i < 4; i++) {
-//     (*out)->coords[i] = (uint8_t*)&kNaN;
-//   }
-//   return GEOARROW_OK;
-// }
+GeoArrowErrorCode GeoArrowOwningGeometryAppendNode(
+    struct GeoArrowOwningGeometry* geom, struct GeoArrowGeometryNode** out) {
+  struct GeoArrowOwningGeometryPrivate* private_data =
+      (struct GeoArrowOwningGeometryPrivate*)geom->private_data;
+  GEOARROW_RETURN_NOT_OK(ArrowBufferAppendFill(&private_data->nodes, 0,
+                                               sizeof(struct GeoArrowGeometryNode)));
+  *out = (struct GeoArrowGeometryNode*)(private_data->nodes.data +
+                                        private_data->nodes.size_bytes -
+                                        sizeof(struct GeoArrowGeometryNode));
+  for (uint32_t i = 0; i < 4; i++) {
+    (*out)->coords[i] = (uint8_t*)&kNaN;
+  }
+
+  return GEOARROW_OK;
+}
 
 #ifndef GEOARROW_BSWAP64
 static inline uint64_t bswap_64(uint64_t x) {
@@ -81,8 +88,8 @@ static inline void GeoArrowGeometryAlignCoords(const uint8_t** cursor,
   }
 }
 
-static inline void GeoArrowGeometryMaybeBswapCoords(struct GeoArrowGeometryNode* node,
-                                                    double* values, int64_t n) {
+static inline void GeoArrowGeometryMaybeBswapCoords(
+    const struct GeoArrowGeometryNode* node, double* values, int64_t n) {
   if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
     uint64_t* data64 = (uint64_t*)values;
     for (int i = 0; i < n; i++) {
@@ -91,8 +98,8 @@ static inline void GeoArrowGeometryMaybeBswapCoords(struct GeoArrowGeometryNode*
   }
 }
 
-static GeoArrowErrorCode GeoArrowGeometryVisitSequence(struct GeoArrowGeometryNode* node,
-                                                       struct GeoArrowVisitor* v) {
+static GeoArrowErrorCode GeoArrowGeometryVisitSequence(
+    const struct GeoArrowGeometryNode* node, struct GeoArrowVisitor* v) {
   double coords[COORD_CACHE_SIZE_ELEMENTS];
   struct GeoArrowCoordView coord_view;
   switch (node->dimensions) {
@@ -142,9 +149,9 @@ static GeoArrowErrorCode GeoArrowGeometryVisitSequence(struct GeoArrowGeometryNo
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowGeometryVisitNode(struct GeoArrowGeometryNode* node,
-                                                   int64_t* n_nodes,
-                                                   struct GeoArrowVisitor* v) {
+static GeoArrowErrorCode GeoArrowGeometryVisitNode(
+    const struct GeoArrowGeometryNode* node, int64_t* n_nodes,
+    struct GeoArrowVisitor* v) {
   if ((*n_nodes)-- <= 0) {
     GeoArrowErrorSet(v->error, "Too few nodes provided to GeoArrowGeometryVisit()");
   }
@@ -173,7 +180,7 @@ static GeoArrowErrorCode GeoArrowGeometryVisitNode(struct GeoArrowGeometryNode* 
     case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
     case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
     case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION: {
-      struct GeoArrowGeometryNode* child = node + 1;
+      const struct GeoArrowGeometryNode* child = node + 1;
       for (uint32_t i = 0; i < node->size; i++) {
         int64_t n_nodes_before_child = *n_nodes;
         GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisitNode(child, n_nodes, v));
@@ -191,7 +198,7 @@ static GeoArrowErrorCode GeoArrowGeometryVisitNode(struct GeoArrowGeometryNode* 
   return GEOARROW_OK;
 }
 
-GeoArrowErrorCode GeoArrowGeometryVisit(struct GeoArrowGeometry geometry,
+GeoArrowErrorCode GeoArrowGeometryVisit(const struct GeoArrowGeometry geometry,
                                         struct GeoArrowVisitor* v) {
   int64_t n_nodes = geometry.n_nodes;
   GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisitNode(geometry.root, &n_nodes, v));

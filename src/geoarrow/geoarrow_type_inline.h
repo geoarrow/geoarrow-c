@@ -318,6 +318,38 @@ static inline void GeoArrowMapDimensions(enum GeoArrowDimensions src_dim,
   }
 }
 
+static inline GeoArrowErrorCode GeoArrowGeometryNodeSetInterleaved(
+    struct GeoArrowGeometryNode* node, enum GeoArrowGeometryType geometry_type,
+    enum GeoArrowDimensions dimensions, struct GeoArrowBufferView coords) {
+  node->geometry_type = (uint8_t)geometry_type;
+  node->dimensions = (uint8_t)dimensions;
+
+  int32_t coord_stride_bytes = _GeoArrowkNumDimensions[dimensions] * sizeof(double);
+  node->size = (uint32_t)(coords.size_bytes / coord_stride_bytes);
+  for (int i = 0; i < 4; i++) {
+    node->coord_stride[i] = coord_stride_bytes;
+    node->coords[i] = coords.data + (i * sizeof(double));
+  }
+
+  return GEOARROW_OK;
+}
+
+static inline GeoArrowErrorCode GeoArrowGeometryNodeSetSeparated(
+    struct GeoArrowGeometryNode* node, enum GeoArrowGeometryType geometry_type,
+    enum GeoArrowDimensions dimensions, struct GeoArrowBufferView coords) {
+  node->geometry_type = (uint8_t)geometry_type;
+  node->dimensions = (uint8_t)dimensions;
+
+  int64_t dimension_size_bytes = coords.size_bytes / _GeoArrowkNumDimensions[dimensions];
+  node->size = (uint32_t)(dimension_size_bytes / sizeof(double));
+  for (int i = 0; i < 4; i++) {
+    node->coord_stride[i] = 1;
+    node->coords[i] = coords.data + (i * dimension_size_bytes);
+  }
+
+  return GEOARROW_OK;
+}
+
 // Four little-endian NANs
 static uint8_t _GeoArrowkEmptyPointCoords[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f, 0x00, 0x00, 0x00,

@@ -298,11 +298,17 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 ///
 /// @{
 
-GeoArrowErrorCode GeoArrowOwningGeometryInit(struct GeoArrowOwningGeometry* owning);
+GeoArrowErrorCode GeoArrowOwningGeometryInit(struct GeoArrowOwningGeometry* geom);
 
-void GeoArrowOwningGeometryReset(struct GeoArrowOwningGeometry* owning);
+void GeoArrowOwningGeometryReset(struct GeoArrowOwningGeometry* geom);
 
-GeoArrowErrorCode GeoArrowGeometryVisit(struct GeoArrowGeometry geometry,
+GeoArrowErrorCode GeoArrowOwningGeometryResize(struct GeoArrowOwningGeometry* geom,
+                                               int64_t n_nodes);
+
+GeoArrowErrorCode GeoArrowOwningGeometryAppendNode(struct GeoArrowOwningGeometry* geom,
+                                                   struct GeoArrowGeometryNode** out);
+
+GeoArrowErrorCode GeoArrowGeometryVisit(const struct GeoArrowGeometry geom,
                                         struct GeoArrowVisitor* v);
 
 /// @}
