@@ -43,8 +43,8 @@ static inline void GeoArrowOwningGeometrySyncGeomToNodes(
   struct GeoArrowOwningGeometryPrivate* private_data =
       (struct GeoArrowOwningGeometryPrivate*)geom->private_data;
   // Inline methods should never modify the capacity or data pointer
-  NANOARROW_DCHECK(private_data->nodes.size_bytes ==
-                   (geom->size_nodes * (int64_t)sizeof(struct GeoArrowGeometryNode)));
+  NANOARROW_DCHECK(private_data->nodes.capacity_bytes ==
+                   (geom->capacity_nodes * (int64_t)sizeof(struct GeoArrowGeometryNode)));
   NANOARROW_DCHECK(private_data->nodes.data == (uint8_t*)geom->root);
 
   // But may have updated the size
@@ -56,10 +56,9 @@ static inline void GeoArrowOwningGeometrySyncNodesToGeom(
   struct GeoArrowOwningGeometryPrivate* private_data =
       (struct GeoArrowOwningGeometryPrivate*)geom->private_data;
   geom->root = (struct GeoArrowGeometryNode*)private_data->nodes.data;
-  geom->size_nodes =
-      private_data->nodes.size_bytes / sizeof(struct GeoArrowOwningGeometry);
+  geom->size_nodes = private_data->nodes.size_bytes / sizeof(struct GeoArrowGeometryNode);
   geom->capacity_nodes =
-      private_data->nodes.capacity_bytes / sizeof(struct GeoArrowOwningGeometry);
+      private_data->nodes.capacity_bytes / sizeof(struct GeoArrowGeometryNode);
 }
 
 GeoArrowErrorCode GeoArrowOwningGeometryResizeNodes(struct GeoArrowOwningGeometry* geom,
