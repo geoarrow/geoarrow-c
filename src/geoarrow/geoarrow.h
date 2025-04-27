@@ -298,16 +298,32 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 ///
 /// @{
 
+/// \brief Initialize geometry for a GeoArrowOwningGeometry
+///
+/// If GEOARROW_OK is returned, the caller is responsible for calling
+/// GeoArrowOwningGeometryReset.
 GeoArrowErrorCode GeoArrowOwningGeometryInit(struct GeoArrowOwningGeometry* geom);
 
+/// \brief Free memory associated with a GeoArrowOwningGeometry
 void GeoArrowOwningGeometryReset(struct GeoArrowOwningGeometry* geom);
 
-GeoArrowErrorCode GeoArrowOwningGeometryResize(struct GeoArrowOwningGeometry* geom,
-                                               int64_t n_nodes);
+/// \brief Resize the nodes list
+///
+/// This can be used to truncate the nodes list to zero before populating
+/// its contents with another value. Use GeoArrowOwningGeometryResizeNodesInline()
+/// when calling this in a loop.
+GeoArrowErrorCode GeoArrowOwningGeometryResizeNodes(struct GeoArrowOwningGeometry* geom,
+                                                    int64_t size_nodes);
 
+/// \brief Append a node to the nodes list and initialize its contents
+///
+/// This can be used to truncate the nodes list to zero before populating
+/// its contents with another value. Use GeoArrowOwningGeometryAppendNodeInline()
+/// when calling this in a loop.
 GeoArrowErrorCode GeoArrowOwningGeometryAppendNode(struct GeoArrowOwningGeometry* geom,
                                                    struct GeoArrowGeometryNode** out);
 
+/// \brief Export this geometry using a GeoArrowVisitor
 GeoArrowErrorCode GeoArrowGeometryVisit(const struct GeoArrowGeometry geom,
                                         struct GeoArrowVisitor* v);
 

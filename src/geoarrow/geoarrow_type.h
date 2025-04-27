@@ -401,8 +401,17 @@ struct GeoArrowGeometry {
 /// \brief Variant of the GeoArrowGeometry that owns its GeoArrowGeometryNode and/or
 /// its coordinates
 struct GeoArrowOwningGeometry {
-  /// \brief A view of the geometry that is owned
-  struct GeoArrowGeometry geometry;
+  /// \brief A pointer to the root geometry node
+  struct GeoArrowGeometryNode* root;
+
+  /// \brief The number of valid nodes in the root array
+  ///
+  /// This can be used when iterating over the geometry to ensure the sizes of
+  /// the children are correctly set.
+  int64_t size_nodes;
+
+  /// \brief The number of allocated nodes in the root array
+  int64_t capacity_nodes;
 
   /// \brief Opaque data
   void* private_data;
