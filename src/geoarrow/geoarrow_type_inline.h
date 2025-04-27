@@ -364,22 +364,22 @@ static inline GeoArrowErrorCode GeoArrowGeometryNodeSetSeparated(
   return GEOARROW_OK;
 }
 
-/// \brief Inline version of GeoArrowOwningGeometryResizeNodes
+/// \brief Inline version of GeoArrowGeometryResizeNodes
 /// \ingroup geoarrow-geometry
-static inline GeoArrowErrorCode GeoArrowOwningGeometryResizeNodesInline(
-    struct GeoArrowOwningGeometry* geom, int64_t size_nodes) {
+static inline GeoArrowErrorCode GeoArrowGeometryResizeNodesInline(
+    struct GeoArrowGeometry* geom, int64_t size_nodes) {
   if (size_nodes < geom->capacity_nodes) {
     geom->size_nodes = size_nodes;
     return GEOARROW_OK;
   } else {
-    return GeoArrowOwningGeometryResizeNodes(geom, size_nodes);
+    return GeoArrowGeometryResizeNodes(geom, size_nodes);
   }
 }
 
-/// \brief Inline version of GeoArrowOwningGeometryAppendNode
+/// \brief Inline version of GeoArrowGeometryAppendNode
 /// \ingroup geoarrow-geometry
-static inline GeoArrowErrorCode GeoArrowOwningGeometryAppendNodeInline(
-    struct GeoArrowOwningGeometry* geom, struct GeoArrowGeometryNode** out) {
+static inline GeoArrowErrorCode GeoArrowGeometryAppendNodeInline(
+    struct GeoArrowGeometry* geom, struct GeoArrowGeometryNode** out) {
   if (geom->size_nodes < geom->capacity_nodes) {
     *out = geom->root + (geom->size_nodes++);
     memset(*out, 0, sizeof(struct GeoArrowGeometryNode));
@@ -388,7 +388,7 @@ static inline GeoArrowErrorCode GeoArrowOwningGeometryAppendNodeInline(
     }
     return GEOARROW_OK;
   } else {
-    return GeoArrowOwningGeometryAppendNode(geom, out);
+    return GeoArrowGeometryAppendNode(geom, out);
   }
 }
 

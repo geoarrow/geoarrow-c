@@ -382,25 +382,27 @@ struct GeoArrowGeometryNode {
   const void* user_data;
 };
 
-/// \brief Container for a geometry represented by a sequence of GeoArrowGeometryNode
-struct GeoArrowGeometry {
+/// \brief View of a geometry represented by a sequence of GeoArrowGeometryNode
+///
+/// This struct owns neither the array of nodes nor the array(s) of coordinates.
+struct GeoArrowGeometryView {
   /// \brief A pointer to the root geometry node
   ///
   /// The memory is managed by the producer of the struct (e.g., a WKBReader
   /// will hold the array of GeoArrowGeometryNode and populate this struct
   /// to communicate the result.
-  struct GeoArrowGeometryNode* root;
+  const struct GeoArrowGeometryNode* root;
 
   /// \brief The number of valid nodes in the root array
   ///
   /// This can be used when iterating over the geometry to ensure the sizes of
   /// the children are correctly set.
-  int64_t n_nodes;
+  int64_t size_nodes;
 };
 
 /// \brief Variant of the GeoArrowGeometry that owns its GeoArrowGeometryNode and/or
 /// its coordinates
-struct GeoArrowOwningGeometry {
+struct GeoArrowGeometry {
   /// \brief A pointer to the root geometry node
   struct GeoArrowGeometryNode* root;
 

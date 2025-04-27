@@ -24,7 +24,7 @@ TEST(WKBReaderTest, WKBReaderTestPoint) {
   struct GeoArrowWKBReader reader;
   GeoArrowWKBReaderInit(&reader);
 
-  struct GeoArrowGeometry geometry;
+  struct GeoArrowGeometryView geometry;
   ASSERT_EQ(
       GeoArrowWKBReaderRead(&reader, {point.data(), static_cast<int64_t>(point.size())},
                             &geometry, nullptr),

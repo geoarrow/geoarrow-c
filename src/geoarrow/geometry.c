@@ -4,17 +4,17 @@
 #include "geoarrow/geoarrow.h"
 #include "nanoarrow/nanoarrow.h"
 
-struct GeoArrowOwningGeometryPrivate {
-  // Note that the GeoArrowOwningGeometry has cached data/size/capacity that needs
+struct GeoArrowGeometryPrivate {
+  // Note that the GeoArrowGeometry has cached data/size/capacity that needs
   // to be kept in sync
   struct ArrowBuffer nodes;
   struct ArrowBuffer coords;
 };
 
-GeoArrowErrorCode GeoArrowOwningGeometryInit(struct GeoArrowOwningGeometry* geom) {
-  struct GeoArrowOwningGeometryPrivate* private_data =
-      (struct GeoArrowOwningGeometryPrivate*)ArrowMalloc(
-          sizeof(struct GeoArrowOwningGeometryPrivate));
+GeoArrowErrorCode GeoArrowGeometryInit(struct GeoArrowGeometry* geom) {
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)ArrowMalloc(
+          sizeof(struct GeoArrowGeometryPrivate));
   if (private_data == NULL) {
     return ENOMEM;
   }
@@ -29,19 +29,18 @@ GeoArrowErrorCode GeoArrowOwningGeometryInit(struct GeoArrowOwningGeometry* geom
   return GEOARROW_OK;
 }
 
-void GeoArrowOwningGeometryReset(struct GeoArrowOwningGeometry* geom) {
-  struct GeoArrowOwningGeometryPrivate* private_data =
-      (struct GeoArrowOwningGeometryPrivate*)geom->private_data;
+void GeoArrowGeometryReset(struct GeoArrowGeometry* geom) {
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
   ArrowBufferReset(&private_data->coords);
   ArrowBufferReset(&private_data->nodes);
   ArrowFree(geom->private_data);
   geom->private_data = NULL;
 }
 
-static inline void GeoArrowOwningGeometrySyncGeomToNodes(
-    struct GeoArrowOwningGeometry* geom) {
-  struct GeoArrowOwningGeometryPrivate* private_data =
-      (struct GeoArrowOwningGeometryPrivate*)geom->private_data;
+static inline void GeoArrowGeometrySyncGeomToNodes(struct GeoArrowGeometry* geom) {
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
   // Inline methods should never modify the capacity or data pointer
   NANOARROW_DCHECK(private_data->nodes.capacity_bytes ==
                    (geom->capacity_nodes * (int64_t)sizeof(struct GeoArrowGeometryNode)));
@@ -51,34 +50,33 @@ static inline void GeoArrowOwningGeometrySyncGeomToNodes(
   private_data->nodes.size_bytes = geom->size_nodes * sizeof(struct GeoArrowGeometryNode);
 }
 
-static inline void GeoArrowOwningGeometrySyncNodesToGeom(
-    struct GeoArrowOwningGeometry* geom) {
-  struct GeoArrowOwningGeometryPrivate* private_data =
-      (struct GeoArrowOwningGeometryPrivate*)geom->private_data;
+static inline void GeoArrowGeometrySyncNodesToGeom(struct GeoArrowGeometry* geom) {
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
   geom->root = (struct GeoArrowGeometryNode*)private_data->nodes.data;
   geom->size_nodes = private_data->nodes.size_bytes / sizeof(struct GeoArrowGeometryNode);
   geom->capacity_nodes =
       private_data->nodes.capacity_bytes / sizeof(struct GeoArrowGeometryNode);
 }
 
-GeoArrowErrorCode GeoArrowOwningGeometryResizeNodes(struct GeoArrowOwningGeometry* geom,
-                                                    int64_t size_nodes) {
-  struct GeoArrowOwningGeometryPrivate* private_data =
-      (struct GeoArrowOwningGeometryPrivate*)geom->private_data;
+GeoArrowErrorCode GeoArrowGeometryResizeNodes(struct GeoArrowGeometry* geom,
+                                              int64_t size_nodes) {
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
   GEOARROW_RETURN_NOT_OK(ArrowBufferResize(&private_data->nodes, size_nodes, 0));
-  GeoArrowOwningGeometrySyncNodesToGeom(geom);
+  GeoArrowGeometrySyncNodesToGeom(geom);
   return GEOARROW_OK;
 }
 
-GeoArrowErrorCode GeoArrowOwningGeometryAppendNode(struct GeoArrowOwningGeometry* geom,
-                                                   struct GeoArrowGeometryNode** out) {
-  struct GeoArrowOwningGeometryPrivate* private_data =
-      (struct GeoArrowOwningGeometryPrivate*)geom->private_data;
-  GeoArrowOwningGeometrySyncGeomToNodes(geom);
+GeoArrowErrorCode GeoArrowGeometryAppendNode(struct GeoArrowGeometry* geom,
+                                             struct GeoArrowGeometryNode** out) {
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
+  GeoArrowGeometrySyncGeomToNodes(geom);
   GEOARROW_RETURN_NOT_OK(
       ArrowBufferReserve(&private_data->nodes, sizeof(struct GeoArrowGeometryNode)));
-  GeoArrowOwningGeometrySyncNodesToGeom(geom);
-  return GeoArrowOwningGeometryAppendNodeInline(geom, out);
+  GeoArrowGeometrySyncNodesToGeom(geom);
+  return GeoArrowGeometryAppendNodeInline(geom, out);
 }
 
 #ifndef GEOARROW_BSWAP64
@@ -216,9 +214,9 @@ static GeoArrowErrorCode GeoArrowGeometryVisitNode(
   return GEOARROW_OK;
 }
 
-GeoArrowErrorCode GeoArrowGeometryVisit(const struct GeoArrowGeometry geometry,
+GeoArrowErrorCode GeoArrowGeometryVisit(const struct GeoArrowGeometryView geometry,
                                         struct GeoArrowVisitor* v) {
-  int64_t n_nodes = geometry.n_nodes;
+  int64_t n_nodes = geometry.size_nodes;
   GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisitNode(geometry.root, &n_nodes, v));
   if (n_nodes != 0) {
     GeoArrowErrorSet(

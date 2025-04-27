@@ -280,7 +280,7 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 
 /// \defgroup geoarrow-geometry Zero-copy friendly scalar geometries
 ///
-/// The GeoArrowGeometry, GeoArrowOwningGeometry, and GeoArrowGeometryNode form the
+/// The GeoArrowGeometry, GeoArrowGeometry, and GeoArrowGeometryNode form the
 /// basis for iterating over single geometries in the GeoArrow C library. Whereas
 /// GeoArrow allows a more efficient implementation of many algorithms by treating
 /// Arrays as a whole, sometimes the concept of a scalar is needed to interact
@@ -290,7 +290,7 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 ///   polygon ring) or size (with children immediately following in depth-first order).
 /// - A GeoArrowGeometry is a view of a continguous sequence of GeoArrowGeometryNodes,
 ///   and owns neither the array of nodes nor the underlying coordinates.
-/// - A GeoArrowOwningGeometry owns its array of nodes and optionally the underlying
+/// - A GeoArrowGeometry owns its array of nodes and optionally the underlying
 ///   coordinates.
 ///
 /// This approach is friendly to iteration over a potentially many items with few
@@ -298,33 +298,33 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 ///
 /// @{
 
-/// \brief Initialize geometry for a GeoArrowOwningGeometry
+/// \brief Initialize geometry for a GeoArrowGeometry
 ///
 /// If GEOARROW_OK is returned, the caller is responsible for calling
-/// GeoArrowOwningGeometryReset.
-GeoArrowErrorCode GeoArrowOwningGeometryInit(struct GeoArrowOwningGeometry* geom);
+/// GeoArrowGeometryReset.
+GeoArrowErrorCode GeoArrowGeometryInit(struct GeoArrowGeometry* geom);
 
-/// \brief Free memory associated with a GeoArrowOwningGeometry
-void GeoArrowOwningGeometryReset(struct GeoArrowOwningGeometry* geom);
+/// \brief Free memory associated with a GeoArrowGeometry
+void GeoArrowGeometryReset(struct GeoArrowGeometry* geom);
 
 /// \brief Resize the nodes list
 ///
 /// This can be used to truncate the nodes list to zero before populating
-/// its contents with another value. Use GeoArrowOwningGeometryResizeNodesInline()
+/// its contents with another value. Use GeoArrowGeometryResizeNodesInline()
 /// when calling this in a loop.
-GeoArrowErrorCode GeoArrowOwningGeometryResizeNodes(struct GeoArrowOwningGeometry* geom,
-                                                    int64_t size_nodes);
+GeoArrowErrorCode GeoArrowGeometryResizeNodes(struct GeoArrowGeometry* geom,
+                                              int64_t size_nodes);
 
 /// \brief Append a node to the nodes list and initialize its contents
 ///
 /// This can be used to truncate the nodes list to zero before populating
-/// its contents with another value. Use GeoArrowOwningGeometryAppendNodeInline()
+/// its contents with another value. Use GeoArrowGeometryAppendNodeInline()
 /// when calling this in a loop.
-GeoArrowErrorCode GeoArrowOwningGeometryAppendNode(struct GeoArrowOwningGeometry* geom,
-                                                   struct GeoArrowGeometryNode** out);
+GeoArrowErrorCode GeoArrowGeometryAppendNode(struct GeoArrowGeometry* geom,
+                                             struct GeoArrowGeometryNode** out);
 
 /// \brief Export this geometry using a GeoArrowVisitor
-GeoArrowErrorCode GeoArrowGeometryVisit(const struct GeoArrowGeometry geom,
+GeoArrowErrorCode GeoArrowGeometryVisit(const struct GeoArrowGeometryView geom,
                                         struct GeoArrowVisitor* v);
 
 /// @}
@@ -510,7 +510,7 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
 
 GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
                                         struct GeoArrowBufferView src,
-                                        struct GeoArrowGeometry* out,
+                                        struct GeoArrowGeometryView* out,
                                         struct GeoArrowError* error);
 
 /// \brief Free resources held by a GeoArrowWKBWriter
