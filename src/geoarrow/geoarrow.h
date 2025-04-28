@@ -288,7 +288,7 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 ///
 /// - A GeoArrowGeometryNode is a view of a coordinate sequence (point, linestring, or
 ///   polygon ring) or size (with children immediately following in depth-first order).
-/// - A GeoArrowGeometry is a view of a continguous sequence of GeoArrowGeometryNodes,
+/// - A GeoArrowGeometry is a view of a contiguous sequence of GeoArrowGeometryNodes,
 ///   and owns neither the array of nodes nor the underlying coordinates.
 /// - A GeoArrowGeometry owns its array of nodes and optionally the underlying
 ///   coordinates.
