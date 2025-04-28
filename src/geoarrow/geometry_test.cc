@@ -81,3 +81,44 @@ TEST(GeometryTest, GeometryTestShallowCopy) {
   GeoArrowGeometryReset(&geom2);
   GeoArrowGeometryReset(&geom);
 }
+
+TEST(GeometryTest, GeometryTestDeepCopy) {
+  WKXTester tester;
+
+  double coords[] = {10, 11, 12, 13, 14, 15, 16, 17};
+  struct GeoArrowBufferView coord1_view;
+  coord1_view.data = reinterpret_cast<const uint8_t*>(coords);
+  coord1_view.size_bytes = sizeof(coords) / 2;
+
+  struct GeoArrowBufferView coord2_view;
+  coord2_view.data = reinterpret_cast<const uint8_t*>(coords + 4);
+  coord2_view.size_bytes = sizeof(coords) / 2;
+
+  struct GeoArrowGeometry geom;
+  ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
+
+  // Use a multipoint to ensure that multiple nodes are supported
+  struct GeoArrowGeometryNode* node;
+  ASSERT_EQ(GeoArrowGeometryAppendNodeInline(&geom, &node), GEOARROW_OK);
+  node->geometry_type = GEOARROW_GEOMETRY_TYPE_MULTIPOINT;
+  node->dimensions = GEOARROW_DIMENSIONS_XYZM;
+  node->size = 2;
+
+  ASSERT_EQ(GeoArrowGeometryAppendNodeInline(&geom, &node), GEOARROW_OK);
+  GeoArrowGeometryNodeSetInterleaved(node, GEOARROW_GEOMETRY_TYPE_POINT,
+                                     GEOARROW_DIMENSIONS_XYZM, coord1_view);
+
+  ASSERT_EQ(GeoArrowGeometryAppendNodeInline(&geom, &node), GEOARROW_OK);
+  GeoArrowGeometryNodeSetInterleaved(node, GEOARROW_GEOMETRY_TYPE_POINT,
+                                     GEOARROW_DIMENSIONS_XYZM, coord2_view);
+
+  struct GeoArrowGeometry geom2;
+  ASSERT_EQ(GeoArrowGeometryInit(&geom2), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowGeometryShallowCopy(GeoArrowGeometryAsView(&geom), &geom2),
+            GEOARROW_OK);
+  ASSERT_EQ(GeoArrowGeometryVisit(&geom2, tester.WKTVisitor()), GEOARROW_OK);
+  EXPECT_EQ(tester.WKTValue(), "MULTIPOINT ZM ((10 11 12 13), (14 15 16 17))");
+
+  GeoArrowGeometryReset(&geom2);
+  GeoArrowGeometryReset(&geom);
+}

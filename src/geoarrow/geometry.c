@@ -87,6 +87,73 @@ GeoArrowErrorCode GeoArrowGeometryAppendNode(struct GeoArrowGeometry* geom,
   return GeoArrowGeometryAppendNodeInline(geom, out);
 }
 
+static inline void GeoArrowGeometryAlignCoords(const uint8_t** cursor,
+                                               const int32_t* stride, double* coords,
+                                               int n_values, uint32_t n_coords) {
+  double* coords_cursor = coords;
+  for (uint32_t i = 0; i < n_coords; i++) {
+    for (int i = 0; i < n_values; i++) {
+      memcpy(coords_cursor++, cursor[i], sizeof(double));
+      cursor[i] += stride[i];
+    }
+  }
+}
+
+GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
+                                           struct GeoArrowGeometry* dst) {
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)dst->private_data;
+
+  // Calculate the number of coordinates required
+  int64_t coords_required = 0;
+  const struct GeoArrowGeometryNode* src_node = src.root;
+  for (int64_t i = 0; i < dst->size_nodes; i++) {
+    switch (src_node->geometry_type) {
+      case GEOARROW_GEOMETRY_TYPE_POINT:
+      case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+        coords_required += src_node->size;
+        break;
+      default:
+        break;
+    }
+
+    ++src_node;
+  }
+
+  // Resize the destination coords array
+  GEOARROW_RETURN_NOT_OK(
+      ArrowBufferResize(&private_data->coords, coords_required * sizeof(double), 0));
+
+  // Copy the nodes
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryShallowCopy(src, dst));
+
+  // Copy the data and update the nodes to point to the internal data
+  double* coords = (double*)private_data->coords.data;
+  struct GeoArrowGeometryNode* dst_node = dst->root;
+  int n_values;
+  for (int64_t i = 0; i < dst->size_nodes; i++) {
+    switch (dst_node->geometry_type) {
+      case GEOARROW_GEOMETRY_TYPE_POINT:
+      case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+        n_values = _GeoArrowkNumDimensions[dst_node->dimensions];
+        GeoArrowGeometryAlignCoords(dst_node->coords, dst_node->coord_stride, coords,
+                                    n_values, dst_node->size);
+        for (int i = 0; i < 4; i++) {
+          dst_node->coords[i] = (uint8_t*)(coords + i);
+          dst_node->coord_stride[i] = n_values * sizeof(double);
+        }
+        coords += dst_node->size * n_values;
+        break;
+      default:
+        break;
+    }
+
+    ++dst_node;
+  }
+
+  return GEOARROW_OK;
+}
+
 #ifndef GEOARROW_BSWAP64
 static inline uint64_t bswap_64(uint64_t x) {
   return (((x & 0xFFULL) << 56) | ((x & 0xFF00ULL) << 40) | ((x & 0xFF0000ULL) << 24) |
@@ -99,18 +166,6 @@ static inline uint64_t bswap_64(uint64_t x) {
 
 // This must be divisible by 2, 3, and 4
 #define COORD_CACHE_SIZE_ELEMENTS 384
-
-static inline void GeoArrowGeometryAlignCoords(const uint8_t** cursor,
-                                               const int32_t* stride, double* coords,
-                                               int n_values, uint32_t n_coords) {
-  double* coords_cursor = coords;
-  for (uint32_t i = 0; i < n_coords; i++) {
-    for (int i = 0; i < n_values; i++) {
-      memcpy(coords_cursor++, cursor[i], sizeof(double));
-      cursor[i] += stride[i];
-    }
-  }
-}
 
 static inline void GeoArrowGeometryMaybeBswapCoords(
     const struct GeoArrowGeometryNode* node, double* values, int64_t n) {
