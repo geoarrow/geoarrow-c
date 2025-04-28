@@ -331,6 +331,18 @@ static uint8_t _GeoArrowkEmptyPointCoords[] = {
     0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f};
 #endif
 
+/// \brief View a GeoArrowGeometry
+/// \ingroup geoarrow-geometry
+///
+/// The geometry_type must be a POINT or LINESTRING.
+static inline struct GeoArrowGeometryView GeoArrowGeometryAsView(
+    struct GeoArrowGeometry* geom) {
+  struct GeoArrowGeometryView out;
+  out.root = geom->root;
+  out.size_nodes = geom->size_nodes;
+  return out;
+}
+
 /// \brief Set a node where coordinates are stored in a row-major (C) array
 /// \ingroup geoarrow-geometry
 ///

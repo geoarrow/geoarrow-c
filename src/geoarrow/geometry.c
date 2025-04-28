@@ -29,6 +29,13 @@ GeoArrowErrorCode GeoArrowGeometryInit(struct GeoArrowGeometry* geom) {
   return GEOARROW_OK;
 }
 
+GeoArrowErrorCode GeoArrowGeometryShallowCopy(struct GeoArrowGeometryView src,
+                                              struct GeoArrowGeometry* dst) {
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryResizeNodes(dst, src.size_nodes));
+  memcpy(dst->root, src.root, src.size_nodes * sizeof(struct GeoArrowGeometryNode));
+  return GEOARROW_OK;
+}
+
 void GeoArrowGeometryReset(struct GeoArrowGeometry* geom) {
   struct GeoArrowGeometryPrivate* private_data =
       (struct GeoArrowGeometryPrivate*)geom->private_data;
@@ -63,7 +70,8 @@ GeoArrowErrorCode GeoArrowGeometryResizeNodes(struct GeoArrowGeometry* geom,
                                               int64_t size_nodes) {
   struct GeoArrowGeometryPrivate* private_data =
       (struct GeoArrowGeometryPrivate*)geom->private_data;
-  GEOARROW_RETURN_NOT_OK(ArrowBufferResize(&private_data->nodes, size_nodes, 0));
+  GEOARROW_RETURN_NOT_OK(ArrowBufferResize(
+      &private_data->nodes, size_nodes * sizeof(struct GeoArrowGeometryNode), 0));
   GeoArrowGeometrySyncNodesToGeom(geom);
   return GEOARROW_OK;
 }

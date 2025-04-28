@@ -274,7 +274,6 @@ GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
   GEOARROW_RETURN_NOT_OK(WKBReaderReadNodeGeometry(s, node, error));
 
   // Populate output on success
-  out->root = s->geom.root;
-  out->size_nodes = s->geom.size_nodes;
+  *out = GeoArrowGeometryAsView(&s->geom);
   return GEOARROW_OK;
 }
