@@ -323,8 +323,12 @@ GeoArrowErrorCode GeoArrowGeometryResizeNodes(struct GeoArrowGeometry* geom,
 GeoArrowErrorCode GeoArrowGeometryAppendNode(struct GeoArrowGeometry* geom,
                                              struct GeoArrowGeometryNode** out);
 
-/// \brief Export this geometry using a GeoArrowVisitor
-GeoArrowErrorCode GeoArrowGeometryVisit(const struct GeoArrowGeometryView geom,
+/// \brief Export a GeoArrowGeometryView using a GeoArrowVisitor
+GeoArrowErrorCode GeoArrowGeometryViewVisit(struct GeoArrowGeometryView geometry,
+                                            struct GeoArrowVisitor* v);
+
+/// \brief Export a GeoArrowGeometry using a GeoArrowVisitor
+GeoArrowErrorCode GeoArrowGeometryVisit(struct GeoArrowGeometry* geom,
                                         struct GeoArrowVisitor* v);
 
 /// @}

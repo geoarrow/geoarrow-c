@@ -357,7 +357,7 @@ static inline GeoArrowErrorCode GeoArrowGeometryNodeSetSeparated(
   int64_t dimension_size_bytes = coords.size_bytes / _GeoArrowkNumDimensions[dimensions];
   node->size = (uint32_t)(dimension_size_bytes / sizeof(double));
   for (int i = 0; i < 4; i++) {
-    node->coord_stride[i] = 1;
+    node->coord_stride[i] = sizeof(double);
     node->coords[i] = coords.data + (i * dimension_size_bytes);
   }
 

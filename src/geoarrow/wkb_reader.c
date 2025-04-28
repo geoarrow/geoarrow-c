@@ -248,10 +248,8 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowBufferView src,
                                          struct GeoArrowVisitor* v) {
   struct GeoArrowGeometryView geometry;
-  GEOARROW_RETURN_NOT_OK(v->feat_start(v));
   GEOARROW_RETURN_NOT_OK(GeoArrowWKBReaderRead(reader, src, &geometry, v->error));
-  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisit(geometry, v));
-  GEOARROW_RETURN_NOT_OK(v->feat_end(v));
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryViewVisit(geometry, v));
   return GEOARROW_OK;
 }
 

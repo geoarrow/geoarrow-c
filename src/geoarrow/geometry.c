@@ -214,14 +214,32 @@ static GeoArrowErrorCode GeoArrowGeometryVisitNode(
   return GEOARROW_OK;
 }
 
-GeoArrowErrorCode GeoArrowGeometryVisit(const struct GeoArrowGeometryView geometry,
-                                        struct GeoArrowVisitor* v) {
+GeoArrowErrorCode GeoArrowGeometryViewVisit(struct GeoArrowGeometryView geometry,
+                                            struct GeoArrowVisitor* v) {
   int64_t n_nodes = geometry.size_nodes;
+  GEOARROW_RETURN_NOT_OK(v->feat_start(v));
   GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisitNode(geometry.root, &n_nodes, v));
   if (n_nodes != 0) {
     GeoArrowErrorSet(
         v->error, "Too many nodes provided to GeoArrowGeometryVisit() for root geometry");
     return EINVAL;
   }
+
+  GEOARROW_RETURN_NOT_OK(v->feat_end(v));
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowGeometryVisit(struct GeoArrowGeometry* geometry,
+                                        struct GeoArrowVisitor* v) {
+  int64_t n_nodes = geometry->size_nodes;
+  GEOARROW_RETURN_NOT_OK(v->feat_start(v));
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryVisitNode(geometry->root, &n_nodes, v));
+  if (n_nodes != 0) {
+    GeoArrowErrorSet(
+        v->error, "Too many nodes provided to GeoArrowGeometryVisit() for root geometry");
+    return EINVAL;
+  }
+
+  GEOARROW_RETURN_NOT_OK(v->feat_end(v));
   return GEOARROW_OK;
 }
