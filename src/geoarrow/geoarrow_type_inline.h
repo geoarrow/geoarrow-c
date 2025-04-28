@@ -328,7 +328,7 @@ static uint8_t _GeoArrowkEmptyPointCoords[] = {
 /// \ingroup geoarrow-geometry
 ///
 /// The geometry_type must be a POINT or LINESTRING.
-static inline GeoArrowErrorCode GeoArrowGeometryNodeSetInterleaved(
+static inline void GeoArrowGeometryNodeSetInterleaved(
     struct GeoArrowGeometryNode* node, enum GeoArrowGeometryType geometry_type,
     enum GeoArrowDimensions dimensions, struct GeoArrowBufferView coords) {
   node->geometry_type = (uint8_t)geometry_type;
@@ -340,15 +340,13 @@ static inline GeoArrowErrorCode GeoArrowGeometryNodeSetInterleaved(
     node->coord_stride[i] = coord_stride_bytes;
     node->coords[i] = coords.data + (i * sizeof(double));
   }
-
-  return GEOARROW_OK;
 }
 
 /// \brief Set a node where coordinates are stored in a column-major (Fortran) array
 /// \ingroup geoarrow-geometry
 ///
 /// The geometry_type must be a POINT or LINESTRING.
-static inline GeoArrowErrorCode GeoArrowGeometryNodeSetSeparated(
+static inline void GeoArrowGeometryNodeSetSeparated(
     struct GeoArrowGeometryNode* node, enum GeoArrowGeometryType geometry_type,
     enum GeoArrowDimensions dimensions, struct GeoArrowBufferView coords) {
   node->geometry_type = (uint8_t)geometry_type;
@@ -360,8 +358,6 @@ static inline GeoArrowErrorCode GeoArrowGeometryNodeSetSeparated(
     node->coord_stride[i] = sizeof(double);
     node->coords[i] = coords.data + (i * dimension_size_bytes);
   }
-
-  return GEOARROW_OK;
 }
 
 /// \brief Inline version of GeoArrowGeometryResizeNodes
