@@ -338,6 +338,10 @@ GeoArrowErrorCode GeoArrowGeometryViewVisit(struct GeoArrowGeometryView geometry
 GeoArrowErrorCode GeoArrowGeometryVisit(struct GeoArrowGeometry* geom,
                                         struct GeoArrowVisitor* v);
 
+/// \brief Build a GeoArrowGeometry using a visitor
+void GeoArrowGeometryInitVisitor(struct GeoArrowGeometry* geom,
+                                 struct GeoArrowVisitor* v);
+
 /// @}
 
 /// \defgroup geoarrow-visitor Low-level reader/visitor interfaces

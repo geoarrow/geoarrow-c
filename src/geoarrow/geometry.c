@@ -159,7 +159,8 @@ GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
   return GEOARROW_OK;
 }
 
-#define GEOARROW_GEOMETRY_VISITOR_MAX_NESTING 32
+// We define a maximum nesting to simplify collecting sizes based on levels
+#define GEOARROW_GEOMETRY_VISITOR_MAX_NESTING 31
 
 static inline GeoArrowErrorCode GeoArrowGeometryReallocCoords(
     struct GeoArrowGeometry* geom, struct ArrowBuffer* new_coords,
@@ -211,6 +212,9 @@ static inline GeoArrowErrorCode GeoArrowGeometryReserveCoords(
       ArrowBufferReset(&new_coords);
       return result;
     }
+
+    ArrowBufferReset(&private_data->coords);
+    ArrowBufferMove(&new_coords, &private_data->coords);
   }
 
   *out = (double*)(private_data->coords.data + private_data->coords.size_bytes);
@@ -257,7 +261,8 @@ static int geom_start_geometry(struct GeoArrowVisitor* v,
         node->coords[i] = (uint8_t*)(coords_start + i);
         node->coord_stride[i] = n_values * sizeof(double);
       }
-    } break;
+      break;
+    }
     default:
       break;
   }
@@ -330,6 +335,7 @@ static int geom_end_geometry(struct GeoArrowVisitor* v) {
   if (private_data->current_level == 0) {
     GeoArrowErrorSet(v->error,
                      "Incorrect nesting in GeoArrowGeometry visitor (level < 0)");
+    return EINVAL;
   }
 
   private_data->current_level--;
@@ -337,7 +343,61 @@ static int geom_end_geometry(struct GeoArrowVisitor* v) {
 }
 
 static int feat_end_geometry(struct GeoArrowVisitor* v) {
-  NANOARROW_UNUSED(v);
+  struct GeoArrowGeometry* geom = (struct GeoArrowGeometry*)v->private_data;
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
+
+  if (geom->size_nodes == 0) {
+    GeoArrowErrorSet(v->error,
+                     "Call to feat_end before geom_start in GeoArrowGeometry visitor");
+    return EINVAL;
+  }
+
+  if (private_data->coords.size_bytes == 0) {
+    // Can happen for empty collections where there was never a sequence
+    return GEOARROW_OK;
+  }
+
+  // Set sequence lengths by rolling backwards through the sequences. We recorded
+  // the start position for each sequence in geom_start, so we can calculate the
+  // size based on the distance between the pointers.
+  const uint8_t* end = private_data->coords.data + private_data->coords.size_bytes;
+  struct GeoArrowGeometryNode* node_begin = geom->root;
+  struct GeoArrowGeometryNode* node_end = geom->root + geom->size_nodes;
+
+  ptrdiff_t sequence_bytes;
+  for (struct GeoArrowGeometryNode* node = (node_end - 1); node >= node_begin; node--) {
+    switch (node->geometry_type) {
+      case GEOARROW_GEOMETRY_TYPE_POINT:
+      case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+        sequence_bytes = end - node->coords[0];
+        node->size = (uint32_t)(sequence_bytes / node->coord_stride[0]);
+        end = node->coords[0];
+        break;
+      default:
+        break;
+    }
+  }
+
+  uint32_t sizes[GEOARROW_GEOMETRY_VISITOR_MAX_NESTING + 1];
+  memset(sizes, 0, sizeof(sizes));
+  for (struct GeoArrowGeometryNode* node = (node_end - 1); node >= node_begin; node--) {
+    sizes[node->level]++;
+
+    switch (node->geometry_type) {
+      case GEOARROW_GEOMETRY_TYPE_POLYGON:
+      case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+      case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+      case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+      case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
+        node->size = sizes[node->level + 1];
+        sizes[node->level + 1] = 0;
+        break;
+      default:
+        break;
+    }
+  }
+
   return GEOARROW_OK;
 }
 

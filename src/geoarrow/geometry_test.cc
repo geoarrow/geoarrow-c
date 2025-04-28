@@ -122,3 +122,25 @@ TEST(GeometryTest, GeometryTestDeepCopy) {
   GeoArrowGeometryReset(&geom2);
   GeoArrowGeometryReset(&geom);
 }
+
+TEST(GeometryTest, GeometryTestBuildFromVisitor) {
+  WKXTester tester;
+
+  struct GeoArrowGeometry geom;
+  ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
+
+  struct GeoArrowVisitor v;
+  struct GeoArrowError error;
+  v.error = &error;
+  GeoArrowGeometryInitVisitor(&geom, &v);
+
+  tester.ReadWKT("POINT ZM (10 11 12 13)", &v);
+  ASSERT_EQ(GeoArrowGeometryVisit(&geom, tester.WKTVisitor()), GEOARROW_OK);
+  EXPECT_EQ(tester.WKTValue(), "POINT ZM (10 11 12 13)");
+
+  tester.ReadWKT("MULTIPOINT ZM ((10 11 12 13), (14 15 16 17))", &v);
+  ASSERT_EQ(GeoArrowGeometryVisit(&geom, tester.WKTVisitor()), GEOARROW_OK);
+  EXPECT_EQ(tester.WKTValue(), "MULTIPOINT ZM ((10 11 12 13), (14 15 16 17))");
+
+  GeoArrowGeometryReset(&geom);
+}
