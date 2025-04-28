@@ -9,6 +9,8 @@ struct GeoArrowGeometryPrivate {
   // to be kept in sync
   struct ArrowBuffer nodes;
   struct ArrowBuffer coords;
+  // For the builder interface
+  int current_level;
 };
 
 GeoArrowErrorCode GeoArrowGeometryInit(struct GeoArrowGeometry* geom) {
@@ -32,7 +34,10 @@ GeoArrowErrorCode GeoArrowGeometryInit(struct GeoArrowGeometry* geom) {
 GeoArrowErrorCode GeoArrowGeometryShallowCopy(struct GeoArrowGeometryView src,
                                               struct GeoArrowGeometry* dst) {
   GEOARROW_RETURN_NOT_OK(GeoArrowGeometryResizeNodes(dst, src.size_nodes));
-  memcpy(dst->root, src.root, src.size_nodes * sizeof(struct GeoArrowGeometryNode));
+  if (src.size_nodes > 0) {
+    memcpy(dst->root, src.root, src.size_nodes * sizeof(struct GeoArrowGeometryNode));
+  }
+
   return GEOARROW_OK;
 }
 
@@ -152,6 +157,201 @@ GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
   }
 
   return GEOARROW_OK;
+}
+
+#define GEOARROW_GEOMETRY_VISITOR_MAX_NESTING 32
+
+static inline GeoArrowErrorCode GeoArrowGeometryReallocCoords(
+    struct GeoArrowGeometry* geom, struct ArrowBuffer* new_coords,
+    int64_t additional_size_bytes) {
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
+
+  int64_t new_size_bytes;
+  if ((private_data->coords.size_bytes + additional_size_bytes) >
+      private_data->coords.size_bytes * 2) {
+    new_size_bytes = private_data->coords.size_bytes + additional_size_bytes;
+  } else {
+    new_size_bytes = private_data->coords.size_bytes * 2;
+  }
+
+  GEOARROW_RETURN_NOT_OK(ArrowBufferReserve(new_coords, new_size_bytes));
+  GEOARROW_RETURN_NOT_OK(ArrowBufferAppend(new_coords, private_data->coords.data,
+                                           private_data->coords.size_bytes));
+  struct GeoArrowGeometryNode* node = geom->root;
+  for (int64_t i = 0; i < geom->size_nodes; i++) {
+    for (int i = 0; i < 4; i++) {
+      if (node->coords[i] == _GeoArrowkEmptyPointCoords) {
+        continue;
+      }
+
+      ptrdiff_t offset = node->coords[i] - private_data->coords.data;
+      node->coords[i] = new_coords->data + offset;
+    }
+
+    ++node;
+  }
+
+  return GEOARROW_OK;
+}
+
+static inline GeoArrowErrorCode GeoArrowGeometryReserveCoords(
+    struct GeoArrowGeometry* geom, int64_t additional_doubles, double** out) {
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
+
+  int64_t bytes_required =
+      private_data->coords.size_bytes + (additional_doubles * sizeof(double));
+  if (bytes_required > private_data->coords.capacity_bytes) {
+    struct ArrowBuffer new_coords;
+    ArrowBufferInit(&new_coords);
+    GeoArrowErrorCode result = GeoArrowGeometryReallocCoords(
+        geom, &new_coords, (additional_doubles * sizeof(double)));
+    if (result != GEOARROW_OK) {
+      ArrowBufferReset(&new_coords);
+      return result;
+    }
+  }
+
+  *out = (double*)(private_data->coords.data + private_data->coords.size_bytes);
+  return GEOARROW_OK;
+}
+
+static int feat_start_geometry(struct GeoArrowVisitor* v) {
+  struct GeoArrowGeometry* geom = (struct GeoArrowGeometry*)v->private_data;
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
+
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryResizeNodes(geom, 0));
+  GEOARROW_RETURN_NOT_OK(ArrowBufferResize(&private_data->coords, 0, 0));
+  private_data->current_level = 0;
+  return GEOARROW_OK;
+}
+
+static int null_feat_geometry(struct GeoArrowVisitor* v) {
+  struct GeoArrowGeometry* geom = (struct GeoArrowGeometry*)v->private_data;
+  struct GeoArrowGeometryNode* node;
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendNodeInline(geom, &node));
+  return GEOARROW_OK;
+}
+
+static int geom_start_geometry(struct GeoArrowVisitor* v,
+                               enum GeoArrowGeometryType geometry_type,
+                               enum GeoArrowDimensions dimensions) {
+  struct GeoArrowGeometry* geom = (struct GeoArrowGeometry*)v->private_data;
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
+  struct GeoArrowGeometryNode* node;
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendNodeInline(geom, &node));
+  node->geometry_type = (uint8_t)geometry_type;
+  node->dimensions = (uint8_t)dimensions;
+  node->level = (uint8_t)private_data->current_level;
+  switch (geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_POINT:
+    case GEOARROW_GEOMETRY_TYPE_LINESTRING: {
+      int n_values = _GeoArrowkNumDimensions[dimensions];
+      double* coords_start;
+      GEOARROW_RETURN_NOT_OK(
+          GeoArrowGeometryReserveCoords(geom, n_values, &coords_start));
+      for (int i = 0; i < n_values; i++) {
+        node->coords[i] = (uint8_t*)(coords_start + i);
+        node->coord_stride[i] = n_values * sizeof(double);
+      }
+    } break;
+    default:
+      break;
+  }
+
+  if (private_data->current_level == GEOARROW_GEOMETRY_VISITOR_MAX_NESTING) {
+    GeoArrowErrorSet(v->error, "Maximum recursion for GeoArrowGeometry visitor reached");
+    return EINVAL;
+  }
+
+  private_data->current_level++;
+  return GEOARROW_OK;
+}
+
+static int ring_start_geometry(struct GeoArrowVisitor* v) {
+  struct GeoArrowGeometry* geom = (struct GeoArrowGeometry*)v->private_data;
+  if (geom->size_nodes == 0) {
+    GeoArrowErrorSet(v->error,
+                     "Call to ring_start before geom_start in GeoArrowGeometry visitor");
+    return EINVAL;
+  }
+
+  struct GeoArrowGeometryNode* last_node = geom->root + geom->size_nodes - 1;
+  return geom_start_geometry(v, GEOARROW_GEOMETRY_TYPE_LINESTRING, last_node->dimensions);
+}
+
+static int coords_geometry(struct GeoArrowVisitor* v,
+                           const struct GeoArrowCoordView* coords) {
+  struct GeoArrowGeometry* geom = (struct GeoArrowGeometry*)v->private_data;
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
+
+  if (geom->size_nodes == 0) {
+    GeoArrowErrorSet(v->error,
+                     "Call to coords before geom_start in GeoArrowGeometry visitor");
+    return EINVAL;
+  }
+
+  double* values;
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryReserveCoords(geom, coords->n_coords, &values));
+
+  for (int64_t i = 0; i < coords->n_coords; i++) {
+    for (int j = 0; j < coords->n_values; j++) {
+      *values++ = GEOARROW_COORD_VIEW_VALUE(coords, i, j);
+    }
+  }
+
+  private_data->coords.size_bytes += coords->n_coords * coords->n_values * sizeof(double);
+  return GEOARROW_OK;
+}
+
+static int ring_end_geometry(struct GeoArrowVisitor* v) {
+  struct GeoArrowGeometry* geom = (struct GeoArrowGeometry*)v->private_data;
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
+
+  if (private_data->current_level == 0) {
+    GeoArrowErrorSet(v->error,
+                     "Incorrect nesting in GeoArrowGeometry visitor (level < 0)");
+  }
+
+  private_data->current_level--;
+  return GEOARROW_OK;
+}
+
+static int geom_end_geometry(struct GeoArrowVisitor* v) {
+  struct GeoArrowGeometry* geom = (struct GeoArrowGeometry*)v->private_data;
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
+
+  if (private_data->current_level == 0) {
+    GeoArrowErrorSet(v->error,
+                     "Incorrect nesting in GeoArrowGeometry visitor (level < 0)");
+  }
+
+  private_data->current_level--;
+  return GEOARROW_OK;
+}
+
+static int feat_end_geometry(struct GeoArrowVisitor* v) {
+  NANOARROW_UNUSED(v);
+  return GEOARROW_OK;
+}
+
+void GeoArrowGeometryInitVisitor(struct GeoArrowGeometry* geom,
+                                 struct GeoArrowVisitor* v) {
+  v->feat_start = &feat_start_geometry;
+  v->null_feat = &null_feat_geometry;
+  v->geom_start = &geom_start_geometry;
+  v->ring_start = &ring_start_geometry;
+  v->coords = &coords_geometry;
+  v->ring_end = &ring_end_geometry;
+  v->geom_end = &geom_end_geometry;
+  v->feat_end = &feat_end_geometry;
+  v->private_data = geom;
 }
 
 #ifndef GEOARROW_BSWAP64
