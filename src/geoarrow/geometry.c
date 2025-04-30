@@ -365,8 +365,12 @@ static int feat_end_geometry(struct GeoArrowVisitor* v) {
   struct GeoArrowGeometryNode* node_begin = geom->root;
   struct GeoArrowGeometryNode* node_end = geom->root + geom->size_nodes;
 
+  uint32_t sizes[GEOARROW_GEOMETRY_VISITOR_MAX_NESTING + 1];
+  memset(sizes, 0, sizeof(sizes));
   ptrdiff_t sequence_bytes;
   for (struct GeoArrowGeometryNode* node = (node_end - 1); node >= node_begin; node--) {
+    sizes[node->level]++;
+
     switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
@@ -374,17 +378,6 @@ static int feat_end_geometry(struct GeoArrowVisitor* v) {
         node->size = (uint32_t)(sequence_bytes / node->coord_stride[0]);
         end = node->coords[0];
         break;
-      default:
-        break;
-    }
-  }
-
-  uint32_t sizes[GEOARROW_GEOMETRY_VISITOR_MAX_NESTING + 1];
-  memset(sizes, 0, sizeof(sizes));
-  for (struct GeoArrowGeometryNode* node = (node_end - 1); node >= node_begin; node--) {
-    sizes[node->level]++;
-
-    switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POLYGON:
       case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
       case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
