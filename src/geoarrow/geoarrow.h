@@ -335,7 +335,7 @@ GeoArrowErrorCode GeoArrowGeometryViewVisit(struct GeoArrowGeometryView geometry
                                             struct GeoArrowVisitor* v);
 
 /// \brief Export a GeoArrowGeometry using a GeoArrowVisitor
-GeoArrowErrorCode GeoArrowGeometryVisit(struct GeoArrowGeometry* geom,
+GeoArrowErrorCode GeoArrowGeometryVisit(const struct GeoArrowGeometry* geom,
                                         struct GeoArrowVisitor* v);
 
 /// \brief Build a GeoArrowGeometry using a visitor

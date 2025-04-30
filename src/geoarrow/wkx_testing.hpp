@@ -34,6 +34,7 @@ class WKXTester {
     array_.release = nullptr;
     ArrowArrayViewInitFromType(&wkt_array_view_, NANOARROW_TYPE_STRING);
     ArrowArrayViewInitFromType(&wkb_array_view_, NANOARROW_TYPE_BINARY);
+    GeoArrowGeometryInit(&geometry_);
   }
 
   ~WKXTester() {
@@ -46,6 +47,7 @@ class WKXTester {
     }
     ArrowArrayViewReset(&wkt_array_view_);
     ArrowArrayViewReset(&wkb_array_view_);
+    GeoArrowGeometryReset(&geometry_);
   }
 
   void SetFlatMultipoint(bool use_flat_multipoint) {
@@ -66,6 +68,11 @@ class WKXTester {
     return WKTValue();
   }
 
+  std::string AsWKT(const GeoArrowGeometry& geometry) {
+    ReadGeometry(geometry, WKTVisitor());
+    return WKTValue();
+  }
+
   std::vector<uint8_t> AsWKB(const std::string& str) {
     ReadWKT(str, WKBVisitor());
     return WKBValue();
@@ -74,6 +81,21 @@ class WKXTester {
   std::vector<uint8_t> AsWKB(const std::vector<uint8_t>& str) {
     ReadWKB(str, WKBVisitor());
     return WKBValue();
+  }
+
+  std::vector<uint8_t> AsWKB(const GeoArrowGeometry& geometry) {
+    ReadGeometry(geometry, WKBVisitor());
+    return WKBValue();
+  }
+
+  const GeoArrowGeometry& AsGeometry(const std::string& str) {
+    ReadWKT(str, GeometryVisitor());
+    return Geometry();
+  }
+
+  const GeoArrowGeometry& AsGeometry(const std::vector<uint8_t>& str) {
+    ReadWKB(str, GeometryVisitor());
+    return Geometry();
   }
 
   void ReadWKB(const std::vector<uint8_t>& str, struct GeoArrowVisitor* v) {
@@ -100,6 +122,13 @@ class WKXTester {
     }
   }
 
+  void ReadGeometry(const GeoArrowGeometry& geometry, struct GeoArrowVisitor* v) {
+    int result = GeoArrowGeometryVisit(&geometry, v);
+    if (result != GEOARROW_OK) {
+      throw WKXTestException("GeoArrowGeometryVisit", result, error_.message);
+    }
+  }
+
   void ReadNulls(int64_t n, struct GeoArrowVisitor* v) {
     for (int64_t i = 0; i < n; i++) {
       v->feat_start(v);
@@ -118,6 +147,13 @@ class WKXTester {
   struct GeoArrowVisitor* WKBVisitor() {
     error_.message[0] = '\0';
     GeoArrowWKBWriterInitVisitor(&wkb_writer_, &v_);
+    v_.error = &error_;
+    return &v_;
+  }
+
+  struct GeoArrowVisitor* GeometryVisitor() {
+    error_.message[0] = '\0';
+    GeoArrowGeometryInitVisitor(&geometry_, &v_);
     v_.error = &error_;
     return &v_;
   }
@@ -198,6 +234,8 @@ class WKXTester {
     return values[i];
   }
 
+  const GeoArrowGeometry& Geometry() { return geometry_; }
+
  private:
   struct GeoArrowWKTReader wkt_reader_;
   struct GeoArrowWKTWriter wkt_writer_;
@@ -207,6 +245,7 @@ class WKXTester {
   struct ArrowArray array_;
   struct ArrowArrayView wkt_array_view_;
   struct ArrowArrayView wkb_array_view_;
+  struct GeoArrowGeometry geometry_;
   struct GeoArrowError error_;
 };
 

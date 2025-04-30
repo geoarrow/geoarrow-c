@@ -545,7 +545,7 @@ GeoArrowErrorCode GeoArrowGeometryViewVisit(struct GeoArrowGeometryView geometry
   return GEOARROW_OK;
 }
 
-GeoArrowErrorCode GeoArrowGeometryVisit(struct GeoArrowGeometry* geometry,
+GeoArrowErrorCode GeoArrowGeometryVisit(const struct GeoArrowGeometry* geometry,
                                         struct GeoArrowVisitor* v) {
   int64_t n_nodes = geometry->size_nodes;
   GEOARROW_RETURN_NOT_OK(v->feat_start(v));
