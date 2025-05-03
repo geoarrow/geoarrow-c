@@ -301,7 +301,8 @@ static int coords_geometry(struct GeoArrowVisitor* v,
   }
 
   double* values;
-  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryReserveCoords(geom, coords->n_coords, &values));
+  GEOARROW_RETURN_NOT_OK(
+      GeoArrowGeometryReserveCoords(geom, coords->n_coords * coords->n_values, &values));
 
   for (int64_t i = 0; i < coords->n_coords; i++) {
     for (int j = 0; j < coords->n_values; j++) {
