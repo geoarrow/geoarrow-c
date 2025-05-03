@@ -123,24 +123,39 @@ TEST(GeometryTest, GeometryTestDeepCopy) {
   GeoArrowGeometryReset(&geom);
 }
 
-TEST(GeometryTest, GeometryTestBuildFromVisitor) {
-  WKXTester tester;
+TEST(GeometryTest, GeometryTestRoundtripWKT) {
+  // These are also tested in the WKTFilesTest; however, we inline a fer here since
+  // they are specifically testing the geometry constructor
+  std::vector<std::string> wkts = {
+      "POINT (30 10)", "POINT ZM (30 10 40 300)", "LINESTRING (30 10, 10 30, 40 40)",
+      "LINESTRING ZM (30 10 40 300, 10 30 40 300, 40 40 80 1600)",
+      "POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10), (20 30, 35 35, 30 20, 20 30))",
+      "MULTIPOINT ((10 40), (40 30), (20 20), (30 10))",
+      "MULTILINESTRING ((10 10, 20 20, 10 40), (40 40, 30 30, 40 20, 30 10))",
+      // Funny definition to avoid 'suspicous string literal' warning
+      std::string("GEOMETRYCOLLECTION (GEOMETRYCOLLECTION (POINT (30 10), LINESTRING (30 "
+                  "10, 10 30, ") +
+          "40 40), POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10)), MULTIPOINT ((30 10)), "
+          "MULTILINESTRING ((30 10, 10 30, 40 40)), MULTIPOLYGON (((30 10, 40 40, 20 40, "
+          "10 "
+          "20, 30 10)))))"};
 
-  struct GeoArrowGeometry geom;
-  ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
+  for (const auto& wkt : wkts) {
+    SCOPED_TRACE(wkt);
+    WKXTester tester;
 
-  struct GeoArrowVisitor v;
-  struct GeoArrowError error;
-  v.error = &error;
-  GeoArrowGeometryInitVisitor(&geom, &v);
+    struct GeoArrowGeometry geom;
+    ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
 
-  tester.ReadWKT("POINT ZM (10 11 12 13)", &v);
-  ASSERT_EQ(GeoArrowGeometryVisit(&geom, tester.WKTVisitor()), GEOARROW_OK);
-  EXPECT_EQ(tester.WKTValue(), "POINT ZM (10 11 12 13)");
+    struct GeoArrowVisitor v;
+    struct GeoArrowError error;
+    v.error = &error;
+    GeoArrowGeometryInitVisitor(&geom, &v);
 
-  tester.ReadWKT("MULTIPOINT ZM ((10 11 12 13), (14 15 16 17))", &v);
-  ASSERT_EQ(GeoArrowGeometryVisit(&geom, tester.WKTVisitor()), GEOARROW_OK);
-  EXPECT_EQ(tester.WKTValue(), "MULTIPOINT ZM ((10 11 12 13), (14 15 16 17))");
+    tester.ReadWKT(wkt, &v);
+    ASSERT_EQ(GeoArrowGeometryVisit(&geom, tester.WKTVisitor()), GEOARROW_OK);
+    EXPECT_EQ(tester.WKTValue(), wkt);
 
-  GeoArrowGeometryReset(&geom);
+    GeoArrowGeometryReset(&geom);
+  }
 }
