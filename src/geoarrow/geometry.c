@@ -253,6 +253,11 @@ static int geom_start_geometry(struct GeoArrowVisitor* v,
   switch (geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_POINT:
     case GEOARROW_GEOMETRY_TYPE_LINESTRING: {
+      // Reserve coords and set pointers here, even when we're not sure if
+      // there will be any coordinates. This lets us calculate sequences sizes
+      // after the fact because we can always use the pointer differences between
+      // the start of the x value in one sequence and the start of the x value
+      // in the next sequence to calculate sequence size.
       int n_values = _GeoArrowkNumDimensions[dimensions];
       double* coords_start;
       GEOARROW_RETURN_NOT_OK(
