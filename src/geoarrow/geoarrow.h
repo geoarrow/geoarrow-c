@@ -314,6 +314,13 @@ void GeoArrowGeometryReset(struct GeoArrowGeometry* geom);
 GeoArrowErrorCode GeoArrowGeometryShallowCopy(struct GeoArrowGeometryView src,
                                               struct GeoArrowGeometry* dst);
 
+/// \brief Populate the coords and nodes of a GeoArrowGeometry from a GeoArrowGeometryView
+///
+/// Copies nodes and coords from src into a previously initialized GeoArrowGeometry. On
+/// success the destination owns its nodes but and any underlying coordinates.
+GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
+                                           struct GeoArrowGeometry* dst);
+
 /// \brief Resize the nodes list
 ///
 /// This can be used to truncate the nodes list to zero before populating

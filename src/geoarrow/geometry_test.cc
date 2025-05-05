@@ -114,8 +114,7 @@ TEST(GeometryTest, GeometryTestDeepCopy) {
 
   struct GeoArrowGeometry geom2;
   ASSERT_EQ(GeoArrowGeometryInit(&geom2), GEOARROW_OK);
-  ASSERT_EQ(GeoArrowGeometryShallowCopy(GeoArrowGeometryAsView(&geom), &geom2),
-            GEOARROW_OK);
+  ASSERT_EQ(GeoArrowGeometryDeepCopy(GeoArrowGeometryAsView(&geom), &geom2), GEOARROW_OK);
   ASSERT_EQ(GeoArrowGeometryVisit(&geom2, tester.WKTVisitor()), GEOARROW_OK);
   EXPECT_EQ(tester.WKTValue(), "MULTIPOINT ZM ((10 11 12 13), (14 15 16 17))");
 
@@ -124,7 +123,7 @@ TEST(GeometryTest, GeometryTestDeepCopy) {
 }
 
 TEST(GeometryTest, GeometryTestRoundtripWKT) {
-  // These are also tested in the WKTFilesTest; however, we inline a fer here since
+  // These are also tested in the WKXFilesTest; however, we inline a few here since
   // they are specifically testing the geometry constructor
   std::vector<std::string> wkts = {
       "POINT (30 10)", "POINT ZM (30 10 40 300)", "LINESTRING (30 10, 10 30, 40 40)",

@@ -50,7 +50,6 @@ TEST(WKXFilesTest, WKXFilesTestFiles) {
     while (std::getline(infile, line_wkt)) {
       SCOPED_TRACE("WKT: " + line_wkt);
 
-      std::cout << path << "\n" << std::flush;
       std::vector<uint8_t> wkb_from_line_wkt = tester.AsWKB(line_wkt);
       // For all current examples, the ISO wkb size is the same as the EWKB size
       int64_t wkb_size = wkb_from_line_wkt.size();
@@ -67,8 +66,23 @@ TEST(WKXFilesTest, WKXFilesTestFiles) {
       EXPECT_EQ(tester.AsWKB(line_wkb), line_wkb);
       EXPECT_EQ(tester.AsWKB(line_ewkb), line_wkb);
 
+      struct GeoArrowGeometry geom_cloner;
+      ASSERT_EQ(GeoArrowGeometryInit(&geom_cloner), GEOARROW_OK);
+
       const GeoArrowGeometry& geom_from_wkt = tester.AsGeometry(line_wkt);
       EXPECT_EQ(tester.AsWKT(geom_from_wkt), line_wkt);
+
+      ASSERT_EQ(GeoArrowGeometryShallowCopy(GeoArrowGeometryAsView(&geom_from_wkt),
+                                            &geom_cloner),
+                GEOARROW_OK);
+      EXPECT_EQ(tester.AsWKT(geom_cloner), line_wkt);
+
+      ASSERT_EQ(
+          GeoArrowGeometryDeepCopy(GeoArrowGeometryAsView(&geom_from_wkt), &geom_cloner),
+          GEOARROW_OK);
+      EXPECT_EQ(tester.AsWKT(geom_cloner), line_wkt);
+
+      GeoArrowGeometryReset(&geom_cloner);
 
       const GeoArrowGeometry& geom_from_wkb = tester.AsGeometry(line_wkb);
       EXPECT_EQ(tester.AsWKB(geom_from_wkb), line_wkb);

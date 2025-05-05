@@ -336,7 +336,7 @@ static uint8_t _GeoArrowkEmptyPointCoords[] = {
 ///
 /// The geometry_type must be a POINT or LINESTRING.
 static inline struct GeoArrowGeometryView GeoArrowGeometryAsView(
-    struct GeoArrowGeometry* geom) {
+    const struct GeoArrowGeometry* geom) {
   struct GeoArrowGeometryView out;
   out.root = geom->root;
   out.size_nodes = geom->size_nodes;

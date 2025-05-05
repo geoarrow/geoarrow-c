@@ -112,11 +112,11 @@ GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
   // Calculate the number of coordinates required
   int64_t coords_required = 0;
   const struct GeoArrowGeometryNode* src_node = src.root;
-  for (int64_t i = 0; i < dst->size_nodes; i++) {
+  for (int64_t i = 0; i < src.size_nodes; i++) {
     switch (src_node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
-        coords_required += src_node->size;
+        coords_required += _GeoArrowkNumDimensions[src_node->dimensions] * src_node->size;
         break;
       default:
         break;
