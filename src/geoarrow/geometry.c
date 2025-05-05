@@ -26,6 +26,7 @@ GeoArrowErrorCode GeoArrowGeometryInit(struct GeoArrowGeometry* geom) {
   geom->capacity_nodes = 0;
   ArrowBufferInit(&private_data->nodes);
   ArrowBufferInit(&private_data->coords);
+  private_data->current_level = 0;
   geom->private_data = private_data;
 
   return GEOARROW_OK;
@@ -327,6 +328,7 @@ static int ring_end_geometry(struct GeoArrowVisitor* v) {
   if (private_data->current_level == 0) {
     GeoArrowErrorSet(v->error,
                      "Incorrect nesting in GeoArrowGeometry visitor (level < 0)");
+    return EINVAL;
   }
 
   private_data->current_level--;

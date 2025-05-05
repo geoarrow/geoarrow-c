@@ -158,3 +158,36 @@ TEST(GeometryTest, GeometryTestRoundtripWKT) {
     GeoArrowGeometryReset(&geom);
   }
 }
+
+TEST(GeometryTest, GeometryFromVisitorErrors) {
+  struct GeoArrowGeometry geom;
+  struct GeoArrowVisitor v;
+  struct GeoArrowError error;
+  GeoArrowGeometryInit(&geom);
+  GeoArrowGeometryInitVisitor(&geom, &v);
+  v.error = &error;
+
+  struct GeoArrowCoordView coords;
+  coords.n_coords = 0;
+  coords.n_values = 2;
+  coords.coords_stride = 1;
+
+  // Invalid because level < 0
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  EXPECT_EQ(v.ring_start(&v), EINVAL);
+  EXPECT_EQ(v.ring_end(&v), EINVAL);
+  EXPECT_EQ(v.coords(&v, &coords), EINVAL);
+  EXPECT_EQ(v.geom_end(&v), EINVAL);
+  EXPECT_EQ(v.feat_end(&v), EINVAL);
+
+  // Invalid because of too much nesting
+  EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
+  for (int i = 0; i < 31; i++) {
+    EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
+              GEOARROW_OK);
+  }
+  EXPECT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_POINT, GEOARROW_DIMENSIONS_XY),
+            EINVAL);
+
+  GeoArrowGeometryReset(&geom);
+}
