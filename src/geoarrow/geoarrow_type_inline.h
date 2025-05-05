@@ -319,10 +319,93 @@ static inline void GeoArrowMapDimensions(enum GeoArrowDimensions src_dim,
 }
 
 // Four little-endian NANs
+#if defined(GEOARROW_NATIVE_ENDIAN) && GEOARROW_NATIVE_ENDIAN == 0x00
+static uint8_t _GeoArrowkEmptyPointCoords[] = {
+    0x7f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7f, 0xf8, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x7f, 0xf8, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x7f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+#else
 static uint8_t _GeoArrowkEmptyPointCoords[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f};
+#endif
+
+/// \brief View a GeoArrowGeometry
+/// \ingroup geoarrow-geometry
+///
+/// The geometry_type must be a POINT or LINESTRING.
+static inline struct GeoArrowGeometryView GeoArrowGeometryAsView(
+    const struct GeoArrowGeometry* geom) {
+  struct GeoArrowGeometryView out;
+  out.root = geom->root;
+  out.size_nodes = geom->size_nodes;
+  return out;
+}
+
+/// \brief Set a node where coordinates are stored in a row-major (C) array
+/// \ingroup geoarrow-geometry
+///
+/// The geometry_type must be a POINT or LINESTRING.
+static inline void GeoArrowGeometryNodeSetInterleaved(
+    struct GeoArrowGeometryNode* node, enum GeoArrowGeometryType geometry_type,
+    enum GeoArrowDimensions dimensions, struct GeoArrowBufferView coords) {
+  node->geometry_type = (uint8_t)geometry_type;
+  node->dimensions = (uint8_t)dimensions;
+
+  int32_t coord_stride_bytes = _GeoArrowkNumDimensions[dimensions] * sizeof(double);
+  node->size = (uint32_t)(coords.size_bytes / coord_stride_bytes);
+  for (int i = 0; i < 4; i++) {
+    node->coord_stride[i] = coord_stride_bytes;
+    node->coords[i] = coords.data + (i * sizeof(double));
+  }
+}
+
+/// \brief Set a node where coordinates are stored in a column-major (Fortran) array
+/// \ingroup geoarrow-geometry
+///
+/// The geometry_type must be a POINT or LINESTRING.
+static inline void GeoArrowGeometryNodeSetSeparated(
+    struct GeoArrowGeometryNode* node, enum GeoArrowGeometryType geometry_type,
+    enum GeoArrowDimensions dimensions, struct GeoArrowBufferView coords) {
+  node->geometry_type = (uint8_t)geometry_type;
+  node->dimensions = (uint8_t)dimensions;
+
+  int64_t dimension_size_bytes = coords.size_bytes / _GeoArrowkNumDimensions[dimensions];
+  node->size = (uint32_t)(dimension_size_bytes / sizeof(double));
+  for (int i = 0; i < 4; i++) {
+    node->coord_stride[i] = sizeof(double);
+    node->coords[i] = coords.data + (i * dimension_size_bytes);
+  }
+}
+
+/// \brief Inline version of GeoArrowGeometryResizeNodes
+/// \ingroup geoarrow-geometry
+static inline GeoArrowErrorCode GeoArrowGeometryResizeNodesInline(
+    struct GeoArrowGeometry* geom, int64_t size_nodes) {
+  if (size_nodes < geom->capacity_nodes) {
+    geom->size_nodes = size_nodes;
+    return GEOARROW_OK;
+  } else {
+    return GeoArrowGeometryResizeNodes(geom, size_nodes);
+  }
+}
+
+/// \brief Inline version of GeoArrowGeometryAppendNode
+/// \ingroup geoarrow-geometry
+static inline GeoArrowErrorCode GeoArrowGeometryAppendNodeInline(
+    struct GeoArrowGeometry* geom, struct GeoArrowGeometryNode** out) {
+  if (geom->size_nodes < geom->capacity_nodes) {
+    *out = geom->root + (geom->size_nodes++);
+    memset(*out, 0, sizeof(struct GeoArrowGeometryNode));
+    for (uint32_t i = 0; i < 4; i++) {
+      (*out)->coords[i] = _GeoArrowkEmptyPointCoords;
+    }
+    return GEOARROW_OK;
+  } else {
+    return GeoArrowGeometryAppendNode(geom, out);
+  }
+}
 
 // Copies coordinates from one view to another keeping dimensions the same.
 // This function fills dimensions in dst but not in src with NAN; dimensions

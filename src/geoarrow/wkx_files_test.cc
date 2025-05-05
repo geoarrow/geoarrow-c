@@ -34,6 +34,8 @@ TEST(WKXFilesTest, WKXFilesTestFiles) {
       continue;
     }
 
+    SCOPED_TRACE("Path: " + path);
+
     std::stringstream wkb_path_builder;
     wkb_path_builder << path.substr(0, path.size() - 4) << ".wkb";
 
@@ -46,22 +48,44 @@ TEST(WKXFilesTest, WKXFilesTestFiles) {
     std::ifstream infile_ewkb(ewkb_path_builder.str());
     std::string line_wkt;
     while (std::getline(infile, line_wkt)) {
-      std::cout << path << "\n" << std::flush;
-      std::basic_string<uint8_t> wkb_from_line_wkt = tester.AsWKB(line_wkt);
+      SCOPED_TRACE("WKT: " + line_wkt);
+
+      std::vector<uint8_t> wkb_from_line_wkt = tester.AsWKB(line_wkt);
       // For all current examples, the ISO wkb size is the same as the EWKB size
       int64_t wkb_size = wkb_from_line_wkt.size();
 
       infile_wkb.read((char*)read_buffer, wkb_size);
-      std::basic_string<uint8_t> line_wkb(read_buffer, wkb_size);
+      std::vector<uint8_t> line_wkb(read_buffer, read_buffer + wkb_size);
 
       infile_ewkb.read((char*)read_buffer, wkb_size);
-      std::basic_string<uint8_t> line_ewkb(read_buffer, wkb_size);
+      std::vector<uint8_t> line_ewkb(read_buffer, read_buffer + wkb_size);
 
       ASSERT_EQ(wkb_from_line_wkt, line_wkb);
       EXPECT_EQ(tester.AsWKT(line_wkt), line_wkt);
 
       EXPECT_EQ(tester.AsWKB(line_wkb), line_wkb);
       EXPECT_EQ(tester.AsWKB(line_ewkb), line_wkb);
+
+      struct GeoArrowGeometry geom_cloner;
+      ASSERT_EQ(GeoArrowGeometryInit(&geom_cloner), GEOARROW_OK);
+
+      const GeoArrowGeometry& geom_from_wkt = tester.AsGeometry(line_wkt);
+      EXPECT_EQ(tester.AsWKT(geom_from_wkt), line_wkt);
+
+      ASSERT_EQ(GeoArrowGeometryShallowCopy(GeoArrowGeometryAsView(&geom_from_wkt),
+                                            &geom_cloner),
+                GEOARROW_OK);
+      EXPECT_EQ(tester.AsWKT(geom_cloner), line_wkt);
+
+      ASSERT_EQ(
+          GeoArrowGeometryDeepCopy(GeoArrowGeometryAsView(&geom_from_wkt), &geom_cloner),
+          GEOARROW_OK);
+      EXPECT_EQ(tester.AsWKT(geom_cloner), line_wkt);
+
+      GeoArrowGeometryReset(&geom_cloner);
+
+      const GeoArrowGeometry& geom_from_wkb = tester.AsGeometry(line_wkb);
+      EXPECT_EQ(tester.AsWKB(geom_from_wkb), line_wkb);
 
       // Special case the empty point, which translates from WKB to
       // WKT as POINT [Z[M]] (nan nan [nan [nan]]) instead of EMPTY

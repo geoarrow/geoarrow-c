@@ -118,9 +118,9 @@ TEST(KernelTest, KernelTestVisitVoidAggWKB) {
   struct ArrowArray array_in;
   struct ArrowArray array_out;
 
-  std::basic_string<uint8_t> point({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                    0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
-                                    0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
+  std::vector<uint8_t> point({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+                              0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
+                              0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
   struct ArrowBufferView data;
   data.data.data = point.data();
   data.size_bytes = point.size();
@@ -322,7 +322,7 @@ TEST(KernelTest, KernelTestFormatWKTFromWKB) {
 
   // Use at least one LINESTRING, which forces a slightly different path through the
   // visitor.
-  std::basic_string<uint8_t> linestring(
+  std::vector<uint8_t> linestring(
       {0x01, 0x02, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
        0x00, 0x3e, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40, 0x00, 0x00, 0x00,
        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
@@ -480,9 +480,9 @@ TEST(KernelTest, KernelTestAsWKB) {
   EXPECT_EQ(array_out2.null_count, 1);
 
   // Will be different on big-endian
-  std::basic_string<uint8_t> point({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                    0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
-                                    0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
+  std::vector<uint8_t> point({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+                              0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
+                              0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
 
   struct ArrowArrayView array_view;
   struct ArrowBufferView item;
@@ -490,12 +490,16 @@ TEST(KernelTest, KernelTestAsWKB) {
 
   ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array_out1, nullptr), GEOARROW_OK);
   item = ArrowArrayViewGetBytesUnsafe(&array_view, 0);
-  EXPECT_EQ(std::basic_string<uint8_t>(item.data.as_uint8, item.size_bytes), point);
+  EXPECT_EQ(
+      std::vector<uint8_t>(item.data.as_uint8, item.data.as_uint8 + item.size_bytes),
+      point);
   EXPECT_TRUE(ArrowArrayViewIsNull(&array_view, 1));
 
   ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array_out2, nullptr), GEOARROW_OK);
   item = ArrowArrayViewGetBytesUnsafe(&array_view, 0);
-  EXPECT_EQ(std::basic_string<uint8_t>(item.data.as_uint8, item.size_bytes), point);
+  EXPECT_EQ(
+      std::vector<uint8_t>(item.data.as_uint8, item.data.as_uint8 + item.size_bytes),
+      point);
   EXPECT_TRUE(ArrowArrayViewIsNull(&array_view, 1));
 
   ArrowBufferReset(&buffer);

@@ -278,6 +278,79 @@ GeoArrowErrorCode GeoArrowKernelInit(struct GeoArrowKernel* kernel, const char* 
 
 /// @}
 
+/// \defgroup geoarrow-geometry Zero-copy friendly scalar geometries
+///
+/// The GeoArrowGeometry, GeoArrowGeometry, and GeoArrowGeometryNode form the
+/// basis for iterating over single geometries in the GeoArrow C library. Whereas
+/// GeoArrow allows a more efficient implementation of many algorithms by treating
+/// Arrays as a whole, sometimes the concept of a scalar is needed to interact
+/// with other libraries or reduce the complexity of an operation.
+///
+/// - A GeoArrowGeometryNode is a view of a coordinate sequence (point, linestring, or
+///   polygon ring) or size (with children immediately following in depth-first order).
+/// - A GeoArrowGeometry is a view of a contiguous sequence of GeoArrowGeometryNodes,
+///   and owns neither the array of nodes nor the underlying coordinates.
+/// - A GeoArrowGeometry owns its array of nodes and optionally the underlying
+///   coordinates.
+///
+/// This approach is friendly to iteration over a potentially many items with few
+/// if any dynamic allocations.
+///
+/// @{
+
+/// \brief Initialize geometry for a GeoArrowGeometry
+///
+/// If GEOARROW_OK is returned, the caller is responsible for calling
+/// GeoArrowGeometryReset.
+GeoArrowErrorCode GeoArrowGeometryInit(struct GeoArrowGeometry* geom);
+
+/// \brief Free memory associated with a GeoArrowGeometry
+void GeoArrowGeometryReset(struct GeoArrowGeometry* geom);
+
+/// \brief Populate the nodes of a GeoArrowGeometry from a GeoArrowGeometryView
+///
+/// Copies nodes from src into a previously initialized GeoArrowGeometry. On success
+/// the destination owns its nodes but not any underlying coordinates.
+GeoArrowErrorCode GeoArrowGeometryShallowCopy(struct GeoArrowGeometryView src,
+                                              struct GeoArrowGeometry* dst);
+
+/// \brief Populate the coords and nodes of a GeoArrowGeometry from a GeoArrowGeometryView
+///
+/// Copies nodes and coords from src into a previously initialized GeoArrowGeometry. On
+/// success the destination owns its nodes but and any underlying coordinates.
+GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
+                                           struct GeoArrowGeometry* dst);
+
+/// \brief Resize the nodes list
+///
+/// This can be used to truncate the nodes list to zero before populating
+/// its contents with another value. Use GeoArrowGeometryResizeNodesInline()
+/// when calling this in a loop.
+GeoArrowErrorCode GeoArrowGeometryResizeNodes(struct GeoArrowGeometry* geom,
+                                              int64_t size_nodes);
+
+/// \brief Append a node to the nodes list and initialize its contents
+///
+/// This can be used to truncate the nodes list to zero before populating
+/// its contents with another value. Use GeoArrowGeometryAppendNodeInline()
+/// when calling this in a loop.
+GeoArrowErrorCode GeoArrowGeometryAppendNode(struct GeoArrowGeometry* geom,
+                                             struct GeoArrowGeometryNode** out);
+
+/// \brief Export a GeoArrowGeometryView using a GeoArrowVisitor
+GeoArrowErrorCode GeoArrowGeometryViewVisit(struct GeoArrowGeometryView geometry,
+                                            struct GeoArrowVisitor* v);
+
+/// \brief Export a GeoArrowGeometry using a GeoArrowVisitor
+GeoArrowErrorCode GeoArrowGeometryVisit(const struct GeoArrowGeometry* geom,
+                                        struct GeoArrowVisitor* v);
+
+/// \brief Build a GeoArrowGeometry using a visitor
+void GeoArrowGeometryInitVisitor(struct GeoArrowGeometry* geom,
+                                 struct GeoArrowVisitor* v);
+
+/// @}
+
 /// \defgroup geoarrow-visitor Low-level reader/visitor interfaces
 ///
 /// The GeoArrow specification defines memory layouts for many types.
@@ -456,6 +529,11 @@ GeoArrowErrorCode GeoArrowWKBReaderInit(struct GeoArrowWKBReader* reader);
 GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowBufferView src,
                                          struct GeoArrowVisitor* v);
+
+GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
+                                        struct GeoArrowBufferView src,
+                                        struct GeoArrowGeometryView* out,
+                                        struct GeoArrowError* error);
 
 /// \brief Free resources held by a GeoArrowWKBWriter
 void GeoArrowWKBReaderReset(struct GeoArrowWKBReader* reader);

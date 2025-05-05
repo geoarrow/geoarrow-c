@@ -22,26 +22,12 @@ static inline uint32_t bswap_32(uint32_t x) {
 #define GEOARROW_BSWAP32(x) bswap_32(x)
 #endif
 
-#ifndef GEOARROW_BSWAP64
-static inline uint64_t bswap_64(uint64_t x) {
-  return (((x & 0xFFULL) << 56) | ((x & 0xFF00ULL) << 40) | ((x & 0xFF0000ULL) << 24) |
-          ((x & 0xFF000000ULL) << 8) | ((x & 0xFF00000000ULL) >> 8) |
-          ((x & 0xFF0000000000ULL) >> 24) | ((x & 0xFF000000000000ULL) >> 40) |
-          ((x & 0xFF00000000000000ULL) >> 56));
-}
-#define GEOARROW_BSWAP64(x) bswap_64(x)
-#endif
-
-// This must be divisible by 2, 3, and 4
-#define COORD_CACHE_SIZE_ELEMENTS 3072
-
 struct WKBReaderPrivate {
   const uint8_t* data;
   int64_t size_bytes;
   const uint8_t* data0;
   int need_swapping;
-  double coords[COORD_CACHE_SIZE_ELEMENTS];
-  struct GeoArrowCoordView coord_view;
+  struct GeoArrowGeometry geom;
 };
 
 static inline int WKBReaderReadEndian(struct WKBReaderPrivate* s,
@@ -75,21 +61,13 @@ static inline int WKBReaderReadUInt32(struct WKBReaderPrivate* s, uint32_t* out,
   }
 }
 
-static inline void WKBReaderMaybeBswapCoords(struct WKBReaderPrivate* s, int64_t n) {
-  if (s->need_swapping) {
-    uint64_t* data64 = (uint64_t*)s->coords;
-    for (int i = 0; i < n; i++) {
-      data64[i] = GEOARROW_BSWAP64(data64[i]);
-    }
-  }
-}
-
-static int WKBReaderReadCoordinates(struct WKBReaderPrivate* s, int64_t n_coords,
-                                    struct GeoArrowVisitor* v) {
-  int64_t bytes_needed = n_coords * s->coord_view.n_values * sizeof(double);
+static inline GeoArrowErrorCode WKBReaderReadNodeCoordinates(
+    struct WKBReaderPrivate* s, uint32_t n_coords, uint32_t coord_size_elements,
+    struct GeoArrowGeometryNode* node, struct GeoArrowError* error) {
+  int64_t bytes_needed = n_coords * coord_size_elements * sizeof(double);
   if (s->size_bytes < bytes_needed) {
-    ArrowErrorSet(
-        (struct ArrowError*)v->error,
+    GeoArrowErrorSet(
+        error,
         "Expected coordinate sequence of %ld coords (%ld bytes) but found %ld bytes "
         "remaining at byte %ld",
         (long)n_coords, (long)bytes_needed, (long)s->size_bytes,
@@ -97,34 +75,24 @@ static int WKBReaderReadCoordinates(struct WKBReaderPrivate* s, int64_t n_coords
     return EINVAL;
   }
 
-  int32_t chunk_size = COORD_CACHE_SIZE_ELEMENTS / s->coord_view.n_values;
-  s->coord_view.n_coords = chunk_size;
-
-  // Process full chunks
-  while (n_coords > chunk_size) {
-    memcpy(s->coords, s->data, COORD_CACHE_SIZE_ELEMENTS * sizeof(double));
-    WKBReaderMaybeBswapCoords(s, COORD_CACHE_SIZE_ELEMENTS);
-    NANOARROW_RETURN_NOT_OK(v->coords(v, &s->coord_view));
-    s->data += COORD_CACHE_SIZE_ELEMENTS * sizeof(double);
-    s->size_bytes -= COORD_CACHE_SIZE_ELEMENTS * sizeof(double);
-    n_coords -= chunk_size;
+  if (n_coords > 0) {
+    for (uint32_t i = 0; i < coord_size_elements; i++) {
+      node->coord_stride[i] = (int32_t)coord_size_elements * sizeof(double);
+      node->coords[i] = s->data + (i * sizeof(double));
+    }
   }
 
-  // Process the last chunk
-  int64_t remaining_bytes = n_coords * s->coord_view.n_values * sizeof(double);
-  memcpy(s->coords, s->data, remaining_bytes);
-  s->data += remaining_bytes;
-  s->size_bytes -= remaining_bytes;
-  s->coord_view.n_coords = n_coords;
-  WKBReaderMaybeBswapCoords(s, n_coords * s->coord_view.n_values);
-  return v->coords(v, &s->coord_view);
+  s->data += bytes_needed;
+  return GEOARROW_OK;
 }
 
-static int WKBReaderReadGeometry(struct WKBReaderPrivate* s, struct GeoArrowVisitor* v) {
-  NANOARROW_RETURN_NOT_OK(WKBReaderReadEndian(s, v->error));
+static inline GeoArrowErrorCode WKBReaderReadNodeGeometry(
+    struct WKBReaderPrivate* s, struct GeoArrowGeometryNode* node,
+    struct GeoArrowError* error) {
+  NANOARROW_RETURN_NOT_OK(WKBReaderReadEndian(s, error));
   uint32_t geometry_type;
   const uint8_t* data_at_geom_type = s->data;
-  NANOARROW_RETURN_NOT_OK(WKBReaderReadUInt32(s, &geometry_type, v->error));
+  NANOARROW_RETURN_NOT_OK(WKBReaderReadUInt32(s, &geometry_type, error));
 
   int has_z = 0;
   int has_m = 0;
@@ -143,7 +111,7 @@ static int WKBReaderReadGeometry(struct WKBReaderPrivate* s, struct GeoArrowVisi
     // has embedded srid but still wants the data and doesn't have another way
     // to convert
     uint32_t embedded_srid;
-    NANOARROW_RETURN_NOT_OK(WKBReaderReadUInt32(s, &embedded_srid, v->error));
+    NANOARROW_RETURN_NOT_OK(WKBReaderReadUInt32(s, &embedded_srid, error));
   }
 
   geometry_type = geometry_type & 0x0000ffff;
@@ -164,14 +132,13 @@ static int WKBReaderReadGeometry(struct WKBReaderPrivate* s, struct GeoArrowVisi
   // Read the number of coordinates/rings/parts
   uint32_t size;
   if (geometry_type != GEOARROW_GEOMETRY_TYPE_POINT) {
-    NANOARROW_RETURN_NOT_OK(WKBReaderReadUInt32(s, &size, v->error));
+    NANOARROW_RETURN_NOT_OK(WKBReaderReadUInt32(s, &size, error));
   } else {
     size = 1;
   }
 
   // Set coord size
-  s->coord_view.n_values = 2 + has_z + has_m;
-  s->coord_view.coords_stride = s->coord_view.n_values;
+  uint32_t coord_size_elements = 2 + has_z + has_m;
 
   // Resolve dimensions
   enum GeoArrowDimensions dimensions;
@@ -185,38 +152,67 @@ static int WKBReaderReadGeometry(struct WKBReaderPrivate* s, struct GeoArrowVisi
     dimensions = GEOARROW_DIMENSIONS_XY;
   }
 
-  NANOARROW_RETURN_NOT_OK(v->geom_start(v, geometry_type, dimensions));
+  // Populate the node
+  node->geometry_type = (uint8_t)geometry_type;
+  node->dimensions = (uint8_t)dimensions;
+  node->size = size;
+  if (s->need_swapping) {
+    node->flags = GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN;
+  }
 
   switch (geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_POINT:
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
-      NANOARROW_RETURN_NOT_OK(WKBReaderReadCoordinates(s, size, v));
+      NANOARROW_RETURN_NOT_OK(
+          WKBReaderReadNodeCoordinates(s, size, coord_size_elements, node, error));
       break;
     case GEOARROW_GEOMETRY_TYPE_POLYGON:
+      if (node->level == 255) {
+        GeoArrowErrorSet(error, "WKBReader exceeded maximum recursion");
+        return ENOTSUP;
+      }
+
+      struct GeoArrowGeometryNode ring_template = *node;
+      ring_template.geometry_type = (uint8_t)GEOARROW_GEOMETRY_TYPE_LINESTRING;
+      ring_template.level++;
+
+      struct GeoArrowGeometryNode* ring;
+      uint32_t ring_size;
       for (uint32_t i = 0; i < size; i++) {
-        uint32_t ring_size;
-        NANOARROW_RETURN_NOT_OK(WKBReaderReadUInt32(s, &ring_size, v->error));
-        NANOARROW_RETURN_NOT_OK(v->ring_start(v));
-        NANOARROW_RETURN_NOT_OK(WKBReaderReadCoordinates(s, ring_size, v));
-        NANOARROW_RETURN_NOT_OK(v->ring_end(v));
+        GEOARROW_RETURN_NOT_OK(WKBReaderReadUInt32(s, &ring_size, error));
+        GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendNodeInline(&s->geom, &ring));
+        *ring = ring_template;
+        ring->size = ring_size;
+
+        GEOARROW_RETURN_NOT_OK(
+            WKBReaderReadNodeCoordinates(s, ring_size, coord_size_elements, ring, error));
       }
       break;
     case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
     case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
     case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
     case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
+      if (node->level == 255) {
+        GeoArrowErrorSet(error, "WKBReader exceeded maximum recursion");
+        return ENOTSUP;
+      }
+
+      uint8_t child_level = node->level + 1;
+      struct GeoArrowGeometryNode* child;
       for (uint32_t i = 0; i < size; i++) {
-        NANOARROW_RETURN_NOT_OK(WKBReaderReadGeometry(s, v));
+        GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendNodeInline(&s->geom, &child));
+        child->level = child_level;
+        GEOARROW_RETURN_NOT_OK(WKBReaderReadNodeGeometry(s, child, error));
       }
       break;
     default:
-      GeoArrowErrorSet(v->error,
+      GeoArrowErrorSet(error,
                        "Expected valid geometry type code but found %u at byte %ld",
                        (unsigned int)geometry_type, (long)(data_at_geom_type - s->data0));
       return EINVAL;
   }
 
-  return v->geom_end(v);
+  return GEOARROW_OK;
 }
 
 GeoArrowErrorCode GeoArrowWKBReaderInit(struct GeoArrowWKBReader* reader) {
@@ -232,33 +228,52 @@ GeoArrowErrorCode GeoArrowWKBReaderInit(struct GeoArrowWKBReader* reader) {
   s->size_bytes = 0;
   s->need_swapping = 0;
 
-  s->coord_view.coords_stride = 2;
-  s->coord_view.n_values = 2;
-  s->coord_view.n_coords = 0;
-  s->coord_view.values[0] = s->coords + 0;
-  s->coord_view.values[1] = s->coords + 1;
-  s->coord_view.values[2] = s->coords + 2;
-  s->coord_view.values[3] = s->coords + 3;
+  GeoArrowErrorCode result = GeoArrowGeometryInit(&s->geom);
+  if (result != GEOARROW_OK) {
+    ArrowFree(s);
+    return result;
+  }
 
   reader->private_data = s;
   return GEOARROW_OK;
 }
 
 void GeoArrowWKBReaderReset(struct GeoArrowWKBReader* reader) {
+  struct WKBReaderPrivate* s = (struct WKBReaderPrivate*)reader->private_data;
+  GeoArrowGeometryReset(&s->geom);
   ArrowFree(reader->private_data);
 }
 
 GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowBufferView src,
                                          struct GeoArrowVisitor* v) {
+  struct GeoArrowGeometryView geometry;
+  GEOARROW_RETURN_NOT_OK(GeoArrowWKBReaderRead(reader, src, &geometry, v->error));
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryViewVisit(geometry, v));
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
+                                        struct GeoArrowBufferView src,
+                                        struct GeoArrowGeometryView* out,
+                                        struct GeoArrowError* error) {
   struct WKBReaderPrivate* s = (struct WKBReaderPrivate*)reader->private_data;
   s->data0 = src.data;
   s->data = src.data;
   s->size_bytes = src.size_bytes;
 
-  NANOARROW_RETURN_NOT_OK(v->feat_start(v));
-  NANOARROW_RETURN_NOT_OK(WKBReaderReadGeometry(s, v));
-  NANOARROW_RETURN_NOT_OK(v->feat_end(v));
+  // Reset the nodes list
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryResizeNodesInline(&s->geom, 0));
 
+  // Make a root node at level 0
+  struct GeoArrowGeometryNode* node;
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendNodeInline(&s->geom, &node));
+  node->level = 0;
+
+  // Read
+  GEOARROW_RETURN_NOT_OK(WKBReaderReadNodeGeometry(s, node, error));
+
+  // Populate output on success
+  *out = GeoArrowGeometryAsView(&s->geom);
   return GEOARROW_OK;
 }
