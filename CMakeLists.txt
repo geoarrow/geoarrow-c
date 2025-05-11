@@ -61,7 +61,7 @@ endif()
 
 configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow/geoarrow_config.h)
 
-if(NOT GEOARROW_BUNDLE AND NOT TARGET nanoarrow::nanoarrow)
+if(NOT TARGET nanoarrow::nanoarrow AND NOT GEOARROW_BUNDLE OR GEOARROW_BUILD_TESTS)
   set(GEOARROW_NANOARROW_TARGET geoarrow_nanoarrow)
   add_library(geoarrow_nanoarrow STATIC EXCLUDE_FROM_ALL src/vendor/nanoarrow/nanoarrow.c)
   target_include_directories(geoarrow_nanoarrow
