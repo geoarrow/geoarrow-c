@@ -61,7 +61,9 @@ endif()
 
 configure_file(src/geoarrow/geoarrow_config.h.in generated/geoarrow/geoarrow_config.h)
 
-if(NOT TARGET nanoarrow::nanoarrow)
+if(NOT TARGET nanoarrow::nanoarrow
+   AND NOT GEOARROW_BUNDLE
+   OR GEOARROW_BUILD_TESTS)
   set(GEOARROW_NANOARROW_TARGET geoarrow_nanoarrow)
   add_library(geoarrow_nanoarrow STATIC EXCLUDE_FROM_ALL src/vendor/nanoarrow/nanoarrow.c)
   target_include_directories(geoarrow_nanoarrow
@@ -394,40 +396,42 @@ if(GEOARROW_BUILD_TESTS)
   gtest_discover_tests(hpp_geometry_type_traits_test)
 endif()
 
-# Add the geoarrow alias target
-add_library(geoarrow::geoarrow ALIAS geoarrow)
+# Add the geoarrow alias target (won't exist in bundle mode, so skip it there)
+if(TARGET geoarrow)
+  add_library(geoarrow::geoarrow ALIAS geoarrow)
 
-# Generate package files for the build and install trees.
-include(CMakePackageConfigHelpers)
-include(GNUInstallDirs)
+  # Generate package files for the build and install trees.
+  include(CMakePackageConfigHelpers)
+  include(GNUInstallDirs)
 
-foreach(tree_type BUILD INSTALL)
-  if(tree_type STREQUAL "BUILD")
-    set(install_location ".")
-  else()
-    set(install_location "${CMAKE_INSTALL_LIBDIR}/cmake/geoarrow")
-  endif()
+  foreach(tree_type BUILD INSTALL)
+    if(tree_type STREQUAL "BUILD")
+      set(install_location ".")
+    else()
+      set(install_location "${CMAKE_INSTALL_LIBDIR}/cmake/geoarrow")
+    endif()
 
-  set(build_location "${PROJECT_BINARY_DIR}/${install_location}")
-  write_basic_package_version_file(
-    "${build_location}/geoarrow-config-version.cmake"
-    VERSION ${geoarrow_VERSION}
-    # After 1.0.0, we can use `SameMajorVersion` here.
-    COMPATIBILITY ExactVersion)
-  configure_package_config_file("${CMAKE_CURRENT_LIST_DIR}/cmake/config.cmake.in"
-                                "${build_location}/geoarrow-config.cmake"
-                                INSTALL_DESTINATION "${install_location}")
+    set(build_location "${PROJECT_BINARY_DIR}/${install_location}")
+    write_basic_package_version_file(
+      "${build_location}/geoarrow-config-version.cmake"
+      VERSION ${geoarrow_VERSION}
+      # After 1.0.0, we can use `SameMajorVersion` here.
+      COMPATIBILITY ExactVersion)
+    configure_package_config_file("${CMAKE_CURRENT_LIST_DIR}/cmake/config.cmake.in"
+                                  "${build_location}/geoarrow-config.cmake"
+                                  INSTALL_DESTINATION "${install_location}")
 
-  if(tree_type STREQUAL "BUILD")
-    export(EXPORT geoarrow-exports
-           FILE "${build_location}/geoarrow-targets.cmake"
-           NAMESPACE geoarrow::)
+    if(tree_type STREQUAL "BUILD")
+      export(EXPORT geoarrow-exports
+             FILE "${build_location}/geoarrow-targets.cmake"
+             NAMESPACE geoarrow::)
 
-  else()
-    install(DIRECTORY "${build_location}/" DESTINATION "${install_location}")
-    install(EXPORT geoarrow-exports
-            DESTINATION "${install_location}"
-            FILE "geoarrow-targets.cmake"
-            NAMESPACE geoarrow::)
-  endif()
-endforeach()
+    else()
+      install(DIRECTORY "${build_location}/" DESTINATION "${install_location}")
+      install(EXPORT geoarrow-exports
+              DESTINATION "${install_location}"
+              FILE "geoarrow-targets.cmake"
+              NAMESPACE geoarrow::)
+    endif()
+  endforeach()
+endif()
