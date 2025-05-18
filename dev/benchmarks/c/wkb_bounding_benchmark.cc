@@ -70,6 +70,47 @@ void BenchBoundDoubles(benchmark::State& state) {
   CheckResult(bounds);
 }
 
+void BenchBoundGeometry(struct GeoArrowGeometryView geom, BoxXY* bounds) {
+  const struct GeoArrowGeometryNode* node;
+  const struct GeoArrowGeometryNode* end;
+  const uint8_t* px;
+  const uint8_t* py;
+  int32_t dx, dy;
+  double x, y;
+
+  end = geom.root + geom.size_nodes;
+  for (node = geom.root; node < end; node++) {
+    switch (node->geometry_type) {
+      case GEOARROW_GEOMETRY_TYPE_POINT:
+      case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+        px = geom.root->coords[0];
+        py = geom.root->coords[1];
+        dx = geom.root->coord_stride[0];
+        dy = geom.root->coord_stride[1];
+
+        if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
+          throw std::runtime_error("big endian not supported");
+        }
+
+        for (uint32_t i = 0; i < node->size; i++) {
+          std::memcpy(&x, px, sizeof(double));
+          std::memcpy(&y, py, sizeof(double));
+
+          bounds->at(0) = MIN(bounds->at(0), x);
+          bounds->at(1) = MIN(bounds->at(1), y);
+          bounds->at(2) = MAX(bounds->at(2), x);
+          bounds->at(3) = MAX(bounds->at(3), y);
+
+          px += dx;
+          py += dy;
+        }
+        break;
+      default:
+        break;
+    }
+  }
+}
+
 BoxXY BoundWKBLinestringUsingGeoArrowHpp(const std::vector<uint8_t>& wkb) {
   BoxXY bounds = BoxXY::Empty();
 
@@ -162,28 +203,7 @@ BoxXY BoundWKBLinestringUsingWkbReader(const std::vector<uint8_t>& wkb) {
     throw std::runtime_error("Error parsing WKB");
   }
 
-  const uint8_t* px;
-  const uint8_t* py;
-  int32_t dx, dy;
-  double x, y;
-
-  px = geom.root->coords[0];
-  py = geom.root->coords[1];
-  dx = geom.root->coord_stride[0];
-  dy = geom.root->coord_stride[1];
-
-  for (uint32_t i = 0; i < geom.root->size; i++) {
-    std::memcpy(&x, px, sizeof(double));
-    std::memcpy(&y, py, sizeof(double));
-
-    bounds[0] = MIN(bounds[0], x);
-    bounds[1] = MIN(bounds[1], y);
-    bounds[2] = MAX(bounds[2], x);
-    bounds[3] = MAX(bounds[3], y);
-
-    px += dx;
-    py += dy;
-  }
+  BenchBoundGeometry(geom, &bounds);
 
   GeoArrowWKBReaderReset(&reader);
   return bounds;
@@ -217,6 +237,8 @@ BoxXY BoundWKBPointsUsingWkbReader(const std::vector<uint8_t>& wkb, uint32_t num
 
   struct GeoArrowBufferView src;
   struct GeoArrowGeometryView geom;
+  const struct GeoArrowGeometryNode* node;
+  const struct GeoArrowGeometryNode* end;
   const uint8_t* px;
   const uint8_t* py;
   int32_t dx, dy;
@@ -229,22 +251,36 @@ BoxXY BoundWKBPointsUsingWkbReader(const std::vector<uint8_t>& wkb, uint32_t num
       throw std::runtime_error("Error parsing WKB");
     }
 
-    px = geom.root->coords[0];
-    py = geom.root->coords[1];
-    dx = geom.root->coord_stride[0];
-    dy = geom.root->coord_stride[1];
+    end = geom.root + geom.size_nodes;
+    for (node = geom.root; node < end; node++) {
+      switch (node->geometry_type) {
+        case GEOARROW_GEOMETRY_TYPE_POINT:
+        case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+          px = geom.root->coords[0];
+          py = geom.root->coords[1];
+          dx = geom.root->coord_stride[0];
+          dy = geom.root->coord_stride[1];
 
-    for (uint32_t i = 0; i < geom.root->size; i++) {
-      std::memcpy(&x, px, sizeof(double));
-      std::memcpy(&y, py, sizeof(double));
+          if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
+            throw std::runtime_error("big endian not supported");
+          }
 
-      bounds[0] = MIN(bounds[0], x);
-      bounds[1] = MIN(bounds[1], y);
-      bounds[2] = MAX(bounds[2], x);
-      bounds[3] = MAX(bounds[3], y);
+          for (uint32_t i = 0; i < node->size; i++) {
+            std::memcpy(&x, px, sizeof(double));
+            std::memcpy(&y, py, sizeof(double));
 
-      px += dx;
-      py += dy;
+            bounds[0] = MIN(bounds[0], x);
+            bounds[1] = MIN(bounds[1], y);
+            bounds[2] = MAX(bounds[2], x);
+            bounds[3] = MAX(bounds[3], y);
+
+            px += dx;
+            py += dy;
+          }
+          break;
+        default:
+          break;
+      }
     }
   }
 
@@ -330,8 +366,8 @@ void BenchBoundWKBPointsUsingUnalignedSequence(benchmark::State& state) {
 BENCHMARK(BenchBoundDoubles);
 BENCHMARK(BenchBoundWKBLinestringUsingGeoArrowHpp);
 BENCHMARK(BenchBoundWKBPointsUsingGeoArrowHpp);
-BENCHMARK(BenchBoundWKBPointsUsingWkbReader);
 BENCHMARK(BenchBoundWKBLinestringUsingWkbReader);
+BENCHMARK(BenchBoundWKBPointsUsingWkbReader);
 BENCHMARK(BenchBoundWKBPointsUsingUnalignedSequence);
 
 std::vector<double> MakeInterleavedCoords(uint32_t num_coords) {
