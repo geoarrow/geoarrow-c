@@ -42,7 +42,7 @@ jobs:
       - name: Install coverage dependencies
         run: |
           sudo apt-get install -y lcov
-          pip install pytest-cov Cython
+          pip install pytest-cov "Cython < 3.1.0"
 
       - name: Install editable
         run: |
@@ -51,7 +51,7 @@ jobs:
       - name: Coverage (geoarrow-c)
         if: success() && matrix.python-version == '3.13'
         run: |
-          pip install setuptools Cython
+          pip install setuptools "Cython < 3.1.0"
 
           pushd python/geoarrow-c
 
