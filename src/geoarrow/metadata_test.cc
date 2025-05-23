@@ -75,8 +75,8 @@ void TestMetadata(const std::string& json, enum GeoArrowEdgeType edge_type,
                   enum GeoArrowCrsType crs_type, const std::string& crs) {
   SCOPED_TRACE(json + " => " + GeoArrowEdgeTypeString(edge_type) + "/" +
                GeoArrowCrsTypeString(crs_type) + "/'" + crs + "'");
-  struct GeoArrowError error{};
-  struct GeoArrowMetadataView metadata_view{};
+  struct GeoArrowError error {};
+  struct GeoArrowMetadataView metadata_view {};
 
   struct GeoArrowStringView metadata;
   metadata.data = json.data();
@@ -90,8 +90,8 @@ void TestMetadata(const std::string& json, enum GeoArrowEdgeType edge_type,
 }
 
 void TestMetadataError(const std::string& json, int code) {
-  struct GeoArrowError error{};
-  struct GeoArrowMetadataView metadata_view{};
+  struct GeoArrowError error {};
+  struct GeoArrowMetadataView metadata_view {};
 
   struct GeoArrowStringView metadata;
   metadata.data = json.data();
@@ -311,7 +311,7 @@ TEST(MetadataTest, MetadataTestUnescapeCRS) {
 }
 
 TEST(MetadataTest, MetadataTestCRSLonLat) {
-  struct GeoArrowMetadataView metadata_view{};
+  struct GeoArrowMetadataView metadata_view {};
   GeoArrowMetadataSetLonLat(&metadata_view);
   EXPECT_EQ(metadata_view.crs_type, GEOARROW_CRS_TYPE_PROJJSON);
   ASSERT_EQ(metadata_view.crs.size_bytes, 1255);
@@ -321,7 +321,7 @@ TEST(MetadataTest, MetadataTestCRSLonLat) {
   GeoArrowMetadataSerialize(&metadata_view, metadata.data(), metadata_size);
 
   // Make sure we can serialize + deserialize a big complex nested CRS value
-  struct GeoArrowMetadataView metadata_view2{};
+  struct GeoArrowMetadataView metadata_view2 {};
   ASSERT_EQ(GeoArrowMetadataViewInit(
                 &metadata_view2, {metadata.data(), static_cast<int64_t>(metadata.size())},
                 nullptr),
