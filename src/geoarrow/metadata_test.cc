@@ -102,21 +102,25 @@ void TestMetadataError(const std::string& json, int code) {
 }
 
 TEST(MetadataTest, MetadataTestReadJSONEdges) {
+  // Default
   EXPECT_NO_FATAL_FAILURE(
-      // Default
       TestMetadata(R"({})", GEOARROW_EDGE_TYPE_PLANAR, GEOARROW_CRS_TYPE_NONE, ""));
-  EXPECT_NO_FATAL_FAILURE(
-      // Explicit planar
-      TestMetadata(R"({"edges": "planar"})", GEOARROW_EDGE_TYPE_PLANAR,
-                   GEOARROW_CRS_TYPE_NONE, ""));
-  EXPECT_NO_FATAL_FAILURE(
-      // Explicit spherical
-      TestMetadata(R"({"edges": "spherical"})", GEOARROW_EDGE_TYPE_SPHERICAL,
-                   GEOARROW_CRS_TYPE_NONE, ""));
-  EXPECT_NO_FATAL_FAILURE(
-      // Explicit spherical
-      TestMetadata(R"({"edges": "spherical"})", GEOARROW_EDGE_TYPE_SPHERICAL,
-                   GEOARROW_CRS_TYPE_NONE, ""));
+
+  // Explicit
+  EXPECT_NO_FATAL_FAILURE(TestMetadata(
+      R"({"edges": "planar"})", GEOARROW_EDGE_TYPE_PLANAR, GEOARROW_CRS_TYPE_NONE, ""));
+  EXPECT_NO_FATAL_FAILURE(TestMetadata(R"({"edges": "spherical"})",
+                                       GEOARROW_EDGE_TYPE_SPHERICAL,
+                                       GEOARROW_CRS_TYPE_NONE, ""));
+  EXPECT_NO_FATAL_FAILURE(TestMetadata(R"({"edges": "vincenty"})",
+                                       GEOARROW_EDGE_TYPE_VINCENTY,
+                                       GEOARROW_CRS_TYPE_NONE, ""));
+  EXPECT_NO_FATAL_FAILURE(TestMetadata(
+      R"({"edges": "thomas"})", GEOARROW_EDGE_TYPE_THOMAS, GEOARROW_CRS_TYPE_NONE, ""));
+  EXPECT_NO_FATAL_FAILURE(TestMetadata(
+      R"({"edges": "andoyer"})", GEOARROW_EDGE_TYPE_ANDOYER, GEOARROW_CRS_TYPE_NONE, ""));
+  EXPECT_NO_FATAL_FAILURE(TestMetadata(
+      R"({"edges": "karney"})", GEOARROW_EDGE_TYPE_KARNEY, GEOARROW_CRS_TYPE_NONE, ""));
 
   // Non-string JSON type
   EXPECT_NO_FATAL_FAILURE(TestMetadataError(R"({"edges": {}})", EINVAL));

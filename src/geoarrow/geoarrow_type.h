@@ -264,7 +264,14 @@ enum GeoArrowCoordType {
 
 /// \brief Edge types/interpolations supported by GeoArrow
 /// \ingroup geoarrow-schema
-enum GeoArrowEdgeType { GEOARROW_EDGE_TYPE_PLANAR, GEOARROW_EDGE_TYPE_SPHERICAL };
+enum GeoArrowEdgeType {
+  GEOARROW_EDGE_TYPE_PLANAR,
+  GEOARROW_EDGE_TYPE_SPHERICAL,
+  GEOARROW_EDGE_TYPE_VINCENTY,
+  GEOARROW_EDGE_TYPE_THOMAS,
+  GEOARROW_EDGE_TYPE_ANDOYER,
+  GEOARROW_EDGE_TYPE_KARNEY
+};
 
 /// \brief Coordinate reference system types supported by GeoArrow
 /// \ingroup geoarrow-schema

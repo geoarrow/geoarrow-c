@@ -220,6 +220,14 @@ static GeoArrowErrorCode ParseJSONMetadata(struct GeoArrowMetadataView* metadata
         metadata_view->edge_type = GEOARROW_EDGE_TYPE_SPHERICAL;
       } else if (v.size_bytes == 8 && strncmp(v.data, "\"planar\"", 8) == 0) {
         metadata_view->edge_type = GEOARROW_EDGE_TYPE_PLANAR;
+      } else if (v.size_bytes == 10 && strncmp(v.data, "\"vincenty\"", 10) == 0) {
+        metadata_view->edge_type = GEOARROW_EDGE_TYPE_VINCENTY;
+      } else if (v.size_bytes == 8 && strncmp(v.data, "\"thomas\"", 8) == 0) {
+        metadata_view->edge_type = GEOARROW_EDGE_TYPE_THOMAS;
+      } else if (v.size_bytes == 9 && strncmp(v.data, "\"andoyer\"", 9) == 0) {
+        metadata_view->edge_type = GEOARROW_EDGE_TYPE_ANDOYER;
+      } else if (v.size_bytes == 8 && strncmp(v.data, "\"karney\"", 8) == 0) {
+        metadata_view->edge_type = GEOARROW_EDGE_TYPE_KARNEY;
       } else if (v.data[0] == 'n') {
         metadata_view->edge_type = GEOARROW_EDGE_TYPE_PLANAR;
       } else {
@@ -470,6 +478,7 @@ static GeoArrowErrorCode GeoArrowSchemaSetMetadataInternal(
 
   int64_t chars_written = GeoArrowMetadataSerializeInternal(metadata_view, metadata);
   NANOARROW_DCHECK(chars_written == metadata_size);
+  NANOARROW_UNUSED(chars_written);
 
   struct ArrowBuffer existing_buffer;
   int result = ArrowMetadataBuilderInit(&existing_buffer, schema->metadata);

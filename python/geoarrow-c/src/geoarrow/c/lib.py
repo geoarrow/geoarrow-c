@@ -103,6 +103,14 @@ class EdgeType:
     PLANAR = _lib.GEOARROW_EDGE_TYPE_PLANAR
     #: Edges are geodesic on a sphere
     SPHERICAL = _lib.GEOARROW_EDGE_TYPE_SPHERICAL
+    #: Edges are geodesic on a spheroid according to the Vincenty algorithm
+    VINCENTY = _lib.GEOARROW_EDGE_TYPE_VINCENTY
+    #: Edges are geodesic on a spheroid according to the Thomas algorithm
+    THOMAS = _lib.GEOARROW_EDGE_TYPE_THOMAS
+    #: Edges are geodesic on a spheroid according to the Andoyer algorithm
+    ANDOYER = _lib.GEOARROW_EDGE_TYPE_ANDOYER
+    #: Edges are geodesic on a spheroid according to the Karney algorithm
+    KARNEY = _lib.GEOARROW_EDGE_TYPE_KARNEY
 
 
 class CrsType:

@@ -120,6 +120,10 @@ cdef extern from "geoarrow_type.h":
     cpdef enum GeoArrowEdgeType:
         GEOARROW_EDGE_TYPE_PLANAR
         GEOARROW_EDGE_TYPE_SPHERICAL
+        GEOARROW_EDGE_TYPE_VINCENTY
+        GEOARROW_EDGE_TYPE_THOMAS
+        GEOARROW_EDGE_TYPE_ANDOYER
+        GEOARROW_EDGE_TYPE_KARNEY
 
     cpdef enum GeoArrowCrsType:
         GEOARROW_CRS_TYPE_NONE

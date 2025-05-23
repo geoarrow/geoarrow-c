@@ -120,6 +120,14 @@ static inline const char* GeoArrowEdgeTypeString(enum GeoArrowEdgeType edge_type
       return "planar";
     case GEOARROW_EDGE_TYPE_SPHERICAL:
       return "spherical";
+    case GEOARROW_EDGE_TYPE_VINCENTY:
+      return "vincenty";
+    case GEOARROW_EDGE_TYPE_THOMAS:
+      return "thomas";
+    case GEOARROW_EDGE_TYPE_ANDOYER:
+      return "andoyer";
+    case GEOARROW_EDGE_TYPE_KARNEY:
+      return "karney";
     default:
       return "<not valid>";
   }
