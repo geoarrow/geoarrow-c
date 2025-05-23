@@ -478,6 +478,7 @@ static GeoArrowErrorCode GeoArrowSchemaSetMetadataInternal(
 
   int64_t chars_written = GeoArrowMetadataSerializeInternal(metadata_view, metadata);
   NANOARROW_DCHECK(chars_written == metadata_size);
+  NANOARROW_UNUSED(chars_written);
 
   struct ArrowBuffer existing_buffer;
   int result = ArrowMetadataBuilderInit(&existing_buffer, schema->metadata);
