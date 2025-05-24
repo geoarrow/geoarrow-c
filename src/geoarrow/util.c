@@ -30,11 +30,3 @@ GeoArrowErrorCode GeoArrowErrorSet(struct GeoArrowError* error, const char* fmt,
     return GEOARROW_OK;
   }
 }
-
-const char* GeoArrowErrorMessage(struct GeoArrowError* error) {
-  if (error == NULL) {
-    return "";
-  } else {
-    return error->message;
-  }
-}
