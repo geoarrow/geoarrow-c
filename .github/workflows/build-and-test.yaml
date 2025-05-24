@@ -25,6 +25,7 @@ jobs:
         config:
           - {label: default-build, cmake_args: "-DCMAKE_BUILD_TYPE=Debug -DGEOARROW_CODE_COVERAGE=ON"}
           - {label: bundled-build, cmake_args: "-DGEOARROW_BUNDLE=ON -DGEOARROW_USE_FAST_FLOAT=OFF -DGEOARROW_USE_RYU=OFF"}
+          - {label: namespaced-build, cmake_args: "-DGEOARROW_NAMESPACE=SomeNamespace"}
 
     steps:
       - name: Checkout repo
@@ -53,6 +54,22 @@ jobs:
         run: |
           cd build
           GEOARROW_TESTING_DIR=$GITHUB_WORKSPACE/testing ctest -T test --output-on-failure .
+
+      - name: Check for non-namespaced symbols in namespaced build
+        if: matrix.config.label == 'namespaced-build'
+        run: |
+          # Dump all symbols
+          nm --extern-only build/libgeoarrow.a
+
+          # Check for non-namespaced ones
+          ARROW_SYMBOLS=`nm --extern-only build/libgeoarrow.a | grep "T GeoArrow" || true`
+          if [ -z "$ARROW_SYMBOLS" ]; then
+            exit 0
+          fi
+
+          echo "Found the following non-namespaced extern symbols:"
+          echo $ARROW_SYMBOLS
+          exit 1
 
       - name: Install lcov
         if: matrix.config.label == 'default-build'
