@@ -117,8 +117,6 @@ struct ArrowArrayStream {
 
 #define GEOARROW_UNUSED(expr) ((void)expr)
 
-// Most namespacing is handled in geoarrow.h, but a few
-
 // This section remaps the non-prefixed symbols to the prefixed symbols so that
 // code written against this build can be used independent of the value of
 // GEOARROW_NAMESPACE.
