@@ -176,6 +176,10 @@
   (FASTFLOAT_VERSION_MAJOR * 10000 + FASTFLOAT_VERSION_MINOR * 100 +           \
    FASTFLOAT_VERSION_PATCH)
 
+#ifdef GEOARROW_NAMESPACE
+namespace GEOARROW_NAMESPACE {
+#endif
+
 namespace fast_float {
 
 enum class chars_format : uint64_t;
@@ -1382,12 +1386,19 @@ constexpr chars_format adjust_for_feature_macros(chars_format fmt) {
 
 } // namespace fast_float
 
+#ifdef GEOARROW_NAMESPACE
+}
+#endif
+
 #endif
 
 
 #ifndef FASTFLOAT_FAST_FLOAT_H
 #define FASTFLOAT_FAST_FLOAT_H
 
+#ifdef GEOARROW_NAMESPACE
+namespace GEOARROW_NAMESPACE {
+#endif
 
 namespace fast_float {
 /**
@@ -1440,6 +1451,10 @@ from_chars(UC const *first, UC const *last, T &value, int base = 10) noexcept;
 
 } // namespace fast_float
 
+#ifdef GEOARROW_NAMESPACE
+}
+#endif
+
 #endif // FASTFLOAT_FAST_FLOAT_H
 
 #ifndef FASTFLOAT_ASCII_NUMBER_H
@@ -1459,6 +1474,10 @@ from_chars(UC const *first, UC const *last, T &value, int base = 10) noexcept;
 
 #ifdef FASTFLOAT_NEON
 #include <arm_neon.h>
+#endif
+
+#ifdef GEOARROW_NAMESPACE
+namespace GEOARROW_NAMESPACE {
 #endif
 
 namespace fast_float {
@@ -2028,12 +2047,20 @@ parse_int_string(UC const *p, UC const *pend, T &value,
 
 } // namespace fast_float
 
+#ifdef GEOARROW_NAMESPACE
+}
+#endif
+
 #endif
 
 #ifndef FASTFLOAT_FAST_TABLE_H
 #define FASTFLOAT_FAST_TABLE_H
 
 #include <cstdint>
+
+#ifdef GEOARROW_NAMESPACE
+namespace GEOARROW_NAMESPACE {
+#endif
 
 namespace fast_float {
 
@@ -2737,6 +2764,10 @@ using powers = powers_template<>;
 
 } // namespace fast_float
 
+#ifdef GEOARROW_NAMESPACE
+}
+#endif
+
 #endif
 
 #ifndef FASTFLOAT_DECIMAL_TO_BINARY_H
@@ -2748,6 +2779,10 @@ using powers = powers_template<>;
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+
+#ifdef GEOARROW_NAMESPACE
+namespace GEOARROW_NAMESPACE {
+#endif
 
 namespace fast_float {
 
@@ -2948,6 +2983,10 @@ compute_float(int64_t q, uint64_t w) noexcept {
 
 } // namespace fast_float
 
+#ifdef GEOARROW_NAMESPACE
+}
+#endif
+
 #endif
 
 #ifndef FASTFLOAT_BIGINT_H
@@ -2958,6 +2997,9 @@ compute_float(int64_t q, uint64_t w) noexcept {
 #include <climits>
 #include <cstring>
 
+#ifdef GEOARROW_NAMESPACE
+namespace GEOARROW_NAMESPACE {
+#endif
 
 namespace fast_float {
 
@@ -3586,6 +3628,10 @@ struct bigint : pow5_tables<> {
 
 } // namespace fast_float
 
+#ifdef GEOARROW_NAMESPACE
+}
+#endif
+
 #endif
 
 #ifndef FASTFLOAT_DIGIT_COMPARISON_H
@@ -3596,6 +3642,9 @@ struct bigint : pow5_tables<> {
 #include <cstring>
 #include <iterator>
 
+#ifdef GEOARROW_NAMESPACE
+namespace GEOARROW_NAMESPACE {
+#endif
 
 namespace fast_float {
 
@@ -4041,6 +4090,10 @@ digit_comp(parsed_number_string_t<UC> &num, adjusted_mantissa am) noexcept {
 
 } // namespace fast_float
 
+#ifdef GEOARROW_NAMESPACE
+}
+#endif
+
 #endif
 
 #ifndef FASTFLOAT_PARSE_NUMBER_H
@@ -4051,6 +4104,10 @@ digit_comp(parsed_number_string_t<UC> &num, adjusted_mantissa am) noexcept {
 #include <cstring>
 #include <limits>
 #include <system_error>
+
+#ifdef GEOARROW_NAMESPACE
+namespace GEOARROW_NAMESPACE {
+#endif
 
 namespace fast_float {
 
@@ -4439,5 +4496,8 @@ from_chars_advanced(UC const *first, UC const *last, T &value,
 
 } // namespace fast_float
 
+#ifdef GEOARROW_NAMESPACE
+}
 #endif
 
+#endif
