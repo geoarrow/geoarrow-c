@@ -257,6 +257,8 @@ struct ArrowArrayStream {
 #define GeoArrowArrayWriterReset \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterReset)
 #define GeoArrowFromChars _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowFromChars)
+#define GeoArrowd2sexp_buffered_n _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowd2sexp_buffered_n)
+#define GeoArrowd2sfixed_buffered_n _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowd2sfixed_buffered_n)
 #endif
 
 /// \brief Represents an errno-compatible error code
