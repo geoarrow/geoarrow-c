@@ -117,6 +117,148 @@ struct ArrowArrayStream {
 
 #define GEOARROW_UNUSED(expr) ((void)expr)
 
+// Most namespacing is handled in geoarrow.h, but a few
+
+// This section remaps the non-prefixed symbols to the prefixed symbols so that
+// code written against this build can be used independent of the value of
+// GEOARROW_NAMESPACE.
+#ifdef GEOARROW_NAMESPACE
+
+#define GeoArrowVersion _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowVersion)
+#define GeoArrowVersionInt _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowVersionInt)
+#define GeoArrowErrorSet _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowErrorSet)
+#define GeoArrowFromChars _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowFromChars)
+#define GeoArrowPrintDouble _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowPrintDouble)
+#define GeoArrowSchemaInit _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowSchemaInit)
+#define GeoArrowSchemaInitExtension \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowSchemaInitExtension)
+#define GeoArrowSchemaViewInit \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowSchemaViewInit)
+#define GeoArrowSchemaViewInitFromStorage \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowSchemaViewInitFromStorage)
+#define GeoArrowSchemaViewInitFromType \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowSchemaViewInitFromType)
+#define GeoArrowMetadataViewInit \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowMetadataViewInit)
+#define GeoArrowMetadataSerialize \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowMetadataSerialize)
+#define GeoArrowSchemaSetMetadata \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowSchemaSetMetadata)
+#define GeoArrowSchemaSetMetadataFrom \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowSchemaSetMetadataFrom)
+#define GeoArrowMetadataSetLonLat \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowMetadataSetLonLat)
+#define GeoArrowUnescapeCrs _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowUnescapeCrs)
+#define GeoArrowArrayViewInitFromType \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayViewInitFromType)
+#define GeoArrowArrayViewInitFromSchema \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayViewInitFromSchema)
+#define GeoArrowArrayViewSetArray \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayViewSetArray)
+#define GeoArrowBuilderInitFromType \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderInitFromType)
+#define GeoArrowBuilderInitFromSchema \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderInitFromSchema)
+#define GeoArrowBuilderReserveBuffer \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderReserveBuffer)
+#define GeoArrowBuilderAppendBufferUnsafe \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderAppendBufferUnsafe)
+#define GeoArrowBuilderAppendBuffer \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderAppendBuffer)
+#define GeoArrowBuilderSetOwnedBuffer \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderSetOwnedBuffer)
+#define GeoArrowBuilderFinish \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderFinish)
+#define GeoArrowBuilderReset _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderReset)
+#define GeoArrowKernelInit _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowKernelInit)
+#define GeoArrowGeometryInit _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryInit)
+#define GeoArrowGeometryReset \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryReset)
+#define GeoArrowGeometryShallowCopy \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryShallowCopy)
+#define GeoArrowGeometryDeepCopy \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryDeepCopy)
+#define GeoArrowGeometryResizeNodes \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryResizeNodes)
+#define GeoArrowGeometryAppendNode \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryAppendNode)
+#define GeoArrowGeometryViewVisit \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryViewVisit)
+#define GeoArrowGeometryVisit \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryVisit)
+#define GeoArrowGeometryInitVisitor \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryInitVisitor)
+#define GeoArrowVisitorInitVoid \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowVisitorInitVoid)
+#define GeoArrowArrayViewVisitNative \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayViewVisitNative)
+#define GeoArrowNativeWriterInit \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowNativeWriterInit)
+#define GeoArrowNativeWriterInitVisitor \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowNativeWriterInitVisitor)
+#define GeoArrowNativeWriterFinish \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowNativeWriterFinish)
+#define GeoArrowNativeWriterReset \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowNativeWriterReset)
+#define GeoArrowWKTWriterInit \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterInit)
+#define GeoArrowWKTWriterInitVisitor \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterInitVisitor)
+#define GeoArrowWKTWriterFinish \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterFinish)
+#define GeoArrowWKTWriterReset \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterReset)
+#define GeoArrowWKTReaderInit \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTReaderInit)
+#define GeoArrowWKTReaderVisit \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTReaderVisit)
+#define GeoArrowWKTReaderReset \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTReaderReset)
+#define GeoArrowWKBWriterInit \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBWriterInit)
+#define GeoArrowWKBWriterInitVisitor \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBWriterInitVisitor)
+#define GeoArrowWKBWriterFinish \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBWriterFinish)
+#define GeoArrowWKBWriterReset \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBWriterReset)
+#define GeoArrowWKBReaderInit \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBReaderInit)
+#define GeoArrowWKBReaderVisit \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBReaderVisit)
+#define GeoArrowWKBReaderRead \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBReaderRead)
+#define GeoArrowWKBReaderReset \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBReaderReset)
+#define GeoArrowArrayReaderInitFromType \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderInitFromType)
+#define GeoArrowArrayReaderInitFromSchema \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderInitFromSchema)
+#define GeoArrowArrayReaderSetArray \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderSetArray)
+#define GeoArrowArrayReaderVisit \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderVisit)
+#define GeoArrowArrayReaderArrayView \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderArrayView)
+#define GeoArrowArrayReaderReset \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderReset)
+#define GeoArrowArrayWriterInitFromType \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterInitFromType)
+#define GeoArrowArrayWriterInitFromSchema \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterInitFromSchema)
+#define GeoArrowArrayWriterSetPrecision \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterSetPrecision)
+#define GeoArrowArrayWriterSetFlatMultipoint \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterSetFlatMultipoint)
+#define GeoArrowArrayWriterInitVisitor \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterInitVisitor)
+#define GeoArrowArrayWriterFinish \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterFinish)
+#define GeoArrowArrayWriterReset \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterReset)
+#define GeoArrowFromChars _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowFromChars)
+#endif
+
 /// \brief Represents an errno-compatible error code
 /// \ingroup geoarrow-utility
 typedef int GeoArrowErrorCode;
