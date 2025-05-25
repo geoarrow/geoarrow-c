@@ -117,11 +117,15 @@ GeoArrowErrorCode GeoArrowSchemaInit(struct ArrowSchema* schema, enum GeoArrowTy
       return ArrowSchemaInitFromType(schema, NANOARROW_TYPE_BINARY);
     case GEOARROW_TYPE_LARGE_WKB:
       return ArrowSchemaInitFromType(schema, NANOARROW_TYPE_LARGE_BINARY);
+    case GEOARROW_TYPE_WKB_VIEW:
+      return ArrowSchemaInitFromType(schema, NANOARROW_TYPE_BINARY_VIEW);
 
     case GEOARROW_TYPE_WKT:
       return ArrowSchemaInitFromType(schema, NANOARROW_TYPE_STRING);
     case GEOARROW_TYPE_LARGE_WKT:
       return ArrowSchemaInitFromType(schema, NANOARROW_TYPE_LARGE_STRING);
+    case GEOARROW_TYPE_WKT_VIEW:
+      return ArrowSchemaInitFromType(schema, NANOARROW_TYPE_STRING_VIEW);
 
     default:
       break;

@@ -299,6 +299,9 @@ static GeoArrowErrorCode GeoArrowSchemaViewInitInternal(
       case NANOARROW_TYPE_LARGE_STRING:
         schema_view->type = GEOARROW_TYPE_LARGE_WKT;
         break;
+      case NANOARROW_TYPE_STRING_VIEW:
+        schema_view->type = GEOARROW_TYPE_WKT_VIEW;
+        break;
       default:
         ArrowErrorSet(na_error,
                       "Expected storage type of string or large_string for extension "
@@ -316,6 +319,9 @@ static GeoArrowErrorCode GeoArrowSchemaViewInitInternal(
         break;
       case NANOARROW_TYPE_LARGE_BINARY:
         schema_view->type = GEOARROW_TYPE_LARGE_WKB;
+        break;
+      case NANOARROW_TYPE_BINARY_VIEW:
+        schema_view->type = GEOARROW_TYPE_WKB_VIEW;
         break;
       default:
         ArrowErrorSet(na_error,
