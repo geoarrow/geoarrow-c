@@ -145,6 +145,10 @@ TEST(GeoArrowHppTest, SerializedToString) {
             "large geoarrow.wkt");
   EXPECT_EQ(geoarrow::GeometryDataType::Make(GEOARROW_TYPE_LARGE_WKB).ToString(),
             "large geoarrow.wkb");
+  EXPECT_EQ(geoarrow::GeometryDataType::Make(GEOARROW_TYPE_WKT_VIEW).ToString(),
+            "view geoarrow.wkt");
+  EXPECT_EQ(geoarrow::GeometryDataType::Make(GEOARROW_TYPE_WKB_VIEW).ToString(),
+            "view geoarrow.wkb");
 }
 
 TEST(GeoArrowHppTest, NativeToString) {

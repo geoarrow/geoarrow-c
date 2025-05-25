@@ -28,6 +28,8 @@ GeoArrowErrorCode GeoArrowArrayWriterInitFromType(struct GeoArrowArrayWriter* wr
   switch (type) {
     case GEOARROW_TYPE_LARGE_WKT:
     case GEOARROW_TYPE_LARGE_WKB:
+    case GEOARROW_TYPE_WKT_VIEW:
+    case GEOARROW_TYPE_WKB_VIEW:
       return ENOTSUP;
     case GEOARROW_TYPE_WKT:
       result = GeoArrowWKTWriterInit(&private_data->wkt_writer);

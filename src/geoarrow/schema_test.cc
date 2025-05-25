@@ -58,6 +58,11 @@ TEST(SchemaTest, SchemaTestInitSchemaWKB) {
   auto maybe_type_large = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_large.status());
   EXPECT_TRUE(maybe_type_large.ValueUnsafe()->Equals(large_binary()));
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_WKB_VIEW), GEOARROW_OK);
+  auto maybe_type_view = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type_view.status());
+  EXPECT_TRUE(maybe_type_view.ValueUnsafe()->Equals(binary_view()));
 }
 
 TEST(SchemaTest, SchemaTestInitSchemaWKT) {
@@ -72,6 +77,11 @@ TEST(SchemaTest, SchemaTestInitSchemaWKT) {
   auto maybe_type_large = ImportType(&schema);
   ASSERT_ARROW_OK(maybe_type_large.status());
   EXPECT_TRUE(maybe_type_large.ValueUnsafe()->Equals(large_utf8()));
+
+  EXPECT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_WKT_VIEW), GEOARROW_OK);
+  auto maybe_type_view = ImportType(&schema);
+  ASSERT_ARROW_OK(maybe_type_view.status());
+  EXPECT_TRUE(maybe_type_view.ValueUnsafe()->Equals(utf8_view()));
 }
 
 TEST(SchemaTest, SchemaTestInitSchemaBox) {
