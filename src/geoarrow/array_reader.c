@@ -194,6 +194,7 @@ GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
     case GEOARROW_TYPE_WKB:
       return GeoArrowArrayViewVisitWKB(&private_data->src.geoarrow, offset, length,
                                        &private_data->wkb_reader, v);
+
     default:
       return GeoArrowArrayViewVisitNative(&private_data->src.geoarrow, offset, length, v);
   }
@@ -206,7 +207,14 @@ GeoArrowErrorCode GeoArrowArrayReaderArrayView(struct GeoArrowArrayReader* reade
       (struct GeoArrowArrayReaderPrivate*)reader->private_data;
   NANOARROW_DCHECK(private_data != NULL);
 
-  // Currently all the types supported by the reader can be viewed
-  *out = &private_data->src.geoarrow;
-  return GEOARROW_OK;
+  switch (private_data->type) {
+    case GEOARROW_TYPE_LARGE_WKT:
+    case GEOARROW_TYPE_WKT_VIEW:
+    case GEOARROW_TYPE_LARGE_WKB:
+    case GEOARROW_TYPE_WKB_VIEW:
+      return ENOTSUP;
+    default:
+      *out = &private_data->src.geoarrow;
+      return GEOARROW_OK;
+  }
 }
