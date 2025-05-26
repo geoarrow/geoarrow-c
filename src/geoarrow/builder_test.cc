@@ -92,7 +92,9 @@ TEST_P(TypeParameterizedTestFixture, BuilderTestEmpty) {
 INSTANTIATE_TEST_SUITE_P(
     BuilderTest, TypeParameterizedTestFixture,
     ::testing::Values(
-        GEOARROW_TYPE_BOX, GEOARROW_TYPE_BOX_Z, GEOARROW_TYPE_BOX_M, GEOARROW_TYPE_BOX_ZM,
+        GEOARROW_TYPE_WKB, GEOARROW_TYPE_LARGE_WKB, GEOARROW_TYPE_WKT,
+        GEOARROW_TYPE_LARGE_WKT, GEOARROW_TYPE_BOX, GEOARROW_TYPE_BOX_Z,
+        GEOARROW_TYPE_BOX_M, GEOARROW_TYPE_BOX_ZM,
 
         GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING, GEOARROW_TYPE_POLYGON,
         GEOARROW_TYPE_MULTIPOINT, GEOARROW_TYPE_MULTILINESTRING,
@@ -125,6 +127,64 @@ INSTANTIATE_TEST_SUITE_P(
         GEOARROW_TYPE_INTERLEAVED_MULTIPOINT_ZM,
         GEOARROW_TYPE_INTERLEAVED_MULTILINESTRING_ZM,
         GEOARROW_TYPE_INTERLEAVED_MULTIPOLYGON_ZM));
+
+TEST(BuilderTest, BuilderTestSerializedFromBuffers) {
+  struct GeoArrowBuilder builder;
+  struct ArrowArray array_out;
+  struct GeoArrowError error;
+
+  uint8_t validity = 0b00000101;
+  std::vector<int32_t> offsets32 = {0, 11, 11, 21};
+  std::vector<int64_t> offsets64 = {0, 11, 11, 21};
+  std::string data = "POINT (0 1)POINT(1 2)";
+
+  for (auto type : {GEOARROW_TYPE_WKT, GEOARROW_TYPE_LARGE_WKT}) {
+    SCOPED_TRACE(type);
+
+    ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, type), GEOARROW_OK);
+    ASSERT_EQ(GeoArrowBuilderAppendBuffer(&builder, 0, {&validity, 1}), GEOARROW_OK);
+
+    if (type == GEOARROW_TYPE_WKT) {
+      ASSERT_EQ(GeoArrowBuilderAppendBuffer(
+                    &builder, 1,
+                    {reinterpret_cast<uint8_t*>(offsets32.data()),
+                     static_cast<int64_t>(offsets32.size() * sizeof(int32_t))}),
+                GEOARROW_OK);
+    } else {
+      ASSERT_EQ(GeoArrowBuilderAppendBuffer(
+                    &builder, 1,
+                    {reinterpret_cast<uint8_t*>(offsets64.data()),
+                     static_cast<int64_t>(offsets64.size() * sizeof(int64_t))}),
+                GEOARROW_OK);
+    }
+
+    ASSERT_EQ(GeoArrowBuilderAppendBuffer(&builder, 2,
+                                          {reinterpret_cast<uint8_t*>(data.data()),
+                                           static_cast<int64_t>(data.size())}),
+              GEOARROW_OK);
+    ASSERT_EQ(GeoArrowBuilderFinish(&builder, &array_out, &error), GEOARROW_OK)
+        << error.message;
+    GeoArrowBuilderReset(&builder);
+
+    ASSERT_EQ(array_out.length, 3);
+    ASSERT_EQ(array_out.null_count, -1);
+
+    struct GeoArrowArrayReader reader;
+    ASSERT_EQ(GeoArrowArrayReaderInitFromType(&reader, type), GEOARROW_OK);
+    ASSERT_EQ(GeoArrowArrayReaderSetArray(&reader, &array_out, nullptr), GEOARROW_OK);
+
+    WKXTester tester;
+    ASSERT_EQ(GeoArrowArrayReaderVisit(&reader, 0, 3, tester.WKTVisitor()), GEOARROW_OK);
+    auto values = tester.WKTValues("<null value>");
+    ASSERT_EQ(values.size(), 3);
+    EXPECT_EQ(values[0], "POINT (0 1)");
+    EXPECT_EQ(values[1], "<null value>");
+    EXPECT_EQ(values[2], "POINT (1 2)");
+
+    GeoArrowArrayReaderReset(&reader);
+    array_out.release(&array_out);
+  }
+}
 
 TEST(BuilderTest, BuilderTestAppendCoords) {
   struct GeoArrowBuilder builder;
