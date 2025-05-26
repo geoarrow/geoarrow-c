@@ -45,6 +45,12 @@ TEST(ArrayReaderTest, ArrayReaderTestVisitWKT) {
     struct GeoArrowArrayReader reader;
     ASSERT_EQ(GeoArrowArrayReaderInitFromSchema(&reader, &schema, nullptr), GEOARROW_OK);
     EXPECT_EQ(GeoArrowArrayReaderSetArray(&reader, &array, nullptr), GEOARROW_OK);
+
+    // Check visit of zero length
+    EXPECT_EQ(GeoArrowArrayReaderVisit(&reader, 0, 0, tester.WKTVisitor()), GEOARROW_OK);
+    EXPECT_EQ(tester.WKTValues("<null value>"), std::vector<std::string>());
+
+    // Check visit
     EXPECT_EQ(GeoArrowArrayReaderVisit(&reader, 0, array.length, tester.WKTVisitor()),
               GEOARROW_OK);
     auto values = tester.WKTValues("<null value>");
@@ -86,6 +92,12 @@ TEST(ArrayReaderTest, ArrayReaderTestVisitWKB) {
     struct GeoArrowArrayReader reader;
     ASSERT_EQ(GeoArrowArrayReaderInitFromSchema(&reader, &schema, nullptr), GEOARROW_OK);
     EXPECT_EQ(GeoArrowArrayReaderSetArray(&reader, &array, nullptr), GEOARROW_OK);
+
+    // Check visit of zero length
+    EXPECT_EQ(GeoArrowArrayReaderVisit(&reader, 0, 0, tester.WKTVisitor()), GEOARROW_OK);
+    EXPECT_EQ(tester.WKTValues("<null value>"), std::vector<std::string>());
+
+    // Check visit
     EXPECT_EQ(GeoArrowArrayReaderVisit(&reader, 0, array.length, tester.WKTVisitor()),
               GEOARROW_OK);
     auto values = tester.WKTValues("<null value>");
@@ -121,6 +133,12 @@ TEST(ArrayReaderTest, ArrayReaderTestVisitGeoArrow) {
   struct GeoArrowArrayReader reader;
   ASSERT_EQ(GeoArrowArrayReaderInitFromSchema(&reader, &schema, nullptr), GEOARROW_OK);
   EXPECT_EQ(GeoArrowArrayReaderSetArray(&reader, &array, nullptr), GEOARROW_OK);
+  // Check visit of zero length
+  EXPECT_EQ(GeoArrowArrayReaderVisit(&reader, 0, 0, tester.WKTVisitor()), GEOARROW_OK);
+  EXPECT_EQ(tester.WKTValues("<null value>"), std::vector<std::string>());
+
+  // Check visit
+
   EXPECT_EQ(GeoArrowArrayReaderVisit(&reader, 0, array.length, tester.WKTVisitor()),
             GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");

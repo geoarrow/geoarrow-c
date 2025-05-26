@@ -243,6 +243,10 @@ GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
   struct GeoArrowArrayReaderPrivate* private_data =
       (struct GeoArrowArrayReaderPrivate*)reader->private_data;
 
+  if (length == 0) {
+    return GEOARROW_OK;
+  }
+
   switch (private_data->type) {
     case GEOARROW_TYPE_WKT:
       return GeoArrowArrayReaderVisitWKT(&private_data->src.geoarrow, offset, length,
