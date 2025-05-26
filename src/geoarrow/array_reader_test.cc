@@ -26,72 +26,89 @@ TEST(ArrayReaderTest, ArrayReaderTestInit) {
 TEST(ArrayReaderTest, ArrayReaderTestVisitWKT) {
   struct ArrowSchema schema;
   struct ArrowArray array;
-  enum GeoArrowType type = GEOARROW_TYPE_WKT;
+  for (auto type : {GEOARROW_TYPE_WKT, GEOARROW_TYPE_LARGE_WKT, GEOARROW_TYPE_WKT_VIEW}) {
+    SCOPED_TRACE(type);
 
-  // Build the array for [POINT (30 10), null]
-  ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, type), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
+    // Build the array for [POINT (30 10), null]
+    ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, type), GEOARROW_OK);
+    ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
+    ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayAppendString(&array, ArrowCharView("POINT (30 10)")), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
+    ASSERT_EQ(ArrowArrayAppendString(&array, ArrowCharView("POINT (30 10)")),
+              GEOARROW_OK);
+    ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
+    ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
 
-  // Check its contents
-  WKXTester tester;
-  struct GeoArrowArrayReader reader;
-  ASSERT_EQ(GeoArrowArrayReaderInitFromSchema(&reader, &schema, nullptr), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArrayReaderSetArray(&reader, &array, nullptr), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArrayReaderVisit(&reader, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
-  auto values = tester.WKTValues("<null value>");
-  ASSERT_EQ(values.size(), 2);
-  EXPECT_EQ(values[0], "POINT (30 10)");
-  EXPECT_EQ(values[1], "<null value>");
+    // Check its contents
+    WKXTester tester;
+    struct GeoArrowArrayReader reader;
+    ASSERT_EQ(GeoArrowArrayReaderInitFromSchema(&reader, &schema, nullptr), GEOARROW_OK);
+    EXPECT_EQ(GeoArrowArrayReaderSetArray(&reader, &array, nullptr), GEOARROW_OK);
 
-  schema.release(&schema);
-  array.release(&array);
-  GeoArrowArrayReaderReset(&reader);
+    // Check visit of zero length
+    EXPECT_EQ(GeoArrowArrayReaderVisit(&reader, 0, 0, tester.WKTVisitor()), GEOARROW_OK);
+    EXPECT_EQ(tester.WKTValues("<null value>"), std::vector<std::string>());
+
+    // Check visit
+    EXPECT_EQ(GeoArrowArrayReaderVisit(&reader, 0, array.length, tester.WKTVisitor()),
+              GEOARROW_OK);
+    auto values = tester.WKTValues("<null value>");
+    ASSERT_EQ(values.size(), 2);
+    EXPECT_EQ(values[0], "POINT (30 10)");
+    EXPECT_EQ(values[1], "<null value>");
+
+    schema.release(&schema);
+    array.release(&array);
+    GeoArrowArrayReaderReset(&reader);
+  }
 }
 
 TEST(ArrayReaderTest, ArrayReaderTestVisitWKB) {
   struct ArrowSchema schema;
   struct ArrowArray array;
-  enum GeoArrowType type = GEOARROW_TYPE_WKB;
 
-  std::vector<uint8_t> point({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-                              0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
-                              0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
-  struct ArrowBufferView point_view;
-  point_view.data.as_uint8 = point.data();
-  point_view.size_bytes = point.size();
+  for (auto type : {GEOARROW_TYPE_WKB, GEOARROW_TYPE_LARGE_WKB, GEOARROW_TYPE_WKB_VIEW}) {
+    SCOPED_TRACE(type);
+    std::vector<uint8_t> point({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
+                                0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
+    struct ArrowBufferView point_view;
+    point_view.data.as_uint8 = point.data();
+    point_view.size_bytes = point.size();
 
-  // Build the array for [POINT (30 10), null]
-  ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, type), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
+    // Build the array for [POINT (30 10), null]
+    ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, type), GEOARROW_OK);
+    ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
+    ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayAppendBytes(&array, point_view), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
+    ASSERT_EQ(ArrowArrayAppendBytes(&array, point_view), GEOARROW_OK);
+    ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
 
-  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
+    ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
 
-  // Check its contents
-  WKXTester tester;
-  struct GeoArrowArrayReader reader;
-  ASSERT_EQ(GeoArrowArrayReaderInitFromSchema(&reader, &schema, nullptr), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArrayReaderSetArray(&reader, &array, nullptr), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowArrayReaderVisit(&reader, 0, array.length, tester.WKTVisitor()),
-            GEOARROW_OK);
-  auto values = tester.WKTValues("<null value>");
-  ASSERT_EQ(values.size(), 2);
-  EXPECT_EQ(values[0], "POINT (30 10)");
-  EXPECT_EQ(values[1], "<null value>");
+    // Check its contents
+    WKXTester tester;
+    struct GeoArrowArrayReader reader;
+    ASSERT_EQ(GeoArrowArrayReaderInitFromSchema(&reader, &schema, nullptr), GEOARROW_OK);
+    EXPECT_EQ(GeoArrowArrayReaderSetArray(&reader, &array, nullptr), GEOARROW_OK);
 
-  schema.release(&schema);
-  array.release(&array);
-  GeoArrowArrayReaderReset(&reader);
+    // Check visit of zero length
+    EXPECT_EQ(GeoArrowArrayReaderVisit(&reader, 0, 0, tester.WKTVisitor()), GEOARROW_OK);
+    EXPECT_EQ(tester.WKTValues("<null value>"), std::vector<std::string>());
+
+    // Check visit
+    EXPECT_EQ(GeoArrowArrayReaderVisit(&reader, 0, array.length, tester.WKTVisitor()),
+              GEOARROW_OK);
+    auto values = tester.WKTValues("<null value>");
+    ASSERT_EQ(values.size(), 2);
+    EXPECT_EQ(values[0], "POINT (30 10)");
+    EXPECT_EQ(values[1], "<null value>");
+
+    schema.release(&schema);
+    array.release(&array);
+    GeoArrowArrayReaderReset(&reader);
+  }
 }
 
 TEST(ArrayReaderTest, ArrayReaderTestVisitGeoArrow) {
@@ -116,6 +133,12 @@ TEST(ArrayReaderTest, ArrayReaderTestVisitGeoArrow) {
   struct GeoArrowArrayReader reader;
   ASSERT_EQ(GeoArrowArrayReaderInitFromSchema(&reader, &schema, nullptr), GEOARROW_OK);
   EXPECT_EQ(GeoArrowArrayReaderSetArray(&reader, &array, nullptr), GEOARROW_OK);
+  // Check visit of zero length
+  EXPECT_EQ(GeoArrowArrayReaderVisit(&reader, 0, 0, tester.WKTVisitor()), GEOARROW_OK);
+  EXPECT_EQ(tester.WKTValues("<null value>"), std::vector<std::string>());
+
+  // Check visit
+
   EXPECT_EQ(GeoArrowArrayReaderVisit(&reader, 0, array.length, tester.WKTVisitor()),
             GEOARROW_OK);
   auto values = tester.WKTValues("<null value>");
