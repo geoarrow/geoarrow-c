@@ -509,6 +509,7 @@ int64_t GeoArrowMetadataSerialize(const struct GeoArrowMetadataView* metadata_vi
   if (metadata_size <= n) {
     int64_t chars_written = GeoArrowMetadataSerializeInternal(metadata_view, out);
     NANOARROW_DCHECK(chars_written == metadata_size);
+    NANOARROW_UNUSED(chars_written);
   }
 
   // If there is room, write the null terminator
