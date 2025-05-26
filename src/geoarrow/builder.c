@@ -223,7 +223,7 @@ GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
       break;
 
     default:
-      return EINVAL;
+      break;
   }
 
   // If the validity bitmap was used, we need to update the validity buffer size
