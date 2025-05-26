@@ -237,10 +237,6 @@ static int kernel_visitor_start(struct GeoArrowKernel* kernel, struct ArrowSchem
 
   switch (schema_view.type) {
     case GEOARROW_TYPE_UNINITIALIZED:
-    case GEOARROW_TYPE_LARGE_WKB:
-    case GEOARROW_TYPE_LARGE_WKT:
-    case GEOARROW_TYPE_WKB_VIEW:
-    case GEOARROW_TYPE_WKT_VIEW:
       return EINVAL;
     default:
       NANOARROW_RETURN_NOT_OK(

@@ -302,6 +302,109 @@ void BenchBoundWKBPointsUsingWkbReader(benchmark::State& state) {
   CheckResult(bounds);
 }
 
+struct VisitingBounder {
+  BoxXY bounds;
+
+  void InitVisitor(struct GeoArrowVisitor* v) {
+    GeoArrowVisitorInitVoid(v);
+    v->coords = [](struct GeoArrowVisitor* v,
+                   const struct GeoArrowCoordView* coords) -> int {
+      auto self = reinterpret_cast<VisitingBounder*>(v->private_data);
+      const double* x = coords->values[0];
+      const double* y = coords->values[1];
+
+      for (int64_t i = 0; i < coords->n_coords; i++) {
+        self->bounds[0] = MIN(self->bounds[0], *x);
+        self->bounds[1] = MIN(self->bounds[1], *y);
+        self->bounds[2] = MAX(self->bounds[2], *x);
+        self->bounds[3] = MAX(self->bounds[3], *y);
+        x += coords->coords_stride;
+        y += coords->coords_stride;
+      }
+
+      return GEOARROW_OK;
+    };
+
+    v->private_data = this;
+  }
+};
+
+BoxXY BoundWKBUsingVisitor(geoarrow::ArrayReader* reader, int64_t length) {
+  VisitingBounder bounder;
+  bounder.bounds = BoxXY::Empty();
+
+  struct GeoArrowVisitor v;
+  bounder.InitVisitor(&v);
+  if (reader->Visit(&v, 0, length) != GEOARROW_OK) {
+    throw std::runtime_error("Visit() errored");
+  }
+
+  return bounder.bounds;
+}
+
+void BenchBoundWKBPointsUsingVisitor(benchmark::State& state) {
+  std::vector<double> coords = MakeInterleavedCoords(kNumCoordsPrettyBig);
+  std::vector<uint8_t> wkb = MakePointsWKB(coords);
+
+  int32_t offset = 0;
+  std::vector<int32_t> offsets = {offset};
+  for (int64_t i = 0; i < kNumCoordsPrettyBig; i++) {
+    offset += 21;
+    offsets.push_back(offset);
+  }
+
+  if (offset != wkb.size()) {
+    throw std::runtime_error("Expected " + std::to_string(wkb.size()) +
+                             " bytes but got " + std::to_string(offset));
+  }
+
+  geoarrow::ArrayBuilder builder(GEOARROW_TYPE_WKB);
+  builder.SetBufferWrapped(1, offsets);
+  builder.SetBufferWrapped(2, wkb);
+
+  struct ArrowArray array;
+  builder.Finish(&array);
+
+  geoarrow::ArrayReader reader(GEOARROW_TYPE_WKB);
+  reader.SetArray(&array);
+
+  BoxXY bounds{};
+
+  for (auto _ : state) {
+    bounds = BoundWKBUsingVisitor(&reader, kNumCoordsPrettyBig);
+    benchmark::DoNotOptimize(bounds);
+  }
+
+  state.SetItemsProcessed(kNumCoordsPrettyBig * state.iterations());
+  CheckResult(bounds);
+}
+
+void BenchBoundWKBLinestringUsingVisitor(benchmark::State& state) {
+  std::vector<double> coords = MakeInterleavedCoords(kNumCoordsPrettyBig);
+  std::vector<uint8_t> wkb = MakeLinestringWKB(coords);
+
+  std::vector<int32_t> offsets = {0, static_cast<int32_t>(wkb.size())};
+  geoarrow::ArrayBuilder builder(GEOARROW_TYPE_WKB);
+  builder.SetBufferWrapped(1, offsets);
+  builder.SetBufferWrapped(2, wkb);
+
+  struct ArrowArray array;
+  builder.Finish(&array);
+
+  geoarrow::ArrayReader reader(GEOARROW_TYPE_WKB);
+  reader.SetArray(&array);
+
+  BoxXY bounds{};
+
+  for (auto _ : state) {
+    bounds = BoundWKBUsingVisitor(&reader, 1);
+    benchmark::DoNotOptimize(bounds);
+  }
+
+  state.SetItemsProcessed(kNumCoordsPrettyBig * state.iterations());
+  CheckResult(bounds);
+}
+
 BoxXY BoundWKBPointsUsingUnalignedSequence(const std::vector<uint8_t>& wkb,
                                            uint32_t num_points) {
   uint32_t xy_point_bytes = 21;
@@ -311,9 +414,6 @@ BoxXY BoundWKBPointsUsingUnalignedSequence(const std::vector<uint8_t>& wkb,
   }
 
   BoxXY bounds = BoxXY::Empty();
-
-  geoarrow::wkb_util::WKBGeometry geometry;
-  geoarrow::wkb_util::WKBParser parser;
 
   uint32_t endian_bytes_le = 0;
   for (uint32_t i = 0; i < num_points; i++) {
@@ -368,6 +468,8 @@ BENCHMARK(BenchBoundWKBLinestringUsingGeoArrowHpp);
 BENCHMARK(BenchBoundWKBPointsUsingGeoArrowHpp);
 BENCHMARK(BenchBoundWKBLinestringUsingWkbReader);
 BENCHMARK(BenchBoundWKBPointsUsingWkbReader);
+BENCHMARK(BenchBoundWKBPointsUsingVisitor);
+BENCHMARK(BenchBoundWKBLinestringUsingVisitor);
 BENCHMARK(BenchBoundWKBPointsUsingUnalignedSequence);
 
 std::vector<double> MakeInterleavedCoords(uint32_t num_coords) {
