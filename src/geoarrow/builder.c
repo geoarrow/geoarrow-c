@@ -55,6 +55,15 @@ static ArrowErrorCode GeoArrowBuilderInitArrayAndCachePointers(
 static GeoArrowErrorCode GeoArrowBuilderInitInternal(struct GeoArrowBuilder* builder) {
   enum GeoArrowType type = builder->view.schema_view.type;
 
+  // View types aren't supported by the visitor nor the buffer builder
+  switch (type) {
+    case GEOARROW_TYPE_WKB_VIEW:
+    case GEOARROW_TYPE_WKT_VIEW:
+      return ENOTSUP;
+    default:
+      break;
+  }
+
   // Initialize an array view to help set some fields
   struct GeoArrowArrayView array_view;
   NANOARROW_RETURN_NOT_OK(GeoArrowArrayViewInitFromType(&array_view, type));
