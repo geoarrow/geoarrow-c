@@ -302,10 +302,49 @@ Python. The library supports well-known binary (WKB), well-known text
 (ISO) and <a class="reference external" href="https://github.com/geoarrow/geoarrow">geoarrow</a> encodings
 as Arrow extension types with all possible mutual conversions including
 support for Z, M, and ZM geometries.</p>
-<p>The library currently implements version 0.1.0 of the GeoArrow
-specification. The easiest way to get started with GeoArrow is to use
-the <a class="reference external" href="https://github.com/geoarrow/geoarrow-python">Python bindings</a>,
-which currently use geoarrow-c under the hood for most operations.</p>
+<p>The library currently implements version 0.2.0 of the GeoArrow
+specification. The easiest way to get started with GeoArrow/C is to use
+the <a class="reference external" href="https://github.com/geoarrow/geoarrow-python">Python bindings</a> or
+<a class="reference external" href="https://github.com/geoarrow/geoarrow-r">R bindings</a> which currently
+use geoarrow-c under the hood for most operations.</p>
+<p>The C library supports CMake with FetchContent:</p>
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">FetchContent_Declare</span><span class="p">(</span>
+<span class="w">  </span><span class="s">geoarrow</span>
+<span class="w">  </span><span class="s">URL</span><span class="w"> </span><span class="s">https://github.com/geoarrow/geoarrow-c/archive/refs/heads/main.zip</span><span class="p">)</span>
+
+<span class="nb">FetchContent_MakeAvailable</span><span class="p">(</span><span class="s">nanoarrow</span><span class="p">)</span>
+<span class="nb">FetchContent_MakeAvailable</span><span class="p">(</span><span class="s">geoarrow</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The most straightforward way to get started producing and consuming is
+the C++ interface:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;vector&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;geoarrow/geoarrow.hpp&quot;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">Example</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">// Build the buffers using C++ objects</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">wkb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MakeLinestringWKB</span><span class="p">(</span><span class="n">coords</span><span class="p">);</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int32_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">offsets</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">int32_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">wkb</span><span class="p">.</span><span class="n">size</span><span class="p">())};</span>
+
+<span class="w">  </span><span class="c1">// Use SetBufferWrapped() to move these into an ArrowArray. This works</span>
+<span class="w">  </span><span class="c1">// for anything movable with .data() and .size().</span>
+<span class="w">  </span><span class="n">geoarrow</span><span class="o">::</span><span class="n">ArrayBuilder</span><span class="w"> </span><span class="n">builder</span><span class="p">(</span><span class="n">GEOARROW_TYPE_WKB</span><span class="p">);</span>
+<span class="w">  </span><span class="n">builder</span><span class="p">.</span><span class="n">SetBufferWrapped</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">offsets</span><span class="p">);</span>
+<span class="w">  </span><span class="n">builder</span><span class="p">.</span><span class="n">SetBufferWrapped</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="n">wkb</span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// Export to an ArrowArray</span>
+<span class="w">  </span><span class="k">struct</span><span class="w"> </span><span class="nc">ArrowArray</span><span class="w"> </span><span class="n">array</span><span class="p">;</span>
+<span class="w">  </span><span class="n">builder</span><span class="p">.</span><span class="n">Finish</span><span class="p">(</span><span class="o">&amp;</span><span class="n">array</span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// Read the ArrowArray using the visitor interface or the GeoArrowGeometry</span>
+<span class="w">  </span><span class="c1">// interface.</span>
+<span class="w">  </span><span class="n">geoarrow</span><span class="o">::</span><span class="n">ArrayReader</span><span class="w"> </span><span class="n">reader</span><span class="p">(</span><span class="n">GEOARROW_TYPE_WKB</span><span class="p">);</span>
+<span class="w">  </span><span class="n">reader</span><span class="p">.</span><span class="n">SetArray</span><span class="p">(</span><span class="o">&amp;</span><span class="n">array</span><span class="p">);</span>
+
+<span class="w">  </span><span class="n">reader</span><span class="p">.</span><span class="n">Visit</span><span class="p">(...)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
 <section id="contents">
 <h2>Contents<a class="headerlink" href="#contents" title="Link to this heading">#</a></h2>
 <div class="toctree-wrapper compound">
