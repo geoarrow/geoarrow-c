@@ -17,8 +17,8 @@ main() {
 
   # Build the bundle
   python "${SCRATCH}/ci/scripts/bundle.py" \
-      --include-output-dir=src/geoarrow \
-      --source-output-dir=src/geoarrow/nanoarrow
+      --include-output-dir=src/vendor \
+      --source-output-dir=src/vendor/nanoarrow
 }
 
 main
