@@ -98,9 +98,9 @@ static inline void GeoArrowGeometryAlignCoords(const uint8_t** cursor,
                                                int n_values, uint32_t n_coords) {
   double* coords_cursor = coords;
   for (uint32_t i = 0; i < n_coords; i++) {
-    for (int i = 0; i < n_values; i++) {
-      memcpy(coords_cursor++, cursor[i], sizeof(double));
-      cursor[i] += stride[i];
+    for (int j = 0; j < n_values; j++) {
+      memcpy(coords_cursor++, cursor[j], sizeof(double));
+      cursor[j] += stride[j];
     }
   }
 }
