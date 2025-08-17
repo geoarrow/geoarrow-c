@@ -30,6 +30,9 @@ struct GeoArrowNativeWriterPrivate {
   int32_t level;
 };
 
+static GeoArrowErrorCode GeoArrowNativeWriterEnsureOutputInitialized(
+    struct GeoArrowNativeWriter* writer);
+
 GeoArrowErrorCode GeoArrowNativeWriterInit(struct GeoArrowNativeWriter* writer,
                                            enum GeoArrowType type) {
   struct GeoArrowNativeWriterPrivate* private_data =
@@ -60,6 +63,13 @@ GeoArrowErrorCode GeoArrowNativeWriterInit(struct GeoArrowNativeWriter* writer,
   private_data->empty_coord.coords_stride = 1;
 
   writer->private_data = private_data;
+
+  result = GeoArrowNativeWriterEnsureOutputInitialized(writer);
+  if (result != GEOARROW_OK) {
+    GeoArrowNativeWriterReset(writer);
+    return result;
+  }
+
   return GEOARROW_OK;
 }
 
@@ -192,12 +202,11 @@ static inline void GeoArrowNativeWriterCopyCoordsInterleaved(const uint8_t** cur
   }
 }
 
-static inline void GeoArrowNativeWriterCopyCoordsSeparated(const uint8_t** cursor,
-                                                           const int32_t* stride,
-                                                           double** coords, int n_values,
-                                                           uint32_t n_coords) {
+static inline void GeoArrowNativeWriterCopyCoordsSeparated(
+    const uint8_t** cursor, const int32_t* stride, double** coords, int64_t dst_offset,
+    int n_values, uint32_t n_coords) {
   for (int j = 0; j < n_values; j++) {
-    double* coords_cursor = coords[j];
+    double* coords_cursor = coords[j] + dst_offset;
     for (uint32_t i = 0; i < n_coords; i++) {
       memcpy(coords_cursor++, cursor[j], sizeof(double));
       cursor[j] += stride[j];
@@ -228,8 +237,8 @@ static inline void GeoArrowNativeWriterAppendNodeCoordsUnsafe(
           dst->n_values, node->size);
       break;
     case GEOARROW_COORD_TYPE_SEPARATE:
-      GeoArrowNativeWriterCopyCoordsSeparated(dsts, dst_strides, dst->values,
-                                              dst->n_values, node->size);
+      GeoArrowNativeWriterCopyCoordsSeparated(
+          dsts, dst_strides, dst->values, dst->size_coords, dst->n_values, node->size);
       break;
     default:
       NANOARROW_DCHECK(0 && "unreachable");
@@ -413,7 +422,7 @@ GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer
         case GEOARROW_GEOMETRY_TYPE_POINT:
         case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
           GEOARROW_RETURN_NOT_OK(
-              GeoArrowNativeWriterAppendSize(writer, 0, node->size, error));
+              GeoArrowNativeWriterAppendSize(writer, 0, coord_count, error));
           break;
         default:
           GeoArrowErrorSet(error, "Can't append %s to array of type MULTIPOINT",
@@ -1104,7 +1113,6 @@ GeoArrowErrorCode GeoArrowNativeWriterInitVisitor(struct GeoArrowNativeWriter* w
       return EINVAL;
   }
 
-  NANOARROW_RETURN_NOT_OK(GeoArrowNativeWriterEnsureOutputInitialized(writer));
   v->private_data = writer;
   return GEOARROW_OK;
 }

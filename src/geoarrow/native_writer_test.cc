@@ -670,3 +670,123 @@ TEST(NativeWriterTest, WritePointGeometry) {
 
   ArrowArrayRelease(&array_out);
 }
+
+TEST(NativeWriterTest, WriteLinestringGeometry) {
+  WKXTester tester;
+
+  struct GeoArrowNativeWriter builder;
+  ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_LINESTRING), GEOARROW_OK);
+
+  auto geom = tester.AsGeometry("LINESTRING (1 2, 3 4)");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+            GEOARROW_OK);
+
+  ASSERT_EQ(GeoArrowNativeWriterAppendNull(&builder), GEOARROW_OK);
+
+  geom = tester.AsGeometry("LINESTRING EMPTY");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+            GEOARROW_OK);
+
+  struct ArrowArray array_out;
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowNativeWriterFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowNativeWriterReset(&builder);
+
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.null_count, 1);
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_LINESTRING), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "LINESTRING (1 2, 3 4)");
+  EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(values[2], "LINESTRING EMPTY");
+
+  ArrowArrayRelease(&array_out);
+}
+
+TEST(NativeWriterTest, WritePolygonGeometry) {
+  WKXTester tester;
+
+  struct GeoArrowNativeWriter builder;
+  ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_POLYGON), GEOARROW_OK);
+
+  auto geom = tester.AsGeometry("POLYGON ((0 0, 1 0, 0 1, 0 0))");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+            GEOARROW_OK);
+
+  ASSERT_EQ(GeoArrowNativeWriterAppendNull(&builder), GEOARROW_OK);
+
+  geom = tester.AsGeometry("POLYGON EMPTY");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+            GEOARROW_OK);
+
+  struct ArrowArray array_out;
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowNativeWriterFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowNativeWriterReset(&builder);
+
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.null_count, 1);
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POLYGON), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "POLYGON ((0 0, 1 0, 0 1, 0 0))");
+  EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(values[2], "POLYGON EMPTY");
+
+  ArrowArrayRelease(&array_out);
+}
+
+TEST(NativeWriterTest, WriteMultiPointGeometry) {
+  WKXTester tester;
+
+  struct GeoArrowNativeWriter builder;
+  ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_MULTIPOINT), GEOARROW_OK);
+
+  auto geom = tester.AsGeometry("MULTIPOINT ((1 2), (3 4))");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+            GEOARROW_OK);
+
+  ASSERT_EQ(GeoArrowNativeWriterAppendNull(&builder), GEOARROW_OK);
+
+  geom = tester.AsGeometry("MULTIPOINT EMPTY");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+            GEOARROW_OK);
+
+  struct ArrowArray array_out;
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowNativeWriterFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowNativeWriterReset(&builder);
+
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.null_count, 1);
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_MULTIPOINT), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "MULTIPOINT ((1 2), (3 4))");
+  EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(values[2], "MULTIPOINT EMPTY");
+
+  ArrowArrayRelease(&array_out);
+}
