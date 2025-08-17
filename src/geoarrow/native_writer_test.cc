@@ -548,7 +548,8 @@ TEST_P(WKTRoundtripParameterizedTestFixture, NativeWriterWKTRoundtrip) {
   array_out.release(&array_out);
 }
 
-#define WKT_PAIR(a, b) std::pair<std::string, enum GeoArrowType> { a, b }
+#define WKT_PAIR(a, b) \
+  std::pair<std::string, enum GeoArrowType> { a, b }
 
 INSTANTIATE_TEST_SUITE_P(
     NativeWriterTest, WKTRoundtripParameterizedTestFixture,
@@ -629,3 +630,43 @@ INSTANTIATE_TEST_SUITE_P(
 
         // Comment to keep the last line on its own
         ));
+
+TEST(NativeWriterTest, WritePointGeometry) {
+  WKXTester tester;
+
+  struct GeoArrowNativeWriter builder;
+  ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_POINT), GEOARROW_OK);
+
+  auto geom = tester.AsGeometry("POINT (1 2)");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+            GEOARROW_OK);
+
+  ASSERT_EQ(GeoArrowNativeWriterAppendNull(&builder), GEOARROW_OK);
+
+  geom = tester.AsGeometry("POINT EMPTY");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+            GEOARROW_OK);
+
+  struct ArrowArray array_out;
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowNativeWriterFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowNativeWriterReset(&builder);
+
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.null_count, 1);
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "POINT (1 2)");
+  EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(values[2], "POINT (nan nan)");
+
+  ArrowArrayRelease(&array_out);
+}

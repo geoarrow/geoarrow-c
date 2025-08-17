@@ -406,6 +406,9 @@ GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer
                                              struct GeoArrowGeometryView geom,
                                              struct GeoArrowError* error);
 
+/// \brief Append a null element to this writer
+GeoArrowErrorCode GeoArrowNativeWriterAppendNull(struct GeoArrowNativeWriter* writer);
+
 /// \brief Finish an ArrowArray containing elements from the visited input
 ///
 /// This function can be called more than once to support multiple batches.

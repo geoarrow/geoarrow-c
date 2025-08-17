@@ -16,6 +16,7 @@ struct GeoArrowNativeWriterPrivate {
 
   struct ArrowBitmap validity;
   int64_t null_count;
+  int64_t current_length;
   int32_t last_offset[4];
 
   // Fields to keep track of state
@@ -87,12 +88,12 @@ static GeoArrowErrorCode GeoArrowNativeWriterEnsureOutputInitialized(
   }
 
   private_data->null_count = 0;
+  private_data->current_length = 0;
   NANOARROW_RETURN_NOT_OK(ArrowBitmapResize(&private_data->validity, 0, 0));
+  memset(private_data->last_offset, 0, sizeof(private_data->last_offset));
 
   private_data->builder.view.coords.size_coords = 0;
   private_data->builder.view.coords.capacity_coords = 0;
-
-  memset(private_data->last_offset, 0, sizeof(private_data->last_offset));
 
   private_data->output_initialized = 1;
   return GEOARROW_OK;
@@ -216,8 +217,8 @@ static inline void GeoArrowNativeWriterAppendNodeCoordsUnsafe(
   const uint8_t* dsts[4];
   int32_t dst_strides[4];
   for (int i = 0; i < 4; i++) {
-    dsts[i] = srcs[map[i]];
-    dst_strides[i] = src_strides[map[i]];
+    dsts[i] = srcs[map[i] + 1];
+    dst_strides[i] = src_strides[map[i] + 1];
   }
 
   switch (dst_coord_type) {
@@ -303,6 +304,36 @@ static GeoArrowErrorCode GeoArrowNativeWriterAppendMultiPolygonOffsets(
   return GEOARROW_OK;
 }
 
+static GeoArrowErrorCode GeoArrowNativeWriterAppendValidity(
+    struct GeoArrowNativeWriter* writer, int is_valid) {
+  struct GeoArrowNativeWriterPrivate* private_data =
+      (struct GeoArrowNativeWriterPrivate*)writer->private_data;
+
+  private_data->current_length++;
+
+  if (!is_valid) {
+    if (private_data->validity.buffer.data == NULL) {
+      NANOARROW_RETURN_NOT_OK(
+          ArrowBitmapReserve(&private_data->validity, private_data->current_length));
+      ArrowBitmapAppendUnsafe(&private_data->validity, 1,
+                              private_data->current_length - 1);
+    }
+
+    private_data->null_count++;
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(&private_data->validity, 0, 1));
+  } else if (private_data->validity.buffer.data != NULL) {
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(&private_data->validity, 1, 1));
+  }
+
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowNativeWriterAppendNull(struct GeoArrowNativeWriter* writer) {
+  GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendEmpty(writer, NULL));
+  GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendValidity(writer, 0));
+  return GEOARROW_OK;
+}
+
 GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer,
                                              struct GeoArrowGeometryView geom,
                                              struct GeoArrowError* error) {
@@ -316,6 +347,7 @@ GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer
   // Any EMPTY can be appended to any builder
   if (coord_count == 0) {
     GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendEmpty(writer, error));
+    GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendValidity(writer, 1));
     return GEOARROW_OK;
   }
 
@@ -441,6 +473,9 @@ GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer
   GEOARROW_RETURN_NOT_OK(
       GeoArrowBuilderCoordsReserve(&private_data->builder, coord_count));
   GeoArrowNativeWriterAppendCoordsUnsafe(writer, geom);
+
+  // Append to validity buffer
+  GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendValidity(writer, 1));
 
   return GEOARROW_OK;
 }
