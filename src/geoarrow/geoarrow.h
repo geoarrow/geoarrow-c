@@ -401,6 +401,11 @@ GeoArrowErrorCode GeoArrowNativeWriterInit(struct GeoArrowNativeWriter* writer,
 GeoArrowErrorCode GeoArrowNativeWriterInitVisitor(struct GeoArrowNativeWriter* writer,
                                                   struct GeoArrowVisitor* v);
 
+/// \brief Append a GeoArrowGeometryView to this writer
+GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer,
+                                             struct GeoArrowGeometryView geom,
+                                             struct GeoArrowError* error);
+
 /// \brief Finish an ArrowArray containing elements from the visited input
 ///
 /// This function can be called more than once to support multiple batches.

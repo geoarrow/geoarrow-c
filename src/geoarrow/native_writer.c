@@ -303,9 +303,9 @@ static GeoArrowErrorCode GeoArrowNativeWriterAppendMultiPolygonOffsets(
   return GEOARROW_OK;
 }
 
-GeoArrowErrorCode GeoArrowNativeWriterAppendNode(struct GeoArrowNativeWriter* writer,
-                                                 struct GeoArrowGeometryView geom,
-                                                 struct GeoArrowError* error) {
+GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer,
+                                             struct GeoArrowGeometryView geom,
+                                             struct GeoArrowError* error) {
   struct GeoArrowNativeWriterPrivate* private_data =
       (struct GeoArrowNativeWriterPrivate*)writer->private_data;
 
