@@ -421,6 +421,25 @@ static inline GeoArrowErrorCode GeoArrowGeometryAppendNodeInline(
   }
 }
 
+/// \brief Count coordinates in a GeoArrowGeometryView
+/// \ingroup geoarrow-geometry
+static inline uint32_t GeoArrowGeometryViewNumCoords(struct GeoArrowGeometryView geom) {
+  uint32_t count = 0;
+  const struct GeoArrowGeometryNode* end = geom.root + geom.size_nodes;
+  for (const struct GeoArrowGeometryNode* node = geom.root; node < end; node++) {
+    switch (node->geometry_type) {
+      case GEOARROW_GEOMETRY_TYPE_POINT:
+      case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+        count += node->size;
+        break;
+      default:
+        break;
+    }
+  }
+
+  return count;
+}
+
 // Copies coordinates from one view to another keeping dimensions the same.
 // This function fills dimensions in dst but not in src with NAN; dimensions
 // in src but not in dst are dropped. This is useful for generic copying of
