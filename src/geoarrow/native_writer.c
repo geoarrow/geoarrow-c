@@ -16,6 +16,8 @@ struct GeoArrowNativeWriterPrivate {
 
   struct ArrowBitmap validity;
   int64_t null_count;
+  int64_t current_length;
+  int32_t last_offset[4];
 
   // Fields to keep track of state
   int output_initialized;
@@ -27,6 +29,9 @@ struct GeoArrowNativeWriterPrivate {
   int64_t size[32];
   int32_t level;
 };
+
+static GeoArrowErrorCode GeoArrowNativeWriterEnsureOutputInitialized(
+    struct GeoArrowNativeWriter* writer);
 
 GeoArrowErrorCode GeoArrowNativeWriterInit(struct GeoArrowNativeWriter* writer,
                                            enum GeoArrowType type) {
@@ -58,6 +63,13 @@ GeoArrowErrorCode GeoArrowNativeWriterInit(struct GeoArrowNativeWriter* writer,
   private_data->empty_coord.coords_stride = 1;
 
   writer->private_data = private_data;
+
+  result = GeoArrowNativeWriterEnsureOutputInitialized(writer);
+  if (result != GEOARROW_OK) {
+    GeoArrowNativeWriterReset(writer);
+    return result;
+  }
+
   return GEOARROW_OK;
 }
 
@@ -86,7 +98,9 @@ static GeoArrowErrorCode GeoArrowNativeWriterEnsureOutputInitialized(
   }
 
   private_data->null_count = 0;
+  private_data->current_length = 0;
   NANOARROW_RETURN_NOT_OK(ArrowBitmapResize(&private_data->validity, 0, 0));
+  memset(private_data->last_offset, 0, sizeof(private_data->last_offset));
 
   private_data->builder.view.coords.size_coords = 0;
   private_data->builder.view.coords.capacity_coords = 0;
@@ -124,6 +138,359 @@ GeoArrowErrorCode GeoArrowNativeWriterFinish(struct GeoArrowNativeWriter* writer
   }
 
   ArrowArrayMove(&tmp, array);
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowNativeWriterAppendSize(
+    struct GeoArrowNativeWriter* writer, uint32_t offset, uint32_t size,
+    struct GeoArrowError* error) {
+  struct GeoArrowNativeWriterPrivate* private_data =
+      (struct GeoArrowNativeWriterPrivate*)writer->private_data;
+
+  // Handle the offsets (and determine if this geometry can, in fact, be added to the
+  // builder)
+  if (size > INT32_MAX) {
+    GeoArrowErrorSet(
+        error, "Can't append geometry with size > INT32_MAX to GeoArrow native array");
+    return EOVERFLOW;
+  }
+
+  int32_t* p_last_offset = private_data->last_offset + offset;
+  (*p_last_offset) += size;
+
+  GEOARROW_RETURN_NOT_OK(
+      GeoArrowBuilderOffsetAppend(&private_data->builder, offset, p_last_offset, 1));
+
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowNativeWriterAppendEmpty(
+    struct GeoArrowNativeWriter* writer, struct GeoArrowError* error) {
+  struct GeoArrowNativeWriterPrivate* private_data =
+      (struct GeoArrowNativeWriterPrivate*)writer->private_data;
+
+  switch (private_data->builder.view.schema_view.geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_POINT: {
+      GEOARROW_RETURN_NOT_OK(GeoArrowBuilderCoordsAppend(
+          &private_data->builder, &private_data->empty_coord,
+          private_data->builder.view.schema_view.dimensions, 0, 1));
+      return NANOARROW_OK;
+    }
+    case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+    case GEOARROW_GEOMETRY_TYPE_POLYGON:
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+    case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+    case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
+      GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendSize(writer, 0, 0, error));
+      return NANOARROW_OK;
+    default:
+      NANOARROW_DCHECK(0 && "unreachable");
+  }
+}
+
+static inline void GeoArrowNativeWriterCopyCoordsInterleaved(const uint8_t** cursor,
+                                                             const int32_t* stride,
+                                                             double* coords, int n_values,
+                                                             uint32_t n_coords) {
+  double* coords_cursor = coords;
+  for (uint32_t i = 0; i < n_coords; i++) {
+    for (int i = 0; i < n_values; i++) {
+      memcpy(coords_cursor++, cursor[i], sizeof(double));
+      cursor[i] += stride[i];
+    }
+  }
+}
+
+static inline void GeoArrowNativeWriterCopyCoordsSeparated(
+    const uint8_t** cursor, const int32_t* stride, double** coords, int64_t dst_offset,
+    int n_values, uint32_t n_coords) {
+  for (int j = 0; j < n_values; j++) {
+    double* coords_cursor = coords[j] + dst_offset;
+    for (uint32_t i = 0; i < n_coords; i++) {
+      memcpy(coords_cursor++, cursor[j], sizeof(double));
+      cursor[j] += stride[j];
+    }
+  }
+}
+
+static inline void GeoArrowNativeWriterAppendNodeCoordsUnsafe(
+    const struct GeoArrowGeometryNode* node, struct GeoArrowWritableCoordView* dst,
+    enum GeoArrowDimensions dst_dim, enum GeoArrowCoordType dst_coord_type) {
+  int map[4];
+  GeoArrowMapDimensions((enum GeoArrowDimensions)node->dimensions, dst_dim, map);
+  const uint8_t* srcs[] = {_GeoArrowkEmptyPointCoords, node->coords[0], node->coords[1],
+                           node->coords[2], node->coords[3]};
+  const int32_t src_strides[] = {0, node->coord_stride[0], node->coord_stride[1],
+                                 node->coord_stride[2], node->coord_stride[3]};
+  const uint8_t* dsts[4];
+  int32_t dst_strides[4];
+  for (int i = 0; i < 4; i++) {
+    dsts[i] = srcs[map[i] + 1];
+    dst_strides[i] = src_strides[map[i] + 1];
+  }
+
+  switch (dst_coord_type) {
+    case GEOARROW_COORD_TYPE_INTERLEAVED:
+      GeoArrowNativeWriterCopyCoordsInterleaved(
+          dsts, dst_strides, dst->values[0] + (dst->n_values * dst->size_coords),
+          dst->n_values, node->size);
+      break;
+    case GEOARROW_COORD_TYPE_SEPARATE:
+      GeoArrowNativeWriterCopyCoordsSeparated(
+          dsts, dst_strides, dst->values, dst->size_coords, dst->n_values, node->size);
+      break;
+    default:
+      NANOARROW_DCHECK(0 && "unreachable");
+  }
+
+  dst->size_coords += node->size;
+}
+
+static void GeoArrowNativeWriterAppendCoordsUnsafe(struct GeoArrowNativeWriter* writer,
+                                                   struct GeoArrowGeometryView geom) {
+  struct GeoArrowNativeWriterPrivate* private_data =
+      (struct GeoArrowNativeWriterPrivate*)writer->private_data;
+
+  const struct GeoArrowGeometryNode* end = geom.root + geom.size_nodes;
+  for (const struct GeoArrowGeometryNode* node = geom.root; node < end; node++) {
+    switch (node->geometry_type) {
+      case GEOARROW_GEOMETRY_TYPE_POINT:
+      case GEOARROW_GEOMETRY_TYPE_LINESTRING: {
+        GeoArrowNativeWriterAppendNodeCoordsUnsafe(
+            node, &private_data->builder.view.coords,
+            private_data->builder.view.schema_view.dimensions,
+            private_data->builder.view.schema_view.coord_type);
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
+}
+
+static GeoArrowErrorCode GeoArrowNativeWriterAppendLinestringOffsets(
+    struct GeoArrowNativeWriter* writer, const struct GeoArrowGeometryNode* node,
+    uint32_t n, int32_t offset, struct GeoArrowError* error) {
+  for (int64_t i = 0; i < n; i++) {
+    GEOARROW_RETURN_NOT_OK(
+        GeoArrowNativeWriterAppendSize(writer, offset, node->size, error));
+    ++node;
+  }
+
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowNativeWriterAppendPolygonOffsets(
+    struct GeoArrowNativeWriter* writer, const struct GeoArrowGeometryNode* node,
+    uint32_t n, int32_t offset, struct GeoArrowError* error) {
+  for (int64_t i = 0; i < n; i++) {
+    GEOARROW_RETURN_NOT_OK(
+        GeoArrowNativeWriterAppendSize(writer, offset, node->size, error));
+    GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendLinestringOffsets(
+        writer, node + 1, node->size, offset + 1, error));
+
+    node += node->size + 1;
+  }
+
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowNativeWriterAppendMultiPolygonOffsets(
+    struct GeoArrowNativeWriter* writer, const struct GeoArrowGeometryNode* node,
+    struct GeoArrowError* error) {
+  GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendSize(writer, 0, node->size, error));
+  uint32_t n_polygons = node->size;
+  ++node;
+  for (uint32_t i = 0; i < n_polygons; i++) {
+    GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendSize(writer, 1, node->size, error));
+    GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendLinestringOffsets(
+        writer, node + 1, node->size, 2, error));
+    node += node->size + 1;
+  }
+
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowNativeWriterAppendValidity(
+    struct GeoArrowNativeWriter* writer, int is_valid) {
+  struct GeoArrowNativeWriterPrivate* private_data =
+      (struct GeoArrowNativeWriterPrivate*)writer->private_data;
+
+  private_data->current_length++;
+
+  if (!is_valid) {
+    if (private_data->validity.buffer.data == NULL) {
+      NANOARROW_RETURN_NOT_OK(
+          ArrowBitmapReserve(&private_data->validity, private_data->current_length));
+      ArrowBitmapAppendUnsafe(&private_data->validity, 1,
+                              private_data->current_length - 1);
+    }
+
+    private_data->null_count++;
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(&private_data->validity, 0, 1));
+  } else if (private_data->validity.buffer.data != NULL) {
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(&private_data->validity, 1, 1));
+  }
+
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowNativeWriterAppendNull(struct GeoArrowNativeWriter* writer) {
+  GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendEmpty(writer, NULL));
+  GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendValidity(writer, 0));
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer,
+                                             struct GeoArrowGeometryView geom,
+                                             struct GeoArrowError* error) {
+  struct GeoArrowNativeWriterPrivate* private_data =
+      (struct GeoArrowNativeWriterPrivate*)writer->private_data;
+
+  uint32_t coord_count = GeoArrowGeometryViewNumCoords(geom);
+
+  const struct GeoArrowGeometryNode* node = geom.root;
+
+  // Any EMPTY can be appended to any builder
+  if (coord_count == 0) {
+    GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendEmpty(writer, error));
+    GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendValidity(writer, 1));
+    return GEOARROW_OK;
+  }
+
+  // Handle the offsets (and determine if this geometry can, in fact, be
+  // added to the builder)
+  switch (private_data->builder.view.schema_view.geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_POINT:
+      if (coord_count > 1) {
+        GeoArrowErrorSet(
+            error, "Can't append geometry with coord count >1 to array of type POINT");
+        return EINVAL;
+      }
+      break;
+    case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+      switch (node->geometry_type) {
+        case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+          GEOARROW_RETURN_NOT_OK(
+              GeoArrowNativeWriterAppendLinestringOffsets(writer, node, 1, 0, error));
+          break;
+
+        case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+          if (node->size > 1) {
+            GeoArrowErrorSet(
+                error,
+                "Can't append MULTILINESTRING with size >1 to array of type LINESTRING");
+            return EINVAL;
+          }
+
+          GEOARROW_RETURN_NOT_OK(
+              GeoArrowNativeWriterAppendLinestringOffsets(writer, node + 1, 1, 0, error));
+          break;
+
+        default:
+          GeoArrowErrorSet(error, "Can't append %s to array of type LINESTRING",
+                           GeoArrowGeometryTypeString(node->geometry_type));
+          return EINVAL;
+      }
+      break;
+    case GEOARROW_GEOMETRY_TYPE_POLYGON:
+      switch (node->geometry_type) {
+        case GEOARROW_GEOMETRY_TYPE_POLYGON: {
+          GEOARROW_RETURN_NOT_OK(
+              GeoArrowNativeWriterAppendPolygonOffsets(writer, node, 1, 0, error));
+          break;
+        }
+        case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+          if (node->size > 1) {
+            GeoArrowErrorSet(
+                error, "Can't append MULTIPOLYGON with size >1 to array of type POLYGON");
+            return EINVAL;
+          }
+
+          GEOARROW_RETURN_NOT_OK(
+              GeoArrowNativeWriterAppendPolygonOffsets(writer, node + 1, 1, 0, error));
+          break;
+
+        default:
+          GeoArrowErrorSet(error, "Can't append %s to array of type POLYGON",
+                           GeoArrowGeometryTypeString(node->geometry_type));
+          return EINVAL;
+      }
+      break;
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+      switch (node->geometry_type) {
+        case GEOARROW_GEOMETRY_TYPE_POINT:
+        case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+          GEOARROW_RETURN_NOT_OK(
+              GeoArrowNativeWriterAppendSize(writer, 0, coord_count, error));
+          break;
+
+        default:
+          GeoArrowErrorSet(error, "Can't append %s to array of type MULTIPOINT",
+                           GeoArrowGeometryTypeString(node->geometry_type));
+          return EINVAL;
+      }
+      break;
+    case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+      switch (node->geometry_type) {
+        case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+          // Append a one to the first offset buffer
+          GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendSize(writer, 0, 1, error));
+
+          // Append the linestring to the second offset buffer
+          GEOARROW_RETURN_NOT_OK(
+              GeoArrowNativeWriterAppendLinestringOffsets(writer, node, 1, 1, error));
+          break;
+
+        case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+          // Same math as appending a Polygon
+          GEOARROW_RETURN_NOT_OK(
+              GeoArrowNativeWriterAppendPolygonOffsets(writer, node, 1, 0, error));
+          break;
+
+        default:
+          GeoArrowErrorSet(error, "Can't append %s to array of type MULTILINESTRING",
+                           GeoArrowGeometryTypeString(node->geometry_type));
+          return EINVAL;
+      }
+      break;
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+      switch (node->geometry_type) {
+        case GEOARROW_GEOMETRY_TYPE_POLYGON:
+          // Append a one to the first offset buffer
+          GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendSize(writer, 0, 1, error));
+
+          // Append the polygon to the inner offset buffer
+          GEOARROW_RETURN_NOT_OK(
+              GeoArrowNativeWriterAppendPolygonOffsets(writer, node, 1, 1, error));
+          break;
+
+        case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+          GEOARROW_RETURN_NOT_OK(
+              GeoArrowNativeWriterAppendMultiPolygonOffsets(writer, node, error));
+          break;
+
+        default:
+          GeoArrowErrorSet(error, "Can't append %s to array of type MULTIPOLYGON",
+                           GeoArrowGeometryTypeString(node->geometry_type));
+          return EINVAL;
+      }
+      break;
+    default:
+      GeoArrowErrorSet(error, "Unexpected builder geometry type");
+      return EINVAL;
+  }
+
+  // Append coords
+  GEOARROW_RETURN_NOT_OK(
+      GeoArrowBuilderCoordsReserve(&private_data->builder, coord_count));
+  GeoArrowNativeWriterAppendCoordsUnsafe(writer, geom);
+
+  // Append to validity buffer
+  GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendValidity(writer, 1));
+
   return GEOARROW_OK;
 }
 
@@ -751,7 +1118,6 @@ GeoArrowErrorCode GeoArrowNativeWriterInitVisitor(struct GeoArrowNativeWriter* w
       return EINVAL;
   }
 
-  NANOARROW_RETURN_NOT_OK(GeoArrowNativeWriterEnsureOutputInitialized(writer));
   v->private_data = writer;
   return GEOARROW_OK;
 }

@@ -192,6 +192,10 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayViewVisitNative)
 #define GeoArrowNativeWriterInit \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowNativeWriterInit)
+#define GeoArrowNativeWriterAppend \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowNativeWriterAppend)
+#define GeoArrowNativeWriterAppendNull \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowNativeWriterAppendNull)
 #define GeoArrowNativeWriterInitVisitor \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowNativeWriterInitVisitor)
 #define GeoArrowNativeWriterFinish \
