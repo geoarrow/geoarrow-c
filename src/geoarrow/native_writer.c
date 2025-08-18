@@ -424,6 +424,7 @@ GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer
           GEOARROW_RETURN_NOT_OK(
               GeoArrowNativeWriterAppendSize(writer, 0, coord_count, error));
           break;
+
         default:
           GeoArrowErrorSet(error, "Can't append %s to array of type MULTIPOINT",
                            GeoArrowGeometryTypeString(node->geometry_type));
@@ -444,6 +445,7 @@ GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer
           // Same math as appending a Polygon
           GEOARROW_RETURN_NOT_OK(
               GeoArrowNativeWriterAppendPolygonOffsets(writer, node, 1, 0, error));
+          break;
 
         default:
           GeoArrowErrorSet(error, "Can't append %s to array of type MULTILINESTRING",
@@ -467,6 +469,7 @@ GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer
           GEOARROW_RETURN_NOT_OK(
               GeoArrowNativeWriterAppendMultiPolygonOffsets(writer, node, error));
           break;
+
         default:
           GeoArrowErrorSet(error, "Can't append %s to array of type MULTIPOLYGON",
                            GeoArrowGeometryTypeString(node->geometry_type));

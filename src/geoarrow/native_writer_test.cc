@@ -695,7 +695,8 @@ TEST(NativeWriterTest, WriteLinestringGeometry) {
   EXPECT_EQ(array_out.length, 3);
   EXPECT_EQ(array_out.null_count, 1);
 
-  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_LINESTRING), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_LINESTRING),
+            GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(
@@ -735,7 +736,8 @@ TEST(NativeWriterTest, WritePolygonGeometry) {
   EXPECT_EQ(array_out.length, 3);
   EXPECT_EQ(array_out.null_count, 1);
 
-  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POLYGON), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POLYGON),
+            GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(
@@ -775,7 +777,8 @@ TEST(NativeWriterTest, WriteMultiPointGeometry) {
   EXPECT_EQ(array_out.length, 3);
   EXPECT_EQ(array_out.null_count, 1);
 
-  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_MULTIPOINT), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_MULTIPOINT),
+            GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
 
   EXPECT_EQ(
@@ -787,6 +790,93 @@ TEST(NativeWriterTest, WriteMultiPointGeometry) {
   EXPECT_EQ(values[0], "MULTIPOINT ((1 2), (3 4))");
   EXPECT_EQ(values[1], "<null value>");
   EXPECT_EQ(values[2], "MULTIPOINT EMPTY");
+
+  ArrowArrayRelease(&array_out);
+}
+
+TEST(NativeWriterTest, WriteMultiLinestringGeometry) {
+  WKXTester tester;
+
+  struct GeoArrowNativeWriter builder;
+  ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_MULTILINESTRING),
+            GEOARROW_OK);
+
+  auto geom = tester.AsGeometry("MULTILINESTRING ((1 2, 3 4), (5 6, 7 8))");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+            GEOARROW_OK);
+
+  ASSERT_EQ(GeoArrowNativeWriterAppendNull(&builder), GEOARROW_OK);
+
+  geom = tester.AsGeometry("MULTILINESTRING EMPTY");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+            GEOARROW_OK);
+
+  struct ArrowArray array_out;
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowNativeWriterFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowNativeWriterReset(&builder);
+
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.null_count, 1);
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_MULTILINESTRING),
+            GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0], "MULTILINESTRING ((1 2, 3 4), (5 6, 7 8))");
+  EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(values[2], "MULTILINESTRING EMPTY");
+
+  ArrowArrayRelease(&array_out);
+}
+
+TEST(NativeWriterTest, WriteMultiPolygonGeometry) {
+  WKXTester tester;
+
+  struct GeoArrowNativeWriter builder;
+  ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_MULTIPOLYGON), GEOARROW_OK);
+
+  auto geom = tester.AsGeometry(
+      "MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)), ((20 35, 10 30, 10 10, 30 5, 45 20, "
+      "20 35), (30 20, 20 15, 20 25, 30 20)))");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+            GEOARROW_OK);
+
+  ASSERT_EQ(GeoArrowNativeWriterAppendNull(&builder), GEOARROW_OK);
+
+  geom = tester.AsGeometry("MULTIPOLYGON EMPTY");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+            GEOARROW_OK);
+
+  struct ArrowArray array_out;
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowNativeWriterFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowNativeWriterReset(&builder);
+
+  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.null_count, 1);
+
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_MULTIPOLYGON),
+            GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 3);
+  EXPECT_EQ(values[0],
+            "MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)), ((20 35, 10 30, 10 10, 30 5, "
+            "45 20, 20 35), (30 20, 20 15, 20 25, 30 20)))");
+  EXPECT_EQ(values[1], "<null value>");
+  EXPECT_EQ(values[2], "MULTIPOLYGON EMPTY");
 
   ArrowArrayRelease(&array_out);
 }
