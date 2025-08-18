@@ -632,27 +632,48 @@ INSTANTIATE_TEST_SUITE_P(
         ));
 
 TEST(NativeWriterTest, WritePointGeometry) {
+  struct GeoArrowError error;
   WKXTester tester;
 
   struct GeoArrowNativeWriter builder;
   ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_POINT), GEOARROW_OK);
 
+  // A POINT
   auto geom = tester.AsGeometry("POINT (1 2)");
-  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
             GEOARROW_OK);
 
+  // A null
   ASSERT_EQ(GeoArrowNativeWriterAppendNull(&builder), GEOARROW_OK);
 
+  // An EMPTY of the same type
   geom = tester.AsGeometry("POINT EMPTY");
-  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
             GEOARROW_OK);
+
+  // An EMPTY of a different type
+  geom = tester.AsGeometry("GEOMETRYCOLLECTION EMPTY");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
+            GEOARROW_OK);
+
+  // A MULTIPOINT with exactly one child
+  geom = tester.AsGeometry("MULTIPOINT ((3 4))");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
+            GEOARROW_OK);
+
+  // ...but not a MULTIPOINT with >1 child
+  geom = tester.AsGeometry("MULTIPOINT ((5 6), (7 8))");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
+            EINVAL);
+  ASSERT_STREQ(error.message,
+               "Can't append geometry with coord count >1 to array of type POINT");
 
   struct ArrowArray array_out;
   struct GeoArrowArrayView array_view;
   EXPECT_EQ(GeoArrowNativeWriterFinish(&builder, &array_out, nullptr), GEOARROW_OK);
   GeoArrowNativeWriterReset(&builder);
 
-  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.length, 5);
   EXPECT_EQ(array_out.null_count, 1);
 
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT), GEOARROW_OK);
@@ -663,36 +684,59 @@ TEST(NativeWriterTest, WritePointGeometry) {
       GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
-  ASSERT_EQ(values.size(), 3);
+  ASSERT_EQ(values.size(), 5);
   EXPECT_EQ(values[0], "POINT (1 2)");
   EXPECT_EQ(values[1], "<null value>");
   EXPECT_EQ(values[2], "POINT (nan nan)");
+  EXPECT_EQ(values[3], "POINT (nan nan)");
+  EXPECT_EQ(values[4], "POINT (3 4)");
 
   ArrowArrayRelease(&array_out);
 }
 
 TEST(NativeWriterTest, WriteLinestringGeometry) {
+  struct GeoArrowError error;
   WKXTester tester;
 
   struct GeoArrowNativeWriter builder;
   ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_LINESTRING), GEOARROW_OK);
 
+  // A LINESTRING
   auto geom = tester.AsGeometry("LINESTRING (1 2, 3 4)");
-  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
             GEOARROW_OK);
 
+  // A null
   ASSERT_EQ(GeoArrowNativeWriterAppendNull(&builder), GEOARROW_OK);
 
+  // An empty of the same type
   geom = tester.AsGeometry("LINESTRING EMPTY");
-  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
             GEOARROW_OK);
+
+  // An empty of a different type
+  geom = tester.AsGeometry("GEOMETRYCOLLECTION EMPTY");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
+            GEOARROW_OK);
+
+  // A MULTILINESTRING with 1 child
+  geom = tester.AsGeometry("MULTILINESTRING ((5 6, 7 8))");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
+            GEOARROW_OK);
+
+  // ...but not a MULTILINESTRING with >1 child
+  geom = tester.AsGeometry("MULTILINESTRING ((5 6, 7 8), (9 10, 11 12))");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
+            EINVAL);
+  ASSERT_STREQ(error.message,
+               "Can't append MULTILINESTRING with size >1 to array of type LINESTRING");
 
   struct ArrowArray array_out;
   struct GeoArrowArrayView array_view;
-  EXPECT_EQ(GeoArrowNativeWriterFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowNativeWriterFinish(&builder, &array_out, &error), GEOARROW_OK);
   GeoArrowNativeWriterReset(&builder);
 
-  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.length, 5);
   EXPECT_EQ(array_out.null_count, 1);
 
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_LINESTRING),
@@ -704,36 +748,60 @@ TEST(NativeWriterTest, WriteLinestringGeometry) {
       GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
-  ASSERT_EQ(values.size(), 3);
+  ASSERT_EQ(values.size(), 5);
   EXPECT_EQ(values[0], "LINESTRING (1 2, 3 4)");
   EXPECT_EQ(values[1], "<null value>");
   EXPECT_EQ(values[2], "LINESTRING EMPTY");
+  EXPECT_EQ(values[3], "LINESTRING EMPTY");
+  EXPECT_EQ(values[4], "LINESTRING (5 6, 7 8)");
 
   ArrowArrayRelease(&array_out);
 }
 
 TEST(NativeWriterTest, WritePolygonGeometry) {
+  struct GeoArrowError error;
   WKXTester tester;
 
   struct GeoArrowNativeWriter builder;
   ASSERT_EQ(GeoArrowNativeWriterInit(&builder, GEOARROW_TYPE_POLYGON), GEOARROW_OK);
 
-  auto geom = tester.AsGeometry("POLYGON ((0 0, 1 0, 0 1, 0 0))");
-  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+  // A POLYGON
+  auto geom = tester.AsGeometry("POLYGON ((0 0, 10 0, 0 10, 0 0), (1 1, 1 5, 5 1, 1 1))");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
             GEOARROW_OK);
 
+  // A null
   ASSERT_EQ(GeoArrowNativeWriterAppendNull(&builder), GEOARROW_OK);
 
+  // An EMPTY
   geom = tester.AsGeometry("POLYGON EMPTY");
-  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
             GEOARROW_OK);
+
+  // An EMPTY of a different type
+  geom = tester.AsGeometry("GEOMETRYCOLLECTION EMPTY");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
+            GEOARROW_OK);
+
+  // A MULTIPOLYGON with 1 child
+  geom = tester.AsGeometry("MULTIPOLYGON (((0 0, 0 -10, -10 0, 0 0)))");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
+            GEOARROW_OK);
+
+  // ...but not a MULTIPOLYGON with >1 child
+  geom = tester.AsGeometry(
+      "MULTIPOLYGON (((0 0, 0 -10, -10 0, 0 0)), ((0 0, 1 0, 0 1, 0 0)))");
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
+            EINVAL);
+  ASSERT_STREQ(error.message,
+               "Can't append MULTIPOLYGON with size >1 to array of type POLYGON");
 
   struct ArrowArray array_out;
   struct GeoArrowArrayView array_view;
   EXPECT_EQ(GeoArrowNativeWriterFinish(&builder, &array_out, nullptr), GEOARROW_OK);
   GeoArrowNativeWriterReset(&builder);
 
-  EXPECT_EQ(array_out.length, 3);
+  EXPECT_EQ(array_out.length, 5);
   EXPECT_EQ(array_out.null_count, 1);
 
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POLYGON),
@@ -745,10 +813,12 @@ TEST(NativeWriterTest, WritePolygonGeometry) {
       GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
-  ASSERT_EQ(values.size(), 3);
-  EXPECT_EQ(values[0], "POLYGON ((0 0, 1 0, 0 1, 0 0))");
+  ASSERT_EQ(values.size(), 5);
+  EXPECT_EQ(values[0], "POLYGON ((0 0, 10 0, 0 10, 0 0), (1 1, 1 5, 5 1, 1 1))");
   EXPECT_EQ(values[1], "<null value>");
   EXPECT_EQ(values[2], "POLYGON EMPTY");
+  EXPECT_EQ(values[3], "POLYGON EMPTY");
+  EXPECT_EQ(values[4], "POLYGON ((0 0, 0 -10, -10 0, 0 0))");
 
   ArrowArrayRelease(&array_out);
 }

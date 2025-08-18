@@ -387,7 +387,8 @@ GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer
 
           GEOARROW_RETURN_NOT_OK(
               GeoArrowNativeWriterAppendLinestringOffsets(writer, node + 1, 1, 0, error));
-          return GEOARROW_OK;
+          break;
+
         default:
           GeoArrowErrorSet(error, "Can't append %s to array of type LINESTRING",
                            GeoArrowGeometryTypeString(node->geometry_type));
@@ -410,7 +411,8 @@ GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer
 
           GEOARROW_RETURN_NOT_OK(
               GeoArrowNativeWriterAppendPolygonOffsets(writer, node + 1, 1, 0, error));
-          return GEOARROW_OK;
+          break;
+
         default:
           GeoArrowErrorSet(error, "Can't append %s to array of type POLYGON",
                            GeoArrowGeometryTypeString(node->geometry_type));
@@ -440,6 +442,7 @@ GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer
           // Append the linestring to the second offset buffer
           GEOARROW_RETURN_NOT_OK(
               GeoArrowNativeWriterAppendLinestringOffsets(writer, node, 1, 1, error));
+          break;
 
         case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
           // Same math as appending a Polygon
@@ -462,7 +465,6 @@ GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer
           // Append the polygon to the inner offset buffer
           GEOARROW_RETURN_NOT_OK(
               GeoArrowNativeWriterAppendPolygonOffsets(writer, node, 1, 1, error));
-
           break;
 
         case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
