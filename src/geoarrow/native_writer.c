@@ -186,6 +186,7 @@ static GeoArrowErrorCode GeoArrowNativeWriterAppendEmpty(
       return NANOARROW_OK;
     default:
       NANOARROW_DCHECK(0 && "unreachable");
+      return EINVAL;
   }
 }
 
