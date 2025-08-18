@@ -548,6 +548,43 @@ TEST_P(WKTRoundtripParameterizedTestFixture, NativeWriterWKTRoundtrip) {
   array_out.release(&array_out);
 }
 
+TEST_P(WKTRoundtripParameterizedTestFixture, NativeWriterWKTRoundtripGeometry) {
+  // Initialize params
+  const std::string& wkt = GetParam().first;
+  enum GeoArrowType type = GetParam().second;
+
+  // Initialize the builder
+  struct GeoArrowNativeWriter builder;
+  struct GeoArrowError error;
+  ASSERT_EQ(GeoArrowNativeWriterInit(&builder, type), GEOARROW_OK);
+
+  WKXTester tester;
+  auto geom = tester.AsGeometry(wkt);
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
+            GEOARROW_OK);
+
+  // Finalize the output
+  struct ArrowArray array_out;
+  struct GeoArrowArrayView array_view;
+  EXPECT_EQ(GeoArrowNativeWriterFinish(&builder, &array_out, nullptr), GEOARROW_OK);
+  GeoArrowNativeWriterReset(&builder);
+
+  // Validate it
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array_out, nullptr), GEOARROW_OK);
+
+  // Visit the output
+  EXPECT_EQ(
+      GeoArrowArrayViewVisitNative(&array_view, 0, array_out.length, tester.WKTVisitor()),
+      GEOARROW_OK);
+
+  auto values = tester.WKTValues("<null value>");
+  ASSERT_EQ(values.size(), 1);
+  EXPECT_EQ(values[0], wkt);
+
+  array_out.release(&array_out);
+}
+
 #define WKT_PAIR(a, b) \
   std::pair<std::string, enum GeoArrowType> { a, b }
 
