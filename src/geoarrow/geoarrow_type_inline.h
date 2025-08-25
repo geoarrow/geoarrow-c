@@ -440,6 +440,75 @@ static inline uint32_t GeoArrowGeometryViewNumCoords(struct GeoArrowGeometryView
   return count;
 }
 
+/// \brief Copy coordinates from a GeoArrowGeometryView into into output of a given
+/// dimensions
+/// \ingroup geoarrow-geometry
+static inline void GeoArrowGeometryViewCopyCoordsGeneric(
+    struct GeoArrowGeometryView geom, uint8_t** out, const int32_t* out_strides,
+    enum GeoArrowDimensions out_dimensions) {
+  int map[4];
+
+  uint32_t out_dimensions_size = _GeoArrowkNumDimensions[out_dimensions];
+
+  const uint8_t* src[5];
+  src[0] = _GeoArrowkEmptyPointCoords;
+
+  int32_t src_strides[5];
+  src_strides[0] = 0;
+
+  const uint8_t* src_mapped;
+  int32_t src_stride_mapped;
+  uint8_t* out_cursor[4];
+  memcpy(out_cursor, out, out_dimensions_size * sizeof(uint8_t*));
+  int32_t out_stride;
+
+  const struct GeoArrowGeometryNode* end = geom.root + geom.size_nodes;
+  for (const struct GeoArrowGeometryNode* node = geom.root; node < end; ++node) {
+    switch (node->geometry_type) {
+      case GEOARROW_GEOMETRY_TYPE_POINT:
+      case GEOARROW_GEOMETRY_TYPE_LINESTRING: {
+        GeoArrowMapDimensions((enum GeoArrowDimensions)node->dimensions, out_dimensions,
+                              map);
+        src[1] = node->coords[0];
+        src[2] = node->coords[1];
+        src[3] = node->coords[2];
+        src[4] = node->coords[3];
+        src_strides[1] = node->coord_stride[0];
+        src_strides[2] = node->coord_stride[1];
+        src_strides[3] = node->coord_stride[2];
+        src_strides[4] = node->coord_stride[3];
+
+        for (uint32_t i = 0; i < out_dimensions_size; ++i) {
+          src_mapped = src[map[i] + 1];
+          src_stride_mapped = src_strides[map[i] + 1];
+          out_stride = out_strides[i];
+
+          if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
+            for (uint32_t j = 0; j < node->size; ++j) {
+              for (uint32_t k = 0; k < sizeof(double); ++k) {
+                out_cursor[i][k] = src_mapped[sizeof(double) - i];
+              }
+              src_mapped += src_stride_mapped;
+              out_cursor[i] += out_stride;
+            }
+          } else {
+            for (uint32_t j = 0; j < node->size; ++j) {
+              memcpy(out_cursor[i], src_mapped, sizeof(double));
+              src_mapped += src_stride_mapped;
+              out_cursor[i] += out_stride;
+            }
+          }
+        }
+
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
+}
+
 // Copies coordinates from one view to another keeping dimensions the same.
 // This function fills dimensions in dst but not in src with NAN; dimensions
 // in src but not in dst are dropped. This is useful for generic copying of

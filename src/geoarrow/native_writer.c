@@ -190,85 +190,22 @@ static GeoArrowErrorCode GeoArrowNativeWriterAppendEmpty(
   }
 }
 
-static inline void GeoArrowNativeWriterCopyCoordsInterleaved(const uint8_t** cursor,
-                                                             const int32_t* stride,
-                                                             double* coords, int n_values,
-                                                             uint32_t n_coords) {
-  double* coords_cursor = coords;
-  for (uint32_t i = 0; i < n_coords; i++) {
-    for (int i = 0; i < n_values; i++) {
-      memcpy(coords_cursor++, cursor[i], sizeof(double));
-      cursor[i] += stride[i];
-    }
-  }
-}
-
-static inline void GeoArrowNativeWriterCopyCoordsSeparated(
-    const uint8_t** cursor, const int32_t* stride, double** coords, int64_t dst_offset,
-    int n_values, uint32_t n_coords) {
-  for (int j = 0; j < n_values; j++) {
-    double* coords_cursor = coords[j] + dst_offset;
-    for (uint32_t i = 0; i < n_coords; i++) {
-      memcpy(coords_cursor++, cursor[j], sizeof(double));
-      cursor[j] += stride[j];
-    }
-  }
-}
-
-static inline void GeoArrowNativeWriterAppendNodeCoordsUnsafe(
-    const struct GeoArrowGeometryNode* node, struct GeoArrowWritableCoordView* dst,
-    enum GeoArrowDimensions dst_dim, enum GeoArrowCoordType dst_coord_type) {
-  int map[4];
-  GeoArrowMapDimensions((enum GeoArrowDimensions)node->dimensions, dst_dim, map);
-  const uint8_t* srcs[] = {_GeoArrowkEmptyPointCoords, node->coords[0], node->coords[1],
-                           node->coords[2], node->coords[3]};
-  const int32_t src_strides[] = {0, node->coord_stride[0], node->coord_stride[1],
-                                 node->coord_stride[2], node->coord_stride[3]};
-  const uint8_t* dsts[4];
-  int32_t dst_strides[4];
-  for (int i = 0; i < 4; i++) {
-    dsts[i] = srcs[map[i] + 1];
-    dst_strides[i] = src_strides[map[i] + 1];
-  }
-
-  switch (dst_coord_type) {
-    case GEOARROW_COORD_TYPE_INTERLEAVED:
-      GeoArrowNativeWriterCopyCoordsInterleaved(
-          dsts, dst_strides, dst->values[0] + (dst->n_values * dst->size_coords),
-          dst->n_values, node->size);
-      break;
-    case GEOARROW_COORD_TYPE_SEPARATE:
-      GeoArrowNativeWriterCopyCoordsSeparated(
-          dsts, dst_strides, dst->values, dst->size_coords, dst->n_values, node->size);
-      break;
-    default:
-      NANOARROW_DCHECK(0 && "unreachable");
-  }
-
-  dst->size_coords += node->size;
-}
-
 static void GeoArrowNativeWriterAppendCoordsUnsafe(struct GeoArrowNativeWriter* writer,
                                                    struct GeoArrowGeometryView geom) {
   struct GeoArrowNativeWriterPrivate* private_data =
       (struct GeoArrowNativeWriterPrivate*)writer->private_data;
 
-  const struct GeoArrowGeometryNode* end = geom.root + geom.size_nodes;
-  for (const struct GeoArrowGeometryNode* node = geom.root; node < end; node++) {
-    switch (node->geometry_type) {
-      case GEOARROW_GEOMETRY_TYPE_POINT:
-      case GEOARROW_GEOMETRY_TYPE_LINESTRING: {
-        GeoArrowNativeWriterAppendNodeCoordsUnsafe(
-            node, &private_data->builder.view.coords,
-            private_data->builder.view.schema_view.dimensions,
-            private_data->builder.view.schema_view.coord_type);
-        break;
-      }
-
-      default:
-        break;
-    }
+  struct GeoArrowWritableCoordView* out_coords = &private_data->builder.view.coords;
+  uint8_t* out[4];
+  int32_t strides[4];
+  for (int i = 0; i < 4; i++) {
+    out[i] = (uint8_t*)(out_coords->values[i] +
+                        out_coords->coords_stride * out_coords->size_coords);
+    strides[i] = out_coords->coords_stride * sizeof(double);
   }
+
+  GeoArrowGeometryViewCopyCoordsGeneric(
+      geom, out, strides, private_data->builder.view.schema_view.dimensions);
 }
 
 static GeoArrowErrorCode GeoArrowNativeWriterAppendLinestringOffsets(
@@ -488,6 +425,7 @@ GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer
   GEOARROW_RETURN_NOT_OK(
       GeoArrowBuilderCoordsReserve(&private_data->builder, coord_count));
   GeoArrowNativeWriterAppendCoordsUnsafe(writer, geom);
+  private_data->builder.view.coords.size_coords += coord_count;
 
   // Append to validity buffer
   GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendValidity(writer, 1));
