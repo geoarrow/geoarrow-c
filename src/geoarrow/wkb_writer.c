@@ -330,6 +330,7 @@ static GeoArrowErrorCode GeoArrowWKBWriterAppendBuffer(struct ArrowBuffer* value
   const struct GeoArrowGeometryNode* end = geom.root + geom.size_nodes;
   for (const struct GeoArrowGeometryNode* node = geom.root; node < end; ++node) {
     if (remaining_rings > 0) {
+      GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, node->size));
       GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendSequence(values, node));
       --remaining_rings;
       continue;
