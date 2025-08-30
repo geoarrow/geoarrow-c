@@ -250,8 +250,8 @@ void GeoArrowWKBWriterReset(struct GeoArrowWKBWriter* writer) {
   writer->private_data = NULL;
 }
 
-static GeoArrowErrorCode GeoArrowNativeWriterAppendValidity(
-    struct GeoArrowWKBWriter* writer, int is_valid) {
+static GeoArrowErrorCode GeoArrowWkbWriterAppendValidity(struct GeoArrowWKBWriter* writer,
+                                                         int is_valid) {
   struct WKBWriterPrivate* private_data = (struct WKBWriterPrivate*)writer->private_data;
 
   private_data->length++;
@@ -276,7 +276,7 @@ GeoArrowErrorCode GeoArrowWKBWriterAppendNull(struct GeoArrowWKBWriter* writer) 
   struct WKBWriterPrivate* private_data = (struct WKBWriterPrivate*)writer->private_data;
   GEOARROW_RETURN_NOT_OK(ArrowBufferAppendInt32(
       &private_data->offsets, (int32_t)private_data->values.size_bytes));
-  GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterAppendValidity(writer, 0));
+  GEOARROW_RETURN_NOT_OK(GeoArrowWkbWriterAppendValidity(writer, 0));
   return GEOARROW_OK;
 }
 
@@ -348,11 +348,14 @@ static GeoArrowErrorCode GeoArrowWKBWriterAppendBuffer(struct ArrowBuffer* value
         } else {
           GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendSequence(values, node));
         }
+
+        break;
       }
       case GEOARROW_GEOMETRY_TYPE_LINESTRING: {
         GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, iso_geometry_type));
         GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, node->size));
         GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendSequence(values, node));
+        break;
       }
       case GEOARROW_GEOMETRY_TYPE_POLYGON: {
         GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, iso_geometry_type));
