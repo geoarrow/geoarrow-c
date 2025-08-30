@@ -222,6 +222,8 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBWriterInitVisitor)
 #define GeoArrowWKBWriterAppend \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBWriterAppend)
+#define GeoArrowWKBWriterAppendNull \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBWriterAppendNull)
 #define GeoArrowWKBWriterFinish \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBWriterFinish)
 #define GeoArrowWKBWriterReset \
