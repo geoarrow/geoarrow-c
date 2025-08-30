@@ -320,6 +320,7 @@ static GeoArrowErrorCode GeoArrowWKBWriterAppendSequence(
     }
   }
 
+  values->size_bytes += bytes_required;
   return GEOARROW_OK;
 }
 
@@ -384,5 +385,6 @@ GeoArrowErrorCode GeoArrowWKBWriterAppend(struct GeoArrowWKBWriter* writer,
   GEOARROW_RETURN_NOT_OK(ArrowBufferAppendInt32(
       &private_data->offsets, (int32_t)private_data->values.size_bytes));
   GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendBuffer(&private_data->values, geom));
+  GEOARROW_RETURN_NOT_OK(GeoArrowWkbWriterAppendValidity(writer, 1));
   return GEOARROW_OK;
 }

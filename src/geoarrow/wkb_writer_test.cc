@@ -121,6 +121,9 @@ TEST(WKBWriterTest, WKBWriterTestPoint) {
                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
 
   EXPECT_EQ(tester.AsWKB(wkt), expected);
+
+  auto geom = tester.AsGeometry(wkt);
+  EXPECT_EQ(tester.AsWKB(geom), expected);
 }
 
 TEST(WKBWriterTest, WKBWriterTestLinestring) {
