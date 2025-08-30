@@ -267,9 +267,9 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowd2sfixed_buffered_n)
 #endif
 
-    /// \brief Represents an errno-compatible error code
-    /// \ingroup geoarrow-utility
-    typedef int GeoArrowErrorCode;
+/// \brief Represents an errno-compatible error code
+/// \ingroup geoarrow-utility
+typedef int GeoArrowErrorCode;
 
 struct GeoArrowError {
   char message[1024];
