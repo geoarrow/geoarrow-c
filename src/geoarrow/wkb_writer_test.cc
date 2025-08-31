@@ -120,8 +120,10 @@ TEST(WKBWriterTest, WKBWriterTestPoint) {
                                  0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
 
+  // Check via the visitor
   EXPECT_EQ(tester.AsWKB(wkt), expected);
 
+  // Check via the geometry appender
   auto geom = tester.AsGeometry(wkt);
   EXPECT_EQ(tester.AsWKB(geom), expected);
 }
@@ -135,7 +137,12 @@ TEST(WKBWriterTest, WKBWriterTestLinestring) {
        0x00, 0x3e, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40, 0x00, 0x00, 0x00,
        0x00, 0x00, 0x00, 0x28, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x45, 0x40});
 
+  // Check via the visitor
   EXPECT_EQ(tester.AsWKB(wkt), expected);
+
+  // Check via the geometry appender
+  auto geom = tester.AsGeometry(wkt);
+  EXPECT_EQ(tester.AsWKB(geom), expected);
 }
 
 TEST(WKBWriterTest, WKBWriterTestPolygon) {
@@ -157,7 +164,12 @@ TEST(WKBWriterTest, WKBWriterTestPolygon) {
        0x00, 0x00, 0x00, 0x34, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x34, 0x40, 0x00,
        0x00, 0x00, 0x00, 0x00, 0x00, 0x3e, 0x40});
 
+  // Check via the visitor
   EXPECT_EQ(tester.AsWKB(wkt), expected);
+
+  // Check via the geometry appender
+  auto geom = tester.AsGeometry(wkt);
+  EXPECT_EQ(tester.AsWKB(geom), expected);
 }
 
 TEST(WKBWriterTest, WKBWriterTestMultipoint) {
@@ -173,7 +185,12 @@ TEST(WKBWriterTest, WKBWriterTestMultipoint) {
        0x34, 0x40, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3e,
        0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
 
+  // Check via the visitor
   EXPECT_EQ(tester.AsWKB(wkt), expected);
+
+  // Check via the geometry appender
+  auto geom = tester.AsGeometry(wkt);
+  EXPECT_EQ(tester.AsWKB(geom), expected);
 }
 
 TEST(WKBWriterTest, WKBWriterTestNestedCollection) {
@@ -212,5 +229,10 @@ TEST(WKBWriterTest, WKBWriterTestNestedCollection) {
        0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3e, 0x40,
        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
 
+  // Check via the visitor
   EXPECT_EQ(tester.AsWKB(wkt), expected);
+
+  // Check via the geometry appender
+  auto geom = tester.AsGeometry(wkt);
+  EXPECT_EQ(tester.AsWKB(geom), expected);
 }

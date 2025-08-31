@@ -54,7 +54,7 @@ static int feat_start_wkb(struct GeoArrowVisitor* v) {
   if (private->values.size_bytes > 2147483647) {
     return EOVERFLOW;
   }
-  return ArrowBufferAppendInt32(&private->offsets, (int32_t) private->values.size_bytes);
+  return ArrowBufferAppendInt32(&private->offsets, (int32_t)private->values.size_bytes);
 }
 
 static int null_feat_wkb(struct GeoArrowVisitor* v) {
@@ -229,7 +229,7 @@ GeoArrowErrorCode GeoArrowWKBWriterFinish(struct GeoArrowWKBWriter* writer,
   }
 
   NANOARROW_RETURN_NOT_OK(
-      ArrowBufferAppendInt32(&private->offsets, (int32_t) private->values.size_bytes));
+      ArrowBufferAppendInt32(&private->offsets, (int32_t)private->values.size_bytes));
   NANOARROW_RETURN_NOT_OK(ArrowArrayInitFromType(array, private->storage_type));
   ArrowArraySetValidityBitmap(array, &private->validity);
   NANOARROW_RETURN_NOT_OK(ArrowArraySetBuffer(array, 1, &private->offsets));
@@ -341,6 +341,7 @@ static GeoArrowErrorCode GeoArrowWKBWriterAppendBuffer(struct ArrowBuffer* value
 
     switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT: {
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt8(values, GEOARROW_NATIVE_ENDIAN));
         GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, iso_geometry_type));
         if (node->size == 0) {
           uint32_t n_values = _GeoArrowkNumDimensions[node->dimensions];
@@ -353,12 +354,14 @@ static GeoArrowErrorCode GeoArrowWKBWriterAppendBuffer(struct ArrowBuffer* value
         break;
       }
       case GEOARROW_GEOMETRY_TYPE_LINESTRING: {
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt8(values, GEOARROW_NATIVE_ENDIAN));
         GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, iso_geometry_type));
         GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, node->size));
         GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendSequence(values, node));
         break;
       }
       case GEOARROW_GEOMETRY_TYPE_POLYGON: {
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt8(values, GEOARROW_NATIVE_ENDIAN));
         GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, iso_geometry_type));
         GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, node->size));
         remaining_rings = node->size;
@@ -368,6 +371,7 @@ static GeoArrowErrorCode GeoArrowWKBWriterAppendBuffer(struct ArrowBuffer* value
       case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
       case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
       case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt8(values, GEOARROW_NATIVE_ENDIAN));
         GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, iso_geometry_type));
         GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, node->size));
         break;
