@@ -409,48 +409,11 @@ void GeoArrowGeometryInitVisitor(struct GeoArrowGeometry* geom,
 // This must be divisible by 2, 3, and 4
 #define COORD_CACHE_SIZE_ELEMENTS 384
 
-static inline void GeoArrowGeometryMaybeBswapCoords(
-    const struct GeoArrowGeometryNode* node, double* values, int64_t n) {
-  if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
-    uint64_t* data64 = (uint64_t*)values;
-    for (int i = 0; i < n; i++) {
-      data64[i] = GEOARROW_BSWAP64(data64[i]);
-    }
-  }
-}
-
-static inline void GeoArrowGeometryAlignCoords(const uint8_t** cursor,
-                                               const int32_t* stride, double* coords,
-                                               int n_values, uint32_t n_coords) {
-  double* coords_cursor = coords;
-  for (uint32_t i = 0; i < n_coords; i++) {
-    for (int j = 0; j < n_values; j++) {
-      memcpy(coords_cursor++, cursor[j], sizeof(double));
-      cursor[j] += stride[j];
-    }
-  }
-}
-
 static GeoArrowErrorCode GeoArrowGeometryVisitSequence(
     const struct GeoArrowGeometryNode* node, struct GeoArrowVisitor* v) {
   double coords[COORD_CACHE_SIZE_ELEMENTS];
   struct GeoArrowCoordView coord_view;
-  switch (node->dimensions) {
-    case GEOARROW_DIMENSIONS_XY:
-      coord_view.n_values = 2;
-      break;
-    case GEOARROW_DIMENSIONS_XYZ:
-    case GEOARROW_DIMENSIONS_XYM:
-      coord_view.n_values = 3;
-      break;
-    case GEOARROW_DIMENSIONS_XYZM:
-      coord_view.n_values = 4;
-      break;
-    default:
-      GeoArrowErrorSet(v->error, "Invalid dimensions: %d", (int)node->dimensions);
-      return EINVAL;
-  }
-
+  coord_view.n_values = _GeoArrowkNumDimensions[node->dimensions];
   for (int i = 0; i < coord_view.n_values; i++) {
     coord_view.values[i] = coords + i;
     coord_view.coords_stride = coord_view.n_values;
@@ -461,22 +424,24 @@ static GeoArrowErrorCode GeoArrowGeometryVisitSequence(
 
   // Process full chunks
   int64_t n_coords = node->size;
-  const uint8_t* cursor[4];
-  memcpy(cursor, node->coords, sizeof(cursor));
+
+  struct GeoArrowGeometryNode node_cursor = *node;
+  node_cursor.size = chunk_size;
 
   while (n_coords > chunk_size) {
-    GeoArrowGeometryAlignCoords(cursor, node->coord_stride, coords, coord_view.n_values,
-                                chunk_size);
-    GeoArrowGeometryMaybeBswapCoords(node, coords, COORD_CACHE_SIZE_ELEMENTS);
+    GeoArrowGeometryNodeWriteSequence(&node_cursor, (uint8_t*)&coords, sizeof(coords));
     coord_view.n_coords = chunk_size;
     GEOARROW_RETURN_NOT_OK(v->coords(v, &coord_view));
     n_coords -= chunk_size;
+    for (int i = 0; i < coord_view.n_values; i++) {
+      node_cursor.coords[i] += chunk_size * node_cursor.coord_stride[i];
+    }
   }
 
-  GeoArrowGeometryAlignCoords(cursor, node->coord_stride, coords, coord_view.n_values,
-                              (uint32_t)n_coords);
-  GeoArrowGeometryMaybeBswapCoords(node, coords, COORD_CACHE_SIZE_ELEMENTS);
+  // Process the last chunk
+  node_cursor.size = (uint32_t)n_coords;
   coord_view.n_coords = n_coords;
+  GeoArrowGeometryNodeWriteSequence(&node_cursor, (uint8_t*)&coords, sizeof(coords));
   GEOARROW_RETURN_NOT_OK(v->coords(v, &coord_view));
 
   return GEOARROW_OK;
