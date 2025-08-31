@@ -460,7 +460,7 @@ static inline uint32_t GeoArrowGeometryViewNumCoords(struct GeoArrowGeometryView
   return count;
 }
 
-static inline int64_t GeoArrowGeometryNodeWriteSequenceUnsafe(
+static inline int64_t GeoArrowGeometryNodeWriteSequence(
     const struct GeoArrowGeometryNode* node, uint8_t* dst, int64_t dst_size) {
   uint32_t n_values = _GeoArrowkNumDimensions[node->dimensions];
   uint32_t n_coords = node->size;

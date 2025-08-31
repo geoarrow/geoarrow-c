@@ -278,36 +278,18 @@ GeoArrowErrorCode GeoArrowWKBWriterAppendNull(struct GeoArrowWKBWriter* writer) 
 
 static GeoArrowErrorCode GeoArrowWKBWriterAppendSequence(
     struct ArrowBuffer* values, const struct GeoArrowGeometryNode* node) {
-  uint32_t n_values = _GeoArrowkNumDimensions[node->dimensions];
-  uint32_t n_coords = node->size;
-  int64_t bytes_required = n_values * n_coords * sizeof(double);
-  NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(values, bytes_required));
-
-  const uint8_t* src[4];
-  memcpy(src, node->coords, sizeof(src));
-
   uint8_t* dst = values->data + values->size_bytes;
-  for (uint32_t i = 0; i < n_coords; i++) {
-    for (uint32_t j = 0; j < n_values; j++) {
-      memcpy(dst, src[j], sizeof(double));
-      dst += sizeof(double);
-      src[j] += node->coord_stride[j];
-    }
+  int64_t dst_size = values->capacity_bytes - values->size_bytes;
+  int64_t bytes_required = GeoArrowGeometryNodeWriteSequence(node, dst, dst_size);
+  if (bytes_required <= dst_size) {
+    values->size_bytes += bytes_required;
+    return GEOARROW_OK;
   }
 
-  if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
-    dst -= bytes_required;
-    uint64_t tmp;
-    for (uint32_t i = 0; i < n_coords; i++) {
-      memcpy(&tmp, dst, sizeof(double));
-      tmp = GEOARROW_BSWAP64(tmp);
-      memcpy(dst, &tmp, sizeof(double));
-      dst += sizeof(double);
-    }
-  }
-
-  values->size_bytes += bytes_required;
-  return GEOARROW_OK;
+  NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(values, bytes_required));
+  dst_size = values->capacity_bytes - values->size_bytes;
+  NANOARROW_DCHECK(dst_size >= bytes_required);
+  return GeoArrowWKBWriterAppendSequence(values, node);
 }
 
 static GeoArrowErrorCode GeoArrowWKBWriterAppendBuffer(struct ArrowBuffer* values,
