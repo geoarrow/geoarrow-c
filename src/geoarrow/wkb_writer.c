@@ -21,10 +21,6 @@ struct WKBWriterPrivate {
   int feat_is_null;
 };
 
-#ifndef GEOARROW_NATIVE_ENDIAN
-#define GEOARROW_NATIVE_ENDIAN 0x01
-#endif
-
 static uint8_t kWKBWriterEmptyPointCoords2[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                                 0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00,
                                                 0x00, 0x00, 0xf8, 0x7f};
@@ -54,7 +50,7 @@ static int feat_start_wkb(struct GeoArrowVisitor* v) {
   if (private->values.size_bytes > 2147483647) {
     return EOVERFLOW;
   }
-  return ArrowBufferAppendInt32(&private->offsets, (int32_t)private->values.size_bytes);
+  return ArrowBufferAppendInt32(&private->offsets, (int32_t) private->values.size_bytes);
 }
 
 static int null_feat_wkb(struct GeoArrowVisitor* v) {
@@ -229,7 +225,7 @@ GeoArrowErrorCode GeoArrowWKBWriterFinish(struct GeoArrowWKBWriter* writer,
   }
 
   NANOARROW_RETURN_NOT_OK(
-      ArrowBufferAppendInt32(&private->offsets, (int32_t)private->values.size_bytes));
+      ArrowBufferAppendInt32(&private->offsets, (int32_t) private->values.size_bytes));
   NANOARROW_RETURN_NOT_OK(ArrowArrayInitFromType(array, private->storage_type));
   ArrowArraySetValidityBitmap(array, &private->validity);
   NANOARROW_RETURN_NOT_OK(ArrowArraySetBuffer(array, 1, &private->offsets));
@@ -279,16 +275,6 @@ GeoArrowErrorCode GeoArrowWKBWriterAppendNull(struct GeoArrowWKBWriter* writer) 
   GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendValidity(writer, 0));
   return GEOARROW_OK;
 }
-
-#ifndef GEOARROW_BSWAP64
-static inline uint64_t bswap_64(uint64_t x) {
-  return (((x & 0xFFULL) << 56) | ((x & 0xFF00ULL) << 40) | ((x & 0xFF0000ULL) << 24) |
-          ((x & 0xFF000000ULL) << 8) | ((x & 0xFF00000000ULL) >> 8) |
-          ((x & 0xFF0000000000ULL) >> 24) | ((x & 0xFF000000000000ULL) >> 40) |
-          ((x & 0xFF00000000000000ULL) >> 56));
-}
-#define GEOARROW_BSWAP64(x) bswap_64(x)
-#endif
 
 static GeoArrowErrorCode GeoArrowWKBWriterAppendSequence(
     struct ArrowBuffer* values, const struct GeoArrowGeometryNode* node) {

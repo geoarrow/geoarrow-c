@@ -7,10 +7,6 @@
 #include "geoarrow/hpp/array_util.hpp"
 #include "geoarrow/hpp/exception.hpp"
 
-#ifndef GEOARROW_NATIVE_ENDIAN
-#define GEOARROW_NATIVE_ENDIAN 0x01
-#endif
-
 /// \defgroup hpp-binary-utility Binary iteration utilities
 ///
 /// This header provides utilities for iterating over serialized GeoArrow arrays

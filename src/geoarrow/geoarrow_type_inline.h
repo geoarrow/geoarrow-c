@@ -11,6 +11,26 @@
 extern "C" {
 #endif
 
+static inline uint32_t GeoArrowBSwap32(uint32_t x) {
+  return (((x & 0xFF) << 24) | ((x & 0xFF00) << 8) | ((x & 0xFF0000) >> 8) |
+          ((x & 0xFF000000) >> 24));
+}
+
+static inline uint64_t GeoArrowBSwap64(uint64_t x) {
+  return (((x & 0xFFULL) << 56) | ((x & 0xFF00ULL) << 40) | ((x & 0xFF0000ULL) << 24) |
+          ((x & 0xFF000000ULL) << 8) | ((x & 0xFF00000000ULL) >> 8) |
+          ((x & 0xFF0000000000ULL) >> 24) | ((x & 0xFF000000000000ULL) >> 40) |
+          ((x & 0xFF00000000000000ULL) >> 56));
+}
+
+#ifndef GEOARROW_BSWAP32
+#define GEOARROW_BSWAP32(x) GeoArrowBSwap32(x)
+#endif
+
+#ifndef GEOARROW_BSWAP64
+#define GEOARROW_BSWAP64(x) GeoArrowBSwap64(x)
+#endif
+
 /// \brief Extract GeometryType from a GeoArrowType
 /// \ingroup geoarrow-schema
 static inline enum GeoArrowGeometryType GeoArrowGeometryTypeFromType(
@@ -440,8 +460,47 @@ static inline uint32_t GeoArrowGeometryViewNumCoords(struct GeoArrowGeometryView
   return count;
 }
 
+static inline int64_t GeoArrowGeometryNodeWriteSequenceUnsafe(
+    const struct GeoArrowGeometryNode* node, uint8_t* dst, int64_t dst_size) {
+  uint32_t n_values = _GeoArrowkNumDimensions[node->dimensions];
+  uint32_t n_coords = node->size;
+  int64_t bytes_required = n_values * n_coords * sizeof(double);
+  if (dst_size < bytes_required) {
+    return bytes_required;
+  }
+
+  const uint8_t* src[4];
+  memcpy(src, node->coords, sizeof(src));
+
+  for (uint32_t i = 0; i < n_coords; i++) {
+    for (uint32_t j = 0; j < n_values; j++) {
+      memcpy(dst, src[j], sizeof(double));
+      dst += sizeof(double);
+      src[j] += node->coord_stride[j];
+    }
+  }
+
+  if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
+    dst -= bytes_required;
+    uint64_t tmp;
+    for (uint32_t i = 0; i < n_coords; i++) {
+      memcpy(&tmp, dst, sizeof(double));
+      tmp = GEOARROW_BSWAP64(tmp);
+      memcpy(dst, &tmp, sizeof(double));
+      dst += sizeof(double);
+    }
+  }
+
+  return bytes_required;
+}
+
 /// \brief Copy coordinates from a GeoArrowGeometryView into into output of a given
 /// dimensions
+///
+/// This is useful to append all coordinates of a geometry of arbitrary dimensions
+/// dimensions into output of fixed dimensions. The combination of out and out_strides
+/// may be used to copy into either separated or interleaved coordinate output.
+///
 /// \ingroup geoarrow-geometry
 static inline void GeoArrowGeometryViewCopyCoordsGeneric(
     struct GeoArrowGeometryView geom, uint8_t** out, const int32_t* out_strides,

@@ -415,16 +415,6 @@ void GeoArrowGeometryInitVisitor(struct GeoArrowGeometry* geom,
   v->private_data = geom;
 }
 
-#ifndef GEOARROW_BSWAP64
-static inline uint64_t bswap_64(uint64_t x) {
-  return (((x & 0xFFULL) << 56) | ((x & 0xFF00ULL) << 40) | ((x & 0xFF0000ULL) << 24) |
-          ((x & 0xFF000000ULL) << 8) | ((x & 0xFF00000000ULL) >> 8) |
-          ((x & 0xFF0000000000ULL) >> 24) | ((x & 0xFF000000000000ULL) >> 40) |
-          ((x & 0xFF00000000000000ULL) >> 56));
-}
-#define GEOARROW_BSWAP64(x) bswap_64(x)
-#endif
-
 // This must be divisible by 2, 3, and 4
 #define COORD_CACHE_SIZE_ELEMENTS 384
 
