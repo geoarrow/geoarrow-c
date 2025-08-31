@@ -110,51 +110,54 @@ GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
   struct GeoArrowGeometryPrivate* private_data =
       (struct GeoArrowGeometryPrivate*)dst->private_data;
 
-  // Calculate the number of coordinates required
-  int64_t coords_required = 0;
-  const struct GeoArrowGeometryNode* src_node = src.root;
-  for (int64_t i = 0; i < src.size_nodes; i++) {
-    switch (src_node->geometry_type) {
+  // Calculate the number of coordinate storage bytes required
+  int64_t total_bytes_reqired = 0;
+  const struct GeoArrowGeometryNode* src_end = src.root + src.size_nodes;
+  for (const struct GeoArrowGeometryNode* node = src.root; node < src_end; ++node) {
+    switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
-        coords_required += _GeoArrowkNumDimensions[src_node->dimensions] * src_node->size;
+        total_bytes_reqired += GeoArrowGeometryNodeWriteSequence(node, NULL, 0);
         break;
       default:
         break;
     }
-
-    ++src_node;
   }
 
   // Resize the destination coords array
   GEOARROW_RETURN_NOT_OK(
-      ArrowBufferResize(&private_data->coords, coords_required * sizeof(double), 0));
+      ArrowBufferResize(&private_data->coords, total_bytes_reqired, 0));
 
   // Copy the nodes
   GEOARROW_RETURN_NOT_OK(GeoArrowGeometryShallowCopy(src, dst));
 
   // Copy the data and update the nodes to point to the internal data
-  double* coords = (double*)private_data->coords.data;
-  struct GeoArrowGeometryNode* dst_node = dst->root;
+  uint8_t* coords_buf = private_data->coords.data;
+  int64_t coords_buf_size = private_data->coords.size_bytes;
+  int64_t bytes_written;
   int n_values;
-  for (int64_t i = 0; i < dst->size_nodes; i++) {
-    switch (dst_node->geometry_type) {
+
+  struct GeoArrowGeometryNode* dst_end = dst->root + dst->size_nodes;
+  for (struct GeoArrowGeometryNode* node = dst->root; node < dst_end; ++node) {
+    switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
-        n_values = _GeoArrowkNumDimensions[dst_node->dimensions];
-        GeoArrowGeometryAlignCoords(dst_node->coords, dst_node->coord_stride, coords,
-                                    n_values, dst_node->size);
-        for (int i = 0; i < 4; i++) {
-          dst_node->coords[i] = (uint8_t*)(coords + i);
-          dst_node->coord_stride[i] = n_values * sizeof(double);
+        n_values = _GeoArrowkNumDimensions[node->dimensions];
+        bytes_written =
+            GeoArrowGeometryNodeWriteSequence(node, coords_buf, coords_buf_size);
+        // NANOARROW_DCHECK(bytes_written <= coords_buf_size);
+
+        for (int i = 0; i < n_values; i++) {
+          node->coords[i] = coords_buf + (i * sizeof(double));
+          node->coord_stride[i] = n_values * sizeof(double);
         }
-        coords += dst_node->size * n_values;
+
+        coords_buf += bytes_written;
+        coords_buf_size -= bytes_written;
         break;
       default:
         break;
     }
-
-    ++dst_node;
   }
 
   return GEOARROW_OK;
