@@ -250,7 +250,7 @@ void GeoArrowWKBWriterReset(struct GeoArrowWKBWriter* writer) {
   writer->private_data = NULL;
 }
 
-static GeoArrowErrorCode GeoArrowWkbWriterAppendValidity(struct GeoArrowWKBWriter* writer,
+static GeoArrowErrorCode GeoArrowWKBWriterAppendValidity(struct GeoArrowWKBWriter* writer,
                                                          int is_valid) {
   struct WKBWriterPrivate* private_data = (struct WKBWriterPrivate*)writer->private_data;
 
@@ -276,7 +276,7 @@ GeoArrowErrorCode GeoArrowWKBWriterAppendNull(struct GeoArrowWKBWriter* writer) 
   struct WKBWriterPrivate* private_data = (struct WKBWriterPrivate*)writer->private_data;
   GEOARROW_RETURN_NOT_OK(ArrowBufferAppendInt32(
       &private_data->offsets, (int32_t)private_data->values.size_bytes));
-  GEOARROW_RETURN_NOT_OK(GeoArrowWkbWriterAppendValidity(writer, 0));
+  GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendValidity(writer, 0));
   return GEOARROW_OK;
 }
 
@@ -389,6 +389,6 @@ GeoArrowErrorCode GeoArrowWKBWriterAppend(struct GeoArrowWKBWriter* writer,
   GEOARROW_RETURN_NOT_OK(ArrowBufferAppendInt32(
       &private_data->offsets, (int32_t)private_data->values.size_bytes));
   GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendBuffer(&private_data->values, geom));
-  GEOARROW_RETURN_NOT_OK(GeoArrowWkbWriterAppendValidity(writer, 1));
+  GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendValidity(writer, 1));
   return GEOARROW_OK;
 }
