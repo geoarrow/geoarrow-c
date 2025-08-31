@@ -93,18 +93,6 @@ GeoArrowErrorCode GeoArrowGeometryAppendNode(struct GeoArrowGeometry* geom,
   return GeoArrowGeometryAppendNodeInline(geom, out);
 }
 
-static inline void GeoArrowGeometryAlignCoords(const uint8_t** cursor,
-                                               const int32_t* stride, double* coords,
-                                               int n_values, uint32_t n_coords) {
-  double* coords_cursor = coords;
-  for (uint32_t i = 0; i < n_coords; i++) {
-    for (int j = 0; j < n_values; j++) {
-      memcpy(coords_cursor++, cursor[j], sizeof(double));
-      cursor[j] += stride[j];
-    }
-  }
-}
-
 GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
                                            struct GeoArrowGeometry* dst) {
   struct GeoArrowGeometryPrivate* private_data =
@@ -427,6 +415,18 @@ static inline void GeoArrowGeometryMaybeBswapCoords(
     uint64_t* data64 = (uint64_t*)values;
     for (int i = 0; i < n; i++) {
       data64[i] = GEOARROW_BSWAP64(data64[i]);
+    }
+  }
+}
+
+static inline void GeoArrowGeometryAlignCoords(const uint8_t** cursor,
+                                               const int32_t* stride, double* coords,
+                                               int n_values, uint32_t n_coords) {
+  double* coords_cursor = coords;
+  for (uint32_t i = 0; i < n_coords; i++) {
+    for (int j = 0; j < n_values; j++) {
+      memcpy(coords_cursor++, cursor[j], sizeof(double));
+      cursor[j] += stride[j];
     }
   }
 }
