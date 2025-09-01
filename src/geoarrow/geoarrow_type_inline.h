@@ -460,6 +460,8 @@ static inline uint32_t GeoArrowGeometryViewNumCoords(struct GeoArrowGeometryView
   return count;
 }
 
+/// \brief Copy a GeoArrowGeometryNode representing a sequence to interleaved coordinates
+/// \ingroup geoarrow-geometry
 static inline int64_t GeoArrowGeometryNodeWriteSequence(
     const struct GeoArrowGeometryNode* node, uint8_t* dst, int64_t dst_size) {
   uint32_t n_values = _GeoArrowkNumDimensions[node->dimensions];
@@ -493,7 +495,7 @@ static inline int64_t GeoArrowGeometryNodeWriteSequence(
   return bytes_required;
 }
 
-/// \brief Copy coordinates from a GeoArrowGeometryView into into output of a given
+/// \brief Copy all coordinates from a GeoArrowGeometryView into into output of a given
 /// dimensions
 ///
 /// This is useful to append all coordinates of a geometry of arbitrary dimensions
