@@ -14,4 +14,8 @@
 
 #define GEOARROW_USE_RYU 1
 
+#ifndef GEOARROW_NATIVE_ENDIAN
+#define GEOARROW_NATIVE_ENDIAN 0x01
+#endif
+
 #endif
