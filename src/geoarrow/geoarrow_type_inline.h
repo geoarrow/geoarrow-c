@@ -481,13 +481,12 @@ static inline int64_t GeoArrowGeometryNodeWriteSequence(
   }
 
   if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
-    dst -= bytes_required;
+    uint8_t* dst_end = dst;
     uint64_t tmp;
-    for (uint32_t i = 0; i < n_coords; i++) {
+    for (dst -= bytes_required; dst < dst_end; dst += sizeof(double)) {
       memcpy(&tmp, dst, sizeof(double));
       tmp = GEOARROW_BSWAP64(tmp);
       memcpy(dst, &tmp, sizeof(double));
-      dst += sizeof(double);
     }
   }
 
