@@ -80,6 +80,39 @@ TEST(WKBWriterTest, WKBWriterTestOneValidOneNull) {
   GeoArrowWKBWriterReset(&writer);
 }
 
+TEST(WKBWriterTest, WKBWriterTestOneValidOneNullGeometry) {
+  WKXTester tester;
+  struct GeoArrowWKBWriter writer;
+  GeoArrowWKBWriterInit(&writer);
+
+  auto geom = tester.AsGeometry("POINT (1 2)");
+  ASSERT_EQ(GeoArrowWKBWriterAppend(&writer, GeoArrowGeometryAsView(&geom)), GEOARROW_OK);
+
+  ASSERT_EQ(GeoArrowWKBWriterAppendNull(&writer), GEOARROW_OK);
+
+  geom = tester.AsGeometry("POINT (3 4)");
+  ASSERT_EQ(GeoArrowWKBWriterAppend(&writer, GeoArrowGeometryAsView(&geom)), GEOARROW_OK);
+
+  struct ArrowArray array;
+  EXPECT_EQ(GeoArrowWKBWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+  EXPECT_EQ(array.length, 3);
+  EXPECT_EQ(array.null_count, 1);
+
+  struct ArrowArrayView view;
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_BINARY);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
+
+  EXPECT_FALSE(ArrowArrayViewIsNull(&view, 0));
+  EXPECT_TRUE(ArrowArrayViewIsNull(&view, 1));
+  EXPECT_FALSE(ArrowArrayViewIsNull(&view, 2));
+  struct ArrowBufferView value = ArrowArrayViewGetBytesUnsafe(&view, 0);
+  EXPECT_GE(value.size_bytes, 0);
+
+  ArrowArrayViewReset(&view);
+  array.release(&array);
+  GeoArrowWKBWriterReset(&writer);
+}
+
 TEST(WKBWriterTest, WKBWriterTestErrors) {
   struct GeoArrowWKBWriter writer;
   struct GeoArrowVisitor v;
@@ -114,6 +147,30 @@ TEST(WKBWriterTest, WKBWriterTestErrors) {
 
 TEST(WKBWriterTest, WKBWriterTestPoint) {
   WKXTester tester;
+
+  const char* wkt = "POINT (30 10)";
+  std::vector<uint8_t> expected({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                 0x00, 0x00, 0x00, 0x00, 0x3e, 0x40, 0x00,
+                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x24, 0x40});
+
+  // Check via the visitor
+  EXPECT_EQ(tester.AsWKB(wkt), expected);
+
+  // Check via the geometry appender
+  auto geom = tester.AsGeometry(wkt);
+  EXPECT_EQ(tester.AsWKB(geom), expected);
+}
+
+TEST(WKBWriterTest, WKBWriterTestPointEmpty) {
+  WKXTester tester;
+
+  for (const char* wkt :
+       {"POINT EMPTY", "POINT Z EMPTY", "POINT M EMPTY", "POINT ZM EMPTY"}) {
+    auto geom = tester.AsGeometry(wkt);
+    ASSERT_EQ(geom.root->size, 0);
+    auto wkb = tester.AsWKB(geom);
+    EXPECT_EQ(tester.AsWKT(wkb), wkt);
+  }
 
   const char* wkt = "POINT (30 10)";
   std::vector<uint8_t> expected({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
