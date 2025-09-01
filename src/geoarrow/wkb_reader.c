@@ -10,18 +10,6 @@
 #define EWKB_M_BIT 0x40000000
 #define EWKB_SRID_BIT 0x20000000
 
-#ifndef GEOARROW_NATIVE_ENDIAN
-#define GEOARROW_NATIVE_ENDIAN 0x01
-#endif
-
-#ifndef GEOARROW_BSWAP32
-static inline uint32_t bswap_32(uint32_t x) {
-  return (((x & 0xFF) << 24) | ((x & 0xFF00) << 8) | ((x & 0xFF0000) >> 8) |
-          ((x & 0xFF000000) >> 24));
-}
-#define GEOARROW_BSWAP32(x) bswap_32(x)
-#endif
-
 struct WKBReaderPrivate {
   const uint8_t* data;
   int64_t size_bytes;

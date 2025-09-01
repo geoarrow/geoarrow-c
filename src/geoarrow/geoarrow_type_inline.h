@@ -11,6 +11,26 @@
 extern "C" {
 #endif
 
+static inline uint32_t GeoArrowBSwap32(uint32_t x) {
+  return (((x & 0xFF) << 24) | ((x & 0xFF00) << 8) | ((x & 0xFF0000) >> 8) |
+          ((x & 0xFF000000) >> 24));
+}
+
+static inline uint64_t GeoArrowBSwap64(uint64_t x) {
+  return (((x & 0xFFULL) << 56) | ((x & 0xFF00ULL) << 40) | ((x & 0xFF0000ULL) << 24) |
+          ((x & 0xFF000000ULL) << 8) | ((x & 0xFF00000000ULL) >> 8) |
+          ((x & 0xFF0000000000ULL) >> 24) | ((x & 0xFF000000000000ULL) >> 40) |
+          ((x & 0xFF00000000000000ULL) >> 56));
+}
+
+#ifndef GEOARROW_BSWAP32
+#define GEOARROW_BSWAP32(x) GeoArrowBSwap32(x)
+#endif
+
+#ifndef GEOARROW_BSWAP64
+#define GEOARROW_BSWAP64(x) GeoArrowBSwap64(x)
+#endif
+
 /// \brief Extract GeometryType from a GeoArrowType
 /// \ingroup geoarrow-schema
 static inline enum GeoArrowGeometryType GeoArrowGeometryTypeFromType(
@@ -438,6 +458,116 @@ static inline uint32_t GeoArrowGeometryViewNumCoords(struct GeoArrowGeometryView
   }
 
   return count;
+}
+
+/// \brief Copy a GeoArrowGeometryNode representing a sequence to interleaved coordinates
+/// \ingroup geoarrow-geometry
+static inline int64_t GeoArrowGeometryNodeWriteSequence(
+    const struct GeoArrowGeometryNode* node, uint8_t* dst, int64_t dst_size) {
+  uint32_t n_values = _GeoArrowkNumDimensions[node->dimensions];
+  uint32_t n_coords = node->size;
+  int64_t bytes_required = n_values * n_coords * sizeof(double);
+  if (dst_size < bytes_required) {
+    return bytes_required;
+  }
+
+  const uint8_t* src[4];
+  memcpy(src, node->coords, sizeof(src));
+
+  for (uint32_t i = 0; i < n_coords; i++) {
+    for (uint32_t j = 0; j < n_values; j++) {
+      memcpy(dst, src[j], sizeof(double));
+      dst += sizeof(double);
+      src[j] += node->coord_stride[j];
+    }
+  }
+
+  if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
+    uint64_t tmp;
+    for (uint8_t* dst_swap = dst - bytes_required; dst_swap < dst;
+         dst_swap += sizeof(double)) {
+      memcpy(&tmp, dst_swap, sizeof(double));
+      tmp = GEOARROW_BSWAP64(tmp);
+      memcpy(dst_swap, &tmp, sizeof(double));
+    }
+  }
+
+  return bytes_required;
+}
+
+/// \brief Copy all coordinates from a GeoArrowGeometryView into into output of a given
+/// dimensions
+///
+/// This is useful to append all coordinates of a geometry of arbitrary dimensions
+/// dimensions into output of fixed dimensions. The combination of out and out_strides
+/// may be used to copy into either separated or interleaved coordinate output.
+///
+/// \ingroup geoarrow-geometry
+static inline void GeoArrowGeometryViewCopyCoordsGeneric(
+    struct GeoArrowGeometryView geom, uint8_t** out, const int32_t* out_strides,
+    enum GeoArrowDimensions out_dimensions) {
+  int map[4];
+
+  uint32_t out_dimensions_size = _GeoArrowkNumDimensions[out_dimensions];
+
+  const uint8_t* src[5];
+  src[0] = _GeoArrowkEmptyPointCoords;
+
+  int32_t src_strides[5];
+  src_strides[0] = 0;
+
+  const uint8_t* src_mapped;
+  int32_t src_stride_mapped;
+  uint8_t* out_cursor[4];
+  memcpy(out_cursor, out, out_dimensions_size * sizeof(uint8_t*));
+  int32_t out_stride;
+
+  const struct GeoArrowGeometryNode* end = geom.root + geom.size_nodes;
+  for (const struct GeoArrowGeometryNode* node = geom.root; node < end; ++node) {
+    switch (node->geometry_type) {
+      case GEOARROW_GEOMETRY_TYPE_POINT:
+      case GEOARROW_GEOMETRY_TYPE_LINESTRING: {
+        GeoArrowMapDimensions((enum GeoArrowDimensions)node->dimensions, out_dimensions,
+                              map);
+        src[1] = node->coords[0];
+        src[2] = node->coords[1];
+        src[3] = node->coords[2];
+        src[4] = node->coords[3];
+        src_strides[1] = node->coord_stride[0];
+        src_strides[2] = node->coord_stride[1];
+        src_strides[3] = node->coord_stride[2];
+        src_strides[4] = node->coord_stride[3];
+
+        for (uint32_t i = 0; i < out_dimensions_size; ++i) {
+          src_mapped = src[map[i] + 1];
+          src_stride_mapped = src_strides[map[i] + 1];
+          out_stride = out_strides[i];
+
+          if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
+            uint64_t tmp;
+            for (uint32_t j = 0; j < node->size; ++j) {
+              memcpy(&tmp, src_mapped, sizeof(double));
+              tmp = GEOARROW_BSWAP64(tmp);
+              memcpy(out_cursor[i], &tmp, sizeof(double));
+              src_mapped += src_stride_mapped;
+              out_cursor[i] += out_stride;
+            }
+          } else {
+            for (uint32_t j = 0; j < node->size; ++j) {
+              memcpy(out_cursor[i], src_mapped, sizeof(double));
+              src_mapped += src_stride_mapped;
+              out_cursor[i] += out_stride;
+            }
+          }
+        }
+
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
 }
 
 // Copies coordinates from one view to another keeping dimensions the same.

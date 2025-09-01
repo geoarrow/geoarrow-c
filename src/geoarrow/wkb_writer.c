@@ -21,10 +21,6 @@ struct WKBWriterPrivate {
   int feat_is_null;
 };
 
-#ifndef GEOARROW_NATIVE_ENDIAN
-#define GEOARROW_NATIVE_ENDIAN 0x01
-#endif
-
 static uint8_t kWKBWriterEmptyPointCoords2[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                                 0xf8, 0x7f, 0x00, 0x00, 0x00, 0x00,
                                                 0x00, 0x00, 0xf8, 0x7f};
@@ -248,4 +244,119 @@ void GeoArrowWKBWriterReset(struct GeoArrowWKBWriter* writer) {
   ArrowBufferReset(&private->values);
   ArrowFree(private);
   writer->private_data = NULL;
+}
+
+static GeoArrowErrorCode GeoArrowWKBWriterAppendValidity(struct GeoArrowWKBWriter* writer,
+                                                         int is_valid) {
+  struct WKBWriterPrivate* private_data = (struct WKBWriterPrivate*)writer->private_data;
+
+  private_data->length++;
+
+  if (!is_valid) {
+    if (private_data->validity.buffer.data == NULL) {
+      NANOARROW_RETURN_NOT_OK(
+          ArrowBitmapReserve(&private_data->validity, private_data->length));
+      ArrowBitmapAppendUnsafe(&private_data->validity, 1, private_data->length - 1);
+    }
+
+    private_data->null_count++;
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(&private_data->validity, 0, 1));
+  } else if (private_data->validity.buffer.data != NULL) {
+    NANOARROW_RETURN_NOT_OK(ArrowBitmapAppend(&private_data->validity, 1, 1));
+  }
+
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowWKBWriterAppendNull(struct GeoArrowWKBWriter* writer) {
+  struct WKBWriterPrivate* private_data = (struct WKBWriterPrivate*)writer->private_data;
+  GEOARROW_RETURN_NOT_OK(ArrowBufferAppendInt32(
+      &private_data->offsets, (int32_t)private_data->values.size_bytes));
+  GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendValidity(writer, 0));
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowWKBWriterAppendSequence(
+    struct ArrowBuffer* values, const struct GeoArrowGeometryNode* node) {
+  uint8_t* dst = values->data + values->size_bytes;
+  int64_t dst_size = values->capacity_bytes - values->size_bytes;
+  int64_t bytes_required = GeoArrowGeometryNodeWriteSequence(node, dst, dst_size);
+  if (bytes_required <= dst_size) {
+    values->size_bytes += bytes_required;
+    return GEOARROW_OK;
+  }
+
+  NANOARROW_RETURN_NOT_OK(ArrowBufferReserve(values, bytes_required));
+  dst_size = values->capacity_bytes - values->size_bytes;
+  NANOARROW_DCHECK(dst_size >= bytes_required);
+  return GeoArrowWKBWriterAppendSequence(values, node);
+}
+
+static GeoArrowErrorCode GeoArrowWKBWriterAppendBuffer(struct ArrowBuffer* values,
+                                                       struct GeoArrowGeometryView geom) {
+  uint32_t remaining_rings = 0;
+
+  const struct GeoArrowGeometryNode* end = geom.root + geom.size_nodes;
+  for (const struct GeoArrowGeometryNode* node = geom.root; node < end; ++node) {
+    if (remaining_rings > 0) {
+      GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, node->size));
+      GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendSequence(values, node));
+      --remaining_rings;
+      continue;
+    }
+
+    uint32_t iso_geometry_type = node->geometry_type + ((node->dimensions - 1) * 1000);
+
+    switch (node->geometry_type) {
+      case GEOARROW_GEOMETRY_TYPE_POINT: {
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt8(values, GEOARROW_NATIVE_ENDIAN));
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, iso_geometry_type));
+        if (node->size == 0) {
+          uint32_t n_values = _GeoArrowkNumDimensions[node->dimensions];
+          GEOARROW_RETURN_NOT_OK(ArrowBufferAppend(values, _GeoArrowkEmptyPointCoords,
+                                                   n_values * sizeof(double)));
+        } else {
+          GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendSequence(values, node));
+        }
+
+        break;
+      }
+      case GEOARROW_GEOMETRY_TYPE_LINESTRING: {
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt8(values, GEOARROW_NATIVE_ENDIAN));
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, iso_geometry_type));
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, node->size));
+        GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendSequence(values, node));
+        break;
+      }
+      case GEOARROW_GEOMETRY_TYPE_POLYGON: {
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt8(values, GEOARROW_NATIVE_ENDIAN));
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, iso_geometry_type));
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, node->size));
+        remaining_rings = node->size;
+        break;
+      }
+      case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+      case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+      case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+      case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt8(values, GEOARROW_NATIVE_ENDIAN));
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, iso_geometry_type));
+        GEOARROW_RETURN_NOT_OK(ArrowBufferAppendUInt32(values, node->size));
+        break;
+      default:
+        return EINVAL;
+    }
+  }
+
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowWKBWriterAppend(struct GeoArrowWKBWriter* writer,
+                                          struct GeoArrowGeometryView geom) {
+  struct WKBWriterPrivate* private_data = (struct WKBWriterPrivate*)writer->private_data;
+  GEOARROW_RETURN_NOT_OK(ArrowBufferAppendInt32(
+      &private_data->offsets, (int32_t)private_data->values.size_bytes));
+  GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendBuffer(&private_data->values, geom));
+  GEOARROW_RETURN_NOT_OK(GeoArrowWKBWriterAppendValidity(writer, 1));
+  return GEOARROW_OK;
 }

@@ -84,7 +84,11 @@ class WKXTester {
   }
 
   std::vector<uint8_t> AsWKB(const GeoArrowGeometry& geometry) {
-    ReadGeometry(geometry, WKBVisitor());
+    int result = GeoArrowWKBWriterAppend(&wkb_writer_, GeoArrowGeometryAsView(&geometry));
+    if (result != GEOARROW_OK) {
+      throw WKXTestException("GeoArrowWKBWriterAppend", result, error_.message);
+    }
+
     return WKBValue();
   }
 

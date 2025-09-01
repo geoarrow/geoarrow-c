@@ -504,6 +504,13 @@ struct GeoArrowWKBWriter {
 /// GeoArrowWKBWriterReset().
 GeoArrowErrorCode GeoArrowWKBWriterInit(struct GeoArrowWKBWriter* writer);
 
+/// \brief Append a null element to this writer
+GeoArrowErrorCode GeoArrowWKBWriterAppendNull(struct GeoArrowWKBWriter* writer);
+
+/// \brief Append a GeoArrowGeometryView to this writer
+GeoArrowErrorCode GeoArrowWKBWriterAppend(struct GeoArrowWKBWriter* writer,
+                                          struct GeoArrowGeometryView geom);
+
 /// \brief Populate a GeoArrowVisitor pointing to this writer
 void GeoArrowWKBWriterInitVisitor(struct GeoArrowWKBWriter* writer,
                                   struct GeoArrowVisitor* v);
