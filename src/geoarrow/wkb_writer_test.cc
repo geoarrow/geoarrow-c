@@ -169,7 +169,9 @@ TEST(WKBWriterTest, WKBWriterTestPointEmpty) {
     auto geom = tester.AsGeometry(wkt);
     ASSERT_EQ(geom.root->size, 0);
     auto wkb = tester.AsWKB(geom);
-    EXPECT_EQ(tester.AsWKT(wkb), wkt);
+
+    auto expected_wkb = tester.AsWKB(wkt);
+    EXPECT_EQ(wkb, expected_wkb);
   }
 
   const char* wkt = "POINT (30 10)";
