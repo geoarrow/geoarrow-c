@@ -542,10 +542,11 @@ static inline void GeoArrowGeometryViewCopyCoordsGeneric(
           out_stride = out_strides[i];
 
           if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
+            uint64_t tmp;
             for (uint32_t j = 0; j < node->size; ++j) {
-              for (uint32_t k = 0; k < sizeof(double); ++k) {
-                out_cursor[i][k] = src_mapped[sizeof(double) - i];
-              }
+              memcpy(&tmp, src_mapped, sizeof(double));
+              tmp = GEOARROW_BSWAP64(tmp);
+              memcpy(out_cursor[i], &tmp, sizeof(double));
               src_mapped += src_stride_mapped;
               out_cursor[i] += out_stride;
             }
