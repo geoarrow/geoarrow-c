@@ -99,13 +99,13 @@ GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
       (struct GeoArrowGeometryPrivate*)dst->private_data;
 
   // Calculate the number of coordinate storage bytes required
-  int64_t total_bytes_reqired = 0;
+  int64_t total_bytes_required = 0;
   const struct GeoArrowGeometryNode* src_end = src.root + src.size_nodes;
   for (const struct GeoArrowGeometryNode* node = src.root; node < src_end; ++node) {
     switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
-        total_bytes_reqired += GeoArrowGeometryNodeWriteSequence(node, NULL, 0);
+        total_bytes_required += GeoArrowGeometryNodeWriteSequence(node, NULL, 0);
         break;
       default:
         break;
@@ -114,7 +114,7 @@ GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
 
   // Resize the destination coords array
   GEOARROW_RETURN_NOT_OK(
-      ArrowBufferResize(&private_data->coords, total_bytes_reqired, 0));
+      ArrowBufferResize(&private_data->coords, total_bytes_required, 0));
 
   // Copy the nodes
   GEOARROW_RETURN_NOT_OK(GeoArrowGeometryShallowCopy(src, dst));
