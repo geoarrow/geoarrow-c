@@ -36,31 +36,69 @@ static inline int WKTWriterWrite(struct WKTWriterPrivate* private, const char* v
 }
 
 static GeoArrowErrorCode WKTWriterWriteGeometryType(
-    struct WKTWriterPrivate* private, enum GeoArrowGeometryType geometry_type,
+    struct WKTWriterPrivate* private_data, enum GeoArrowGeometryType geometry_type,
     enum GeoArrowDimensions dimensions) {
   const char* geometry_type_name = GeoArrowGeometryTypeString(geometry_type);
-  NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, geometry_type_name));
+  NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, geometry_type_name));
 
   switch (dimensions) {
     case GEOARROW_DIMENSIONS_XY:
       break;
     case GEOARROW_DIMENSIONS_XYZ:
-      NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, " Z"));
+      NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, " Z"));
       break;
     case GEOARROW_DIMENSIONS_XYM:
-      NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, " M"));
+      NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, " M"));
       break;
     case GEOARROW_DIMENSIONS_XYZM:
-      NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, " ZM"));
+      NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, " ZM"));
       break;
     default:
-      NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private, " <not valid>"));
+      NANOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, " <not valid>"));
       return EINVAL;
   }
 
-  GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private, " "));
+  GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, " "));
 
   return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode WKTWriterReserveCoords(struct WKTWriterPrivate* private_data,
+                                                int64_t n_coords, int n_values) {
+  int64_t max_chars_per_coord_theoretical =
+      // space + comma after coordinate
+      (n_coords * 2) +
+      // spaces between ordinates
+      (n_coords * (n_values - 1)) +
+      // GeoArrowPrintDouble might require up to 40 accessible bytes per call
+      (40 * n_values);
+
+  // Use a heuristic to estimate the number of characters we are about to write
+  // to avoid more then one allocation for this call. This is normally substantially
+  // less than the theoretical amount.
+  int64_t max_chars_estimated =
+      (n_coords * 2) +               // space + comma after coordinate
+      (n_coords * (n_values - 1)) +  // spaces between ordinates
+      // precision + decimal + estimate of normal
+      // digits to the left of the decimal
+      ((private_data->precision + 1 + 8) * n_coords * n_values) +
+      // Ensure that the last reserve() call doesn't trigger an allocation
+      max_chars_per_coord_theoretical;
+
+  GEOARROW_RETURN_NOT_OK(ArrowBufferReserve(&private_data->values, max_chars_estimated));
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode WKTWriterCheckElementOutputSize(
+    struct WKTWriterPrivate* private_data) {
+  // Check if we've hit our max number of bytes for this feature
+  if (private_data->max_element_size_bytes >= 0 &&
+      (private_data->values.size_bytes - private_data->values_feat_start) >=
+          private_data->max_element_size_bytes) {
+    return EAGAIN;
+  } else {
+    return GEOARROW_OK;
+  }
 }
 
 static inline void WKTWriterWriteDoubleUnsafe(struct WKTWriterPrivate* private,
@@ -155,6 +193,7 @@ static int coords_wkt(struct GeoArrowVisitor* v, const struct GeoArrowCoordView*
 
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
   NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(private));
+  GEOARROW_RETURN_NOT_OK(WKTWriterReserveCoords(private, n_coords, n_dims));
 
   int64_t max_chars_per_coord_theoretical =
       // space + comma after coordinate
@@ -301,18 +340,160 @@ static GeoArrowErrorCode GeoArrowWKTWriterAppendValidity(struct GeoArrowWKTWrite
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowWKTWriterAppendSequence(
+static inline void GeoArrowWKTWriterAppendCoordUnsafe(
+    struct WKTWriterPrivate* private_data, const uint8_t** cursor, const int32_t* strides,
+    int n_values) {
+  double value;
+
+  memcpy(&value, cursor[0], sizeof(double));
+  WKTWriterWriteDoubleUnsafe(private_data, value);
+  cursor[0] += strides[0];
+
+  for (int j = 1; j < n_values; j++) {
+    ArrowBufferAppendUnsafe(&private_data->values, " ", 1);
+    memcpy(&value, cursor[j], sizeof(double));
+    WKTWriterWriteDoubleUnsafe(private_data, value);
+    cursor[0] += strides[j];
+  }
+}
+
+static GeoArrowErrorCode GeoArrowWKTWriterAppendCoordsUnsafe(
+    struct WKTWriterPrivate* private_data, const struct GeoArrowGeometryNode* node,
+    int n_values) {
+  const uint8_t* cursor[4];
+  memcpy(cursor, node->coords, sizeof(cursor));
+
+  int32_t stride[4];
+  memcpy(stride, node->coord_stride, sizeof(stride));
+
+  // Append the first coord
+  GeoArrowWKTWriterAppendCoordUnsafe(private_data, cursor, stride, n_values);
+
+  // Append the rest of the coords
+  for (uint32_t i = 1; i < node->size; i++) {
+    GEOARROW_RETURN_NOT_OK(WKTWriterCheckElementOutputSize(private_data));
+    ArrowBufferAppendUnsafe(&private_data->values, ", ", 1);
+    GeoArrowWKTWriterAppendCoordUnsafe(private_data, cursor, stride, n_values);
+  }
+
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowWKTWriterAppendSequenceOrEmpty(
     struct WKTWriterPrivate* private_data, const struct GeoArrowGeometryNode* node) {
   if (node->size == 0) {
     GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, "EMPTY"));
     return GEOARROW_OK;
   }
 
+  uint32_t n_coords = node->size;
+  int n_values = _GeoArrowkNumDimensions[node->dimensions];
+
+  GEOARROW_RETURN_NOT_OK(WKTWriterReserveCoords(private_data, n_coords, n_values));
+
+  GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, "("));
+  GeoArrowWKTWriterAppendCoordsUnsafe(private_data, node, n_values);
+  GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, ")"));
+
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowWKTWriterAppendFlatMultipoint(
+    struct WKTWriterPrivate* private_data, const struct GeoArrowGeometryNode* node,
+    const struct GeoArrowGeometryNode** node_iter) {
+  int n_values;
+  const uint8_t* cursor[4];
+  int32_t stride[4] = {0, 0, 0, 0};
+
   GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, "("));
 
-  // TODO: print the coordinatess
+  // Append the first child as a coord
+  const struct GeoArrowGeometryNode* child_node = (*node_iter)++;
+  n_values = _GeoArrowkNumDimensions[child_node->dimensions];
+  GEOARROW_RETURN_NOT_OK(
+      WKTWriterReserveCoords(private_data, child_node->size, n_values));
+  memcpy(cursor, child_node->coords, sizeof(cursor));
+  GeoArrowWKTWriterAppendCoordUnsafe(private_data, cursor, stride, n_values);
+
+  // Append the rest of the children as coords
+  for (uint32_t i = 1; i < node->size; i++) {
+    const struct GeoArrowGeometryNode* child_node = (*node_iter)++;
+    n_values = _GeoArrowkNumDimensions[child_node->dimensions];
+    GEOARROW_RETURN_NOT_OK(
+        WKTWriterReserveCoords(private_data, child_node->size, n_values));
+
+    memcpy(cursor, child_node->coords, sizeof(cursor));
+    GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, ", "));
+    GeoArrowWKTWriterAppendCoordUnsafe(private_data, cursor, stride, n_values);
+  }
 
   GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, ")"));
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowWKTWriterAppendTagged(
+    struct WKTWriterPrivate* private_data, const struct GeoArrowGeometryNode** node_iter);
+
+static GeoArrowErrorCode GeoArrowWKTWriterAppendUntagged(
+    struct WKTWriterPrivate* private_data,
+    const struct GeoArrowGeometryNode** node_iter) {
+  const struct GeoArrowGeometryNode* node = (*node_iter)++;
+
+  switch (node->geometry_type) {
+    case GEOARROW_GEOMETRY_TYPE_POINT:
+    case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+      GEOARROW_RETURN_NOT_OK(GeoArrowWKTWriterAppendSequenceOrEmpty(private_data, node));
+      return GEOARROW_OK;
+
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+      if (private_data->use_flat_multipoint) {
+        return GeoArrowWKTWriterAppendFlatMultipoint(private_data, node, node_iter);
+      }
+    case GEOARROW_GEOMETRY_TYPE_POLYGON:
+    case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON: {
+      if (node->size == 0) {
+        GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, "EMPTY"));
+        return GEOARROW_OK;
+      }
+
+      GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, "("));
+      for (uint32_t i = 0; i < node->size; i++) {
+        GEOARROW_RETURN_NOT_OK(GeoArrowWKTWriterAppendUntagged(private_data, node_iter));
+      }
+      GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, ")"));
+      return GEOARROW_OK;
+    }
+    case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
+      if (node->size == 0) {
+        GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, "EMPTY"));
+        return GEOARROW_OK;
+      }
+
+      GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, "("));
+      for (uint32_t i = 0; i < node->size; i++) {
+        GEOARROW_RETURN_NOT_OK(GeoArrowWKTWriterAppendTagged(private_data, node_iter));
+      }
+      GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, ")"));
+      return GEOARROW_OK;
+    default:
+      return EINVAL;
+  }
+}
+
+static GeoArrowErrorCode GeoArrowWKTWriterAppendTagged(
+    struct WKTWriterPrivate* private_data,
+    const struct GeoArrowGeometryNode** node_iter) {
+  const struct GeoArrowGeometryNode* node = *node_iter;
+
+  enum GeoArrowGeometryType geometry_type =
+      (enum GeoArrowGeometryType)node->geometry_type;
+  enum GeoArrowDimensions dimensions = (enum GeoArrowDimensions)node->dimensions;
+
+  GEOARROW_RETURN_NOT_OK(
+      WKTWriterWriteGeometryType(private_data, geometry_type, dimensions));
+  GEOARROW_RETURN_NOT_OK(GeoArrowWKTWriterAppendUntagged(private_data, node_iter));
+
   return GEOARROW_OK;
 }
 
@@ -324,68 +505,31 @@ GeoArrowErrorCode GeoArrowWKTWriterAppendNull(struct GeoArrowWKTWriter* writer) 
   return GEOARROW_OK;
 }
 
-static GeoArrowErrorCode GeoArrowWKTWriterAppendImpl(
-    struct WKTWriterPrivate* private_data, struct GeoArrowGeometryView geom) {
-  uint32_t remaining_rings = 0;
-
-  const struct GeoArrowGeometryNode* end = geom.root + geom.size_nodes;
-  for (const struct GeoArrowGeometryNode* node = geom.root; node < end; ++node) {
-    if (remaining_rings > 1) {
-      GEOARROW_RETURN_NOT_OK(GeoArrowWKTWriterAppendSequence(private_data, node));
-      --remaining_rings;
-      continue;
-    } else if (remaining_rings == 1) {
-      GEOARROW_RETURN_NOT_OK(GeoArrowWKTWriterAppendSequence(private_data, node));
-      GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, ")"));
-      --remaining_rings;
-      continue;
-    }
-
-    enum GeoArrowGeometryType geometry_type =
-        (enum GeoArrowGeometryType)node->geometry_type;
-    enum GeoArrowDimensions dimensions = (enum GeoArrowDimensions)node->dimensions;
-
-    switch (geometry_type) {
-      case GEOARROW_GEOMETRY_TYPE_POINT:
-      case GEOARROW_GEOMETRY_TYPE_LINESTRING: {
-        GEOARROW_RETURN_NOT_OK(
-            WKTWriterWriteGeometryType(private_data, geometry_type, dimensions));
-        GEOARROW_RETURN_NOT_OK(GeoArrowWKTWriterAppendSequence(private_data, node));
-        break;
-      }
-      case GEOARROW_GEOMETRY_TYPE_POLYGON: {
-        GEOARROW_RETURN_NOT_OK(
-            WKTWriterWriteGeometryType(private_data, geometry_type, dimensions));
-        GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, "("));
-        remaining_rings = node->size;
-        break;
-      }
-      case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
-      case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
-      case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
-      case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
-        GEOARROW_RETURN_NOT_OK(
-            WKTWriterWriteGeometryType(private_data, geometry_type, dimensions));
-        GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, "("));
-
-        // TODO: handle recursive collection bit
-
-        GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, ")"));
-        break;
-      default:
-        return EINVAL;
-    }
-  }
-
-  return GEOARROW_OK;
-}
-
 GeoArrowErrorCode GeoArrowWKTWriterAppend(struct GeoArrowWKTWriter* writer,
                                           struct GeoArrowGeometryView geom) {
   struct WKTWriterPrivate* private_data = (struct WKTWriterPrivate*)writer->private_data;
+  private_data->values_feat_start = private_data->values.size_bytes;
+
   GEOARROW_RETURN_NOT_OK(ArrowBufferAppendInt32(
       &private_data->offsets, (int32_t)private_data->values.size_bytes));
-  GEOARROW_RETURN_NOT_OK(GeoArrowWKTWriterAppendImpl(private_data, geom));
+
+  const struct GeoArrowGeometryNode* node_iter = geom.root;
+  GeoArrowErrorCode result = GeoArrowWKTWriterAppendTagged(private_data, &node_iter);
+  switch (result) {
+    case GEOARROW_OK:
+      break;
+    case EAGAIN:
+      if (private_data->max_element_size_bytes >= 0 &&
+          (private_data->values.size_bytes - private_data->values_feat_start) >
+              private_data->max_element_size_bytes) {
+        private_data->values.size_bytes =
+            private_data->values_feat_start + private_data->max_element_size_bytes;
+      }
+      break;
+    default:
+      return result;
+  }
+
   GEOARROW_RETURN_NOT_OK(GeoArrowWKTWriterAppendValidity(writer, 1));
   return GEOARROW_OK;
 }
