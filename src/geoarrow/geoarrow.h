@@ -460,6 +460,11 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer);
 void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
                                   struct GeoArrowVisitor* v);
 
+GeoArrowErrorCode GeoArrowWKTWriterAppend(struct GeoArrowWKTWriter* writer,
+                                          struct GeoArrowGeometryView geom);
+
+GeoArrowErrorCode GeoArrowWKTWriterAppendNull(struct GeoArrowWKTWriter* writer);
+
 /// \brief Finish an ArrowArray containing elements from the visited input
 ///
 /// This function can be called more than once to support multiple batches.
