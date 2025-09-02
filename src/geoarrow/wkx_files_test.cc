@@ -71,16 +71,19 @@ TEST(WKXFilesTest, WKXFilesTestFiles) {
 
       const GeoArrowGeometry& geom_from_wkt = tester.AsGeometry(line_wkt);
       EXPECT_EQ(tester.AsWKTUsingVisitor(geom_from_wkt), line_wkt);
+      EXPECT_EQ(tester.AsWKT(geom_from_wkt), line_wkt);
 
       ASSERT_EQ(GeoArrowGeometryShallowCopy(GeoArrowGeometryAsView(&geom_from_wkt),
                                             &geom_cloner),
                 GEOARROW_OK);
       EXPECT_EQ(tester.AsWKTUsingVisitor(geom_cloner), line_wkt);
+      EXPECT_EQ(tester.AsWKT(geom_cloner), line_wkt);
 
       ASSERT_EQ(
           GeoArrowGeometryDeepCopy(GeoArrowGeometryAsView(&geom_from_wkt), &geom_cloner),
           GEOARROW_OK);
       EXPECT_EQ(tester.AsWKTUsingVisitor(geom_cloner), line_wkt);
+      EXPECT_EQ(tester.AsWKT(geom_cloner), line_wkt);
 
       GeoArrowGeometryReset(&geom_cloner);
 
