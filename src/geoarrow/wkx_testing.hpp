@@ -68,7 +68,7 @@ class WKXTester {
     return WKTValue();
   }
 
-  std::string AsWKT(const GeoArrowGeometry& geometry) {
+  std::string AsWKTUsingVisitor(const GeoArrowGeometry& geometry) {
     ReadGeometry(geometry, WKTVisitor());
     return WKTValue();
   }
