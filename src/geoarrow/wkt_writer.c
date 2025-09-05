@@ -121,7 +121,7 @@ static int feat_start_wkt(struct GeoArrowVisitor* v) {
   if (private->values.size_bytes > 2147483647) {
     return EOVERFLOW;
   }
-  return ArrowBufferAppendInt32(&private->offsets, (int32_t) private->values.size_bytes);
+  return ArrowBufferAppendInt32(&private->offsets, (int32_t)private->values.size_bytes);
 }
 
 static int null_feat_wkt(struct GeoArrowVisitor* v) {
@@ -457,6 +457,9 @@ static GeoArrowErrorCode GeoArrowWKTWriterAppendImpl(
       if (private_data->use_flat_multipoint) {
         return GeoArrowWKTWriterAppendFlatMultipoint(private_data, node, node_iter);
       }
+#if defined(__GNUC__) || defined(__clang__)
+      __attribute__((fallthrough));
+#endif
     case GEOARROW_GEOMETRY_TYPE_POLYGON:
     case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
     case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
@@ -587,7 +590,7 @@ GeoArrowErrorCode GeoArrowWKTWriterFinish(struct GeoArrowWKTWriter* writer,
     return EOVERFLOW;
   }
   NANOARROW_RETURN_NOT_OK(
-      ArrowBufferAppendInt32(&private->offsets, (int32_t) private->values.size_bytes));
+      ArrowBufferAppendInt32(&private->offsets, (int32_t)private->values.size_bytes));
   NANOARROW_RETURN_NOT_OK(ArrowArrayInitFromType(array, private->storage_type));
   ArrowArraySetValidityBitmap(array, &private->validity);
   NANOARROW_RETURN_NOT_OK(ArrowArraySetBuffer(array, 1, &private->offsets));
