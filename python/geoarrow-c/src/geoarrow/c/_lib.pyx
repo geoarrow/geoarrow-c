@@ -265,6 +265,16 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
                                 const string& metadata) except +ValueError
 
 
+# The default changed in Cython 3.1.0 such that the member of an
+# enum are no longer automatically copied to the parent module.
+globals().update(getattr(GeoArrowGeometryType, '__members__'))
+globals().update(getattr(GeoArrowDimensions, '__members__'))
+globals().update(getattr(GeoArrowCoordType, '__members__'))
+globals().update(getattr(GeoArrowType, '__members__'))
+globals().update(getattr(GeoArrowEdgeType, '__members__'))
+globals().update(getattr(GeoArrowCrsType, '__members__'))
+
+
 class GeoArrowCException(RuntimeError):
 
     def __init__(self, what, code, message=""):
