@@ -31,7 +31,7 @@ jobs:
 
     - uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.13'
 
     - name: Install packaging tools
       run: |
@@ -72,8 +72,8 @@ jobs:
           - {os: "windows-latest", label: "windows-x86", platform: "auto", arch: "x86"}
           - {os: "windows-latest", label: "windows-amd64", platform: "auto", arch: "AMD64"}
           - {os: "windows-latest", label: "windows-arm64", platform: "auto", arch: "ARM64"}
-          - {os: "macOS-13", label: "macOS", platform: "auto", arch: "auto"}
-          - {os: "macOS-14", label: "macOS-arm64", platform: "auto", arch: "auto"}
+          - {os: "macOS-15-intel", label: "macOS", platform: "auto", arch: "auto"}
+          - {os: "macOS-latest", label: "macOS-arm64", platform: "auto", arch: "auto"}
           - {os: "ubuntu-24.04-arm", label: "linux-arm64", platform: "auto", arch: "auto"}
 
     steps:
@@ -83,10 +83,10 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==3.0.1
+        run: python -m pip install cibuildwheel==3.2.0
 
       - name: Build wheels
         run: |
