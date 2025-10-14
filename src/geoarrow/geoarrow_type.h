@@ -920,7 +920,7 @@ struct GeoArrowScalarUdf {
 
 /// \brief Scalar function initializer
 ///
-/// Usually a GeoArrowScalarUdfImpl will be used to execute a single batch
+/// Usually a GeoArrowScalarUdf will be used to execute a single batch
 /// (although it may be reused if a caller can serialize callback use). This
 /// structure is a factory object that initializes such objects.
 struct GeoArrowScalarUdfFactory {
