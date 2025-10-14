@@ -91,6 +91,7 @@ set(GEOARROW_SOURCES
     src/geoarrow/visitor.c
     src/geoarrow/geometry.c
     src/geoarrow/native_writer.c
+    src/geoarrow/scalar_udf.c
     src/geoarrow/wkb_reader.c
     src/geoarrow/wkb_writer.c
     src/geoarrow/wkt_reader.c

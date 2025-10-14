@@ -213,6 +213,22 @@ void GeoArrowBuilderReset(struct GeoArrowBuilder* builder);
 
 /// @}
 
+/// \defgroup geoarrow-udf Function implementations
+///
+/// The GeoArrow C library provides a limited number of function implementations
+/// for several low-level ST_ functions. These functions are more database-like
+/// than the previous GeoArrowKernel-based framework whose interface did not
+/// align well with any existing UDF framework. The implementations provided here
+/// may still require some composition at a higher level but are better suited
+/// to dropping in to a SedonaDB/DuckDB/Acero-like engine.
+///
+/// @{
+
+GeoArrowErrorCode GeoArrowScalarUdfFactoryInit(struct GeoArrowScalarUdfFactory* out,
+                                               const char* name, const char* options);
+
+/// @}
+
 /// \defgroup geoarrow-kernels Transform Arrays
 ///
 /// The GeoArrow C library provides limited support for transforming arrays.

@@ -168,6 +168,8 @@ struct ArrowArrayStream {
 #define GeoArrowBuilderFinish \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderFinish)
 #define GeoArrowBuilderReset _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderReset)
+#define GeoArrowScalarUdfFactoryInit \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowScalarUdfFactoryInit)
 #define GeoArrowKernelInit _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowKernelInit)
 #define GeoArrowGeometryInit _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryInit)
 #define GeoArrowGeometryReset \
@@ -865,7 +867,7 @@ struct GeoArrowVisitor {
 /// access to methods if an instance is shared across threads. In general,
 /// constructing and initializing this structure should be sufficiently
 /// cheap that it shouldn't need to be shared in this way.
-struct GeoArrowScalarUdfImpl {
+struct GeoArrowScalarUdf {
   /// \brief Initialize the state of this UDF instance and calculate a return
   /// type
   ///
@@ -888,9 +890,8 @@ struct GeoArrowScalarUdfImpl {
   /// passed.
   ///
   /// \return An errno-compatible error code, or zero on success.
-  int (*init)(struct GeoArrowScalarUdfImpl* self, struct ArrowSchema* arg_schema,
-              struct ArrowArray** scalar_args,
-              struct ArrowSchema* out);
+  int (*init)(struct GeoArrowScalarUdf* self, struct ArrowSchema* arg_schema,
+              struct ArrowArray** scalar_args, struct ArrowSchema* out);
 
   /// \brief Execute a single batch
   ///
@@ -899,18 +900,18 @@ struct GeoArrowScalarUdfImpl {
   /// inputs.
   /// \param n_args The number of pointers in args
   /// \param out Will be populated with the result on success.
-  int (*execute)(struct GeoArrowScalarUdfImpl* self, struct ArrowArray** args,
-                 int64_t n_args, struct ArrowArray* out);
+  int (*execute)(struct GeoArrowScalarUdf* self, struct ArrowArray** args, int64_t n_args,
+                 struct ArrowArray* out);
 
   /// \brief Get the last error message
   ///
   /// The result is valid until the next call to a UDF method.
-  const char* (*get_last_error)(struct GeoArrowScalarUdfImpl* self);
+  const char* (*get_last_error)(struct GeoArrowScalarUdf* self);
 
   /// \brief Release this instance
   ///
   /// Implementations of this callback must set self->release to NULL.
-  void (*release)(struct GeoArrowScalarUdfImpl* self);
+  void (*release)(struct GeoArrowScalarUdf* self);
 
   /// \brief Opaque implementation-specific data
   void* private_data;
@@ -921,18 +922,18 @@ struct GeoArrowScalarUdfImpl {
 /// Usually a GeoArrowScalarUdfImpl will be used to execute a single batch
 /// (although it may be reused if a caller can serialize callback use). This
 /// structure is a factory object that initializes such objects.
-struct GeoArrowScalarUdfImplFactory {
+struct GeoArrowScalarUdfFactory {
   /// \brief Initialize a new implementation struct
   ///
   /// This callback is thread safe and may be called concurrently from any
   /// thread at any time (as long as this object is valid).
-  void (*new_scalar_udf_impl)(struct GeoArrowScalarUdfImplFactory* self,
-                              struct GeoArrowScalarUdfImpl* out);
+  void (*new_scalar_udf_impl)(struct GeoArrowScalarUdfFactory* self,
+                              struct GeoArrowScalarUdf* out);
 
   /// \brief Release this instance
   ///
   /// Implementations of this callback must set self->release to NULL.
-  void (*release)(struct GeoArrowScalarUdfImplFactory* self);
+  void (*release)(struct GeoArrowScalarUdfFactory* self);
 
   /// \brief Opaque implementation-specific data
   void* private_data;
