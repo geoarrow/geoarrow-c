@@ -10,7 +10,9 @@ TEST(ScalarUdfTest, InitError) {
   struct GeoArrowError error;
   ASSERT_EQ(GeoArrowScalarUdfFactoryInit(&factory, "does not exist", nullptr, &error),
             ENOTSUP);
-  ASSERT_STREQ(error.message, "GeoArrow C scalar implementation with name 'does not exist' does not exist");
+  ASSERT_STREQ(
+      error.message,
+      "GeoArrow C scalar implementation with name 'does not exist' does not exist");
 }
 
 TEST(ScalarUdfTest, Void) {
