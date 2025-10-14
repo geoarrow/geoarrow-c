@@ -225,7 +225,8 @@ void GeoArrowBuilderReset(struct GeoArrowBuilder* builder);
 /// @{
 
 GeoArrowErrorCode GeoArrowScalarUdfFactoryInit(struct GeoArrowScalarUdfFactory* out,
-                                               const char* name, const char* options);
+                                               const char* name, const char* options,
+                                               struct GeoArrowError* error);
 
 /// @}
 
