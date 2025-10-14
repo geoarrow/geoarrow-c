@@ -877,21 +877,22 @@ struct GeoArrowScalarUdf {
   /// that does not apply to the arguments passed is not necessarily an error
   /// (there may be another implementation prepared to handle such a case).
   ///
-  /// \param arg_schema An ArrowSchema whose children define the arguments that
-  /// will be passed. The udf MAY take ownership over arg_schema but does not
-  /// have to (i.e., it is the caller's responsibility to release it if the
-  /// release callback is non-null).
+  /// \param arg_types Argument types
   /// \param scalar_args An optional array of scalar arguments. The entire
   /// array may be null to indicate that none of the arguments are scalars, or
   /// individual items in the array may be NULL to indicate that a particular
   /// argument is not a scalar. Any non-NULL arrays must be of length 1.
+  /// Implementations MAY take ownership over the elements of scalar_args but
+  /// are not required to do so (i.e., caller must check if these elements were
+  /// released, and must release them if needed).
+  /// \param n_args Number of elements in the arg_types and/or scalar_args arrays.
   /// \param out Will be populated with the return type on success, or initialized
   /// to a released value if this implementation does not apply to the arguments
   /// passed.
   ///
   /// \return An errno-compatible error code, or zero on success.
-  int (*init)(struct GeoArrowScalarUdf* self, struct ArrowSchema* arg_schema,
-              struct ArrowArray** scalar_args, struct ArrowSchema* out);
+  int (*init)(struct GeoArrowScalarUdf* self, const struct ArrowSchema** arg_types,
+              struct ArrowArray** scalar_args, int64_t n_args, struct ArrowSchema* out);
 
   /// \brief Execute a single batch
   ///
@@ -901,7 +902,7 @@ struct GeoArrowScalarUdf {
   /// \param n_args The number of pointers in args
   /// \param out Will be populated with the result on success.
   int (*execute)(struct GeoArrowScalarUdf* self, struct ArrowArray** args, int64_t n_args,
-                 struct ArrowArray* out);
+                 int64_t n_rows, struct ArrowArray* out);
 
   /// \brief Get the last error message
   ///

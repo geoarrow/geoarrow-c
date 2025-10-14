@@ -31,25 +31,33 @@ GeoArrowErrorCode GeoArrowScalarUdfFactoryInit(struct GeoArrowScalarUdfFactory* 
 }
 
 static GeoArrowErrorCode GeoArrowScalarUdfVoidInit(struct GeoArrowScalarUdf* self,
-                                                   struct ArrowSchema* arg_schema,
+                                                   const struct ArrowSchema** arg_types,
                                                    struct ArrowArray** scalar_args,
+                                                   int64_t n_args,
                                                    struct ArrowSchema* out) {
   GEOARROW_UNUSED(self);
-  GEOARROW_UNUSED(arg_schema);
+  GEOARROW_UNUSED(arg_types);
   GEOARROW_UNUSED(scalar_args);
-  GEOARROW_UNUSED(out);
-  return ENOTSUP;
+  GEOARROW_UNUSED(n_args);
+
+  GEOARROW_RETURN_NOT_OK(ArrowSchemaInitFromType(out, NANOARROW_TYPE_NA));
+  return GEOARROW_OK;
 }
 
 static GeoArrowErrorCode GeoArrowScalarUdfVoidExecute(struct GeoArrowScalarUdf* self,
                                                       struct ArrowArray** args,
-                                                      int64_t n_args,
+                                                      int64_t n_args, int64_t n_rows,
                                                       struct ArrowArray* out) {
   GEOARROW_UNUSED(self);
   GEOARROW_UNUSED(args);
   GEOARROW_UNUSED(n_args);
-  GEOARROW_UNUSED(out);
-  return ENOTSUP;
+
+  GEOARROW_RETURN_NOT_OK(ArrowArrayInitFromType(out, NANOARROW_TYPE_NA));
+  out->length = n_rows;
+  out->null_count = n_rows;
+  GEOARROW_RETURN_NOT_OK(ArrowArrayFinishBuildingDefault(out, NULL));
+
+  return GEOARROW_OK;
 }
 
 static const char* GeoArrowScalarUdfVoidGetLastError(struct GeoArrowScalarUdf* self) {
