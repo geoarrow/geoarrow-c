@@ -91,6 +91,7 @@ set(GEOARROW_SOURCES
     src/geoarrow/visitor.c
     src/geoarrow/geometry.c
     src/geoarrow/native_writer.c
+    src/geoarrow/scalar_udf.c
     src/geoarrow/wkb_reader.c
     src/geoarrow/wkb_writer.c
     src/geoarrow/wkt_reader.c
@@ -300,6 +301,7 @@ if(GEOARROW_BUILD_TESTS)
   add_executable(metadata_test src/geoarrow/metadata_test.cc)
   add_executable(geometry_test src/geoarrow/geometry_test.cc)
   add_executable(kernel_test src/geoarrow/kernel_test.cc)
+  add_executable(scalar_udf_test src/geoarrow/scalar_udf_test.cc)
   add_executable(visitor_test src/geoarrow/visitor_test.cc)
   add_executable(util_test src/geoarrow/util_test.cc)
   add_executable(native_writer_test src/geoarrow/native_writer_test.cc)
@@ -328,6 +330,7 @@ if(GEOARROW_BUILD_TESTS)
   target_link_libraries(schema_view_test geoarrow gtest_main ${GEOARROW_NANOARROW_TARGET})
   target_link_libraries(geometry_test geoarrow gtest_main ${GEOARROW_NANOARROW_TARGET})
   target_link_libraries(kernel_test geoarrow gtest_main ${GEOARROW_NANOARROW_TARGET})
+  target_link_libraries(scalar_udf_test geoarrow gtest_main ${GEOARROW_NANOARROW_TARGET})
   target_link_libraries(metadata_test geoarrow gtest_main ${GEOARROW_NANOARROW_TARGET})
   target_link_libraries(visitor_test geoarrow gtest_main)
   target_link_libraries(util_test geoarrow gtest_main)
@@ -376,6 +379,7 @@ if(GEOARROW_BUILD_TESTS)
   gtest_discover_tests(schema_view_test)
   gtest_discover_tests(geometry_test)
   gtest_discover_tests(kernel_test)
+  gtest_discover_tests(scalar_udf_test)
   gtest_discover_tests(metadata_test)
   gtest_discover_tests(visitor_test)
   gtest_discover_tests(util_test)
