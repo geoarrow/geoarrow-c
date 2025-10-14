@@ -859,6 +859,85 @@ struct GeoArrowVisitor {
   struct GeoArrowError* error;
 };
 
+/// \brief Simple ABI-stable scalar function implementation
+///
+/// This object is not thread safe: callers must take care to serialize
+/// access to methods if an instance is shared across threads. In general,
+/// constructing and initializing this structure should be sufficiently
+/// cheap that it shouldn't need to be shared in this way.
+struct GeoArrowScalarUdfImpl {
+  /// \brief Initialize the state of this UDF instance and calculate a return
+  /// type
+  ///
+  /// The init callback either computes a return ArrowSchema or initializes the
+  /// return ArrowSchema to an explicitly released value to indicate that this
+  /// implementation does not apply to the arguments passed. An implementation
+  /// that does not apply to the arguments passed is not necessarily an error
+  /// (there may be another implementation prepared to handle such a case).
+  ///
+  /// \param arg_schema An ArrowSchema whose children define the arguments that
+  /// will be passed. The udf MAY take ownership over arg_schema but does not
+  /// have to (i.e., it is the caller's responsibility to release it if the
+  /// release callback is non-null).
+  /// \param scalar_args An optional array of scalar arguments. The entire
+  /// array may be null to indicate that none of the arguments are scalars, or
+  /// individual items in the array may be NULL to indicate that a particular
+  /// argument is not a scalar. Any non-NULL arrays must be of length 1.
+  /// \param out Will be populated with the return type on success, or initialized
+  /// to a released value if this implementation does not apply to the arguments
+  /// passed.
+  ///
+  /// \return An errno-compatible error code, or zero on success.
+  int (*init)(struct GeoArrowScalarUdfImpl* self, struct ArrowSchema* arg_schema,
+              struct ArrowArray** scalar_args,
+              struct ArrowSchema* out);
+
+  /// \brief Execute a single batch
+  ///
+  /// \param args Input arguments. Input must be length one (e.g., a scalar)
+  /// or the size of the batch. Implementations must handle scalar or array
+  /// inputs.
+  /// \param n_args The number of pointers in args
+  /// \param out Will be populated with the result on success.
+  int (*execute)(struct GeoArrowScalarUdfImpl* self, struct ArrowArray** args,
+                 int64_t n_args, struct ArrowArray* out);
+
+  /// \brief Get the last error message
+  ///
+  /// The result is valid until the next call to a UDF method.
+  const char* (*get_last_error)(struct GeoArrowScalarUdfImpl* self);
+
+  /// \brief Release this instance
+  ///
+  /// Implementations of this callback must set self->release to NULL.
+  void (*release)(struct GeoArrowScalarUdfImpl* self);
+
+  /// \brief Opaque implementation-specific data
+  void* private_data;
+};
+
+/// \brief Scalar function initializer
+///
+/// Usually a GeoArrowScalarUdfImpl will be used to execute a single batch
+/// (although it may be reused if a caller can serialize callback use). This
+/// structure is a factory object that initializes such objects.
+struct GeoArrowScalarUdfImplFactory {
+  /// \brief Initialize a new implementation struct
+  ///
+  /// This callback is thread safe and may be called concurrently from any
+  /// thread at any time (as long as this object is valid).
+  void (*new_scalar_udf_impl)(struct GeoArrowScalarUdfImplFactory* self,
+                              struct GeoArrowScalarUdfImpl* out);
+
+  /// \brief Release this instance
+  ///
+  /// Implementations of this callback must set self->release to NULL.
+  void (*release)(struct GeoArrowScalarUdfImplFactory* self);
+
+  /// \brief Opaque implementation-specific data
+  void* private_data;
+};
+
 /// \brief Generalized compute kernel
 ///
 /// Callers are responsible for calling the release callback when finished
