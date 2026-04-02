@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
 
       - name: Build documentation
         run: |
@@ -28,14 +28,14 @@ jobs:
           docker compose run --rm -e GITHUB_ACTIONS docs
 
       - name: Upload built documentation
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # main
         with:
           name: geoarrow-docs
           path: docs/_build/html
 
       - name: Clone gh-pages branch
         if: success() && github.repository == 'geoarrow/geoarrow-c' && github.ref == 'refs/heads/main'
-        uses: actions/checkout@v2
+        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
         with:
           ref: gh-pages
           path: pages-clone
