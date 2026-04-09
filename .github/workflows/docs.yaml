@@ -35,7 +35,7 @@ jobs:
 
       - name: Clone gh-pages branch
         if: success() && github.repository == 'geoarrow/geoarrow-c' && github.ref == 'refs/heads/main'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
         with:
           ref: gh-pages
           path: pages-clone
