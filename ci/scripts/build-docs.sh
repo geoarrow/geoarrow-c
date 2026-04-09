@@ -60,6 +60,9 @@ main() {
    # pip install . doesn't quite work with the setuptools available on the
    # ubuntu docker image...python -m build works I think because it sets up
    # a virtualenv
+   # Mark the mounted directory as safe for git (needed for setuptools-scm
+   # version detection inside Docker where the repo owner differs)
+   git config --global --add safe.directory "${TARGET_GEOARROW_DIR}"
    pushd python/geoarrow-c
    rm -rf dist
    python3 -m build --wheel
