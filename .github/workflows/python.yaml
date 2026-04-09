@@ -19,10 +19,10 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
@@ -42,16 +42,16 @@ jobs:
       - name: Install coverage dependencies
         run: |
           sudo apt-get install -y lcov
-          pip install pytest-cov "Cython < 3.1.0"
+          pip install pytest-cov Cython
 
       - name: Install editable
         run: |
           pip install -e python/geoarrow-c/
 
       - name: Coverage (geoarrow-c)
-        if: success() && matrix.python-version == '3.13'
+        if: success() && matrix.python-version == '3.14'
         run: |
-          pip install setuptools "Cython < 3.1.0"
+          pip install setuptools Cython
 
           pushd python/geoarrow-c
 
@@ -79,13 +79,13 @@ jobs:
           popd
 
       - name: Upload coverage to codecov
-        if: success() && matrix.python-version == '3.13'
+        if: success() && matrix.python-version == '3.14'
         uses: codecov/codecov-action@f32b3a3741e1053eb607407145bc9619351dc93b # v2
         with:
           files: 'python/geoarrow-c/coverage.info,python/geoarrow-c/coverage.xml'
 
       - name: Run doctests
-        if: success() && matrix.python-version == '3.13'
+        if: success() && matrix.python-version == '3.14'
         run: |
           pushd python/geoarrow-c
           pytest --pyargs geoarrow.c --doctest-modules
