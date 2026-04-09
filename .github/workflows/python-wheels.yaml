@@ -24,14 +24,14 @@ jobs:
   sdist:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
         fetch-tags: true
 
     - uses: actions/setup-python@v5
       with:
-        python-version: '3.13'
+        python-version: '3.14'
 
     - name: Install packaging tools
       run: |
@@ -77,7 +77,7 @@ jobs:
           - {os: "ubuntu-24.04-arm", label: "linux-arm64", platform: "auto", arch: "auto"}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -86,7 +86,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==3.2.0
+        run: python -m pip install cibuildwheel==3.4.0
 
       - name: Build wheels
         run: |
@@ -97,6 +97,7 @@ jobs:
           CIBW_PLATFORM: ${{ matrix.config.platform }}
           CIBW_ARCHS: ${{ matrix.config.arch }}
           CIBW_SKIP: pp*
+          CIBW_ENABLE: cpython-freethreading
 
       - uses: actions/upload-artifact@v4
         with:
