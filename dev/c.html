@@ -27,16 +27,16 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="_static/styles/theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
-<link href="_static/styles/pydata-sphinx-theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+  <link href="_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="_static/scripts/fontawesome.js?digest=7f76b32a3354e82990f2"></script>
+  <script defer src="_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
-<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
 
     <script src="_static/documentation_options.js?v=5929fcd5"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
@@ -67,7 +67,9 @@
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
-
+  
+  
+  
   
   <dialog id="pst-search-dialog">
     
@@ -342,7 +344,7 @@
 <dl>
 <dt class="sig sig-object cpp">
 <span class="target" id="group__geoarrow-schema"></span><em><span class="pre">group</span></em> <span class="sig-name descname"><span class="pre">Data</span> <span class="pre">type</span> <span class="pre">creation</span> <span class="pre">and</span> <span class="pre">inspection</span></span></dt>
-<dd><p>The ArrowSchema is the ABI-stable way to communicate type information using the Arrow C Data interface. These functions export ArrowSchema objects or parse their content into a more easily inspectable object. All unique memory layouts have a GeoArrowType identifier, most of which can be decomposed into GeoArrowGeometryType, GeoArrowDimensions, and GeoArrowCoordType.</p>
+<dd><p>The ArrowSchema is the ABI-stable way to communicate type information using the Arrow C Data interface. These functions export ArrowSchema objects or parse their content into a more easily inspectable object. All unique memory layouts have a <a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref">GeoArrowType</span></a> identifier, most of which can be decomposed into <a class="reference internal" href="#group__geoarrow-schema_1gabe50bf2b0b3f872c5c92d9235354483a"><span class="std std-ref">GeoArrowGeometryType</span></a>, <a class="reference internal" href="#group__geoarrow-schema_1gadcdbc38519142d583bdc1737d4132ebc"><span class="std std-ref">GeoArrowDimensions</span></a>, and <a class="reference internal" href="#group__geoarrow-schema_1ga7ce860d20b38b80581e4017cb94d6bb0"><span class="std std-ref">GeoArrowCoordType</span></a>.</p>
 <p>In addition to memory layout, these functions provide a mechanism to serialize and deserialize Arrow extension type information. The serialization format is a JSON object and three keys are currently encoded: crs_type, crs, and edge_type. The embedded parser is not a complete JSON parser and in some circumstances will accept or transport invalid JSON without erroring.</p>
 <p>Serializing extension type information into an ArrowSchema and parsing an ArrowSchema is expensive and should be avoided where possible. </p>
 <div class="breathe-sectiondef docutils container">
@@ -351,7 +353,7 @@
 <dt class="sig sig-object cpp" id="_CPPv412GeoArrowType">
 <span id="_CPPv312GeoArrowType"></span><span id="_CPPv212GeoArrowType"></span><span class="target" id="group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"></span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowType</span></span></span><a class="headerlink" href="#_CPPv412GeoArrowType" title="Link to this definition">#</a><br /></dt>
 <dd><p>Type identifier for types supported by this library. </p>
-<p>It is occasionally useful to represent each unique memory layout with a single type identifier. These types include both the serialized representations and the GeoArrow-native representations. Type identifiers for GeoArrow-native representations can be decomposed into or reconstructed from GeoArrowGeometryType, GeoArrowDimensions, and GeoArrowCoordType.</p>
+<p>It is occasionally useful to represent each unique memory layout with a single type identifier. These types include both the serialized representations and the GeoArrow-native representations. Type identifiers for GeoArrow-native representations can be decomposed into or reconstructed from <a class="reference internal" href="#group__geoarrow-schema_1gabe50bf2b0b3f872c5c92d9235354483a"><span class="std std-ref">GeoArrowGeometryType</span></a>, <a class="reference internal" href="#group__geoarrow-schema_1gadcdbc38519142d583bdc1737d4132ebc"><span class="std std-ref">GeoArrowDimensions</span></a>, and <a class="reference internal" href="#group__geoarrow-schema_1ga7ce860d20b38b80581e4017cb94d6bb0"><span class="std std-ref">GeoArrowCoordType</span></a>.</p>
 <p>The values of this enum are chosen to support efficient decomposition and/or reconstruction into the components that make up this value; however, these values are not guaranteed to be stable. </p>
 <p><em>Values:</em></p>
 <dl class="cpp enumerator">
@@ -862,13 +864,13 @@
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv430GeoArrowSchemaViewInitFromTypeP18GeoArrowSchemaView12GeoArrowType">
 <span id="_CPPv330GeoArrowSchemaViewInitFromTypeP18GeoArrowSchemaView12GeoArrowType"></span><span id="_CPPv230GeoArrowSchemaViewInitFromTypeP18GeoArrowSchemaView12GeoArrowType"></span><span id="GeoArrowSchemaViewInitFromType__GeoArrowSchemaViewP.GeoArrowType"></span><span class="target" id="group__geoarrow-schema_1gac611fd87c9c4d942c7916ba7a0146c52"></span><a class="reference internal" href="#_CPPv417GeoArrowErrorCode" title="GeoArrowErrorCode"><span class="n"><span class="pre">GeoArrowErrorCode</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowSchemaViewInitFromType</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">GeoArrowSchemaView</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">schema_view</span></span>, <span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv412GeoArrowType" title="GeoArrowType"><span class="n"><span class="pre">GeoArrowType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv430GeoArrowSchemaViewInitFromTypeP18GeoArrowSchemaView12GeoArrowType" title="Link to this definition">#</a><br /></dt>
-<dd><p>Initialize a GeoArrowSchemaView directly from a GeoArrowType identifier. </p>
+<dd><p>Initialize a GeoArrowSchemaView directly from a <a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref">GeoArrowType</span></a> identifier. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv424GeoArrowMetadataViewInitP20GeoArrowMetadataView18GeoArrowStringViewP13GeoArrowError">
 <span id="_CPPv324GeoArrowMetadataViewInitP20GeoArrowMetadataView18GeoArrowStringViewP13GeoArrowError"></span><span id="_CPPv224GeoArrowMetadataViewInitP20GeoArrowMetadataView18GeoArrowStringViewP13GeoArrowError"></span><span id="GeoArrowMetadataViewInit__GeoArrowMetadataViewP.GeoArrowStringView.GeoArrowErrorP"></span><span class="target" id="group__geoarrow-schema_1gac55fbc9251ba8f61475fac599ef45374"></span><a class="reference internal" href="#_CPPv417GeoArrowErrorCode" title="GeoArrowErrorCode"><span class="n"><span class="pre">GeoArrowErrorCode</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowMetadataViewInit</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">GeoArrowMetadataView</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">metadata_view</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv418GeoArrowStringView" title="GeoArrowStringView"><span class="n"><span class="pre">GeoArrowStringView</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">metadata</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">GeoArrowError</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">error</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv424GeoArrowMetadataViewInitP20GeoArrowMetadataView18GeoArrowStringViewP13GeoArrowError" title="Link to this definition">#</a><br /></dt>
-<dd><p>Initialize a GeoArrowSchemaView directly from a GeoArrowType identifier. </p>
+<dd><p>Initialize a GeoArrowSchemaView directly from a <a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref">GeoArrowType</span></a> identifier. </p>
 </dd></dl>
 
 <dl class="cpp function">
@@ -905,61 +907,61 @@
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv428GeoArrowGeometryTypeFromType12GeoArrowType">
 <span id="_CPPv328GeoArrowGeometryTypeFromType12GeoArrowType"></span><span id="_CPPv228GeoArrowGeometryTypeFromType12GeoArrowType"></span><span id="GeoArrowGeometryTypeFromType__GeoArrowType"></span><span class="target" id="group__geoarrow-schema_1ga09d817de7970538d52b00f1adc6bf22d"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv420GeoArrowGeometryType" title="GeoArrowGeometryType"><span class="n"><span class="pre">GeoArrowGeometryType</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowGeometryTypeFromType</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv412GeoArrowType" title="GeoArrowType"><span class="n"><span class="pre">GeoArrowType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv428GeoArrowGeometryTypeFromType12GeoArrowType" title="Link to this definition">#</a><br /></dt>
-<dd><p>Extract GeometryType from a GeoArrowType. </p>
+<dd><p>Extract GeometryType from a <a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref">GeoArrowType</span></a>. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv429GeoArrowExtensionNameFromType12GeoArrowType">
 <span id="_CPPv329GeoArrowExtensionNameFromType12GeoArrowType"></span><span id="_CPPv229GeoArrowExtensionNameFromType12GeoArrowType"></span><span id="GeoArrowExtensionNameFromType__GeoArrowType"></span><span class="target" id="group__geoarrow-schema_1ga4d5c79ffe0d2717b2b9f8e11fafc7fe0"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowExtensionNameFromType</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv412GeoArrowType" title="GeoArrowType"><span class="n"><span class="pre">GeoArrowType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv429GeoArrowExtensionNameFromType12GeoArrowType" title="Link to this definition">#</a><br /></dt>
-<dd><p>Returns the Arrow extension name for a given GeoArrowType. </p>
+<dd><p>Returns the Arrow extension name for a given <a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref">GeoArrowType</span></a>. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv424GeoArrowDimensionsString18GeoArrowDimensions">
 <span id="_CPPv324GeoArrowDimensionsString18GeoArrowDimensions"></span><span id="_CPPv224GeoArrowDimensionsString18GeoArrowDimensions"></span><span id="GeoArrowDimensionsString__GeoArrowDimensions"></span><span class="target" id="group__geoarrow-schema_1gabca62e9697c81f53ef69820721c7fe8c"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowDimensionsString</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv418GeoArrowDimensions" title="GeoArrowDimensions"><span class="n"><span class="pre">GeoArrowDimensions</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">dimensions</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv424GeoArrowDimensionsString18GeoArrowDimensions" title="Link to this definition">#</a><br /></dt>
-<dd><p>Returns a string representation of a GeoArrowDimensions. </p>
+<dd><p>Returns a string representation of a <a class="reference internal" href="#group__geoarrow-schema_1gadcdbc38519142d583bdc1737d4132ebc"><span class="std std-ref">GeoArrowDimensions</span></a>. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv423GeoArrowCoordTypeString17GeoArrowCoordType">
 <span id="_CPPv323GeoArrowCoordTypeString17GeoArrowCoordType"></span><span id="_CPPv223GeoArrowCoordTypeString17GeoArrowCoordType"></span><span id="GeoArrowCoordTypeString__GeoArrowCoordType"></span><span class="target" id="group__geoarrow-schema_1ga90b9b2abd845be496249fce698c37041"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowCoordTypeString</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv417GeoArrowCoordType" title="GeoArrowCoordType"><span class="n"><span class="pre">GeoArrowCoordType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">dimensions</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv423GeoArrowCoordTypeString17GeoArrowCoordType" title="Link to this definition">#</a><br /></dt>
-<dd><p>Returns a string representation of a GeoArrowCoordType. </p>
+<dd><p>Returns a string representation of a <a class="reference internal" href="#group__geoarrow-schema_1ga7ce860d20b38b80581e4017cb94d6bb0"><span class="std std-ref">GeoArrowCoordType</span></a>. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv422GeoArrowEdgeTypeString16GeoArrowEdgeType">
 <span id="_CPPv322GeoArrowEdgeTypeString16GeoArrowEdgeType"></span><span id="_CPPv222GeoArrowEdgeTypeString16GeoArrowEdgeType"></span><span id="GeoArrowEdgeTypeString__GeoArrowEdgeType"></span><span class="target" id="group__geoarrow-schema_1ga36bd7660fda11a7d7a70f766137eb229"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowEdgeTypeString</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv416GeoArrowEdgeType" title="GeoArrowEdgeType"><span class="n"><span class="pre">GeoArrowEdgeType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">edge_type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv422GeoArrowEdgeTypeString16GeoArrowEdgeType" title="Link to this definition">#</a><br /></dt>
-<dd><p>Returns a string representation of a GeoArrowEdgeType. </p>
+<dd><p>Returns a string representation of a <a class="reference internal" href="#group__geoarrow-schema_1gaf2f8ddf6ff6b3b4845154c343ad53789"><span class="std std-ref">GeoArrowEdgeType</span></a>. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv421GeoArrowCrsTypeString15GeoArrowCrsType">
 <span id="_CPPv321GeoArrowCrsTypeString15GeoArrowCrsType"></span><span id="_CPPv221GeoArrowCrsTypeString15GeoArrowCrsType"></span><span id="GeoArrowCrsTypeString__GeoArrowCrsType"></span><span class="target" id="group__geoarrow-schema_1ga50668abb46ae4effc1c3eeb7f70c656f"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowCrsTypeString</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv415GeoArrowCrsType" title="GeoArrowCrsType"><span class="n"><span class="pre">GeoArrowCrsType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">crs_type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv421GeoArrowCrsTypeString15GeoArrowCrsType" title="Link to this definition">#</a><br /></dt>
-<dd><p>Returns a string representation of a GeoArrowCrsType. </p>
+<dd><p>Returns a string representation of a <a class="reference internal" href="#group__geoarrow-schema_1ga41977de9bce1c3125c862f269ad40716"><span class="std std-ref">GeoArrowCrsType</span></a>. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv426GeoArrowDimensionsFromType12GeoArrowType">
 <span id="_CPPv326GeoArrowDimensionsFromType12GeoArrowType"></span><span id="_CPPv226GeoArrowDimensionsFromType12GeoArrowType"></span><span id="GeoArrowDimensionsFromType__GeoArrowType"></span><span class="target" id="group__geoarrow-schema_1ga5c96e6a8905470c21eb600075090ece3"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv418GeoArrowDimensions" title="GeoArrowDimensions"><span class="n"><span class="pre">GeoArrowDimensions</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowDimensionsFromType</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv412GeoArrowType" title="GeoArrowType"><span class="n"><span class="pre">GeoArrowType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv426GeoArrowDimensionsFromType12GeoArrowType" title="Link to this definition">#</a><br /></dt>
-<dd><p>Extract GeoArrowDimensions from a GeoArrowType. </p>
+<dd><p>Extract <a class="reference internal" href="#group__geoarrow-schema_1gadcdbc38519142d583bdc1737d4132ebc"><span class="std std-ref">GeoArrowDimensions</span></a> from a <a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref">GeoArrowType</span></a>. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv425GeoArrowCoordTypeFromType12GeoArrowType">
 <span id="_CPPv325GeoArrowCoordTypeFromType12GeoArrowType"></span><span id="_CPPv225GeoArrowCoordTypeFromType12GeoArrowType"></span><span id="GeoArrowCoordTypeFromType__GeoArrowType"></span><span class="target" id="group__geoarrow-schema_1ga06d429ad7c26492aa525cf5ff6b9f4df"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv417GeoArrowCoordType" title="GeoArrowCoordType"><span class="n"><span class="pre">GeoArrowCoordType</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowCoordTypeFromType</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv412GeoArrowType" title="GeoArrowType"><span class="n"><span class="pre">GeoArrowType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv425GeoArrowCoordTypeFromType12GeoArrowType" title="Link to this definition">#</a><br /></dt>
-<dd><p>Extract GeoArrowCoordType from a GeoArrowType. </p>
+<dd><p>Extract <a class="reference internal" href="#group__geoarrow-schema_1ga7ce860d20b38b80581e4017cb94d6bb0"><span class="std std-ref">GeoArrowCoordType</span></a> from a <a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref">GeoArrowType</span></a>. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv416GeoArrowMakeType20GeoArrowGeometryType18GeoArrowDimensions17GeoArrowCoordType">
 <span id="_CPPv316GeoArrowMakeType20GeoArrowGeometryType18GeoArrowDimensions17GeoArrowCoordType"></span><span id="_CPPv216GeoArrowMakeType20GeoArrowGeometryType18GeoArrowDimensions17GeoArrowCoordType"></span><span id="GeoArrowMakeType__GeoArrowGeometryType.GeoArrowDimensions.GeoArrowCoordType"></span><span class="target" id="group__geoarrow-schema_1ga02b82d01b2546a69fd99ea1c8e5456ab"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv412GeoArrowType" title="GeoArrowType"><span class="n"><span class="pre">GeoArrowType</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowMakeType</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv420GeoArrowGeometryType" title="GeoArrowGeometryType"><span class="n"><span class="pre">GeoArrowGeometryType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">geometry_type</span></span>, <span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv418GeoArrowDimensions" title="GeoArrowDimensions"><span class="n"><span class="pre">GeoArrowDimensions</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">dimensions</span></span>, <span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv417GeoArrowCoordType" title="GeoArrowCoordType"><span class="n"><span class="pre">GeoArrowCoordType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">coord_type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv416GeoArrowMakeType20GeoArrowGeometryType18GeoArrowDimensions17GeoArrowCoordType" title="Link to this definition">#</a><br /></dt>
-<dd><p>Construct a GeometryType from a GeoArrowGeometryType, GeoArrowDimensions, and GeoArrowCoordType. </p>
+<dd><p>Construct a GeometryType from a <a class="reference internal" href="#group__geoarrow-schema_1gabe50bf2b0b3f872c5c92d9235354483a"><span class="std std-ref">GeoArrowGeometryType</span></a>, <a class="reference internal" href="#group__geoarrow-schema_1gadcdbc38519142d583bdc1737d4132ebc"><span class="std std-ref">GeoArrowDimensions</span></a>, and <a class="reference internal" href="#group__geoarrow-schema_1ga7ce860d20b38b80581e4017cb94d6bb0"><span class="std std-ref">GeoArrowCoordType</span></a>. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv426GeoArrowGeometryTypeString20GeoArrowGeometryType">
 <span id="_CPPv326GeoArrowGeometryTypeString20GeoArrowGeometryType"></span><span id="_CPPv226GeoArrowGeometryTypeString20GeoArrowGeometryType"></span><span id="GeoArrowGeometryTypeString__GeoArrowGeometryType"></span><span class="target" id="group__geoarrow-schema_1gac378a39e27356e1697d6ee701f311c71"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowGeometryTypeString</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv420GeoArrowGeometryType" title="GeoArrowGeometryType"><span class="n"><span class="pre">GeoArrowGeometryType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">geometry_type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv426GeoArrowGeometryTypeString20GeoArrowGeometryType" title="Link to this definition">#</a><br /></dt>
-<dd><p>The all-caps string associated with a given GeometryType (e.g., POINT) </p>
+<dd><p>The all-caps string associated with a given GeometryType (e.g., POINT). </p>
 </dd></dl>
 
 </div>
@@ -986,7 +988,7 @@
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv429GeoArrowArrayViewInitFromTypeP17GeoArrowArrayView12GeoArrowType">
 <span id="_CPPv329GeoArrowArrayViewInitFromTypeP17GeoArrowArrayView12GeoArrowType"></span><span id="_CPPv229GeoArrowArrayViewInitFromTypeP17GeoArrowArrayView12GeoArrowType"></span><span id="GeoArrowArrayViewInitFromType__GeoArrowArrayViewP.GeoArrowType"></span><span class="target" id="group__geoarrow-array__view_1ga5672d1d45368e9fef0d232e9bcb7e7b0"></span><a class="reference internal" href="#_CPPv417GeoArrowErrorCode" title="GeoArrowErrorCode"><span class="n"><span class="pre">GeoArrowErrorCode</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowArrayViewInitFromType</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv417GeoArrowArrayView" title="GeoArrowArrayView"><span class="n"><span class="pre">GeoArrowArrayView</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">array_view</span></span>, <span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv412GeoArrowType" title="GeoArrowType"><span class="n"><span class="pre">GeoArrowType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv429GeoArrowArrayViewInitFromTypeP17GeoArrowArrayView12GeoArrowType" title="Link to this definition">#</a><br /></dt>
-<dd><p>Initialize a <a class="reference internal" href="#struct_geo_arrow_array_view"><span class="std std-ref">GeoArrowArrayView</span></a> from a GeoArrowType identifier. </p>
+<dd><p>Initialize a <a class="reference internal" href="#struct_geo_arrow_array_view"><span class="std std-ref">GeoArrowArrayView</span></a> from a <a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref">GeoArrowType</span></a> identifier. </p>
 </dd></dl>
 
 <dl class="cpp function">
@@ -1027,7 +1029,7 @@
 <dl class="cpp var">
 <dt class="sig sig-object cpp" id="_CPPv4N17GeoArrowCoordView8n_valuesE">
 <span id="_CPPv3N17GeoArrowCoordView8n_valuesE"></span><span id="_CPPv2N17GeoArrowCoordView8n_valuesE"></span><span id="GeoArrowCoordView::n_values__int32_t"></span><span class="target" id="struct_geo_arrow_coord_view_1a02e61b61c210e5202ceb800292f20284"></span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">n_values</span></span></span><a class="headerlink" href="#_CPPv4N17GeoArrowCoordView8n_valuesE" title="Link to this definition">#</a><br /></dt>
-<dd><p>The number of pointers in the values array (i.e., number of dimensions) </p>
+<dd><p>The number of pointers in the values array (i.e., number of dimensions). </p>
 </dd></dl>
 
 <dl class="cpp var">
@@ -1134,7 +1136,7 @@
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv427GeoArrowBuilderInitFromTypeP15GeoArrowBuilder12GeoArrowType">
 <span id="_CPPv327GeoArrowBuilderInitFromTypeP15GeoArrowBuilder12GeoArrowType"></span><span id="_CPPv227GeoArrowBuilderInitFromTypeP15GeoArrowBuilder12GeoArrowType"></span><span id="GeoArrowBuilderInitFromType__GeoArrowBuilderP.GeoArrowType"></span><span class="target" id="group__geoarrow-builder_1gad977521c88c52e90a58254b55101be10"></span><a class="reference internal" href="#_CPPv417GeoArrowErrorCode" title="GeoArrowErrorCode"><span class="n"><span class="pre">GeoArrowErrorCode</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowBuilderInitFromType</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv415GeoArrowBuilder" title="GeoArrowBuilder"><span class="n"><span class="pre">GeoArrowBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">builder</span></span>, <span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv412GeoArrowType" title="GeoArrowType"><span class="n"><span class="pre">GeoArrowType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv427GeoArrowBuilderInitFromTypeP15GeoArrowBuilder12GeoArrowType" title="Link to this definition">#</a><br /></dt>
-<dd><p>Initialize memory for a <a class="reference internal" href="#struct_geo_arrow_builder"><span class="std std-ref">GeoArrowBuilder</span></a> based on a GeoArrowType identifier. </p>
+<dd><p>Initialize memory for a <a class="reference internal" href="#struct_geo_arrow_builder"><span class="std std-ref">GeoArrowBuilder</span></a> based on a <a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref">GeoArrowType</span></a> identifier. </p>
 </dd></dl>
 
 <dl class="cpp function">
@@ -1331,9 +1333,9 @@
 <li><p>void: Scalar kernel that outputs a null array of the same length as the input for each batch.</p></li>
 <li><p>void_agg: Aggregate kernel that outputs a null array of length 1 for any number of inputs.</p></li>
 <li><p>visit_void_agg: Aggregate kernel that visits every coordinate of every feature of the input, outputting a null array of length 1 for any number of inputs. This is useful for validating well-known text and well-known binary as it will error for input that cannot be visited completely.</p></li>
-<li><p>as_wkt: Scalar kernel that outputs the well-known text version of the input as faithfully as possible (including transferring metadata from the input). Arrays with valid <code class="docutils literal notranslate"><span class="pre">GeoArrowType</span></code>s are supported.</p></li>
-<li><p>as_wkb: Scalar kernel that outputs the well-known binary version of the input as faithfully as possible (including transferring metadata from the input). Arrays with valid <code class="docutils literal notranslate"><span class="pre">GeoArrowType</span></code>s are supported.</p></li>
-<li><p>as_geoarrow: Scalar kernel that outputs the GeoArrow version of the input as faithfully as possible (including transferring metadata from the input). Arrays with valid <code class="docutils literal notranslate"><span class="pre">GeoArrowType</span></code>s are supported. The type of the output is controlled by the <code class="docutils literal notranslate"><span class="pre">type</span></code> option, specified as a <code class="docutils literal notranslate"><span class="pre">GeoArrowType</span></code> cast to integer.</p></li>
+<li><p>as_wkt: Scalar kernel that outputs the well-known text version of the input as faithfully as possible (including transferring metadata from the input). Arrays with valid <code class="docutils literal notranslate"><a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref"><span class="pre">GeoArrowType</span></span></a></code>s are supported.</p></li>
+<li><p>as_wkb: Scalar kernel that outputs the well-known binary version of the input as faithfully as possible (including transferring metadata from the input). Arrays with valid <code class="docutils literal notranslate"><a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref"><span class="pre">GeoArrowType</span></span></a></code>s are supported.</p></li>
+<li><p>as_geoarrow: Scalar kernel that outputs the GeoArrow version of the input as faithfully as possible (including transferring metadata from the input). Arrays with valid <code class="docutils literal notranslate"><a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref"><span class="pre">GeoArrowType</span></span></a></code>s are supported. The type of the output is controlled by the <code class="docutils literal notranslate"><span class="pre">type</span></code> option, specified as a <code class="docutils literal notranslate"><a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref"><span class="pre">GeoArrowType</span></span></a></code> cast to integer.</p></li>
 <li><p>format_wkt: A variation on as_wkt that supports options <code class="docutils literal notranslate"><span class="pre">precision</span></code> and <code class="docutils literal notranslate"><span class="pre">max_element_size_bytes</span></code>. This kernel is lazy and does not visit an entire feature beyond that required for <code class="docutils literal notranslate"><span class="pre">max_element_size_bytes</span></code>.</p></li>
 <li><p>unique_geometry_types_agg: An aggregate kernel that collects unique geometry types in the input. The output is a single int32 array of ISO WKB type codes.</p></li>
 <li><p>box: A scalar kernel that returns the 2-dimensional bounding box by feature. the output bounding box is represented as a struct array with column order xmin, xmax, ymin, ymax. Null features are recorded as a null item in the output; empty features are recorded as Inf, -Inf, Inf, -Inf.</p></li>
@@ -1525,7 +1527,7 @@
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv431GeoArrowArrayReaderInitFromTypeP19GeoArrowArrayReader12GeoArrowType">
 <span id="_CPPv331GeoArrowArrayReaderInitFromTypeP19GeoArrowArrayReader12GeoArrowType"></span><span id="_CPPv231GeoArrowArrayReaderInitFromTypeP19GeoArrowArrayReader12GeoArrowType"></span><span id="GeoArrowArrayReaderInitFromType__GeoArrowArrayReaderP.GeoArrowType"></span><span class="target" id="group__geoarrow-visitor_1ga0b226199eb4489edb9dffe1e161ff7f8"></span><a class="reference internal" href="#_CPPv417GeoArrowErrorCode" title="GeoArrowErrorCode"><span class="n"><span class="pre">GeoArrowErrorCode</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowArrayReaderInitFromType</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv419GeoArrowArrayReader" title="GeoArrowArrayReader"><span class="n"><span class="pre">GeoArrowArrayReader</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">reader</span></span>, <span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv412GeoArrowType" title="GeoArrowType"><span class="n"><span class="pre">GeoArrowType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv431GeoArrowArrayReaderInitFromTypeP19GeoArrowArrayReader12GeoArrowType" title="Link to this definition">#</a><br /></dt>
-<dd><p>Initialize a <a class="reference internal" href="#struct_geo_arrow_array_reader"><span class="std std-ref">GeoArrowArrayReader</span></a> from a GeoArrowType. </p>
+<dd><p>Initialize a <a class="reference internal" href="#struct_geo_arrow_array_reader"><span class="std std-ref">GeoArrowArrayReader</span></a> from a <a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref">GeoArrowType</span></a>. </p>
 <p>If GEOARROW_OK is returned, the caller is responsible for calling <a class="reference internal" href="#group__geoarrow-visitor_1ga001534cf98b31b11c49415f6724df481"><span class="std std-ref">GeoArrowArrayReaderReset()</span></a>. </p>
 </dd></dl>
 
@@ -1565,7 +1567,7 @@
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv431GeoArrowArrayWriterInitFromTypeP19GeoArrowArrayWriter12GeoArrowType">
 <span id="_CPPv331GeoArrowArrayWriterInitFromTypeP19GeoArrowArrayWriter12GeoArrowType"></span><span id="_CPPv231GeoArrowArrayWriterInitFromTypeP19GeoArrowArrayWriter12GeoArrowType"></span><span id="GeoArrowArrayWriterInitFromType__GeoArrowArrayWriterP.GeoArrowType"></span><span class="target" id="group__geoarrow-visitor_1ga928ccff73778446956b7919a23c7bbc4"></span><a class="reference internal" href="#_CPPv417GeoArrowErrorCode" title="GeoArrowErrorCode"><span class="n"><span class="pre">GeoArrowErrorCode</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GeoArrowArrayWriterInitFromType</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv419GeoArrowArrayWriter" title="GeoArrowArrayWriter"><span class="n"><span class="pre">GeoArrowArrayWriter</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">writer</span></span>, <span class="k"><span class="pre">enum</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv412GeoArrowType" title="GeoArrowType"><span class="n"><span class="pre">GeoArrowType</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv431GeoArrowArrayWriterInitFromTypeP19GeoArrowArrayWriter12GeoArrowType" title="Link to this definition">#</a><br /></dt>
-<dd><p>Initialize the memory of a <a class="reference internal" href="#struct_geo_arrow_array_writer"><span class="std std-ref">GeoArrowArrayWriter</span></a> from a GeoArrowType. </p>
+<dd><p>Initialize the memory of a <a class="reference internal" href="#struct_geo_arrow_array_writer"><span class="std std-ref">GeoArrowArrayWriter</span></a> from a <a class="reference internal" href="#group__geoarrow-schema_1ga8f83adfcfb9bd64ba49fca57fe94da91"><span class="std std-ref">GeoArrowType</span></a>. </p>
 <p>If GEOARROW_OK is returned, the caller is responsible for calling <a class="reference internal" href="#group__geoarrow-visitor_1gad653a6aba6d0211cba23f6281213d2ca"><span class="std std-ref">GeoArrowWKTWriterReset()</span></a>. </p>
 </dd></dl>
 
@@ -1641,7 +1643,7 @@
 <dl class="cpp var">
 <dt class="sig sig-object cpp" id="_CPPv4N17GeoArrowWKTWriter9precisionE">
 <span id="_CPPv3N17GeoArrowWKTWriter9precisionE"></span><span id="_CPPv2N17GeoArrowWKTWriter9precisionE"></span><span id="GeoArrowWKTWriter::precision__i"></span><span class="target" id="struct_geo_arrow_w_k_t_writer_1a67ede264564945cc2dd223fac9c280e5"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">precision</span></span></span><a class="headerlink" href="#_CPPv4N17GeoArrowWKTWriter9precisionE" title="Link to this definition">#</a><br /></dt>
-<dd><p>The number of significant digits to include in the output (default: 16) </p>
+<dd><p>The number of significant digits to include in the output (default: 16). </p>
 </dd></dl>
 
 <dl class="cpp var">
@@ -2320,8 +2322,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2"></script>
-<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2"></script>
+  <script defer src="_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -2355,7 +2357,7 @@
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.17.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.17.1.
 </p></div>
       
     </div>
