@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Build documentation
         run: |
@@ -35,7 +35,7 @@ jobs:
 
       - name: Clone gh-pages branch
         if: success() && github.repository == 'geoarrow/geoarrow-c' && github.ref == 'refs/heads/main'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: gh-pages
           path: pages-clone
