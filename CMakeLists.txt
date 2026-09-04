@@ -21,6 +21,7 @@ option(GEOARROW_USE_RYU "Use ryu for numeric value printing" ON)
 option(GEOARROW_NAMESPACE "A prefix for exported symbols" OFF)
 option(GEOARROW_ARROW_STATIC "Use a statically-linked Arrow C++ build when linking tests"
        OFF)
+option(GEOARROW_USE_ARROW_CPP "Build tests that require Arrow C++" OFF)
 option(GEOARROW_BUNDLE "Use ON to just bundle the headers/sources" OFF)
 
 if(GEOARROW_NAMESPACE)
@@ -254,25 +255,30 @@ if(GEOARROW_BUILD_TESTS)
   include(CTest)
   include(FetchContent)
 
-  find_package(Arrow REQUIRED)
+  if(GEOARROW_USE_ARROW_CPP)
+    find_package(Arrow REQUIRED)
 
-  if(${ARROW_VERSION} VERSION_GREATER_EQUAL "10.0.0")
-    set(CMAKE_CXX_STANDARD 17)
+    if(${ARROW_VERSION} VERSION_GREATER_EQUAL "10.0.0")
+      set(CMAKE_CXX_STANDARD 17)
+    else()
+      set(CMAKE_CXX_STANDARD 11)
+    endif()
+
+    # Give caller the option to link a static version of Arrow C++
+    if(GEOARROW_ARROW_STATIC)
+      set(GEOARROW_ARROW_TARGET arrow_static)
+    else()
+      set(GEOARROW_ARROW_TARGET arrow_shared)
+    endif()
   else()
-    set(CMAKE_CXX_STANDARD 11)
+    # The test sources use C++17 features independently of Arrow C++.
+    set(CMAKE_CXX_STANDARD 17)
   endif()
 
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.23")
     cmake_policy(SET CMP0135 NEW)
-  endif()
-
-  # Give caller the option to link a static version of Arrow C++
-  if(GEOARROW_ARROW_STATIC)
-    set(GEOARROW_ARROW_TARGET arrow_static)
-  else()
-    set(GEOARROW_ARROW_TARGET arrow_shared)
   endif()
 
   # Use an old version of googletest if we have to to support gcc 4.8
@@ -296,7 +302,9 @@ if(GEOARROW_BUILD_TESTS)
   add_executable(geoarrow_type_inline_test src/geoarrow/geoarrow_type_inline_test.cc)
   add_executable(builder_test src/geoarrow/builder_test.cc)
   add_executable(array_view_test src/geoarrow/array_view_test.cc)
-  add_executable(schema_test src/geoarrow/schema_test.cc)
+  if(GEOARROW_USE_ARROW_CPP)
+    add_executable(schema_test src/geoarrow/schema_test.cc)
+  endif()
   add_executable(schema_view_test src/geoarrow/schema_view_test.cc)
   add_executable(metadata_test src/geoarrow/metadata_test.cc)
   add_executable(geometry_test src/geoarrow/geometry_test.cc)
@@ -315,8 +323,10 @@ if(GEOARROW_BUILD_TESTS)
 
   add_executable(hpp_array_writer_test src/geoarrow/hpp/array_writer_test.cc)
   add_executable(hpp_geometry_data_type_test src/geoarrow/hpp/geometry_data_type_test.cc)
-  add_executable(hpp_arrow_extension_type_test
-                 src/geoarrow/hpp/arrow_extension_type_test.cc)
+  if(GEOARROW_USE_ARROW_CPP)
+    add_executable(hpp_arrow_extension_type_test
+                   src/geoarrow/hpp/arrow_extension_type_test.cc)
+  endif()
   add_executable(hpp_array_util_test src/geoarrow/hpp/array_util_test.cc)
   add_executable(hpp_wkb_util_test src/geoarrow/hpp/wkb_util_test.cc)
   add_executable(hpp_geometry_type_traits_test
@@ -326,7 +336,9 @@ if(GEOARROW_BUILD_TESTS)
                         ${GEOARROW_NANOARROW_TARGET})
   target_link_libraries(builder_test geoarrow gtest_main ${GEOARROW_NANOARROW_TARGET})
   target_link_libraries(array_view_test geoarrow gtest_main ${GEOARROW_NANOARROW_TARGET})
-  target_link_libraries(schema_test geoarrow ${GEOARROW_ARROW_TARGET} gtest_main)
+  if(GEOARROW_USE_ARROW_CPP)
+    target_link_libraries(schema_test geoarrow ${GEOARROW_ARROW_TARGET} gtest_main)
+  endif()
   target_link_libraries(schema_view_test geoarrow gtest_main ${GEOARROW_NANOARROW_TARGET})
   target_link_libraries(geometry_test geoarrow gtest_main ${GEOARROW_NANOARROW_TARGET})
   target_link_libraries(kernel_test geoarrow gtest_main ${GEOARROW_NANOARROW_TARGET})
@@ -353,8 +365,10 @@ if(GEOARROW_BUILD_TESTS)
                         ${GEOARROW_NANOARROW_TARGET})
   target_link_libraries(hpp_geometry_data_type_test geoarrow gtest_main
                         ${GEOARROW_NANOARROW_TARGET})
-  target_link_libraries(hpp_arrow_extension_type_test geoarrow ${GEOARROW_ARROW_TARGET}
-                        gtest_main)
+  if(GEOARROW_USE_ARROW_CPP)
+    target_link_libraries(hpp_arrow_extension_type_test geoarrow
+                          ${GEOARROW_ARROW_TARGET} gtest_main)
+  endif()
   target_link_libraries(hpp_array_util_test
                         geoarrow
                         gtest_main
@@ -375,7 +389,9 @@ if(GEOARROW_BUILD_TESTS)
   gtest_discover_tests(geoarrow_type_inline_test)
   gtest_discover_tests(builder_test)
   gtest_discover_tests(array_view_test)
-  gtest_discover_tests(schema_test)
+  if(GEOARROW_USE_ARROW_CPP)
+    gtest_discover_tests(schema_test)
+  endif()
   gtest_discover_tests(schema_view_test)
   gtest_discover_tests(geometry_test)
   gtest_discover_tests(kernel_test)
@@ -394,7 +410,9 @@ if(GEOARROW_BUILD_TESTS)
 
   gtest_discover_tests(hpp_array_writer_test)
   gtest_discover_tests(hpp_geometry_data_type_test)
-  gtest_discover_tests(hpp_arrow_extension_type_test)
+  if(GEOARROW_USE_ARROW_CPP)
+    gtest_discover_tests(hpp_arrow_extension_type_test)
+  endif()
   gtest_discover_tests(hpp_array_util_test)
   gtest_discover_tests(hpp_wkb_util_test)
   gtest_discover_tests(hpp_geometry_type_traits_test)
