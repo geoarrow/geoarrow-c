@@ -366,8 +366,8 @@ if(GEOARROW_BUILD_TESTS)
   target_link_libraries(hpp_geometry_data_type_test geoarrow gtest_main
                         ${GEOARROW_NANOARROW_TARGET})
   if(GEOARROW_USE_ARROW_CPP)
-    target_link_libraries(hpp_arrow_extension_type_test geoarrow
-                          ${GEOARROW_ARROW_TARGET} gtest_main)
+    target_link_libraries(hpp_arrow_extension_type_test geoarrow ${GEOARROW_ARROW_TARGET}
+                          gtest_main)
   endif()
   target_link_libraries(hpp_array_util_test
                         geoarrow
