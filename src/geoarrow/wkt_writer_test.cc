@@ -40,6 +40,91 @@ TEST(WKTWriterTest, WKTWriterTestBasic) {
   GeoArrowWKTWriterReset(&writer);
 }
 
+TEST(WKTWriterTest, WKTWriterTestAppendGeometry) {
+  WKXTester tester;
+  struct GeoArrowWKTWriter writer;
+  GeoArrowWKTWriterInit(&writer);
+
+  const auto& point = tester.AsGeometry("POINT (1 2)");
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&point)),
+            GEOARROW_OK);
+  ASSERT_EQ(GeoArrowWKTWriterAppendNull(&writer), GEOARROW_OK);
+
+  const auto& empty_multipoint = tester.AsGeometry("MULTIPOINT EMPTY");
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&empty_multipoint)),
+            GEOARROW_OK);
+
+  const auto& multipoint_with_empty = tester.AsGeometry("MULTIPOINT (EMPTY, (3 4))");
+  ASSERT_EQ(
+      GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&multipoint_with_empty)),
+      GEOARROW_OK);
+
+  struct ArrowArray array;
+  EXPECT_EQ(GeoArrowWKTWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+  EXPECT_EQ(array.length, 4);
+  EXPECT_EQ(array.null_count, 1);
+
+  struct ArrowArrayView view;
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), NANOARROW_OK);
+
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 0).data,
+                        ArrowArrayViewGetStringUnsafe(&view, 0).size_bytes),
+            "POINT (1 2)");
+  EXPECT_TRUE(ArrowArrayViewIsNull(&view, 1));
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 2).data,
+                        ArrowArrayViewGetStringUnsafe(&view, 2).size_bytes),
+            "MULTIPOINT EMPTY");
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 3).data,
+                        ArrowArrayViewGetStringUnsafe(&view, 3).size_bytes),
+            "MULTIPOINT (EMPTY, 3 4)");
+
+  ArrowArrayViewReset(&view);
+  array.release(&array);
+  GeoArrowWKTWriterReset(&writer);
+}
+
+TEST(WKTWriterTest, WKTWriterTestAppendGeometryOptions) {
+  WKXTester tester;
+  struct GeoArrowWKTWriter writer;
+  GeoArrowWKTWriterInit(&writer);
+
+  const auto& point = tester.AsGeometry("POINT (1.2345678901234567 2.3456789012345678)");
+  writer.precision = 100;
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&point)),
+            GEOARROW_OK);
+
+  writer.precision = 3;
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&point)),
+            GEOARROW_OK);
+
+  const auto& linestring = tester.AsGeometry("LINESTRING (1 2, 3 4)");
+  writer.max_element_size_bytes = 6;
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&linestring)),
+            GEOARROW_OK);
+
+  struct ArrowArray array;
+  EXPECT_EQ(GeoArrowWKTWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+
+  struct ArrowArrayView view;
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), NANOARROW_OK);
+
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 0).data,
+                        ArrowArrayViewGetStringUnsafe(&view, 0).size_bytes),
+            "POINT (1.2345678901234567 2.345678901234568)");
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 1).data,
+                        ArrowArrayViewGetStringUnsafe(&view, 1).size_bytes),
+            "POINT (1.235 2.346)");
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 2).data,
+                        ArrowArrayViewGetStringUnsafe(&view, 2).size_bytes),
+            "LINEST");
+
+  ArrowArrayViewReset(&view);
+  array.release(&array);
+  GeoArrowWKTWriterReset(&writer);
+}
+
 int64_t GeoArrowPrintDouble(double f, uint32_t precision, char* result);
 
 TEST(WKTWriterTest, WKTWriterTestPrintDouble) {

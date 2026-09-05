@@ -440,7 +440,8 @@ void GeoArrowNativeWriterReset(struct GeoArrowNativeWriter* writer);
 ///
 /// This struct also contains options for well-known text serialization.
 /// These options can be modified from the defaults after
-/// GeoArrowWKTWriterInit() and before GeoArrowWKTWriterInitVisitor().
+/// GeoArrowWKTWriterInit() and before GeoArrowWKTWriterInitVisitor() or
+/// GeoArrowWKTWriterAppend().
 ///
 /// Note that whether or not GeoArrow was compiled with ryu has a significant
 /// impact on the output: notably, ryu is locale-independent and much faster.
@@ -460,7 +461,7 @@ struct GeoArrowWKTWriter {
   /// Use -1 to denote an unlimited size for each element. When the limit is
   /// reached or shortly after, the called handler method will return EAGAIN,
   /// after which it is safe to call feat_end to end the feature. This ensures
-  /// that a finite amount of input is consumed if this elemtn is set.
+  /// that a finite amount of input is consumed if this element is set.
   int64_t max_element_size_bytes;
 
   /// \brief Implementation-specific details
@@ -477,9 +478,14 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer);
 void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
                                   struct GeoArrowVisitor* v);
 
+/// \brief Append a geometry view to this writer
+///
+/// The geometry is appended using the current writer options. The caller retains
+/// ownership of the geometry view and its referenced memory.
 GeoArrowErrorCode GeoArrowWKTWriterAppend(struct GeoArrowWKTWriter* writer,
                                           struct GeoArrowGeometryView geom);
 
+/// \brief Append a null element to this writer
 GeoArrowErrorCode GeoArrowWKTWriterAppendNull(struct GeoArrowWKTWriter* writer);
 
 /// \brief Finish an ArrowArray containing elements from the visited input
