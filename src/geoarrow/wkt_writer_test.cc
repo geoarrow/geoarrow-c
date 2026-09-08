@@ -110,9 +110,15 @@ TEST(WKTWriterTest, WKTWriterTestAppendGeometryOptions) {
   ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
   ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), NANOARROW_OK);
 
+#if defined(GEOARROW_USE_RYU) && GEOARROW_USE_RYU
+  const char* expected_default_precision = "POINT (1.2345678901234567 2.345678901234568)";
+#else
+  const char* expected_default_precision =
+      "POINT (1.2345678901234567 2.3456789012345678)";
+#endif
   EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 0).data,
                         ArrowArrayViewGetStringUnsafe(&view, 0).size_bytes),
-            "POINT (1.2345678901234567 2.345678901234568)");
+            expected_default_precision);
   EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 1).data,
                         ArrowArrayViewGetStringUnsafe(&view, 1).size_bytes),
             "POINT (1.235 2.346)");
