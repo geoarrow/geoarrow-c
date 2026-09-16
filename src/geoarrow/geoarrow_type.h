@@ -110,10 +110,18 @@ struct ArrowArrayStream {
     if (NAME) return NAME;                       \
   } while (0)
 
+// __COUNTER__ is not guaranteed to be available and some compiler warnings may occur
+// if we use it (-Wc2y-extensions). We don't strictly need it because of the
+// do { ... } while (0) scoping and because we never need the return value to live
+// outside the temporary scope. Here we define a suffix that is unlikely to collide
+// with anything in EXPR.
+#define _GEOARROW_UNIQUE_SUFFIX _geoarrow_unique_suffix
+
 /// \brief Macro helper for error handling
 /// \ingroup geoarrow-utility
 #define GEOARROW_RETURN_NOT_OK(EXPR) \
-  _GEOARROW_RETURN_NOT_OK_IMPL(_GEOARROW_MAKE_NAME(errno_status_, __COUNTER__), EXPR)
+  _GEOARROW_RETURN_NOT_OK_IMPL(      \
+      _GEOARROW_MAKE_NAME(errno_status_, _GEOARROW_UNIQUE_SUFFIX), EXPR)
 
 #define GEOARROW_UNUSED(expr) ((void)expr)
 
