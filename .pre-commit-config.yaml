@@ -15,11 +15,10 @@ repos:
     hooks:
     - id: cmake-format
       args: [--in-place]
-  - repo: https://github.com/psf/black
-    rev: 22.3.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.0
     hooks:
-    - id: black
-      types_or: [pyi, python]
+    - id: ruff-format
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.5
     hooks:
