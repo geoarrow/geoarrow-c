@@ -136,8 +136,7 @@ static inline int WKTWriterCoordIsEmptyPoint(const struct GeoArrowCoordView* coo
   return 1;
 }
 
-static inline int WKTWriterNodeIsEmptyPoint(
-    const struct GeoArrowGeometryNode* node) {
+static inline int WKTWriterNodeIsEmptyPoint(const struct GeoArrowGeometryNode* node) {
   int n_values = _GeoArrowkNumDimensions[node->dimensions];
   if (node->geometry_type != GEOARROW_GEOMETRY_TYPE_POINT || node->size != 1 ||
       n_values < 2) {
