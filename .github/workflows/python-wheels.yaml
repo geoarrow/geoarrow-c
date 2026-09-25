@@ -65,16 +65,17 @@ jobs:
     name: ${{ matrix.config.label }}
     runs-on: ${{ matrix.config.os }}
     strategy:
+      fail-fast: false
       matrix:
         config:
-          - {os: "ubuntu-latest", label: "pyodide", platform: "pyodide", arch: "auto"}
-          - {os: "ubuntu-latest", label: "linux", platform: "auto", arch: "auto"}
-          - {os: "windows-latest", label: "windows-x86", platform: "auto", arch: "x86"}
-          - {os: "windows-latest", label: "windows-amd64", platform: "auto", arch: "AMD64"}
-          - {os: "windows-latest", label: "windows-arm64", platform: "auto", arch: "ARM64"}
-          - {os: "macOS-15-intel", label: "macOS", platform: "auto", arch: "auto"}
-          - {os: "macOS-latest", label: "macOS-arm64", platform: "auto", arch: "auto"}
-          - {os: "ubuntu-24.04-arm", label: "linux-arm64", platform: "auto", arch: "auto"}
+          - {os: "ubuntu-latest", label: "pyodide", platform: "pyodide", arch: "auto", legacy_build: "cp312-*"}
+          - {os: "ubuntu-latest", label: "linux", platform: "auto", arch: "auto", legacy_build: "cp313t-*"}
+          - {os: "windows-latest", label: "windows-x86", platform: "auto", arch: "x86", legacy_build: "cp313t-*" }
+          - {os: "windows-latest", label: "windows-amd64", platform: "auto", arch: "AMD64", legacy_build: "cp313t-*" }
+          - {os: "windows-latest", label: "windows-arm64", platform: "auto", arch: "ARM64", legacy_build: "cp313t-*" }
+          - {os: "macOS-15-intel", label: "macOS", platform: "auto", arch: "auto", legacy_build: "cp313t-*"}
+          - {os: "macOS-latest", label: "macOS-arm64", platform: "auto", arch: "auto", legacy_build: "cp313t-*"}
+          - {os: "ubuntu-24.04-arm", label: "linux-arm64", platform: "auto", arch: "auto", legacy_build: "cp313t-*"}
 
     steps:
       - uses: actions/checkout@v7
@@ -86,7 +87,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==3.4.0
+        run: python -m pip install cibuildwheel==4.2.1
 
       - name: Build wheels
         run: |
@@ -97,9 +98,10 @@ jobs:
           CIBW_PLATFORM: ${{ matrix.config.platform }}
           CIBW_ARCHS: ${{ matrix.config.arch }}
           CIBW_SKIP: pp*
-          CIBW_ENABLE: cpython-freethreading
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""
 
       - uses: actions/upload-artifact@v7
         with:
           name: release-wheels-${{ matrix.config.label }}
           path: ./wheelhouse/*.whl
+          if-no-files-found: error
