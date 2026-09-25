@@ -26,4 +26,4 @@ repos:
     - id: codespell
       types_or: [rst, markdown, c, c++]
       additional_dependencies: [tomli]
-      exclude: "src/geoarrow/ryu/d2s_intrinsics.h"
+      exclude: "src/geoarrow/(ryu/d2s_intrinsics|fast_float)\\.h"
