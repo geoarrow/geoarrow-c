@@ -1,4 +1,5 @@
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -124,6 +125,35 @@ static inline void WKTWriterWriteDoubleUnsafe(struct WKTWriterPrivate* private,
                           ((char*)private->values.data) + private->values.size_bytes);
 }
 
+static inline int WKTWriterCoordIsEmptyPoint(const struct GeoArrowCoordView* coords,
+                                             int64_t i) {
+  for (int32_t j = 0; j < coords->n_values; j++) {
+    if (!isnan(GEOARROW_COORD_VIEW_VALUE(coords, i, j))) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+static inline int WKTWriterNodeIsEmptyPoint(const struct GeoArrowGeometryNode* node) {
+  int n_values = _GeoArrowkNumDimensions[node->dimensions];
+  if (node->geometry_type != GEOARROW_GEOMETRY_TYPE_POINT || node->size != 1 ||
+      n_values < 2) {
+    return 0;
+  }
+
+  for (int j = 0; j < n_values; j++) {
+    double value;
+    memcpy(&value, node->coords[j], sizeof(double));
+    if (!isnan(value)) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
 static int feat_start_wkt(struct GeoArrowVisitor* v) {
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
   private->level = -1;
@@ -206,6 +236,15 @@ static int coords_wkt(struct GeoArrowVisitor* v, const struct GeoArrowCoordView*
 
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)v->private_data;
   NANOARROW_RETURN_NOT_OK(WKTWriterCheckLevel(private));
+
+  // GeoArrow's fixed-size point representation uses an all-NaN coordinate as
+  // the sentinel for POINT EMPTY. Preserve NaNs in every other context.
+  if (private->geometry_type[private->level] == GEOARROW_GEOMETRY_TYPE_POINT &&
+      private->i[private->level] == 0 && n_coords == 1 &&
+      WKTWriterCoordIsEmptyPoint(coords, 0)) {
+    return GEOARROW_OK;
+  }
+
   GEOARROW_RETURN_NOT_OK(WKTWriterReserveCoords(private, n_coords, n_dims));
 
   int64_t max_chars_per_coord_theoretical =
@@ -394,7 +433,7 @@ static GeoArrowErrorCode GeoArrowWKTWriterAppendCoordsUnsafe(
 
 static GeoArrowErrorCode GeoArrowWKTWriterAppendSequenceOrEmpty(
     struct WKTWriterPrivate* private_data, const struct GeoArrowGeometryNode* node) {
-  if (node->size == 0) {
+  if (node->size == 0 || WKTWriterNodeIsEmptyPoint(node)) {
     GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, "EMPTY"));
     return GEOARROW_OK;
   }
@@ -427,7 +466,7 @@ static GeoArrowErrorCode GeoArrowWKTWriterAppendFlatMultipoint(
       GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, ", "));
     }
 
-    if (child_node->size == 0) {
+    if (child_node->size == 0 || WKTWriterNodeIsEmptyPoint(child_node)) {
       GEOARROW_RETURN_NOT_OK(WKTWriterWrite(private_data, "EMPTY"));
     } else {
       int n_values = _GeoArrowkNumDimensions[child_node->dimensions];

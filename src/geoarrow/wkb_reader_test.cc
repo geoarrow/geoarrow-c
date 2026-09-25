@@ -35,6 +35,21 @@ TEST(WKBReaderTest, WKBReaderTestPoint) {
   GeoArrowWKBReaderReset(&reader);
 }
 
+TEST(WKBReaderTest, WKBReaderTestPointEmpty) {
+  WKXTester tester;
+
+  // POINT EMPTY is encoded in WKB using an all-NaN coordinate.
+  std::vector<uint8_t> point_empty({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                    0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f, 0x00,
+                                    0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f});
+
+  EXPECT_WKB_ROUNDTRIP(tester, point_empty);
+  EXPECT_EQ(tester.AsWKT(point_empty), "POINT EMPTY");
+
+  const auto& geometry = tester.AsGeometry(point_empty);
+  EXPECT_EQ(tester.AsWKT(geometry), "POINT EMPTY");
+}
+
 TEST(WKBReaderTest, WKBReaderTestPointZM) {
   WKXTester tester;
 

@@ -54,7 +54,7 @@ TEST(NativeWriterTest, WritePoint) {
   ASSERT_EQ(values.size(), 3);
   EXPECT_EQ(values[0], "POINT (1 2)");
   EXPECT_EQ(values[1], "<null value>");
-  EXPECT_EQ(values[2], "POINT (nan nan)");
+  EXPECT_EQ(values[2], "POINT EMPTY");
 
   ArrowArrayRelease(&array_out);
 }
@@ -109,7 +109,7 @@ TEST(NativeWriterTest, WriteInterleavedPoint) {
   ASSERT_EQ(values.size(), 3);
   EXPECT_EQ(values[0], "POINT (1 2)");
   EXPECT_EQ(values[1], "<null value>");
-  EXPECT_EQ(values[2], "POINT (nan nan)");
+  EXPECT_EQ(values[2], "POINT EMPTY");
 
   array_out.release(&array_out);
 }
@@ -723,8 +723,8 @@ TEST(NativeWriterTest, WritePointGeometry) {
   ASSERT_EQ(values.size(), 5);
   EXPECT_EQ(values[0], "POINT (1 2)");
   EXPECT_EQ(values[1], "<null value>");
-  EXPECT_EQ(values[2], "POINT (nan nan)");
-  EXPECT_EQ(values[3], "POINT (nan nan)");
+  EXPECT_EQ(values[2], "POINT EMPTY");
+  EXPECT_EQ(values[3], "POINT EMPTY");
   EXPECT_EQ(values[4], "POINT (3 4)");
 
   ArrowArrayRelease(&array_out);
