@@ -70,9 +70,9 @@ jobs:
         config:
           - {os: "ubuntu-latest", label: "pyodide", platform: "pyodide", arch: "auto", legacy_build: "cp312-*"}
           - {os: "ubuntu-latest", label: "linux", platform: "auto", arch: "auto", legacy_build: "cp313t-*"}
-          - {os: "windows-latest", label: "windows-x86", platform: "auto", arch: "x86", legacy_build: "cp313t-*"}
-          - {os: "windows-latest", label: "windows-amd64", platform: "auto", arch: "AMD64", legacy_build: "cp313t-*"}
-          - {os: "windows-latest", label: "windows-arm64", platform: "auto", arch: "ARM64", legacy_build: "cp313t-*"}
+          - {os: "windows-latest", label: "windows-x86", platform: "auto", arch: "x86", legacy_build: "cp313t-*" }
+          - {os: "windows-latest", label: "windows-amd64", platform: "auto", arch: "AMD64", legacy_build: "cp313t-*" }
+          - {os: "windows-latest", label: "windows-arm64", platform: "auto", arch: "ARM64", legacy_build: "cp313t-*" }
           - {os: "macOS-15-intel", label: "macOS", platform: "auto", arch: "auto", legacy_build: "cp313t-*"}
           - {os: "macOS-latest", label: "macOS-arm64", platform: "auto", arch: "auto", legacy_build: "cp313t-*"}
           - {os: "ubuntu-24.04-arm", label: "linux-arm64", platform: "auto", arch: "auto", legacy_build: "cp313t-*"}
@@ -98,6 +98,7 @@ jobs:
           CIBW_PLATFORM: ${{ matrix.config.platform }}
           CIBW_ARCHS: ${{ matrix.config.arch }}
           CIBW_SKIP: pp*
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""
 
       - uses: actions/upload-artifact@v7
         with:
