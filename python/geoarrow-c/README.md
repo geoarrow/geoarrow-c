@@ -40,6 +40,39 @@ kernel.push(input_pyarrow)
 result = kernel.finish()
 ```
 
+## Type specification integration
+
+The `arrow_to_type_spec()` and `type_spec_to_arrow()` functions bridge
+`geoarrow.types.TypeSpec` objects and the Arrow C Data Interface. This
+integration requires the `geoarrow-types` package but does not require a
+particular Arrow implementation.
+
+`type_spec_to_arrow()` returns a `SchemaHolder` implementing
+`__arrow_c_schema__`:
+
+```python
+import geoarrow.types as gt
+from geoarrow.c import type_spec_to_arrow
+
+type_spec = gt.linestring(
+    dimensions=gt.Dimensions.XYZ,
+    coord_type=gt.CoordType.INTERLEAVED,
+    crs="EPSG:4326",
+)
+schema = type_spec_to_arrow(type_spec)
+schema_capsule = schema.__arrow_c_schema__()
+```
+
+`arrow_to_type_spec()` accepts a `SchemaHolder` or any other
+`__arrow_c_schema__` provider and reconstructs the corresponding `TypeSpec`:
+
+```python
+from geoarrow.c import arrow_to_type_spec
+
+roundtripped = arrow_to_type_spec(schema)
+assert roundtripped == type_spec.with_defaults().canonicalize()
+```
+
 ## Building
 
 Python bindings for nanoarrow are managed with [setuptools](https://setuptools.pypa.io/en/latest/index.html).
