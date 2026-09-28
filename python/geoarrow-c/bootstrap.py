@@ -15,8 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os
 import glob
+import os
 import shutil
 
 if __name__ == "__main__":

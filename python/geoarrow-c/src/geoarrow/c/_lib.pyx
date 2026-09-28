@@ -6,7 +6,9 @@
 """Low-level geoarrow Python bindings."""
 
 from libc.stdint cimport uint8_t, int32_t, int64_t, uintptr_t
+from libc.stdlib cimport free, malloc
 from cpython cimport Py_buffer, PyObject
+from cpython.pycapsule cimport PyCapsule_GetPointer, PyCapsule_New
 from libcpp cimport bool
 from libcpp.string cimport string
 
@@ -219,6 +221,12 @@ cdef extern from "geoarrow.h":
                                             ArrowArray* array,
                                             GeoArrowError* error)
 
+
+cdef extern from "nanoarrow/nanoarrow.h":
+    void ArrowSchemaMove(ArrowSchema* src, ArrowSchema* dst)
+    GeoArrowErrorCode ArrowSchemaDeepCopy(ArrowSchema* schema,
+                                          ArrowSchema* schema_out)
+
 cdef extern from "geoarrow_python.h":
 
     GeoArrowErrorCode GeoArrowBuilderSetPyBuffer(GeoArrowBuilder* builder, int64_t i, PyObject* obj,
@@ -259,6 +267,10 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
                                 const string& metadata) except +ValueError
 
         @staticmethod
+        GeometryDataType MakeType "Make"(GeoArrowType type,
+                                          const string& metadata) except +ValueError
+
+        @staticmethod
         GeometryDataType Make1 "Make"(ArrowSchema* schema) except +ValueError
 
         @staticmethod
@@ -289,6 +301,19 @@ class GeoArrowCException(RuntimeError):
             super().__init__(f"{self.what} failed ({self.code}): {self.message}")
 
 
+cdef void pycapsule_schema_deleter(object schema_capsule) noexcept:
+    cdef ArrowSchema* schema = <ArrowSchema*>PyCapsule_GetPointer(
+        schema_capsule, "arrow_schema"
+    )
+    if schema == NULL:
+        return
+
+    if schema.release != NULL:
+        schema.release(schema)
+
+    free(schema)
+
+
 cdef class Error:
     cdef GeoArrowError c_error
 
@@ -315,6 +340,41 @@ cdef class SchemaHolder:
 
     def _addr(self):
         return <uintptr_t>&self.c_schema
+
+    def __arrow_c_schema__(self):
+        """Export an independent Arrow schema capsule."""
+        if self.c_schema.release == NULL:
+            raise ValueError("Schema is already released")
+
+        cdef ArrowSchema* schema = <ArrowSchema*>malloc(sizeof(ArrowSchema))
+        if schema == NULL:
+            raise MemoryError()
+
+        schema.release = NULL
+        capsule = PyCapsule_New(
+            schema, "arrow_schema", &pycapsule_schema_deleter
+        )
+        cdef int result = ArrowSchemaDeepCopy(&self.c_schema, schema)
+        if result != GEOARROW_OK:
+            Error.raise_error("ArrowSchemaDeepCopy()", result)
+
+        return capsule
+
+    @staticmethod
+    def from_arrow_c_schema(obj):
+        """Import an Arrow schema capsule or ``__arrow_c_schema__`` provider."""
+        if hasattr(obj, "__arrow_c_schema__"):
+            obj = obj.__arrow_c_schema__()
+
+        cdef ArrowSchema* schema = <ArrowSchema*>PyCapsule_GetPointer(
+            obj, "arrow_schema"
+        )
+        if schema.release == NULL:
+            raise ValueError("Arrow schema is released")
+
+        out = SchemaHolder()
+        ArrowSchemaMove(schema, &out.c_schema)
+        return out
 
     def is_valid(self):
         return self.c_schema.release != NULL
@@ -469,6 +529,11 @@ cdef class CGeometryDataType:
              GeoArrowCoordType coord_type,
              metadata=b''):
         cdef GeometryDataType ctype = GeometryDataType.Make0(geometry_type, dimensions, coord_type, metadata)
+        return CGeometryDataType._move_from_ctype(&ctype)
+
+    @staticmethod
+    def MakeType(GeoArrowType type, metadata=b''):
+        cdef GeometryDataType ctype = GeometryDataType.MakeType(type, metadata)
         return CGeometryDataType._move_from_ctype(&ctype)
 
     @staticmethod

@@ -1,5 +1,5 @@
-from . import _lib  # noqa: F401
-from ._lib import (
+from geoarrow.c import _lib  # noqa: F401
+from geoarrow.c._lib import (
     ArrayHolder,
     CKernel,
     GeoArrowCException,
