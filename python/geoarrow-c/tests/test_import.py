@@ -1,4 +1,13 @@
+import gc
+import subprocess
+import sys
+import sysconfig
+import weakref
+from array import array
+
 import geoarrow.c as ga
+import geoarrow.c.lib as lib
+import pytest
 
 # This is mostly a naive sanity check that the native extension can be loaded
 # on platforms where there is no pyarrow.
@@ -10,3 +19,62 @@ def test_enums():
     assert ga.Dimensions.UNKNOWN == 0
     assert ga.EdgeType.PLANAR == 0
     assert ga.GeometryType.GEOMETRY == 0
+
+
+def test_free_threaded_import_does_not_enable_gil():
+    if not sysconfig.get_config_var("Py_GIL_DISABLED"):
+        return
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import geoarrow.c, sys; assert not sys._is_gil_enabled()",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_builder_keeps_python_buffers_alive_until_release():
+    type_obj = lib.CGeometryDataType.Make(
+        ga.GeometryType.POINT, ga.Dimensions.XY, ga.CoordType.SEPARATE
+    )
+    builder = lib.CBuilder(type_obj.to_schema())
+
+    invalid = array("d", [0.0])
+    invalid_ref = weakref.ref(invalid)
+    with pytest.raises(lib.GeoArrowCException):
+        builder.set_buffer_double(100, invalid)
+    del invalid
+    gc.collect()
+    assert invalid_ref() is None
+
+    x1 = array("d", [1.0])
+    x1_ref = weakref.ref(x1)
+    builder.set_buffer_double(1, x1)
+    del x1
+    gc.collect()
+    assert x1_ref() is not None
+
+    x2 = array("d", [2.0])
+    x2_ref = weakref.ref(x2)
+    builder.set_buffer_double(1, x2)
+    del x2
+    gc.collect()
+    assert x1_ref() is None
+    assert x2_ref() is not None
+
+    y = array("d", [3.0])
+    builder.set_buffer_double(2, y)
+    out = builder.finish()
+    del builder
+    gc.collect()
+    assert x2_ref() is not None
+
+    out.release()
+    gc.collect()
+    assert x2_ref() is None
