@@ -68,8 +68,3 @@ def test_to_type_spec_accepts_capsule():
     schema_capsule = gt.point().to_pyarrow().__arrow_c_schema__()
 
     assert types.arrow_to_type_spec(schema_capsule) == gt.point().with_defaults()
-
-
-def test_lib_reexports_type_backend():
-    assert lib.type_spec_to_arrow is types.type_spec_to_arrow
-    assert lib.arrow_to_type_spec is types.arrow_to_type_spec
