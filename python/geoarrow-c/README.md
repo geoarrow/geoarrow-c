@@ -32,12 +32,12 @@ the compute kernels exposed by `geoarrow-c`:
 
 ```python
 import geoarrow.pyarrow as ga
-from geoarrow.c import AggregateKernel
+from geoarrow.c import Accumulator
 
 input_pyarrow = ga.array(["POINT (0 1)"])
-kernel = AggregateKernel("box_agg", input_pyarrow.type)
-kernel.push(input_pyarrow)
-result = kernel.finish()
+accumulator = Accumulator("box_agg", input_pyarrow.type)
+accumulator.update(input_pyarrow)
+result = accumulator.evaluate()
 ```
 
 ## Type specification integration

@@ -61,7 +61,7 @@ class ScalarKernel(_Kernel):
     def __init__(self, name, type_in, **options):
         _validate_name(name)
         if name.endswith("_agg"):
-            raise ValueError("Aggregate kernel names must be used with AggregateKernel")
+            raise ValueError("Aggregate kernel names must be used with Accumulator")
         super().__init__(name, type_in, options)
 
     def execute(self, array):
@@ -86,7 +86,7 @@ class ScalarKernel(_Kernel):
 
 
 class Accumulator(_Kernel):
-    """An aggregate GeoArrow C kernel with a push/finish lifecycle.
+    """An aggregate GeoArrow C kernel with an update/evaluate lifecycle.
 
     Parameters
     ----------
@@ -104,8 +104,8 @@ class Accumulator(_Kernel):
             raise ValueError("Scalar kernel names must be used with ScalarKernel")
         super().__init__(name, type_in, options)
 
-    def push(self, array):
-        """Push an Arrow array or all chunks of an array stream."""
+    def update(self, array):
+        """Update the aggregate with an Arrow array or array stream."""
         if hasattr(array, "__arrow_c_array__"):
             array_in = lib.ArrayHolder.from_arrow_c_array(array)
             self._kernel.push_batch_agg(array_in)
@@ -125,8 +125,8 @@ class Accumulator(_Kernel):
             f"got {type(array)}"
         )
 
-    def finish(self):
-        """Finish the aggregation and return its result array."""
+    def evaluate(self):
+        """Evaluate the current aggregate and return its result array."""
         return self._kernel.finish_agg()
 
 

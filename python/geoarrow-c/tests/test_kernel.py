@@ -51,15 +51,15 @@ def test_scalar_kernel_execute_chunked_array():
     assert [len(chunk) for chunk in result.chunks] == [2, 1]
 
 
-def test_aggregate_kernel_push_and_finish():
+def test_accumulator_update_and_evaluate():
     kernel = Accumulator("void_agg", pa.int32())
     array = pa.chunked_array([[1, 2], [3]], type=pa.int32())
 
-    assert kernel.push(StreamProvider(array)) is None
-    assert pa.array(kernel.finish()) == pa.nulls(1)
-    assert pa.array(kernel.finish()) == pa.nulls(1)
-    assert kernel.push(pa.array([4])) is None
-    assert pa.array(kernel.finish()) == pa.nulls(1)
+    assert kernel.update(StreamProvider(array)) is None
+    assert pa.array(kernel.evaluate()) == pa.nulls(1)
+    assert pa.array(kernel.evaluate()) == pa.nulls(1)
+    assert kernel.update(pa.array([4])) is None
+    assert pa.array(kernel.evaluate()) == pa.nulls(1)
 
 
 def test_kernel_kind_is_explicit():
