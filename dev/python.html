@@ -353,6 +353,20 @@ as <code class="docutils literal notranslate"><span class="pre">import</span> <s
 </pre></div>
 </div>
 </section>
+<dl class="py function">
+<dt class="sig sig-object py" id="geoarrow.c.arrow_to_type_spec">
+<span class="sig-name descname"><span class="pre">arrow_to_type_spec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#geoarrow.c.arrow_to_type_spec" title="Link to this definition">#</a></dt>
+<dd><p>Create a <code class="docutils literal notranslate"><span class="pre">geoarrow.types.TypeSpec</span></code> from an Arrow schema provider.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="geoarrow.c.type_spec_to_arrow">
+<span class="sig-name descname"><span class="pre">type_spec_to_arrow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#geoarrow.c.type_spec_to_arrow" title="Link to this definition">#</a></dt>
+<dd><p>Create a <code class="docutils literal notranslate"><span class="pre">SchemaHolder</span></code> from a <code class="docutils literal notranslate"><span class="pre">geoarrow.types.TypeSpec</span></code>.</p>
+<p>The returned object implements the Arrow PyCapsule protocol and is importable
+as a field in PyArrow and elsewhere.</p>
+</dd></dl>
+
 <section id="constants">
 <h2>Constants<a class="headerlink" href="#constants" title="Link to this heading">#</a></h2>
 </section>
@@ -397,6 +411,8 @@ as <code class="docutils literal notranslate"><span class="pre">import</span> <s
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.arrow_to_type_spec"><code class="docutils literal notranslate"><span class="pre">arrow_to_type_spec()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.type_spec_to_arrow"><code class="docutils literal notranslate"><span class="pre">type_spec_to_arrow()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#constants">Constants</a></li>
 </ul>
   </nav></div>
