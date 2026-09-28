@@ -221,6 +221,12 @@ cdef extern from "geoarrow.h":
                                             ArrowArray* array,
                                             GeoArrowError* error)
 
+
+cdef extern from "nanoarrow/nanoarrow.h":
+    void ArrowSchemaMove(ArrowSchema* src, ArrowSchema* dst)
+    GeoArrowErrorCode ArrowSchemaDeepCopy(ArrowSchema* schema,
+                                          ArrowSchema* schema_out)
+
 cdef extern from "geoarrow_python.h":
 
     GeoArrowErrorCode GeoArrowBuilderSetPyBuffer(GeoArrowBuilder* builder, int64_t i, PyObject* obj,
@@ -334,6 +340,41 @@ cdef class SchemaHolder:
 
     def _addr(self):
         return <uintptr_t>&self.c_schema
+
+    def __arrow_c_schema__(self):
+        """Export an independent Arrow schema capsule."""
+        if self.c_schema.release == NULL:
+            raise ValueError("Schema is already released")
+
+        cdef ArrowSchema* schema = <ArrowSchema*>malloc(sizeof(ArrowSchema))
+        if schema == NULL:
+            raise MemoryError()
+
+        schema.release = NULL
+        capsule = PyCapsule_New(
+            schema, "arrow_schema", &pycapsule_schema_deleter
+        )
+        cdef int result = ArrowSchemaDeepCopy(&self.c_schema, schema)
+        if result != GEOARROW_OK:
+            Error.raise_error("ArrowSchemaDeepCopy()", result)
+
+        return capsule
+
+    @staticmethod
+    def from_arrow_c_schema(obj):
+        """Import an Arrow schema capsule or ``__arrow_c_schema__`` provider."""
+        if hasattr(obj, "__arrow_c_schema__"):
+            obj = obj.__arrow_c_schema__()
+
+        cdef ArrowSchema* schema = <ArrowSchema*>PyCapsule_GetPointer(
+            obj, "arrow_schema"
+        )
+        if schema.release == NULL:
+            raise ValueError("Arrow schema is released")
+
+        out = SchemaHolder()
+        ArrowSchemaMove(schema, &out.c_schema)
+        return out
 
     def is_valid(self):
         return self.c_schema.release != NULL
@@ -482,19 +523,6 @@ cdef class CGeometryDataType:
         self.c_vector_type.InitStorageSchema(&out.c_schema)
         return out
 
-    def to_schema_capsule(self):
-        self._assert_valid()
-        cdef ArrowSchema* schema = <ArrowSchema*>malloc(sizeof(ArrowSchema))
-        if schema == NULL:
-            raise MemoryError()
-
-        schema.release = NULL
-        capsule = PyCapsule_New(
-            schema, "arrow_schema", &pycapsule_schema_deleter
-        )
-        self.c_vector_type.InitSchema(schema)
-        return capsule
-
     @staticmethod
     def Make(GeoArrowGeometryType geometry_type,
              GeoArrowDimensions dimensions,
@@ -511,17 +539,6 @@ cdef class CGeometryDataType:
     @staticmethod
     def FromExtension(SchemaHolder schema):
         cdef GeometryDataType ctype = GeometryDataType.Make1(&schema.c_schema)
-        return CGeometryDataType._move_from_ctype(&ctype)
-
-    @staticmethod
-    def FromExtensionCapsule(schema_capsule):
-        cdef ArrowSchema* schema = <ArrowSchema*>PyCapsule_GetPointer(
-            schema_capsule, "arrow_schema"
-        )
-        if schema.release == NULL:
-            raise ValueError("Arrow schema is released")
-
-        cdef GeometryDataType ctype = GeometryDataType.Make1(schema)
         return CGeometryDataType._move_from_ctype(&ctype)
 
     @staticmethod

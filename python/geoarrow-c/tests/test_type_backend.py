@@ -26,18 +26,26 @@ pa = pytest.importorskip("pyarrow")
     ],
 )
 def test_type_spec_roundtrip(spec):
-    schema_capsule = lib.from_type_spec(spec)
-    assert lib.to_type_spec(schema_capsule) == spec.with_defaults().canonicalize()
+    schema = lib.type_spec_to_arrow(spec)
+    assert isinstance(schema, lib.SchemaHolder)
+    assert lib.arrow_to_type_spec(schema) == spec.with_defaults().canonicalize()
 
 
-def test_to_type_spec_does_not_consume_capsule():
-    schema_capsule = lib.from_type_spec(gt.point())
+def test_to_type_spec_does_not_consume_holder():
+    schema = lib.type_spec_to_arrow(gt.point())
 
-    assert lib.to_type_spec(schema_capsule) == lib.to_type_spec(schema_capsule)
+    assert lib.arrow_to_type_spec(schema) == lib.arrow_to_type_spec(schema)
+
+
+def test_to_type_spec_short_circuits_type_spec():
+    spec = gt.point()
+
+    assert lib.arrow_to_type_spec(spec) is spec
 
 
 def test_from_type_spec_capsule_is_arrow_compatible():
-    schema_capsule = lib.from_type_spec(gt.point())
+    schema = lib.type_spec_to_arrow(gt.point())
+    schema_capsule = schema.__arrow_c_schema__()
     assert pa.DataType._import_from_c_capsule(schema_capsule) == pa.struct(
         [
             pa.field("x", pa.float64(), nullable=False),
@@ -46,13 +54,19 @@ def test_from_type_spec_capsule_is_arrow_compatible():
     )
 
 
-def test_to_type_spec_accepts_arrow_compatible_capsule():
+def test_to_type_spec_accepts_arrow_schema_provider():
     spec = gt.linestring(
         dimensions=gt.Dimensions.XYZ,
         coord_type=gt.CoordType.INTERLEAVED,
         edge_type=gt.EdgeType.SPHERICAL,
         crs="EPSG:4326",
     )
-    schema_capsule = spec.to_pyarrow().__arrow_c_schema__()
+    arrow_type = spec.to_pyarrow()
 
-    assert lib.to_type_spec(schema_capsule) == spec.with_defaults()
+    assert lib.arrow_to_type_spec(arrow_type) == spec.with_defaults()
+
+
+def test_to_type_spec_accepts_capsule():
+    schema_capsule = gt.point().to_pyarrow().__arrow_c_schema__()
+
+    assert lib.arrow_to_type_spec(schema_capsule) == gt.point().with_defaults()

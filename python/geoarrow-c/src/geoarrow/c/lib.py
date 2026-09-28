@@ -18,8 +18,11 @@ _ENCODING_TO_C_TYPE = {
 _C_TYPE_TO_ENCODING = {value: key for key, value in _ENCODING_TO_C_TYPE.items()}
 
 
-def from_type_spec(spec):
-    """Create an Arrow schema capsule from a ``geoarrow.types.TypeSpec``."""
+def type_spec_to_arrow(spec):
+    """Create a ``SchemaHolder`` from a ``geoarrow.types.TypeSpec``.
+
+    The returned object implements the Arrow PyCapsule protocol and is importable
+    as a field in PyArrow and elsewhere."""
     import geoarrow.types as gt
 
     spec = gt.type_spec(spec).with_defaults().canonicalize()
@@ -42,14 +45,22 @@ def from_type_spec(spec):
 
         c_type = _lib.CGeometryDataType.MakeType(type_id, metadata)
 
-    return c_type.to_schema_capsule()
+    return c_type.to_schema()
 
 
-def to_type_spec(arrow_pycapsule_schema):
-    """Create a ``geoarrow.types.TypeSpec`` from an Arrow schema capsule."""
+def arrow_to_type_spec(obj):
+    """Create a ``geoarrow.types.TypeSpec`` from an Arrow schema provider."""
     import geoarrow.types as gt
 
-    c_type = _lib.CGeometryDataType.FromExtensionCapsule(arrow_pycapsule_schema)
+    if isinstance(obj, gt.TypeSpec):
+        return obj
+
+    if isinstance(obj, SchemaHolder):
+        schema = obj
+    else:
+        schema = SchemaHolder.from_arrow_c_schema(obj)
+
+    c_type = _lib.CGeometryDataType.FromExtension(schema)
     metadata_spec = gt.TypeSpec.from_extension_metadata(
         c_type.extension_metadata.decode("UTF-8")
     )
@@ -81,6 +92,6 @@ __all__ = [
     "CKernel",
     "GeoArrowCException",
     "SchemaHolder",
-    "from_type_spec",
-    "to_type_spec",
+    "arrow_to_type_spec",
+    "type_spec_to_arrow",
 ]
