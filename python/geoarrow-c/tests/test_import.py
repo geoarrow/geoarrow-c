@@ -5,20 +5,8 @@ import sysconfig
 import weakref
 from array import array
 
-import geoarrow.c as ga
-import geoarrow.c.lib as lib
 import pytest
-
-# This is mostly a naive sanity check that the native extension can be loaded
-# on platforms where there is no pyarrow.
-
-
-def test_enums():
-    assert ga.CoordType.UNKNOWN == 0
-    assert ga.CrsType.UNKNOWN == 1
-    assert ga.Dimensions.UNKNOWN == 0
-    assert ga.EdgeType.PLANAR == 0
-    assert ga.GeometryType.GEOMETRY == 0
+from geoarrow.c.lib import _lib as lib
 
 
 def test_free_threaded_import_does_not_enable_gil():
@@ -41,7 +29,9 @@ def test_free_threaded_import_does_not_enable_gil():
 
 def test_builder_keeps_python_buffers_alive_until_release():
     type_obj = lib.CGeometryDataType.Make(
-        ga.GeometryType.POINT, ga.Dimensions.XY, ga.CoordType.SEPARATE
+        lib.GEOARROW_GEOMETRY_TYPE_POINT,
+        lib.GEOARROW_DIMENSIONS_XY,
+        lib.GEOARROW_COORD_TYPE_SEPARATE,
     )
     builder = lib.CBuilder(type_obj.to_schema())
 

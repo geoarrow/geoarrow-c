@@ -10,5 +10,3 @@ Examples
 """
 
 from geoarrow.c._version import __version__, __version_tuple__  # NOQA: F401
-
-from .lib import GeometryType, Dimensions, CoordType, EdgeType, CrsType
