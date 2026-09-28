@@ -27,6 +27,21 @@ def test_free_threaded_import_does_not_enable_gil():
     assert result.returncode == 0, result.stderr
 
 
+def test_lib_import_does_not_import_geoarrow_types():
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import geoarrow.c.lib, sys; assert 'geoarrow.types' not in sys.modules",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
 def test_builder_keeps_python_buffers_alive_until_release():
     type_obj = lib.CGeometryDataType.Make(
         lib.GEOARROW_GEOMETRY_TYPE_POINT,
