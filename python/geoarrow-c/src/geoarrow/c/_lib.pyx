@@ -569,7 +569,7 @@ cdef class ArrayStreamHolder:
                 &out.c_stream, i, &(<ArrayHolder>array).c_array
             )
 
-        out._schema = schema
+        out._schema = out.get_schema()
         return out
 
     def get_schema(self):

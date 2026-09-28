@@ -50,6 +50,20 @@ def test_array_stream_holder_arrow_c_stream_roundtrip():
     assert holder.is_valid() is False
 
 
+def test_array_stream_holder_from_arrays_owns_schema():
+    schema = lib.SchemaHolder.from_arrow_c_schema(pa.int32())
+    expected = pa.array([1, None, 3], type=pa.int32())
+    array = lib.ArrayHolder.from_arrow_c_array(expected)
+    stream = lib.ArrayStreamHolder.from_arrays(schema, [array])
+
+    schema.release()
+    batch = stream.get_next()
+    assert stream.get_next() is None
+    stream.release()
+
+    assert pa.array(batch) == expected
+
+
 def test_kernel_void():
     kernel = lib.CKernel(b"void")
 
