@@ -85,7 +85,7 @@ class ScalarKernel(_Kernel):
         )
 
 
-class AggregateKernel(_Kernel):
+class Accumulator(_Kernel):
     """An aggregate GeoArrow C kernel with a push/finish lifecycle.
 
     Parameters
@@ -153,4 +153,4 @@ def _pack_options(options):
     return packed
 
 
-__all__ = ["AggregateKernel", "ScalarKernel"]
+__all__ = ["Accumulator", "ScalarKernel"]

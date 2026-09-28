@@ -10,11 +10,11 @@ Examples
 """
 
 from geoarrow.c._version import __version__, __version_tuple__  # NOQA: F401
-from geoarrow.c.kernel import AggregateKernel, ScalarKernel
+from geoarrow.c.kernel import Accumulator, ScalarKernel
 from geoarrow.c.types import arrow_to_type_spec, type_spec_to_arrow
 
 __all__ = [
-    "AggregateKernel",
+    "Accumulator",
     "ScalarKernel",
     "arrow_to_type_spec",
     "type_spec_to_arrow",

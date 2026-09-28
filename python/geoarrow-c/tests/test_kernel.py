@@ -1,5 +1,5 @@
 import pytest
-from geoarrow.c import AggregateKernel, ScalarKernel, lib
+from geoarrow.c import Accumulator, ScalarKernel, lib
 
 pa = pytest.importorskip("pyarrow")
 
@@ -52,7 +52,7 @@ def test_scalar_kernel_execute_chunked_array():
 
 
 def test_aggregate_kernel_push_and_finish():
-    kernel = AggregateKernel("void_agg", pa.int32())
+    kernel = Accumulator("void_agg", pa.int32())
     array = pa.chunked_array([[1, 2], [3]], type=pa.int32())
 
     assert kernel.push(StreamProvider(array)) is None
@@ -66,16 +66,16 @@ def test_kernel_kind_is_explicit():
     with pytest.raises(ValueError, match="Aggregate kernel"):
         ScalarKernel("void_agg", pa.int32())
     with pytest.raises(ValueError, match="Scalar kernel"):
-        AggregateKernel("void", pa.int32())
+        Accumulator("void", pa.int32())
 
 
-@pytest.mark.parametrize("kernel_cls", [ScalarKernel, AggregateKernel])
+@pytest.mark.parametrize("kernel_cls", [ScalarKernel, Accumulator])
 def test_kernel_requires_string_name(kernel_cls):
     with pytest.raises(TypeError, match="name.*str"):
         kernel_cls(b"void", pa.int32())
 
 
-@pytest.mark.parametrize("kernel_cls", [ScalarKernel, AggregateKernel])
+@pytest.mark.parametrize("kernel_cls", [ScalarKernel, Accumulator])
 def test_kernel_requires_schema_provider(kernel_cls):
     name = "void" if kernel_cls is ScalarKernel else "void_agg"
     with pytest.raises(ValueError):
