@@ -112,9 +112,8 @@ def _validate_name(name):
 
 def _pack_options(options):
     options = {key: value for key, value in options.items() if value is not None}
-    if not options:
-        return b""
 
+    # Arrow metadata requires a four-byte count even when there are no entries.
     packed = len(options).to_bytes(4, sys.byteorder, signed=True)
     for key, value in options.items():
         key_bytes = str(key).encode("UTF-8")

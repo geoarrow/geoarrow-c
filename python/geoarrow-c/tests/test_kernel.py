@@ -1,5 +1,6 @@
 import pytest
 from geoarrow.c import AggregateFunction, ScalarFunction, lib
+from geoarrow.c.kernel import _pack_options
 
 pa = pytest.importorskip("pyarrow")
 
@@ -78,6 +79,11 @@ def test_function_requires_array(function):
 def test_function_options_omit_none():
     function = ScalarFunction("void", unused=None)
     assert pa.array(function(pa.array([1]))) == pa.nulls(1)
+
+
+@pytest.mark.parametrize("options", [{}, {"precision": None}])
+def test_empty_options_include_metadata_count(options):
+    assert _pack_options(options) == b"\x00\x00\x00\x00"
 
 
 def test_function_empty_stream():
