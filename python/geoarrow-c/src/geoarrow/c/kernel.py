@@ -61,9 +61,7 @@ class ScalarKernel(_Kernel):
     def __init__(self, name, type_in, **options):
         _validate_name(name)
         if name.endswith("_agg"):
-            raise ValueError(
-                "Aggregate kernel names must be used with AggregateKernel"
-            )
+            raise ValueError("Aggregate kernel names must be used with AggregateKernel")
         super().__init__(name, type_in, options)
 
     def execute(self, array):
@@ -79,16 +77,12 @@ class ScalarKernel(_Kernel):
                     break
                 arrays_out.append(self._execute_array(array_in))
 
-            return lib.ArrayStreamHolder.from_arrays(
-                self._type_out_schema, arrays_out
-            )
+            return lib.ArrayStreamHolder.from_arrays(self._type_out_schema, arrays_out)
 
         raise TypeError(
             "Expected an __arrow_c_array__ or __arrow_c_stream__ provider, "
             f"got {type(array)}"
         )
-
-    __call__ = execute
 
 
 class AggregateKernel(_Kernel):
@@ -107,17 +101,11 @@ class AggregateKernel(_Kernel):
     def __init__(self, name, type_in, **options):
         _validate_name(name)
         if not name.endswith("_agg"):
-            raise ValueError(
-                "Scalar kernel names must be used with ScalarKernel"
-            )
+            raise ValueError("Scalar kernel names must be used with ScalarKernel")
         super().__init__(name, type_in, options)
-        self._finished = False
 
     def push(self, array):
         """Push an Arrow array or all chunks of an array stream."""
-        if self._finished:
-            raise RuntimeError("Cannot push to a finished aggregate kernel")
-
         if hasattr(array, "__arrow_c_array__"):
             array_in = lib.ArrayHolder.from_arrow_c_array(array)
             self._kernel.push_batch_agg(array_in)
@@ -139,10 +127,6 @@ class AggregateKernel(_Kernel):
 
     def finish(self):
         """Finish the aggregation and return its result array."""
-        if self._finished:
-            raise RuntimeError("Aggregate kernel is already finished")
-
-        self._finished = True
         return self._kernel.finish_agg()
 
 
