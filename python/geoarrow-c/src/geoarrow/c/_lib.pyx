@@ -1,6 +1,7 @@
 
 # cython: language_level = 3
 # cython: linetrace=True
+# cython: freethreading_compatible = True
 
 """Low-level geoarrow Python bindings."""
 
