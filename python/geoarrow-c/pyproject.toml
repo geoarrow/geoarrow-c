@@ -19,10 +19,11 @@
 [project]
 name = "geoarrow-c"
 dynamic = ["version"]
-readme = "README.md"
+readme = {file = "README.md", content-type = "text/markdown"}
 description = "Python bindings to the geoarrow C and C++ implementation"
 authors = [{name = "Dewey Dunnington", email = "dewey@dunnington.ca"}]
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.9"
 
 [project.optional-dependencies]
@@ -34,7 +35,7 @@ repository = "https://github.com/geoarrow/geoarrow-c"
 
 [build-system]
 requires = [
-    "setuptools >= 61.0.0",
+    "setuptools >= 77.0.3",
     "setuptools-scm",
     "Cython >= 3.1.0"
 ]
