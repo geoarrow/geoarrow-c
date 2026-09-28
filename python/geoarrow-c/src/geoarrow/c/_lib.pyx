@@ -439,6 +439,12 @@ cdef class ArrayHolder:
     def _addr(self):
         return <uintptr_t>&self.c_array
 
+    def get_schema(self):
+        """Return an independent copy of this array's schema."""
+        if self._schema is None:
+            raise ValueError("Array holder does not have a schema")
+        return SchemaHolder.from_arrow_c_schema(self._schema)
+
     def __arrow_c_array__(self, requested_schema=None):
         """Export this array using the Arrow PyCapsule protocol."""
         if requested_schema is not None:

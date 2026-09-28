@@ -32,13 +32,20 @@ the compute kernels exposed by `geoarrow-c`:
 
 ```python
 import geoarrow.pyarrow as ga
-from geoarrow.c import Accumulator
+from geoarrow.c import AggregateFunction, ScalarFunction
 
 input_pyarrow = ga.array(["POINT (0 1)"])
-accumulator = Accumulator("box_agg", input_pyarrow.type)
-accumulator.update(input_pyarrow)
-result = accumulator.evaluate()
+format_wkt = ScalarFunction("format_wkt", precision=3)
+formatted = format_wkt(input_pyarrow)
+
+box_agg = AggregateFunction("box_agg")
+result = box_agg(input_pyarrow)
 ```
+
+Each call infers the input type from the array or stream and creates a fresh
+kernel. Scalar functions preserve stream batch boundaries; aggregate functions
+combine all batches into a single result array. Results implement the Arrow
+PyCapsule protocol and can be imported into an Arrow implementation.
 
 ## Type specification integration
 

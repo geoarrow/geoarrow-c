@@ -34,6 +34,18 @@ def test_array_holder_arrow_c_array_roundtrip():
     assert holder.is_valid() is False
 
 
+def test_array_holder_get_schema():
+    with pytest.raises(ValueError, match="does not have a schema"):
+        lib.ArrayHolder().get_schema()
+
+    expected = pa.array([1, None, 3], type=pa.int32())
+    holder = lib.ArrayHolder.from_arrow_c_array(expected)
+    schema = holder.get_schema()
+    assert pa.DataType._import_from_c_capsule(schema.__arrow_c_schema__()) == pa.int32()
+    schema.release()
+    assert pa.array(holder) == expected
+
+
 def test_array_stream_holder_arrow_c_stream_roundtrip():
     holder = lib.ArrayStreamHolder.from_arrow_c_stream(
         pa.chunked_array([[1, 2], [3]], type=pa.int64())

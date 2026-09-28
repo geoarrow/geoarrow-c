@@ -1,133 +1,108 @@
-"""Higher-level wrappers around GeoArrow C compute kernels.
-
-These wrappers accept and return Arrow PyCapsule protocol providers while
-keeping the current ``CKernel`` binding as an implementation detail. Scalar and
-aggregate kernels are separate because they have different execution
-lifecycles and are expected to use separate C ABIs in the future.
-"""
+"""High-level wrappers around GeoArrow C compute kernels."""
 
 import sys
 
 from geoarrow.c import lib
 
 
-class _Kernel:
-    def __init__(self, name, type_in, options):
-        if not isinstance(name, str):
-            raise TypeError("Expected `name` to be a str")
+class ScalarFunction:
+    """A callable scalar GeoArrow C function.
 
+    Each call creates a new kernel using the input array or stream's schema.
+
+    Parameters
+    ----------
+    name : str
+        The registered C kernel name.
+    **options
+        Kernel options. ``None`` values are omitted.
+    """
+
+    def __init__(self, name, **options):
+        _validate_name(name)
+        if name.endswith("_agg"):
+            raise ValueError(
+                "Aggregate kernel names must be used with AggregateFunction"
+            )
         self._name = name
-        self._kernel = lib.CKernel(name.encode("UTF-8"))
-
-        self._type_in = lib.SchemaHolder.from_arrow_c_schema(type_in)
-        self._type_out_schema = self._kernel.start(
-            self._type_in, _pack_options(options)
-        )
+        self._options = _pack_options(options)
 
     @property
     def name(self):
         """The C kernel name."""
         return self._name
 
-    @property
-    def type_in(self):
-        """The input ``SchemaHolder``."""
-        return self._type_in
+    def __call__(self, array):
+        """Return an Arrow array or stream matching the input's batch structure."""
+        array_in = _import_input(array)
+        kernel = lib.CKernel(self._name.encode("UTF-8"))
+        type_out = kernel.start(array_in.get_schema(), self._options)
+        if isinstance(array_in, lib.ArrayHolder):
+            return kernel.push_batch(array_in)
 
-    @property
-    def type_out(self):
-        """The output ``SchemaHolder``."""
-        return self._type_out_schema
+        arrays_out = []
+        while True:
+            batch = array_in.get_next()
+            if batch is None:
+                break
+            arrays_out.append(kernel.push_batch(batch))
 
-    def _execute_array(self, array):
-        array_in = lib.ArrayHolder.from_arrow_c_array(array)
-        return self._kernel.push_batch(array_in)
-
-
-class ScalarKernel(_Kernel):
-    """A scalar GeoArrow C kernel.
-
-    Parameters
-    ----------
-    name : str
-        The registered C kernel name.
-    type_in : __arrow_c_schema__ provider
-        The input array type. The current GeoArrow C kernel ABI accepts one
-        input; a future scalar-kernel ABI may support multiple inputs.
-    **options
-        Kernel options. ``None`` values are omitted.
-    """
-
-    def __init__(self, name, type_in, **options):
-        _validate_name(name)
-        if name.endswith("_agg"):
-            raise ValueError("Aggregate kernel names must be used with Accumulator")
-        super().__init__(name, type_in, options)
-
-    def execute(self, array):
-        """Execute the kernel for an Arrow array or array stream."""
-        if hasattr(array, "__arrow_c_array__"):
-            return self._execute_array(array)
-        if hasattr(array, "__arrow_c_stream__"):
-            stream_in = lib.ArrayStreamHolder.from_arrow_c_stream(array)
-            arrays_out = []
-            while True:
-                array_in = stream_in.get_next()
-                if array_in is None:
-                    break
-                arrays_out.append(self._execute_array(array_in))
-
-            return lib.ArrayStreamHolder.from_arrays(self._type_out_schema, arrays_out)
-
-        raise TypeError(
-            "Expected an __arrow_c_array__ or __arrow_c_stream__ provider, "
-            f"got {type(array)}"
-        )
+        return lib.ArrayStreamHolder.from_arrays(type_out, arrays_out)
 
 
-class Accumulator(_Kernel):
-    """An aggregate GeoArrow C kernel with an update/evaluate lifecycle.
+class AggregateFunction:
+    """A callable aggregate GeoArrow C function.
+
+    Each call creates a new kernel using the input array or stream's schema,
+    accumulates all input batches, and returns the aggregate result array.
 
     Parameters
     ----------
     name : str
         The registered C aggregate kernel name.
-    type_in : __arrow_c_schema__ provider
-        The input array type.
     **options
         Kernel options. ``None`` values are omitted.
     """
 
-    def __init__(self, name, type_in, **options):
+    def __init__(self, name, **options):
         _validate_name(name)
         if not name.endswith("_agg"):
-            raise ValueError("Scalar kernel names must be used with ScalarKernel")
-        super().__init__(name, type_in, options)
+            raise ValueError("Scalar kernel names must be used with ScalarFunction")
+        self._name = name
+        self._options = _pack_options(options)
 
-    def update(self, array):
-        """Update the aggregate with an Arrow array or array stream."""
-        if hasattr(array, "__arrow_c_array__"):
-            array_in = lib.ArrayHolder.from_arrow_c_array(array)
-            self._kernel.push_batch_agg(array_in)
-            return
+    @property
+    def name(self):
+        """The C kernel name."""
+        return self._name
 
-        if hasattr(array, "__arrow_c_stream__"):
-            stream_in = lib.ArrayStreamHolder.from_arrow_c_stream(array)
+    def __call__(self, array):
+        """Aggregate an Arrow array or stream and return its result array."""
+        array_in = _import_input(array)
+        kernel = lib.CKernel(self._name.encode("UTF-8"))
+        kernel.start(array_in.get_schema(), self._options)
+        if isinstance(array_in, lib.ArrayHolder):
+            kernel.push_batch_agg(array_in)
+        else:
             while True:
-                array_in = stream_in.get_next()
-                if array_in is None:
+                batch = array_in.get_next()
+                if batch is None:
                     break
-                self._kernel.push_batch_agg(array_in)
-            return
+                kernel.push_batch_agg(batch)
 
-        raise TypeError(
-            "Expected an __arrow_c_array__ or __arrow_c_stream__ provider, "
-            f"got {type(array)}"
-        )
+        return kernel.finish_agg()
 
-    def evaluate(self):
-        """Evaluate the current aggregate and return its result array."""
-        return self._kernel.finish_agg()
+
+def _import_input(array):
+    if hasattr(array, "__arrow_c_array__"):
+        return lib.ArrayHolder.from_arrow_c_array(array)
+    if hasattr(array, "__arrow_c_stream__"):
+        return lib.ArrayStreamHolder.from_arrow_c_stream(array)
+
+    raise TypeError(
+        "Expected an __arrow_c_array__ or __arrow_c_stream__ provider, "
+        f"got {type(array)}"
+    )
 
 
 def _validate_name(name):
@@ -153,4 +128,4 @@ def _pack_options(options):
     return packed
 
 
-__all__ = ["Accumulator", "ScalarKernel"]
+__all__ = ["AggregateFunction", "ScalarFunction"]
