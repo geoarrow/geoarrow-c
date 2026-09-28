@@ -1,7 +1,5 @@
 import pytest
-
-from geoarrow.c import lib
-
+from geoarrow.c import lib, types
 
 gt = pytest.importorskip("geoarrow.types")
 pa = pytest.importorskip("pyarrow")
@@ -26,25 +24,25 @@ pa = pytest.importorskip("pyarrow")
     ],
 )
 def test_type_spec_roundtrip(spec):
-    schema = lib.type_spec_to_arrow(spec)
+    schema = types.type_spec_to_arrow(spec)
     assert isinstance(schema, lib.SchemaHolder)
-    assert lib.arrow_to_type_spec(schema) == spec.with_defaults().canonicalize()
+    assert types.arrow_to_type_spec(schema) == spec.with_defaults().canonicalize()
 
 
 def test_to_type_spec_does_not_consume_holder():
-    schema = lib.type_spec_to_arrow(gt.point())
+    schema = types.type_spec_to_arrow(gt.point())
 
-    assert lib.arrow_to_type_spec(schema) == lib.arrow_to_type_spec(schema)
+    assert types.arrow_to_type_spec(schema) == types.arrow_to_type_spec(schema)
 
 
 def test_to_type_spec_short_circuits_type_spec():
     spec = gt.point()
 
-    assert lib.arrow_to_type_spec(spec) is spec
+    assert types.arrow_to_type_spec(spec) is spec
 
 
 def test_from_type_spec_capsule_is_arrow_compatible():
-    schema = lib.type_spec_to_arrow(gt.point())
+    schema = types.type_spec_to_arrow(gt.point())
     schema_capsule = schema.__arrow_c_schema__()
     assert pa.DataType._import_from_c_capsule(schema_capsule) == pa.struct(
         [
@@ -63,10 +61,15 @@ def test_to_type_spec_accepts_arrow_schema_provider():
     )
     arrow_type = spec.to_pyarrow()
 
-    assert lib.arrow_to_type_spec(arrow_type) == spec.with_defaults()
+    assert types.arrow_to_type_spec(arrow_type) == spec.with_defaults()
 
 
 def test_to_type_spec_accepts_capsule():
     schema_capsule = gt.point().to_pyarrow().__arrow_c_schema__()
 
-    assert lib.arrow_to_type_spec(schema_capsule) == gt.point().with_defaults()
+    assert types.arrow_to_type_spec(schema_capsule) == gt.point().with_defaults()
+
+
+def test_lib_reexports_type_backend():
+    assert lib.type_spec_to_arrow is types.type_spec_to_arrow
+    assert lib.arrow_to_type_spec is types.arrow_to_type_spec

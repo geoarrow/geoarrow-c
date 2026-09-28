@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -18,8 +16,9 @@
 # under the License.
 
 import os
-import sys
 import subprocess
+import sys
+
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
 
@@ -29,13 +28,13 @@ from setuptools.command.build_ext import build_ext
 this_dir = os.path.dirname(__file__)
 bootstrap_py = os.path.join(this_dir, "bootstrap.py")
 if os.path.exists(bootstrap_py):
-    subprocess.run([sys.executable, bootstrap_py])
+    subprocess.run([sys.executable, bootstrap_py], check=False)
 
 vendor_dir = os.path.join(this_dir, "src", "geoarrow", "c", "geoarrow")
 sources = [
     f"src/geoarrow/c/geoarrow/{f}"
     for f in os.listdir(vendor_dir)
-    if f.endswith(".c") or f.endswith(".cc")
+    if f.endswith((".c", ".cc"))
 ]
 
 sources += [
