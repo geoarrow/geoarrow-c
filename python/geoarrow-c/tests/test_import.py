@@ -9,6 +9,9 @@ import pytest
 from geoarrow.c.lib import _lib as lib
 
 
+@pytest.mark.skipif(
+    sys.platform == "emscripten", reason="Emscripten does not support subprocesses"
+)
 def test_free_threaded_import_does_not_enable_gil():
     if not sysconfig.get_config_var("Py_GIL_DISABLED"):
         return
@@ -27,6 +30,9 @@ def test_free_threaded_import_does_not_enable_gil():
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.skipif(
+    sys.platform == "emscripten", reason="Emscripten does not support subprocesses"
+)
 def test_lib_import_does_not_import_geoarrow_types():
     result = subprocess.run(
         [
