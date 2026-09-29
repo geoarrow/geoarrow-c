@@ -353,6 +353,51 @@ as <code class="docutils literal notranslate"><span class="pre">import</span> <s
 </pre></div>
 </div>
 </section>
+<dl class="py class">
+<dt class="sig sig-object py" id="geoarrow.c.AggregateFunction">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">AggregateFunction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#geoarrow.c.AggregateFunction" title="Link to this definition">#</a></dt>
+<dd><p>A callable aggregate GeoArrow C function.</p>
+<p>Each call creates a new kernel using the input array or stream’s schema,
+accumulates all input batches, and returns the aggregate result array.</p>
+<section id="parameters">
+<h2>Parameters<a class="headerlink" href="#parameters" title="Link to this heading">#</a></h2>
+<dl class="simple">
+<dt>name<span class="classifier">str</span></dt><dd><p>The registered C aggregate kernel name.</p>
+</dd>
+<dt><a href="#id1"><span class="problematic" id="id2">**</span></a>options</dt><dd><p>Kernel options. <code class="docutils literal notranslate"><span class="pre">None</span></code> values are omitted.</p>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="geoarrow.c.AggregateFunction.name">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#geoarrow.c.AggregateFunction.name" title="Link to this definition">#</a></dt>
+<dd><p>The C kernel name.</p>
+</dd></dl>
+
+</section>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="geoarrow.c.ScalarFunction">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">ScalarFunction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#geoarrow.c.ScalarFunction" title="Link to this definition">#</a></dt>
+<dd><p>A callable scalar GeoArrow C function.</p>
+<p>Each call creates a new kernel using the input array or stream’s schema.</p>
+<section id="id3">
+<h2>Parameters<a class="headerlink" href="#id3" title="Link to this heading">#</a></h2>
+<dl class="simple">
+<dt>name<span class="classifier">str</span></dt><dd><p>The registered C kernel name.</p>
+</dd>
+<dt><a href="#id4"><span class="problematic" id="id5">**</span></a>options</dt><dd><p>Kernel options. <code class="docutils literal notranslate"><span class="pre">None</span></code> values are omitted.</p>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="geoarrow.c.ScalarFunction.name">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#geoarrow.c.ScalarFunction.name" title="Link to this definition">#</a></dt>
+<dd><p>The C kernel name.</p>
+</dd></dl>
+
+</section>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="geoarrow.c.arrow_to_type_spec">
 <span class="sig-name descname"><span class="pre">arrow_to_type_spec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#geoarrow.c.arrow_to_type_spec" title="Link to this definition">#</a></dt>
@@ -411,6 +456,14 @@ as a field in PyArrow and elsewhere.</p>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.AggregateFunction"><code class="docutils literal notranslate"><span class="pre">AggregateFunction</span></code></a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.AggregateFunction.name"><code class="docutils literal notranslate"><span class="pre">AggregateFunction.name</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.ScalarFunction"><code class="docutils literal notranslate"><span class="pre">ScalarFunction</span></code></a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.ScalarFunction.name"><code class="docutils literal notranslate"><span class="pre">ScalarFunction.name</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.arrow_to_type_spec"><code class="docutils literal notranslate"><span class="pre">arrow_to_type_spec()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#geoarrow.c.type_spec_to_arrow"><code class="docutils literal notranslate"><span class="pre">type_spec_to_arrow()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#constants">Constants</a></li>
