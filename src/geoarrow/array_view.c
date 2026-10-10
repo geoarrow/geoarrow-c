@@ -611,61 +611,113 @@ static void GeoArrowArrayViewInitGeometryNode(struct GeoArrowGeometryNode* node)
   }
 }
 
-static struct GeoArrowGeometryNode* GeoArrowArrayViewSetGeometryNode(
-    const struct GeoArrowArrayView* array_view, enum GeoArrowGeometryType type, int level,
-    int64_t i, struct GeoArrowGeometryNode* node) {
+// Array nesting and geometry nesting differ: multipoints have a point node for
+// every coordinate, whereas linestrings represent a whole sequence in one node.
+// Resolve the geometry levels once, then traverse using only nesting levels.
+struct GeoArrowArrayViewGeometryLevels {
+  int n_levels;
+  enum GeoArrowGeometryType geometry_type[3];
+};
+
+static const struct GeoArrowArrayViewGeometryLevels kGeoArrowArrayViewGeometryLevels[] = {
+    {0, {GEOARROW_GEOMETRY_TYPE_GEOMETRY}},
+    {1, {GEOARROW_GEOMETRY_TYPE_POINT}},
+    {1, {GEOARROW_GEOMETRY_TYPE_LINESTRING}},
+    {2, {GEOARROW_GEOMETRY_TYPE_POLYGON, GEOARROW_GEOMETRY_TYPE_LINESTRING}},
+    {2, {GEOARROW_GEOMETRY_TYPE_MULTIPOINT, GEOARROW_GEOMETRY_TYPE_POINT}},
+    {2, {GEOARROW_GEOMETRY_TYPE_MULTILINESTRING, GEOARROW_GEOMETRY_TYPE_LINESTRING}},
+    {3,
+     {GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON, GEOARROW_GEOMETRY_TYPE_POLYGON,
+      GEOARROW_GEOMETRY_TYPE_LINESTRING}}};
+
+static inline void GeoArrowArrayViewSetGeometryNode(
+    const struct GeoArrowArrayView* array_view,
+    const struct GeoArrowArrayViewGeometryLevels* levels, int level, uint32_t size,
+    struct GeoArrowGeometryNode* node) {
   GeoArrowArrayViewInitGeometryNode(node);
-  node->geometry_type = (uint8_t)type;
+  node->geometry_type = (uint8_t)levels->geometry_type[level];
   node->dimensions = (uint8_t)array_view->schema_view.dimensions;
   node->level = (uint8_t)level;
+  node->size = size;
+}
 
-  int64_t offset = array_view->offset[level] + i;
-  int64_t size = 1;
-  if (type != GEOARROW_GEOMETRY_TYPE_POINT) {
-    size = (int64_t)array_view->offsets[level][offset + 1] -
-           array_view->offsets[level][offset];
-    offset = array_view->offsets[level][offset];
+static inline void GeoArrowArrayViewSetGeometryCoords(
+    const struct GeoArrowArrayView* array_view, int64_t offset,
+    struct GeoArrowGeometryNode* node) {
+  // Empty sequences retain readable NaN coordinates, even when the array has
+  // no coordinate buffers or this sequence is at the end of a buffer.
+  if (node->size == 0) {
+    return;
   }
 
-  node->size = (uint32_t)size;
-  if (type == GEOARROW_GEOMETRY_TYPE_POINT || type == GEOARROW_GEOMETRY_TYPE_LINESTRING) {
-    if (type == GEOARROW_GEOMETRY_TYPE_LINESTRING) {
-      offset += array_view->offset[level + 1];
-    }
+  for (int j = 0; j < array_view->coords.n_values; j++) {
+    node->coords[j] = (const uint8_t*)(array_view->coords.values[j] +
+                                       offset * array_view->coords.coords_stride);
+    node->coord_stride[j] = array_view->coords.coords_stride * sizeof(double);
+  }
+}
 
-    // Empty sequences retain readable NaN coordinates, even when the array has
-    // no coordinate buffers or this sequence is at the end of a buffer.
-    if (size > 0) {
-      for (int j = 0; j < array_view->coords.n_values; j++) {
-        node->coords[j] = (const uint8_t*)(array_view->coords.values[j] +
-                                           offset * array_view->coords.coords_stride);
-        node->coord_stride[j] = array_view->coords.coords_stride * sizeof(double);
+struct GeoArrowArrayViewGeometryRange {
+  int64_t begin;
+  uint32_t size;
+};
+
+static inline struct GeoArrowArrayViewGeometryRange GeoArrowArrayViewGeometryRangeAt(
+    const struct GeoArrowArrayView* array_view, int level, int64_t i) {
+  struct GeoArrowArrayViewGeometryRange range;
+  range.begin = array_view->offsets[level][i];
+  range.size = (uint32_t)(array_view->offsets[level][i + 1] - range.begin);
+  range.begin += array_view->offset[level + 1];
+  return range;
+}
+
+static void GeoArrowArrayViewSetGeometryNodes(
+    const struct GeoArrowArrayView* array_view,
+    const struct GeoArrowArrayViewGeometryLevels* levels, int64_t i,
+    struct GeoArrowGeometryNode* node) {
+  struct GeoArrowArrayViewGeometryRange range = {array_view->offset[0] + i, 1};
+  if (array_view->n_offsets > 0) {
+    range = GeoArrowArrayViewGeometryRangeAt(array_view, 0, range.begin);
+  }
+
+  GeoArrowArrayViewSetGeometryNode(array_view, levels, 0, range.size, node);
+  if (levels->n_levels == 1) {
+    GeoArrowArrayViewSetGeometryCoords(array_view, range.begin, node);
+    return;
+  }
+
+  ++node;
+  if (levels->n_levels == 2) {
+    if (array_view->n_offsets == 1) {
+      // The leaf array contains individual points rather than sequences.
+      for (uint32_t j = 0; j < range.size; j++, node++) {
+        GeoArrowArrayViewSetGeometryNode(array_view, levels, 1, 1, node);
+        GeoArrowArrayViewSetGeometryCoords(array_view, range.begin + j, node);
+      }
+    } else {
+      for (uint32_t j = 0; j < range.size; j++, node++) {
+        struct GeoArrowArrayViewGeometryRange coords =
+            GeoArrowArrayViewGeometryRangeAt(array_view, 1, range.begin + j);
+        GeoArrowArrayViewSetGeometryNode(array_view, levels, 1, coords.size, node);
+        GeoArrowArrayViewSetGeometryCoords(array_view, coords.begin, node);
       }
     }
-
-    return node + 1;
+    return;
   }
 
-  enum GeoArrowGeometryType child_type;
-  switch (type) {
-    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
-      child_type = GEOARROW_GEOMETRY_TYPE_POINT;
-      break;
-    case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
-      child_type = GEOARROW_GEOMETRY_TYPE_POLYGON;
-      break;
-    default:
-      // Polygon rings and multilinestring children are linestring nodes.
-      child_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
-      break;
+  // Native geometries have at most three geometry levels. Explicit loops let
+  // the compiler specialize the node initialization for each array level.
+  for (uint32_t j = 0; j < range.size; j++) {
+    struct GeoArrowArrayViewGeometryRange children =
+        GeoArrowArrayViewGeometryRangeAt(array_view, 1, range.begin + j);
+    GeoArrowArrayViewSetGeometryNode(array_view, levels, 1, children.size, node++);
+    for (uint32_t k = 0; k < children.size; k++, node++) {
+      struct GeoArrowArrayViewGeometryRange coords =
+          GeoArrowArrayViewGeometryRangeAt(array_view, 2, children.begin + k);
+      GeoArrowArrayViewSetGeometryNode(array_view, levels, 2, coords.size, node);
+      GeoArrowArrayViewSetGeometryCoords(array_view, coords.begin, node);
+    }
   }
-
-  struct GeoArrowGeometryNode* next = node + 1;
-  for (int64_t j = 0; j < size; j++) {
-    next = GeoArrowArrayViewSetGeometryNode(array_view, child_type, level + 1, offset + j,
-                                            next);
-  }
-  return next;
 }
 
 GeoArrowErrorCode GeoArrowArrayViewGetGeometry(const struct GeoArrowArrayView* array_view,
@@ -694,13 +746,12 @@ GeoArrowErrorCode GeoArrowArrayViewGetGeometry(const struct GeoArrowArrayView* a
     return GEOARROW_OK;
   }
 
+  const struct GeoArrowArrayViewGeometryLevels* levels =
+      &kGeoArrowArrayViewGeometryLevels[type];
+
   // Count nodes before allocating so allocation failure leaves out unchanged.
-  // Each list level contributes children, except the final coordinate sequence
-  // (multipoints are the exception: each coordinate has its own point node).
-  int n_child_levels = array_view->n_offsets;
-  if (type != GEOARROW_GEOMETRY_TYPE_MULTIPOINT) {
-    n_child_levels--;
-  }
+  // Each geometry level contributes one node per child at that array level.
+  int n_child_levels = levels->n_levels - 1;
 
   int64_t size_nodes = 1;
   int64_t begin = i;
@@ -712,6 +763,6 @@ GeoArrowErrorCode GeoArrowArrayViewGetGeometry(const struct GeoArrowArrayView* a
   }
 
   GEOARROW_RETURN_NOT_OK(GeoArrowGeometryResizeNodesInline(out, size_nodes));
-  GeoArrowArrayViewSetGeometryNode(array_view, type, 0, i, out->root);
+  GeoArrowArrayViewSetGeometryNodes(array_view, levels, i, out->root);
   return GEOARROW_OK;
 }
