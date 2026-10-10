@@ -143,6 +143,22 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
                                             const struct ArrowArray* array,
                                             struct GeoArrowError* error);
 
+/// \brief View one native array element as a geometry without copying coordinates
+///
+/// The array_view must reference a valid array of points, linestrings, polygons,
+/// multipoints, multilinestrings, or multipolygons. Both coordinate layouts and all
+/// dimensions are supported. Serialized types and boxes return ENOTSUP.
+/// The index i is relative to the logical array slice and must be in
+/// [0, array_view->length[0]); otherwise EINVAL is returned.
+///
+/// The caller must initialize out with GeoArrowGeometryInit() and eventually call
+/// GeoArrowGeometryReset(). Its nodes are replaced on success and their allocation
+/// is reused where possible. Coordinate buffers are borrowed from array_view and
+/// must remain valid while the result is used. Null elements produce one node of
+/// type GEOARROW_GEOMETRY_TYPE_GEOMETRY with size zero.
+GeoArrowErrorCode GeoArrowArrayViewGetGeometry(const struct GeoArrowArrayView* array_view,
+                                               int64_t i, struct GeoArrowGeometry* out);
+
 /// @}
 
 /// \defgroup geoarrow-builder Array creation

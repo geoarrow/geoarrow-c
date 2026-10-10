@@ -603,3 +603,115 @@ GeoArrowErrorCode GeoArrowArrayViewVisitNative(const struct GeoArrowArrayView* a
       return ENOTSUP;
   }
 }
+
+static void GeoArrowArrayViewInitGeometryNode(struct GeoArrowGeometryNode* node) {
+  memset(node, 0, sizeof(*node));
+  for (int j = 0; j < 4; j++) {
+    node->coords[j] = _GeoArrowkEmptyPointCoords;
+  }
+}
+
+static struct GeoArrowGeometryNode* GeoArrowArrayViewSetGeometryNode(
+    const struct GeoArrowArrayView* array_view, enum GeoArrowGeometryType type, int level,
+    int64_t i, struct GeoArrowGeometryNode* node) {
+  GeoArrowArrayViewInitGeometryNode(node);
+  node->geometry_type = (uint8_t)type;
+  node->dimensions = (uint8_t)array_view->schema_view.dimensions;
+  node->level = (uint8_t)level;
+
+  int64_t offset = array_view->offset[level] + i;
+  int64_t size = 1;
+  if (type != GEOARROW_GEOMETRY_TYPE_POINT) {
+    size = (int64_t)array_view->offsets[level][offset + 1] -
+           array_view->offsets[level][offset];
+    offset = array_view->offsets[level][offset];
+  }
+
+  node->size = (uint32_t)size;
+  if (type == GEOARROW_GEOMETRY_TYPE_POINT || type == GEOARROW_GEOMETRY_TYPE_LINESTRING) {
+    if (type == GEOARROW_GEOMETRY_TYPE_LINESTRING) {
+      offset += array_view->offset[level + 1];
+    }
+
+    // Empty sequences retain readable NaN coordinates, even when the array has
+    // no coordinate buffers or this sequence is at the end of a buffer.
+    if (size > 0) {
+      for (int j = 0; j < array_view->coords.n_values; j++) {
+        node->coords[j] = (const uint8_t*)(array_view->coords.values[j] +
+                                           offset * array_view->coords.coords_stride);
+        node->coord_stride[j] = array_view->coords.coords_stride * sizeof(double);
+      }
+    }
+
+    return node + 1;
+  }
+
+  enum GeoArrowGeometryType child_type;
+  switch (type) {
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+      child_type = GEOARROW_GEOMETRY_TYPE_POINT;
+      break;
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+      child_type = GEOARROW_GEOMETRY_TYPE_POLYGON;
+      break;
+    default:
+      // Polygon rings and multilinestring children are linestring nodes.
+      child_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
+      break;
+  }
+
+  struct GeoArrowGeometryNode* next = node + 1;
+  for (int64_t j = 0; j < size; j++) {
+    next = GeoArrowArrayViewSetGeometryNode(array_view, child_type, level + 1, offset + j,
+                                            next);
+  }
+  return next;
+}
+
+GeoArrowErrorCode GeoArrowArrayViewGetGeometry(const struct GeoArrowArrayView* array_view,
+                                               int64_t i, struct GeoArrowGeometry* out) {
+  enum GeoArrowGeometryType type = array_view->schema_view.geometry_type;
+  switch (type) {
+    case GEOARROW_GEOMETRY_TYPE_POINT:
+    case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+    case GEOARROW_GEOMETRY_TYPE_POLYGON:
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+    case GEOARROW_GEOMETRY_TYPE_MULTILINESTRING:
+    case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+      break;
+    default:
+      return ENOTSUP;
+  }
+
+  if (i < 0 || i >= array_view->length[0]) {
+    return EINVAL;
+  }
+
+  if (array_view->validity_bitmap != NULL &&
+      !ArrowBitGet(array_view->validity_bitmap, array_view->offset[0] + i)) {
+    GEOARROW_RETURN_NOT_OK(GeoArrowGeometryResizeNodesInline(out, 1));
+    GeoArrowArrayViewInitGeometryNode(out->root);
+    return GEOARROW_OK;
+  }
+
+  // Count nodes before allocating so allocation failure leaves out unchanged.
+  // Each list level contributes children, except the final coordinate sequence
+  // (multipoints are the exception: each coordinate has its own point node).
+  int n_child_levels = array_view->n_offsets;
+  if (type != GEOARROW_GEOMETRY_TYPE_MULTIPOINT) {
+    n_child_levels--;
+  }
+
+  int64_t size_nodes = 1;
+  int64_t begin = i;
+  int64_t end = i + 1;
+  for (int level = 0; level < n_child_levels && begin < end; level++) {
+    begin = array_view->offsets[level][array_view->offset[level] + begin];
+    end = array_view->offsets[level][array_view->offset[level] + end];
+    size_nodes += end - begin;
+  }
+
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryResizeNodesInline(out, size_nodes));
+  GeoArrowArrayViewSetGeometryNode(array_view, type, 0, i, out->root);
+  return GEOARROW_OK;
+}
