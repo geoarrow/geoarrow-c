@@ -720,10 +720,25 @@ static void GeoArrowArrayViewSetGeometryNodes(
   }
 }
 
+static GeoArrowErrorCode GeoArrowArrayViewGetBoxGeometry(
+    const struct GeoArrowArrayView* array_view, int64_t i, struct GeoArrowGeometry* out) {
+  int64_t raw_offset = array_view->offset[0] + i;
+  double xmin = GEOARROW_COORD_VIEW_VALUE(&array_view->coords, raw_offset, 0);
+  double ymin = GEOARROW_COORD_VIEW_VALUE(&array_view->coords, raw_offset, 1);
+  double xmax = GEOARROW_COORD_VIEW_VALUE(&array_view->coords, raw_offset, 2);
+  double ymax = GEOARROW_COORD_VIEW_VALUE(&array_view->coords, raw_offset, 3);
+  return GeoArrowGeometrySetBox(out, xmin, ymin, xmax, ymax);
+}
+
 GeoArrowErrorCode GeoArrowArrayViewGetGeometry(const struct GeoArrowArrayView* array_view,
                                                int64_t i, struct GeoArrowGeometry* out) {
   enum GeoArrowGeometryType type = array_view->schema_view.geometry_type;
   switch (type) {
+    case GEOARROW_GEOMETRY_TYPE_BOX:
+      if (array_view->schema_view.dimensions != GEOARROW_DIMENSIONS_XY) {
+        return ENOTSUP;
+      }
+      break;
     case GEOARROW_GEOMETRY_TYPE_POINT:
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
     case GEOARROW_GEOMETRY_TYPE_POLYGON:
@@ -744,6 +759,10 @@ GeoArrowErrorCode GeoArrowArrayViewGetGeometry(const struct GeoArrowArrayView* a
     GEOARROW_RETURN_NOT_OK(GeoArrowGeometryResizeNodesInline(out, 1));
     GeoArrowArrayViewInitGeometryNode(out->root);
     return GEOARROW_OK;
+  }
+
+  if (type == GEOARROW_GEOMETRY_TYPE_BOX) {
+    return GeoArrowArrayViewGetBoxGeometry(array_view, i, out);
   }
 
   const struct GeoArrowArrayViewGeometryLevels* levels =

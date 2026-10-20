@@ -12,10 +12,6 @@
 // including arrays sliced at every nesting level and at coordinate children.
 static void CheckArrayViewGeometries(const struct GeoArrowArrayView* array_view,
                                      const std::vector<std::string>& expected) {
-  if (array_view->schema_view.geometry_type == GEOARROW_GEOMETRY_TYPE_BOX) {
-    return;
-  }
-
   struct GeoArrowGeometry geom;
   ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
   WKXTester tester;
@@ -327,6 +323,33 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidBoxNonXY) {
   ASSERT_STREQ(error.message, "Can't visit box with non-XY dimensions");
 
   ArrowSchemaRelease(&schema);
+}
+
+TEST(ArrayViewTest, ArrayViewGetGeometryBoxCrossingAntimeridian) {
+  struct ArrowSchema schema;
+  struct ArrowArray array;
+  ASSERT_EQ(GeoArrowSchemaInit(&schema, GEOARROW_TYPE_BOX), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
+
+  int child_i = 0;
+  for (double value : {170.0, -10.0, -170.0, 20.0}) {
+    ASSERT_EQ(ArrowArrayAppendDouble(array.children[child_i++], value), GEOARROW_OK);
+  }
+  ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
+  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
+
+  struct GeoArrowArrayView array_view;
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_BOX), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+
+  CheckArrayViewGeometries(
+      &array_view,
+      {"MULTIPOLYGON (((170 -10, Infinity -10, Infinity 20, 170 20, 170 -10)), "
+       "((-Infinity -10, -170 -10, -170 20, -Infinity 20, -Infinity -10)))"});
+
+  array.release(&array);
+  schema.release(&schema);
 }
 
 TEST(ArrayViewTest, ArrayViewTestSetArrayValidPoint) {
@@ -1476,9 +1499,9 @@ INSTANTIATE_TEST_SUITE_P(
 TEST(ArrayViewTest, GetGeometryUnsupported) {
   struct GeoArrowGeometry geom;
   ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
-  for (auto type : {GEOARROW_TYPE_BOX, GEOARROW_TYPE_BOX_Z, GEOARROW_TYPE_BOX_M,
-                    GEOARROW_TYPE_BOX_ZM, GEOARROW_TYPE_WKT, GEOARROW_TYPE_WKB,
-                    GEOARROW_TYPE_LARGE_WKT, GEOARROW_TYPE_LARGE_WKB}) {
+  for (auto type :
+       {GEOARROW_TYPE_BOX_Z, GEOARROW_TYPE_BOX_M, GEOARROW_TYPE_BOX_ZM, GEOARROW_TYPE_WKT,
+        GEOARROW_TYPE_WKB, GEOARROW_TYPE_LARGE_WKT, GEOARROW_TYPE_LARGE_WKB}) {
     struct GeoArrowArrayView array_view;
     ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
     EXPECT_EQ(GeoArrowArrayViewGetGeometry(&array_view, 0, &geom), ENOTSUP);

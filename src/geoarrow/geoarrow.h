@@ -143,19 +143,22 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
                                             const struct ArrowArray* array,
                                             struct GeoArrowError* error);
 
-/// \brief View one native array element as a geometry without copying coordinates
+/// \brief View one native array element as a geometry
 ///
 /// The array_view must reference a valid array of points, linestrings, polygons,
-/// multipoints, multilinestrings, or multipolygons. Both coordinate layouts and all
-/// dimensions are supported. Serialized types and boxes return ENOTSUP.
+/// multipoints, multilinestrings, multipolygons, or XY boxes. Both coordinate layouts
+/// and all dimensions of native geometry arrays are supported. Serialized types and
+/// boxes with non-XY dimensions return ENOTSUP. An XY box is returned as a polygon, or
+/// as two polygons in a multipolygon when xmin > xmax.
 /// The index i is relative to the logical array slice and must be in
 /// [0, array_view->length[0]); otherwise EINVAL is returned.
 ///
 /// The caller must initialize out with GeoArrowGeometryInit() and eventually call
 /// GeoArrowGeometryReset(). Its nodes are replaced on success and their allocation
-/// is reused where possible. Coordinate buffers are borrowed from array_view and
-/// must remain valid while the result is used. Null elements produce one node of
-/// type GEOARROW_GEOMETRY_TYPE_GEOMETRY with size zero.
+/// is reused where possible. Coordinate buffers are borrowed from array_view for
+/// native geometry arrays and must remain valid while the result is used. Box polygon
+/// coordinates are owned by out. Null elements produce one node of type
+/// GEOARROW_GEOMETRY_TYPE_GEOMETRY with size zero.
 GeoArrowErrorCode GeoArrowArrayViewGetGeometry(const struct GeoArrowArrayView* array_view,
                                                int64_t i, struct GeoArrowGeometry* out);
 
@@ -353,6 +356,16 @@ GeoArrowErrorCode GeoArrowGeometryShallowCopy(struct GeoArrowGeometryView src,
 /// success the destination owns its nodes but and any underlying coordinates.
 GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
                                            struct GeoArrowGeometry* dst);
+
+/// \brief Populate a GeoArrowGeometry from an XY box
+///
+/// Replaces the contents of geom with a polygon containing the box bounds. If
+/// xmin > xmax, the box is considered to cross the antimeridian and is represented
+/// by a multipolygon whose X limits are negative and positive infinity. If
+/// ymin > ymax, the result is an empty polygon. The resulting coordinates are owned
+/// by geom.
+GeoArrowErrorCode GeoArrowGeometrySetBox(struct GeoArrowGeometry* geom, double xmin,
+                                         double ymin, double xmax, double ymax);
 
 /// \brief Resize the nodes list
 ///
