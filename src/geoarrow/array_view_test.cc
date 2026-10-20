@@ -1315,98 +1315,170 @@ TEST(ArrayViewTest, ArrayViewTestSetArrayValidMultipolygonWithOffsets) {
   array.release(&array);
 }
 
-TEST_P(TypeParameterizedTestFixture, ArrayViewGetGeometry) {
-  struct GeoArrowArrayView array_view;
-  ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GetParam()), GEOARROW_OK);
-  if (array_view.schema_view.geometry_type == GEOARROW_GEOMETRY_TYPE_BOX) {
+struct ArrayViewGeometryTestCase {
+  enum GeoArrowType type;
+  const char* wkt;
+  const char* empty_wkt;
+};
+
+class ArrayViewGeometryTestFixture
+    : public ::testing::TestWithParam<ArrayViewGeometryTestCase> {};
+
+TEST_P(ArrayViewGeometryTestFixture, ArrayViewGetGeometry) {
+  const auto& test_case = GetParam();
+  const std::string wkt(test_case.wkt);
+  const std::string empty(test_case.empty_wkt);
+
+  // Exercise both coordinate layouts with the same geometry fixture.
+  for (auto coord_type :
+       {GEOARROW_COORD_TYPE_SEPARATE, GEOARROW_COORD_TYPE_INTERLEAVED}) {
+    enum GeoArrowType type =
+        GeoArrowMakeType(GeoArrowGeometryTypeFromType(test_case.type),
+                         GeoArrowDimensionsFromType(test_case.type), coord_type);
+    SCOPED_TRACE(coord_type == GEOARROW_COORD_TYPE_SEPARATE ? "separate" : "interleaved");
+
+    struct GeoArrowArrayView array_view;
+    ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+
+    struct GeoArrowNativeWriter writer;
+    ASSERT_EQ(GeoArrowNativeWriterInit(&writer, type), GEOARROW_OK);
+    WKXTester tester;
+    for (const auto& value : {wkt, std::string("<null value>"), empty, wkt}) {
+      if (value == "<null value>") {
+        ASSERT_EQ(GeoArrowNativeWriterAppendNull(&writer), GEOARROW_OK);
+      } else {
+        const auto& parsed = tester.AsGeometry(value);
+        ASSERT_EQ(
+            GeoArrowNativeWriterAppend(&writer, GeoArrowGeometryAsView(&parsed), nullptr),
+            GEOARROW_OK);
+      }
+    }
+    struct ArrowArray array;
+    ASSERT_EQ(GeoArrowNativeWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+    GeoArrowNativeWriterReset(&writer);
+    ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+    CheckArrayViewGeometries(&array_view, {wkt, "<null value>", empty, wkt});
+
     struct GeoArrowGeometry geom;
     ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
-    EXPECT_EQ(GeoArrowArrayViewGetGeometry(&array_view, 0, &geom), ENOTSUP);
-    GeoArrowGeometryReset(&geom);
-    return;
-  }
-
-  const char* dim_suffix[] = {"", "", " Z", " M", " ZM"};
-  const char* coord[] = {"", "1 2", "1 2 3", "1 2 4", "1 2 3 4"};
-  auto dims = array_view.schema_view.dimensions;
-  std::string xy = coord[dims];
-  std::string sequence = xy + ", " + xy;
-  std::string ring = xy + ", " + xy + ", " + xy + ", " + xy;
-  std::string bodies[] = {"",
-                          "(" + xy + ")",
-                          "(" + sequence + ")",
-                          "((" + ring + "), (" + ring + "))",
-                          "((" + xy + "), (" + xy + "))",
-                          "((" + sequence + "), EMPTY, (" + sequence + "))",
-                          "(((" + ring + "), (" + ring + ")), EMPTY, ((" + ring + ")))"};
-  const char* names[] = {"",           "POINT",           "LINESTRING",  "POLYGON",
-                         "MULTIPOINT", "MULTILINESTRING", "MULTIPOLYGON"};
-  auto geometry_type = array_view.schema_view.geometry_type;
-  std::string prefix = std::string(names[geometry_type]) + dim_suffix[dims];
-  std::string wkt = prefix + " " + bodies[geometry_type];
-  std::string empty = prefix + " EMPTY";
-
-  struct GeoArrowNativeWriter writer;
-  ASSERT_EQ(GeoArrowNativeWriterInit(&writer, GetParam()), GEOARROW_OK);
-  WKXTester tester;
-  for (const auto& value : {wkt, std::string("<null value>"), empty, wkt}) {
-    if (value == "<null value>") {
-      ASSERT_EQ(GeoArrowNativeWriterAppendNull(&writer), GEOARROW_OK);
-    } else {
-      const auto& parsed = tester.AsGeometry(value);
-      ASSERT_EQ(
-          GeoArrowNativeWriterAppend(&writer, GeoArrowGeometryAsView(&parsed), nullptr),
-          GEOARROW_OK);
+    ASSERT_EQ(GeoArrowArrayViewGetGeometry(&array_view, 0, &geom), GEOARROW_OK);
+    // The first coordinate sequence must point directly into the array buffers.
+    const struct GeoArrowGeometryNode* sequence_node = geom.root;
+    while (sequence_node->geometry_type != GEOARROW_GEOMETRY_TYPE_POINT &&
+           sequence_node->geometry_type != GEOARROW_GEOMETRY_TYPE_LINESTRING) {
+      ++sequence_node;
     }
-  }
-  struct ArrowArray array;
-  ASSERT_EQ(GeoArrowNativeWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
-  GeoArrowNativeWriterReset(&writer);
-  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
-  CheckArrayViewGeometries(&array_view, {wkt, "<null value>", empty, wkt});
+    for (int j = 0; j < array_view.coords.n_values; j++) {
+      EXPECT_EQ(sequence_node->coords[j],
+                reinterpret_cast<const uint8_t*>(array_view.coords.values[j]));
+      EXPECT_EQ(sequence_node->coord_stride[j],
+                array_view.coords.coords_stride * static_cast<int32_t>(sizeof(double)));
+    }
 
-  struct GeoArrowGeometry geom;
-  ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
-  ASSERT_EQ(GeoArrowArrayViewGetGeometry(&array_view, 0, &geom), GEOARROW_OK);
-  // The first coordinate sequence must point directly into the array buffers.
-  const struct GeoArrowGeometryNode* sequence_node = geom.root;
-  while (sequence_node->geometry_type != GEOARROW_GEOMETRY_TYPE_POINT &&
-         sequence_node->geometry_type != GEOARROW_GEOMETRY_TYPE_LINESTRING) {
-    ++sequence_node;
-  }
-  for (int j = 0; j < array_view.coords.n_values; j++) {
-    EXPECT_EQ(sequence_node->coords[j],
-              reinterpret_cast<const uint8_t*>(array_view.coords.values[j]));
-    EXPECT_EQ(sequence_node->coord_stride[j],
-              array_view.coords.coords_stride * static_cast<int32_t>(sizeof(double)));
-  }
+    auto* nodes = geom.root;
+    int64_t size_nodes = geom.size_nodes;
+    EXPECT_EQ(GeoArrowArrayViewGetGeometry(&array_view, -1, &geom), EINVAL);
+    EXPECT_EQ(GeoArrowArrayViewGetGeometry(&array_view, array.length, &geom), EINVAL);
+    EXPECT_EQ(geom.root, nodes);
+    EXPECT_EQ(geom.size_nodes, size_nodes);
+    EXPECT_EQ(tester.AsWKT(geom), wkt);
+    EXPECT_EQ(GeoArrowArrayViewGetGeometry(&array_view, 1, &geom), GEOARROW_OK);
+    EXPECT_EQ(geom.root, nodes);
+    EXPECT_EQ(GeoArrowArrayViewGetGeometry(&array_view, 0, &geom), GEOARROW_OK);
+    EXPECT_EQ(geom.root, nodes);
+    GeoArrowGeometryReset(&geom);
 
-  auto* nodes = geom.root;
-  int64_t size_nodes = geom.size_nodes;
-  EXPECT_EQ(GeoArrowArrayViewGetGeometry(&array_view, -1, &geom), EINVAL);
-  EXPECT_EQ(GeoArrowArrayViewGetGeometry(&array_view, array.length, &geom), EINVAL);
-  EXPECT_EQ(geom.root, nodes);
-  EXPECT_EQ(geom.size_nodes, size_nodes);
-  EXPECT_EQ(tester.AsWKT(geom), wkt);
-  EXPECT_EQ(GeoArrowArrayViewGetGeometry(&array_view, 1, &geom), GEOARROW_OK);
-  EXPECT_EQ(geom.root, nodes);
-  EXPECT_EQ(GeoArrowArrayViewGetGeometry(&array_view, 0, &geom), GEOARROW_OK);
-  EXPECT_EQ(geom.root, nodes);
-  GeoArrowGeometryReset(&geom);
-
-  // Top-level slicing changes both the logical index and validity bitmap lookup.
-  array.offset = 1;
-  array.length = 3;
-  ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
-  CheckArrayViewGeometries(&array_view, {"<null value>", empty, wkt});
-  array.release(&array);
+    // Top-level slicing changes both the logical index and validity bitmap lookup.
+    array.offset = 1;
+    array.length = 3;
+    ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+    CheckArrayViewGeometries(&array_view, {"<null value>", empty, wkt});
+    array.release(&array);
+  }
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    ArrayViewTest, ArrayViewGeometryTestFixture,
+    ::testing::Values(
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_POINT, "POINT (1 2)", "POINT EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_POINT_Z, "POINT Z (1 2 3)",
+                                  "POINT Z EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_POINT_M, "POINT M (1 2 4)",
+                                  "POINT M EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_POINT_ZM, "POINT ZM (1 2 3 4)",
+                                  "POINT ZM EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_LINESTRING, "LINESTRING (1 2, 3 4, 5 6)",
+                                  "LINESTRING EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_LINESTRING_Z,
+                                  "LINESTRING Z (1 2 3, 4 5 6)", "LINESTRING Z EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_LINESTRING_M,
+                                  "LINESTRING M (1 2 3, 4 5 6)", "LINESTRING M EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_LINESTRING_ZM,
+                                  "LINESTRING ZM (1 2 3 4, 5 6 7 8)",
+                                  "LINESTRING ZM EMPTY"},
+        ArrayViewGeometryTestCase{
+            GEOARROW_TYPE_POLYGON,
+            "POLYGON ((0 0, 10 0, 0 10, 0 0), (1 1, 2 1, 1 2, 1 1))", "POLYGON EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_POLYGON_Z,
+                                  "POLYGON Z ((0 0 1, 10 0 2, 0 10 3, 0 0 1))",
+                                  "POLYGON Z EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_POLYGON_M,
+                                  "POLYGON M ((0 0 1, 10 0 2, 0 10 3, 0 0 1))",
+                                  "POLYGON M EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_POLYGON_ZM,
+                                  "POLYGON ZM ((0 0 1 2, 10 0 3 4, 0 10 5 6, 0 0 1 2))",
+                                  "POLYGON ZM EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_MULTIPOINT, "MULTIPOINT ((1 2), (3 4))",
+                                  "MULTIPOINT EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_MULTIPOINT_Z,
+                                  "MULTIPOINT Z ((1 2 3), (4 5 6))",
+                                  "MULTIPOINT Z EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_MULTIPOINT_M,
+                                  "MULTIPOINT M ((1 2 3), (4 5 6))",
+                                  "MULTIPOINT M EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_MULTIPOINT_ZM,
+                                  "MULTIPOINT ZM ((1 2 3 4), (5 6 7 8))",
+                                  "MULTIPOINT ZM EMPTY"},
+        ArrayViewGeometryTestCase{GEOARROW_TYPE_MULTILINESTRING,
+                                  "MULTILINESTRING ((1 2, 3 4), EMPTY, (5 6, 7 8))",
+                                  "MULTILINESTRING EMPTY"},
+        ArrayViewGeometryTestCase{
+            GEOARROW_TYPE_MULTILINESTRING_Z,
+            "MULTILINESTRING Z ((1 2 3, 4 5 6), EMPTY, (7 8 9, 10 11 12))",
+            "MULTILINESTRING Z EMPTY"},
+        ArrayViewGeometryTestCase{
+            GEOARROW_TYPE_MULTILINESTRING_M,
+            "MULTILINESTRING M ((1 2 3, 4 5 6), EMPTY, (7 8 9, 10 11 12))",
+            "MULTILINESTRING M EMPTY"},
+        ArrayViewGeometryTestCase{
+            GEOARROW_TYPE_MULTILINESTRING_ZM,
+            "MULTILINESTRING ZM ((1 2 3 4, 5 6 7 8), EMPTY, (9 10 11 12, 13 14 "
+            "15 16))",
+            "MULTILINESTRING ZM EMPTY"},
+        ArrayViewGeometryTestCase{
+            GEOARROW_TYPE_MULTIPOLYGON,
+            "MULTIPOLYGON (((0 0, 10 0, 0 10, 0 0)), EMPTY, ((2 2, 3 2, 2 3, 2 "
+            "2)))",
+            "MULTIPOLYGON EMPTY"},
+        ArrayViewGeometryTestCase{
+            GEOARROW_TYPE_MULTIPOLYGON_Z,
+            "MULTIPOLYGON Z (((0 0 1, 10 0 2, 0 10 3, 0 0 1)), EMPTY)",
+            "MULTIPOLYGON Z EMPTY"},
+        ArrayViewGeometryTestCase{
+            GEOARROW_TYPE_MULTIPOLYGON_M,
+            "MULTIPOLYGON M (((0 0 1, 10 0 2, 0 10 3, 0 0 1)), EMPTY)",
+            "MULTIPOLYGON M EMPTY"},
+        ArrayViewGeometryTestCase{
+            GEOARROW_TYPE_MULTIPOLYGON_ZM,
+            "MULTIPOLYGON ZM (((0 0 1 2, 10 0 3 4, 0 10 5 6, 0 0 1 2)), EMPTY)",
+            "MULTIPOLYGON ZM EMPTY"}));
 
 TEST(ArrayViewTest, GetGeometryUnsupported) {
   struct GeoArrowGeometry geom;
   ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
-  for (auto type : {GEOARROW_TYPE_WKT, GEOARROW_TYPE_WKB, GEOARROW_TYPE_LARGE_WKT,
-                    GEOARROW_TYPE_LARGE_WKB}) {
+  for (auto type : {GEOARROW_TYPE_BOX, GEOARROW_TYPE_BOX_Z, GEOARROW_TYPE_BOX_M,
+                    GEOARROW_TYPE_BOX_ZM, GEOARROW_TYPE_WKT, GEOARROW_TYPE_WKB,
+                    GEOARROW_TYPE_LARGE_WKT, GEOARROW_TYPE_LARGE_WKB}) {
     struct GeoArrowArrayView array_view;
     ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
     EXPECT_EQ(GeoArrowArrayViewGetGeometry(&array_view, 0, &geom), ENOTSUP);
