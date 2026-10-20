@@ -132,8 +132,8 @@ TEST(GeometryTest, GeometryTestSetBox) {
 
   ASSERT_EQ(GeoArrowGeometrySetBox(&geom, 170, -10, -170, 20), GEOARROW_OK);
   EXPECT_EQ(tester.AsWKT(geom),
-            "MULTIPOLYGON (((170 -10, Infinity -10, Infinity 20, 170 20, 170 -10)), "
-            "((-Infinity -10, -170 -10, -170 20, -Infinity 20, -Infinity -10)))");
+            "MULTIPOLYGON (((170 -10, inf -10, inf 20, 170 20, 170 -10)), "
+            "((-inf -10, -170 -10, -170 20, -inf 20, -inf -10)))");
 
   ASSERT_EQ(GeoArrowGeometrySetBox(&geom, 1, 4, 3, 2), GEOARROW_OK);
   EXPECT_EQ(tester.AsWKT(geom), "POLYGON EMPTY");

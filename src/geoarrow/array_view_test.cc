@@ -345,8 +345,8 @@ TEST(ArrayViewTest, ArrayViewGetGeometryBoxCrossingAntimeridian) {
 
   CheckArrayViewGeometries(
       &array_view,
-      {"MULTIPOLYGON (((170 -10, Infinity -10, Infinity 20, 170 20, 170 -10)), "
-       "((-Infinity -10, -170 -10, -170 20, -Infinity 20, -Infinity -10)))"});
+      {"MULTIPOLYGON (((170 -10, inf -10, inf 20, 170 20, 170 -10)), "
+       "((-inf -10, -170 -10, -170 20, -inf 20, -inf -10)))"});
 
   array.release(&array);
   schema.release(&schema);
