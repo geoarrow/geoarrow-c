@@ -344,9 +344,8 @@ TEST(ArrayViewTest, ArrayViewGetGeometryBoxCrossingAntimeridian) {
   ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
 
   CheckArrayViewGeometries(
-      &array_view,
-      {"MULTIPOLYGON (((170 -10, inf -10, inf 20, 170 20, 170 -10)), "
-       "((-inf -10, -170 -10, -170 20, -inf 20, -inf -10)))"});
+      &array_view, {"MULTIPOLYGON (((170 -10, inf -10, inf 20, 170 20, 170 -10)), "
+                    "((-inf -10, -170 -10, -170 20, -inf 20, -inf -10)))"});
 
   array.release(&array);
   schema.release(&schema);
