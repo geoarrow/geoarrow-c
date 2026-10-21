@@ -1,5 +1,6 @@
 
 #include <cmath>
+#include <ostream>
 
 #include <gtest/gtest.h>
 
@@ -1342,6 +1343,13 @@ struct ArrayViewGeometryTestCase {
   const char* wkt;
   const char* empty_wkt;
 };
+
+// Print initialized fields instead of letting GoogleTest dump raw bytes, which
+// would read uninitialized padding between the enum and pointer members.
+void PrintTo(const ArrayViewGeometryTestCase& test_case, std::ostream* os) {
+  *os << "{type: " << test_case.type << ", wkt: " << test_case.wkt
+      << ", empty_wkt: " << test_case.empty_wkt << "}";
+}
 
 class ArrayViewGeometryTestFixture
     : public ::testing::TestWithParam<ArrayViewGeometryTestCase> {};
