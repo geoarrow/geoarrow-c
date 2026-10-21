@@ -122,6 +122,25 @@ TEST(GeometryTest, GeometryTestDeepCopy) {
   GeoArrowGeometryReset(&geom);
 }
 
+TEST(GeometryTest, GeometryTestSetBox) {
+  WKXTester tester;
+  struct GeoArrowGeometry geom;
+  ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
+
+  ASSERT_EQ(GeoArrowGeometrySetBox(&geom, 1, 2, 3, 4), GEOARROW_OK);
+  EXPECT_EQ(tester.AsWKT(geom), "POLYGON ((1 2, 3 2, 3 4, 1 4, 1 2))");
+
+  ASSERT_EQ(GeoArrowGeometrySetBox(&geom, 170, -10, -170, 20), GEOARROW_OK);
+  EXPECT_EQ(tester.AsWKT(geom),
+            "MULTIPOLYGON (((170 -10, inf -10, inf 20, 170 20, 170 -10)), "
+            "((-inf -10, -170 -10, -170 20, -inf 20, -inf -10)))");
+
+  ASSERT_EQ(GeoArrowGeometrySetBox(&geom, 1, 4, 3, 2), GEOARROW_OK);
+  EXPECT_EQ(tester.AsWKT(geom), "POLYGON EMPTY");
+
+  GeoArrowGeometryReset(&geom);
+}
+
 TEST(GeometryTest, GeometryTestRoundtripWKT) {
   // These are also tested in the WKXFilesTest; however, we inline a few here since
   // they are specifically testing the geometry constructor

@@ -73,6 +73,45 @@ TEST(WKXFilesTest, WKXFilesTestFiles) {
       EXPECT_EQ(tester.AsWKTUsingVisitor(geom_from_wkt), line_wkt);
       EXPECT_EQ(tester.AsWKT(geom_from_wkt), line_wkt);
 
+      // Geometry collections do not have a native GeoArrow array type. For every
+      // other geometry, exercise scalar access using both native coordinate layouts.
+      if (geom_from_wkt.root->geometry_type !=
+          GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION) {
+        for (auto coord_type :
+             {GEOARROW_COORD_TYPE_SEPARATE, GEOARROW_COORD_TYPE_INTERLEAVED}) {
+          enum GeoArrowType type = GeoArrowMakeType(
+              static_cast<enum GeoArrowGeometryType>(geom_from_wkt.root->geometry_type),
+              static_cast<enum GeoArrowDimensions>(geom_from_wkt.root->dimensions),
+              coord_type);
+          SCOPED_TRACE(coord_type == GEOARROW_COORD_TYPE_SEPARATE ? "separate"
+                                                                  : "interleaved");
+
+          struct GeoArrowNativeWriter writer;
+          ASSERT_EQ(GeoArrowNativeWriterInit(&writer, type), GEOARROW_OK);
+          ASSERT_EQ(GeoArrowNativeWriterAppend(
+                        &writer, GeoArrowGeometryAsView(&geom_from_wkt), nullptr),
+                    GEOARROW_OK);
+
+          struct ArrowArray array;
+          ASSERT_EQ(GeoArrowNativeWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+          GeoArrowNativeWriterReset(&writer);
+
+          struct GeoArrowArrayView array_view;
+          ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+          ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+
+          struct GeoArrowGeometry geom_from_array;
+          ASSERT_EQ(GeoArrowGeometryInit(&geom_from_array), GEOARROW_OK);
+          ASSERT_EQ(GeoArrowArrayViewGetGeometry(&array_view, 0, &geom_from_array),
+                    GEOARROW_OK);
+          EXPECT_EQ(tester.AsWKT(geom_from_array), line_wkt);
+          EXPECT_EQ(tester.AsWKTUsingVisitor(geom_from_array), line_wkt);
+
+          GeoArrowGeometryReset(&geom_from_array);
+          array.release(&array);
+        }
+      }
+
       ASSERT_EQ(GeoArrowGeometryShallowCopy(GeoArrowGeometryAsView(&geom_from_wkt),
                                             &geom_cloner),
                 GEOARROW_OK);

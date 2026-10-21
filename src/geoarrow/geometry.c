@@ -1,5 +1,6 @@
 
 #include <errno.h>
+#include <math.h>
 
 #include "geoarrow/geoarrow.h"
 #include "nanoarrow/nanoarrow.h"
@@ -210,6 +211,80 @@ static inline GeoArrowErrorCode GeoArrowGeometryReserveCoords(
   }
 
   *out = (double*)(private_data->coords.data + private_data->coords.size_bytes);
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowGeometryAppendBoxNode(
+    struct GeoArrowGeometry* geom, enum GeoArrowGeometryType geometry_type, uint8_t level,
+    uint32_t size, struct GeoArrowGeometryNode** out) {
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendNodeInline(geom, out));
+  (*out)->geometry_type = (uint8_t)geometry_type;
+  (*out)->dimensions = GEOARROW_DIMENSIONS_XY;
+  (*out)->level = level;
+  (*out)->size = size;
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowGeometryAppendBoxPolygon(struct GeoArrowGeometry* geom,
+                                                          uint8_t level, double xmin,
+                                                          double ymin, double xmax,
+                                                          double ymax, double** coords) {
+  struct GeoArrowGeometryNode* node;
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendBoxNode(
+      geom, GEOARROW_GEOMETRY_TYPE_POLYGON, level, 1, &node));
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendBoxNode(
+      geom, GEOARROW_GEOMETRY_TYPE_LINESTRING, level + 1, 5, &node));
+
+  double values[10] = {xmin, ymin, xmax, ymin, xmax, ymax, xmin, ymax, xmin, ymin};
+  memcpy(*coords, values, sizeof(values));
+  node->coords[0] = (const uint8_t*)*coords;
+  node->coords[1] = (const uint8_t*)(*coords + 1);
+  node->coord_stride[0] = 2 * sizeof(double);
+  node->coord_stride[1] = 2 * sizeof(double);
+  *coords += 10;
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowGeometrySetBox(struct GeoArrowGeometry* geom, double xmin,
+                                         double ymin, double xmax, double ymax) {
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryResizeNodesInline(geom, 0));
+  GEOARROW_RETURN_NOT_OK(ArrowBufferResize(&private_data->coords, 0, 0));
+
+  struct GeoArrowGeometryNode* node;
+  if (ymin > ymax) {
+    return GeoArrowGeometryAppendBoxNode(geom, GEOARROW_GEOMETRY_TYPE_POLYGON, 0, 0,
+                                         &node);
+  }
+
+  int n_polygons = xmin > xmax ? 2 : 1;
+  double* coords;
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryReserveCoords(geom, n_polygons * 10, &coords));
+
+  if (n_polygons == 1) {
+    GEOARROW_RETURN_NOT_OK(
+        GeoArrowGeometryAppendBoxNode(geom, GEOARROW_GEOMETRY_TYPE_POLYGON, 0, 1, &node));
+    GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendBoxNode(
+        geom, GEOARROW_GEOMETRY_TYPE_LINESTRING, 1, 5, &node));
+
+    double values[10] = {xmin, ymin, xmax, ymin, xmax, ymax, xmin, ymax, xmin, ymin};
+    memcpy(coords, values, sizeof(values));
+    node->coords[0] = (const uint8_t*)coords;
+    node->coords[1] = (const uint8_t*)(coords + 1);
+    node->coord_stride[0] = 2 * sizeof(double);
+    node->coord_stride[1] = 2 * sizeof(double);
+    coords += 10;
+  } else {
+    GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendBoxNode(
+        geom, GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON, 0, 2, &node));
+    GEOARROW_RETURN_NOT_OK(
+        GeoArrowGeometryAppendBoxPolygon(geom, 1, xmin, ymin, INFINITY, ymax, &coords));
+    GEOARROW_RETURN_NOT_OK(
+        GeoArrowGeometryAppendBoxPolygon(geom, 1, -INFINITY, ymin, xmax, ymax, &coords));
+  }
+
+  private_data->coords.size_bytes = n_polygons * 10 * sizeof(double);
   return GEOARROW_OK;
 }
 
