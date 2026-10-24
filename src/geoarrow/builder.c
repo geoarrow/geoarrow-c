@@ -17,6 +17,9 @@ struct BuilderPrivate {
   // might be NULL.
   struct ArrowBitmap* validity;
   struct ArrowBuffer* buffers[9];
+
+  int64_t geometry_length;
+  int64_t geometry_null_count;
 };
 
 static ArrowErrorCode GeoArrowBuilderInitArrayAndCachePointers(
@@ -48,6 +51,9 @@ static ArrowErrorCode GeoArrowBuilderInitArrayAndCachePointers(
   for (int i = 0; i < 4; i++) {
     builder->view.coords.values[i] = NULL;
   }
+
+  private->geometry_length = 0;
+  private->geometry_null_count = 0;
 
   return GEOARROW_OK;
 }
@@ -271,6 +277,10 @@ GeoArrowErrorCode GeoArrowBuilderFinish(struct GeoArrowBuilder* builder,
     private->array.null_count = -1;
   }
 
+  if (private->geometry_length > 0) {
+    private->array.null_count = private->geometry_null_count;
+  }
+
   // Move the result out of private so we can maybe prepare for the next round
   struct ArrowArray tmp;
   ArrowArrayMove(&private->array, &tmp);
@@ -421,4 +431,181 @@ static void GeoArrowSetCoordContainerLength(struct GeoArrowBuilder* builder) {
       // e.g., WKB
       break;
   }
+}
+
+// Native geometry nesting differs from array nesting for multipoints: point
+// children contribute coordinates but do not have their own offset buffer.
+static const uint8_t kGeoArrowBuilderGeometryTypes[7][3] = {
+    {GEOARROW_GEOMETRY_TYPE_GEOMETRY},
+    {GEOARROW_GEOMETRY_TYPE_POINT},
+    {GEOARROW_GEOMETRY_TYPE_LINESTRING},
+    {GEOARROW_GEOMETRY_TYPE_POLYGON, GEOARROW_GEOMETRY_TYPE_LINESTRING},
+    {GEOARROW_GEOMETRY_TYPE_MULTIPOINT, GEOARROW_GEOMETRY_TYPE_POINT},
+    {GEOARROW_GEOMETRY_TYPE_MULTILINESTRING, GEOARROW_GEOMETRY_TYPE_LINESTRING},
+    {GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON, GEOARROW_GEOMETRY_TYPE_POLYGON,
+     GEOARROW_GEOMETRY_TYPE_LINESTRING}};
+
+static void GeoArrowBuilderAppendNodeCoords(struct GeoArrowBuilder* builder,
+                                            const struct GeoArrowGeometryNode* node) {
+  struct GeoArrowWritableCoordView* coords = &builder->view.coords;
+  int map[4];
+  GeoArrowMapDimensions((enum GeoArrowDimensions)node->dimensions,
+                        builder->view.schema_view.dimensions, map);
+  uint32_t n = node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT ? 1 : node->size;
+  for (int j = 0; j < coords->n_values; j++) {
+    int missing = node->size == 0 || map[j] < 0;
+    const uint8_t* src = missing ? _GeoArrowkEmptyPointCoords : node->coords[map[j]];
+    int32_t stride = missing ? 0 : node->coord_stride[map[j]];
+    for (uint32_t k = 0; k < n; k++) {
+      uint64_t value;
+      memcpy(&value, src + (int64_t)k * stride, sizeof(value));
+      if (!missing && (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN)) {
+        value = GEOARROW_BSWAP64(value);
+      }
+      memcpy(coords->values[j] + (coords->size_coords + k) * coords->coords_stride,
+             &value, sizeof(value));
+    }
+  }
+  coords->size_coords += n;
+}
+
+GeoArrowErrorCode GeoArrowBuilderAppendGeometry(struct GeoArrowBuilder* builder,
+                                                struct GeoArrowGeometryView geometry,
+                                                struct GeoArrowError* error) {
+  enum GeoArrowGeometryType type = builder->view.schema_view.geometry_type;
+  if (type < GEOARROW_GEOMETRY_TYPE_POINT || type > GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON) {
+    GeoArrowErrorSet(error, "Geometry append requires a native geometry array");
+    return ENOTSUP;
+  }
+
+  if (geometry.size_nodes < 0 || (geometry.size_nodes > 0 && geometry.root == NULL)) {
+    GeoArrowErrorSet(error, "Invalid geometry view");
+    return EINVAL;
+  }
+
+  int is_null = geometry.size_nodes == 0 || geometry.root->geometry_type == 0;
+  if (is_null && geometry.size_nodes > 0 &&
+      (geometry.size_nodes != 1 || geometry.root->size != 0)) {
+    GeoArrowErrorSet(error, "Invalid null geometry");
+    return EINVAL;
+  }
+
+  // Validate the complete tree and count buffer growth before modifying lengths.
+  const uint8_t* types = kGeoArrowBuilderGeometryTypes[type];
+  int n_offsets = builder->view.n_offsets;
+  int64_t n_coords = 0;
+  int64_t n_offsets_add[3] = {0, 0, 0};
+  int64_t offset_add[3] = {0, 0, 0};
+  int64_t remaining[3] = {1, 0, 0};
+  int level = 0;
+  if (is_null) {
+    n_coords = type == GEOARROW_GEOMETRY_TYPE_POINT;
+    n_offsets_add[0] = n_offsets > 0;
+  } else {
+    for (int64_t i = 0; i < geometry.size_nodes; i++) {
+      const struct GeoArrowGeometryNode* node = geometry.root + i;
+      while (level > 0 && remaining[level] == 0) {
+        level--;
+      }
+      if (remaining[level] == 0 || node->geometry_type != types[level] ||
+          node->level != geometry.root->level + level ||
+          node->dimensions < GEOARROW_DIMENSIONS_XY ||
+          node->dimensions > GEOARROW_DIMENSIONS_XYZM ||
+          (node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT && node->size > 1)) {
+        GeoArrowErrorSet(error, "Geometry node does not match builder nesting or type");
+        return EINVAL;
+      }
+      remaining[level]--;
+      if (level < n_offsets) {
+        n_offsets_add[level]++;
+        offset_add[level] += node->size;
+        if (offset_add[level] > INT32_MAX) {
+          GeoArrowErrorSet(error, "Geometry offsets exceed INT32_MAX");
+          return EOVERFLOW;
+        }
+      }
+      if (node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT ||
+          node->geometry_type == GEOARROW_GEOMETRY_TYPE_LINESTRING) {
+        n_coords += node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT ? 1 : node->size;
+      } else if (node->size > 0) {
+        remaining[++level] = node->size;
+      }
+    }
+    if (remaining[0] != 0 || remaining[1] != 0 || remaining[2] != 0) {
+      GeoArrowErrorSet(error, "Geometry is missing child nodes");
+      return EINVAL;
+    }
+  }
+
+  struct BuilderPrivate* private = (struct BuilderPrivate*)builder->private_data;
+  int32_t last_offset[3] = {0, 0, 0};
+  for (int i = 0; i < n_offsets; i++) {
+    struct GeoArrowWritableBufferView* buffer = builder->view.buffers + i + 1;
+    if (buffer->size_bytes > 0) {
+      last_offset[i] = buffer->data.as_int32[buffer->size_bytes / sizeof(int32_t) - 1];
+    }
+    if (offset_add[i] > INT32_MAX - (int64_t)last_offset[i]) {
+      GeoArrowErrorSet(error, "Appending geometry would overflow native array offsets");
+      return EOVERFLOW;
+    }
+  }
+
+  // Reserve all buffers before writing. No input node or coordinate is retained.
+  if (n_coords > 0) {
+    GEOARROW_RETURN_NOT_OK(GeoArrowBuilderCoordsReserve(builder, n_coords));
+  }
+  for (int i = 0; i < n_offsets; i++) {
+    int64_t n = n_offsets_add[i] + (builder->view.buffers[i + 1].size_bytes == 0);
+    GEOARROW_RETURN_NOT_OK(
+        GeoArrowBuilderReserveBuffer(builder, i + 1, n * sizeof(int32_t)));
+  }
+  struct GeoArrowWritableBufferView* validity = builder->view.buffers;
+  if (is_null || validity->size_bytes > 0) {
+    int64_t size_bytes = (private->geometry_length + 8) / 8;
+    GEOARROW_RETURN_NOT_OK(
+        GeoArrowBuilderReserveBuffer(builder, 0, size_bytes - validity->size_bytes));
+    memset(validity->data.as_uint8 + validity->size_bytes, 0,
+           size_bytes - validity->size_bytes);
+    if (validity->size_bytes == 0) {
+      ArrowBitsSetTo(validity->data.as_uint8, 0, private->geometry_length, 1);
+    }
+    ArrowBitSetTo(validity->data.as_uint8, private->geometry_length, !is_null);
+    validity->size_bytes = size_bytes;
+  }
+  for (int i = 0; i < n_offsets; i++) {
+    if (builder->view.buffers[i + 1].size_bytes == 0) {
+      int32_t zero = 0;
+      GeoArrowBuilderOffsetAppendUnsafe(builder, i, &zero, 1);
+    }
+  }
+
+  if (is_null) {
+    if (n_offsets > 0) {
+      GeoArrowBuilderOffsetAppendUnsafe(builder, 0, last_offset, 1);
+    } else {
+      struct GeoArrowGeometryNode empty;
+      memset(&empty, 0, sizeof(empty));
+      empty.geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
+      empty.dimensions = (uint8_t)builder->view.schema_view.dimensions;
+      GeoArrowBuilderAppendNodeCoords(builder, &empty);
+    }
+    private->geometry_null_count++;
+  } else {
+    for (int64_t i = 0; i < geometry.size_nodes; i++) {
+      const struct GeoArrowGeometryNode* node = geometry.root + i;
+      int node_level = node->level - geometry.root->level;
+      if (node_level < n_offsets) {
+        last_offset[node_level] += (int32_t)node->size;
+        GeoArrowBuilderOffsetAppendUnsafe(builder, node_level, last_offset + node_level,
+                                          1);
+      }
+      if ((node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT ||
+           node->geometry_type == GEOARROW_GEOMETRY_TYPE_LINESTRING) &&
+          (node->size > 0 || node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT)) {
+        GeoArrowBuilderAppendNodeCoords(builder, node);
+      }
+    }
+  }
+  private->geometry_length++;
+  return GEOARROW_OK;
 }

@@ -1,4 +1,6 @@
 
+#include <cmath>
+
 #include <gtest/gtest.h>
 
 #include "geoarrow/geoarrow.h"
@@ -555,4 +557,237 @@ TEST(BuilderTest, BuilderTestSetBuffersMultipolygon) {
   EXPECT_EQ(values[2], "<null value>");
 
   array_out.release(&array_out);
+}
+
+TEST_P(TypeParameterizedTestFixture, BuilderAppendGeometry) {
+  GeoArrowBuilder builder;
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GetParam()), GEOARROW_OK);
+  auto type = builder.view.schema_view.geometry_type;
+  GeoArrowGeometryView null_view = {nullptr, 0};
+  if (type < GEOARROW_GEOMETRY_TYPE_POINT || type > GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON) {
+    EXPECT_EQ(GeoArrowBuilderAppendGeometry(&builder, null_view, nullptr), ENOTSUP);
+    GeoArrowBuilderReset(&builder);
+    return;
+  }
+
+  auto dims = builder.view.schema_view.dimensions;
+  std::string dim_suffix[] = {"", "", " Z", " M", " ZM"};
+  std::string coord[] = {"", "1 2", "1 2 3", "1 2 3", "1 2 3 4"};
+  std::string sequence = coord[dims] + ", " + coord[dims];
+  std::string contents[] = {"",
+                            "(" + coord[dims] + ")",
+                            "(" + sequence + ")",
+                            "((" + sequence + "))",
+                            "((" + coord[dims] + "))",
+                            "((" + sequence + "))",
+                            "(((" + sequence + ")))"};
+  std::string prefix = std::string(GeoArrowGeometryTypeString(type)) + dim_suffix[dims];
+  std::string wkt = prefix + " " + contents[type];
+  std::string empty = prefix + " EMPTY";
+  WKXTester tester;
+  GeoArrowGeometry result;
+  ASSERT_EQ(GeoArrowGeometryInit(&result), GEOARROW_OK);
+  GeoArrowError error;
+
+  // Reuse the builder across batches, including null-first and entirely empty
+  // batches. Cross a bitmap byte boundary, and overwrite the borrowed input.
+  for (int batch = 0; batch < 3; batch++) {
+    for (int i = 0; i < 12; i++) {
+      bool is_null = (i + batch) % 3 == 1;
+      const auto& geom = tester.AsGeometry(i % 3 == 0 && batch != 2 ? wkt : empty);
+      ASSERT_EQ(
+          GeoArrowBuilderAppendGeometry(
+              &builder, is_null ? null_view : GeoArrowGeometryAsView(&geom), &error),
+          GEOARROW_OK)
+          << error.message;
+    }
+    tester.AsGeometry("POINT (9 10)");
+    ArrowArray array;
+    ASSERT_EQ(GeoArrowBuilderFinish(&builder, &array, &error), GEOARROW_OK)
+        << error.message;
+    EXPECT_EQ(array.length, 12);
+    EXPECT_EQ(array.null_count, 4);
+    GeoArrowArrayView view;
+    ASSERT_EQ(GeoArrowArrayViewInitFromType(&view, GetParam()), GEOARROW_OK);
+    ASSERT_EQ(GeoArrowArrayViewSetArray(&view, &array, &error), GEOARROW_OK);
+    for (int i = 0; i < 12; i++) {
+      ASSERT_EQ(GeoArrowArrayViewGetGeometry(&view, i, &result), GEOARROW_OK);
+      if ((i + batch) % 3 == 1) {
+        EXPECT_EQ(result.root->geometry_type, 0);
+      } else {
+        EXPECT_EQ(tester.AsWKT(result), i % 3 == 0 && batch != 2 ? wkt : empty);
+      }
+    }
+    array.release(&array);
+  }
+  GeoArrowGeometryReset(&result);
+  GeoArrowBuilderReset(&builder);
+}
+
+TEST(BuilderTest, AppendGeometryPreservesEmptyParts) {
+  WKXTester tester;
+  for (const auto& wkt :
+       {"MULTIPOINT (EMPTY, (1 2), EMPTY)", "MULTILINESTRING (EMPTY, (1 2, 3 4), EMPTY)",
+        "POLYGON (EMPTY, (1 2, 3 4, 1 2), EMPTY)",
+        "MULTIPOLYGON (EMPTY, ((1 2, 3 4, 1 2), EMPTY), EMPTY)",
+        "MULTIPOINT (EMPTY, EMPTY)", "MULTILINESTRING (EMPTY, EMPTY)",
+        "POLYGON (EMPTY, EMPTY)", "MULTIPOLYGON (EMPTY, (EMPTY), EMPTY)"}) {
+    SCOPED_TRACE(wkt);
+    // Read WKB directly so all-empty containers retain their child counts.
+    auto wkb = tester.AsWKB(wkt);
+    GeoArrowWKBReader reader;
+    ASSERT_EQ(GeoArrowWKBReaderInit(&reader), GEOARROW_OK);
+    GeoArrowGeometryView geom;
+    ASSERT_EQ(
+        GeoArrowWKBReaderRead(&reader, {wkb.data(), static_cast<int64_t>(wkb.size())},
+                              &geom, nullptr),
+        GEOARROW_OK);
+    auto type =
+        GeoArrowMakeType(static_cast<GeoArrowGeometryType>(geom.root->geometry_type),
+                         GEOARROW_DIMENSIONS_XY, GEOARROW_COORD_TYPE_SEPARATE);
+    GeoArrowBuilder builder;
+    ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, type), GEOARROW_OK);
+    for (int i = 0; i < 2; i++) {
+      ASSERT_EQ(GeoArrowBuilderAppendGeometry(&builder, geom, nullptr), GEOARROW_OK);
+    }
+    ArrowArray array;
+    ASSERT_EQ(GeoArrowBuilderFinish(&builder, &array, nullptr), GEOARROW_OK);
+    EXPECT_EQ(array.null_count, 0);
+    EXPECT_EQ(array.buffers[0], nullptr);
+    GeoArrowArrayView view;
+    ASSERT_EQ(GeoArrowArrayViewInitFromType(&view, type), GEOARROW_OK);
+    ASSERT_EQ(GeoArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
+    GeoArrowGeometry out;
+    ASSERT_EQ(GeoArrowGeometryInit(&out), GEOARROW_OK);
+    for (int i = 0; i < 2; i++) {
+      ASSERT_EQ(GeoArrowArrayViewGetGeometry(&view, i, &out), GEOARROW_OK);
+      EXPECT_EQ(out.size_nodes, geom.size_nodes);
+      EXPECT_EQ(tester.AsWKT(out), wkt);
+    }
+    GeoArrowGeometryReset(&out);
+    array.release(&array);
+    GeoArrowBuilderReset(&builder);
+    GeoArrowWKBReaderReset(&reader);
+  }
+}
+
+TEST(BuilderTest, AppendGeometryStridesDimensionsAndEndian) {
+  for (auto layout : {GEOARROW_COORD_TYPE_SEPARATE, GEOARROW_COORD_TYPE_INTERLEAVED}) {
+    for (int swap : {0, 1}) {
+      // Unaligned reversed X, constant Y, and no Z/M in the source.
+      uint8_t bytes[25];
+      double values[] = {1, 3, 2};
+      for (int i = 0; i < 3; i++) {
+        uint64_t value;
+        memcpy(&value, values + i, sizeof(value));
+        if (swap) value = GEOARROW_BSWAP64(value);
+        memcpy(bytes + 1 + i * sizeof(value), &value, sizeof(value));
+      }
+      GeoArrowGeometryNode node = {};
+      node.geometry_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
+      node.dimensions = GEOARROW_DIMENSIONS_XY;
+      node.flags =
+          static_cast<uint8_t>(swap ? GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN : 0);
+      node.size = 2;
+      node.coords[0] = bytes + 9;
+      node.coords[1] = bytes + 17;
+      node.coord_stride[0] = -8;
+      GeoArrowBuilder builder;
+      auto type = GeoArrowMakeType(GEOARROW_GEOMETRY_TYPE_LINESTRING,
+                                   GEOARROW_DIMENSIONS_XYZM, layout);
+      ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, type), GEOARROW_OK);
+      ASSERT_EQ(GeoArrowBuilderAppendGeometry(&builder, {&node, 1}, nullptr),
+                GEOARROW_OK);
+      ArrowArray array;
+      ASSERT_EQ(GeoArrowBuilderFinish(&builder, &array, nullptr), GEOARROW_OK);
+      GeoArrowArrayView view;
+      ASSERT_EQ(GeoArrowArrayViewInitFromType(&view, type), GEOARROW_OK);
+      ASSERT_EQ(GeoArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
+      EXPECT_EQ(GEOARROW_COORD_VIEW_VALUE(&view.coords, 0, 0), 3);
+      EXPECT_EQ(GEOARROW_COORD_VIEW_VALUE(&view.coords, 1, 0), 1);
+      EXPECT_EQ(GEOARROW_COORD_VIEW_VALUE(&view.coords, 0, 1), 2);
+      EXPECT_EQ(GEOARROW_COORD_VIEW_VALUE(&view.coords, 1, 1), 2);
+      EXPECT_TRUE(std::isnan(GEOARROW_COORD_VIEW_VALUE(&view.coords, 0, 2)));
+      EXPECT_TRUE(std::isnan(GEOARROW_COORD_VIEW_VALUE(&view.coords, 1, 3)));
+      array.release(&array);
+      GeoArrowBuilderReset(&builder);
+    }
+  }
+
+  WKXTester tester;
+  const auto& geom = tester.AsGeometry("POINT ZM (1 2 3 4)");
+  GeoArrowBuilder builder;
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_POINT_M), GEOARROW_OK);
+  ASSERT_EQ(
+      GeoArrowBuilderAppendGeometry(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+      GEOARROW_OK);
+  ArrowArray array;
+  ASSERT_EQ(GeoArrowBuilderFinish(&builder, &array, nullptr), GEOARROW_OK);
+  EXPECT_EQ(static_cast<const double*>(array.children[2]->buffers[1])[0], 4);
+  array.release(&array);
+  GeoArrowBuilderReset(&builder);
+}
+
+TEST(BuilderTest, AppendGeometryInvalidAndOverflow) {
+  GeoArrowBuilder builder;
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_MULTIPOLYGON),
+            GEOARROW_OK);
+  WKXTester tester;
+  const auto& geom = tester.AsGeometry("MULTIPOLYGON (((1 2, 3 4)))");
+  std::vector<GeoArrowGeometryNode> nodes(geom.root, geom.root + geom.size_nodes);
+  ASSERT_EQ(
+      GeoArrowBuilderAppendGeometry(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+      GEOARROW_OK);
+  auto reject = [&](GeoArrowGeometryView view, int code) {
+    int64_t sizes[9];
+    for (int i = 0; i < builder.view.n_buffers; i++)
+      sizes[i] = builder.view.buffers[i].size_bytes;
+    auto size_coords = builder.view.coords.size_coords;
+    EXPECT_EQ(GeoArrowBuilderAppendGeometry(&builder, view, nullptr), code);
+    EXPECT_EQ(builder.view.coords.size_coords, size_coords);
+    for (int i = 0; i < builder.view.n_buffers; i++)
+      EXPECT_EQ(builder.view.buffers[i].size_bytes, sizes[i]);
+  };
+  reject({nullptr, 1}, EINVAL);
+  reject({nullptr, -1}, EINVAL);
+  reject({nodes.data(), 2}, EINVAL);
+  nodes.push_back(nodes.back());
+  reject({nodes.data(), 4}, EINVAL);
+  nodes.pop_back();
+  nodes[1].level = 2;
+  reject({nodes.data(), 3}, EINVAL);
+  nodes[1].level = 1;
+  nodes[1].geometry_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
+  reject({nodes.data(), 3}, EINVAL);
+  nodes[1].geometry_type = GEOARROW_GEOMETRY_TYPE_POLYGON;
+  nodes[2].dimensions = 0;
+  reject({nodes.data(), 3}, EINVAL);
+  nodes[2].dimensions = GEOARROW_DIMENSIONS_XY;
+  nodes[2].size = UINT32_MAX;
+  reject({nodes.data(), 3}, EOVERFLOW);
+  nodes[2].size = INT32_MAX;  // Individually valid, but overflows the existing offset.
+  reject({nodes.data(), 3}, EOVERFLOW);
+  nodes[0].geometry_type = 0;
+  reject({nodes.data(), 1}, EINVAL);
+
+  // A failed append leaves the preceding geometry intact and allows another append.
+  ASSERT_EQ(
+      GeoArrowBuilderAppendGeometry(&builder, GeoArrowGeometryAsView(&geom), nullptr),
+      GEOARROW_OK);
+  GeoArrowGeometryNode null_node = {};
+  ASSERT_EQ(GeoArrowBuilderAppendGeometry(&builder, {&null_node, 1}, nullptr),
+            GEOARROW_OK);
+  ArrowArray array;
+  ASSERT_EQ(GeoArrowBuilderFinish(&builder, &array, nullptr), GEOARROW_OK);
+  EXPECT_EQ(array.length, 3);
+  EXPECT_EQ(array.null_count, 1);
+  EXPECT_EQ(array.children[0]->children[0]->children[0]->length, 4);
+  array.release(&array);
+  GeoArrowBuilderReset(&builder);
+
+  ASSERT_EQ(GeoArrowBuilderInitFromType(&builder, GEOARROW_TYPE_POINT), GEOARROW_OK);
+  nodes[0].geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
+  nodes[0].size = 2;
+  EXPECT_EQ(GeoArrowBuilderAppendGeometry(&builder, {nodes.data(), 1}, nullptr), EINVAL);
+  GeoArrowBuilderReset(&builder);
 }
