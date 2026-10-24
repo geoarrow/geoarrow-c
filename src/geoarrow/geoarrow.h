@@ -173,8 +173,7 @@ GeoArrowErrorCode GeoArrowArrayViewGetGeometry(const struct GeoArrowArrayView* a
 ///   array for each using GeoArrowBuilderSetOwnedBuffer()
 /// - Append the appropriate values to each buffer in-place using
 ///   GeoArrowBuilderAppendBuffer()
-/// - Use GeoArrowBuilderInitVisitor() and let the visitor build the buffers
-///   for you.
+/// - Append individual geometries using GeoArrowBuilderAppendGeometry().
 ///
 /// For all methods you can re-use the builder object for multiple batches
 /// and call GeoArrowBuilderFinish() multiple times. You should
@@ -213,6 +212,27 @@ static inline void GeoArrowBuilderAppendBufferUnsafe(struct GeoArrowBuilder* bui
 /// \brief Append data to a buffer in a GeoArrowBuilder
 static inline GeoArrowErrorCode GeoArrowBuilderAppendBuffer(
     struct GeoArrowBuilder* builder, int64_t i, struct GeoArrowBufferView value);
+
+/// \brief Copy one geometry into a native GeoArrow array
+///
+/// Supports POINT, LINESTRING, POLYGON, MULTIPOINT, MULTILINESTRING, and
+/// MULTIPOLYGON builders with either coordinate layout. The geometry type and
+/// nesting must match the builder; empty parts are preserved. Coordinates are
+/// doubles and may be unaligned, strided, or endian-swapped. Missing dimensions
+/// are filled with NaN and extra dimensions are discarded.
+///
+/// An empty view or a single node with geometry_type and size both zero appends
+/// a null. Empty points are represented by NaN coordinates. Input memory must
+/// remain valid for this call and must not alias the builder's buffers.
+/// Use this method exclusively within a batch; do not mix it with buffer writes.
+/// GeoArrowBuilderFinish() resets the builder for the next batch.
+///
+/// Returns ENOTSUP for unsupported builder types, EINVAL for incompatible node
+/// structure, and EOVERFLOW if native offsets would exceed INT32_MAX. These
+/// errors leave the builder unchanged.
+GeoArrowErrorCode GeoArrowBuilderAppendGeometry(struct GeoArrowBuilder* builder,
+                                                struct GeoArrowGeometryView geometry,
+                                                struct GeoArrowError* error);
 
 /// \brief Replace a buffer with one whose lifecycle is externally managed.
 GeoArrowErrorCode GeoArrowBuilderSetOwnedBuffer(

@@ -173,6 +173,8 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderAppendBufferUnsafe)
 #define GeoArrowBuilderAppendBuffer \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderAppendBuffer)
+#define GeoArrowBuilderAppendGeometry \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderAppendGeometry)
 #define GeoArrowBuilderSetOwnedBuffer \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderSetOwnedBuffer)
 #define GeoArrowBuilderFinish \
