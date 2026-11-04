@@ -6,6 +6,12 @@
 
 #include "geoarrow/geoarrow.h"
 
+#if defined(GEOARROW_USE_FAST_FLOAT) && GEOARROW_USE_FAST_FLOAT
+// Internal helper: parse a bounded prefix and return the first unconsumed byte.
+GeoArrowErrorCode GeoArrowFromCharsPartial(const char* first, const char* last,
+                                           double* out, const char** end);
+#endif
+
 #define COORD_CACHE_SIZE_COORDS 64
 
 struct WKTReaderPrivate {
@@ -124,6 +130,37 @@ static inline int GeoArrowWKTAssertWordEmpty(struct WKTReaderPrivate* s,
 static inline int ReadOrdinate(struct WKTReaderPrivate* s, double* out,
                                struct GeoArrowError* error) {
   const char* start = s->data;
+#if defined(GEOARROW_USE_FAST_FLOAT) && GEOARROW_USE_FAST_FLOAT
+  // Avoid the general prefix parser's overhead for one- and two-digit integers.
+  // These values convert exactly to double; applying the sign afterward also
+  // preserves negative zero. Leave decimal/exponent forms on the general path.
+  int negative = s->size_bytes > 0 && start[0] == '-';
+  int64_t n = negative;
+  int value = 0;
+  while (n < s->size_bytes && n < negative + 2 && start[n] >= '0' && start[n] <= '9') {
+    value = value * 10 + (start[n] - '0');
+    n++;
+  }
+  if (n > negative && (n == s->size_bytes || start[n] == '\0' || start[n] == ' ' ||
+                       start[n] == '\t' || start[n] == '\n' || start[n] == '\r' ||
+                       start[n] == ',' || start[n] == '(' || start[n] == ')')) {
+    *out = negative ? -(double)value : (double)value;
+    GeoArrowWKTAdvanceUnsafe(s, n);
+    return GEOARROW_OK;
+  }
+
+  const char* end;
+  int prefix_result = GeoArrowFromCharsPartial(start, start + s->size_bytes, out, &end);
+  // NaN payloads can contain parentheses: keep them on the token-bounded path
+  // below so that fast_float cannot consume WKT delimiters.
+  if (prefix_result == GEOARROW_OK && *out == *out) {
+    GeoArrowWKTAdvanceUnsafe(s, end - start);
+    // Preserve acceptance of numeric prefixes followed by a non-number suffix.
+    // For valid numbers, this only inspects the delimiter, not the number again.
+    GeoArrowWKTSkipUntilSep(s);
+    return GEOARROW_OK;
+  }
+#endif
   GeoArrowWKTSkipUntilSep(s);
   int result = GeoArrowFromChars(start, s->data, out);
   if (result != GEOARROW_OK) {
