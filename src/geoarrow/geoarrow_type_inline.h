@@ -518,8 +518,7 @@ static inline void GeoArrowGeometryViewCopyCoordsGeneric(
 
   const uint8_t* src_mapped;
   int32_t src_stride_mapped;
-  uint8_t* out_cursor[4];
-  memcpy(out_cursor, out, out_dimensions_size * sizeof(uint8_t*));
+  int64_t out_offset = 0;
   int32_t out_stride;
 
   const struct GeoArrowGeometryNode* end = geom.root + geom.size_nodes;
@@ -543,24 +542,23 @@ static inline void GeoArrowGeometryViewCopyCoordsGeneric(
           src_stride_mapped = src_strides[map[i] + 1];
           out_stride = out_strides[i];
 
-          if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
+          // Synthesized missing dimensions already use native-endian NaNs.
+          if (map[i] >= 0 && (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN)) {
             uint64_t tmp;
             for (uint32_t j = 0; j < node->size; ++j) {
-              memcpy(&tmp, src_mapped, sizeof(double));
+              memcpy(&tmp, src_mapped + (int64_t)j * src_stride_mapped, sizeof(double));
               tmp = GEOARROW_BSWAP64(tmp);
-              memcpy(out_cursor[i], &tmp, sizeof(double));
-              src_mapped += src_stride_mapped;
-              out_cursor[i] += out_stride;
+              memcpy(out[i] + (out_offset + j) * out_stride, &tmp, sizeof(double));
             }
           } else {
             for (uint32_t j = 0; j < node->size; ++j) {
-              memcpy(out_cursor[i], src_mapped, sizeof(double));
-              src_mapped += src_stride_mapped;
-              out_cursor[i] += out_stride;
+              memcpy(out[i] + (out_offset + j) * out_stride,
+                     src_mapped + (int64_t)j * src_stride_mapped, sizeof(double));
             }
           }
         }
 
+        out_offset += node->size;
         break;
       }
 
@@ -743,6 +741,11 @@ static inline GeoArrowErrorCode GeoArrowBuilderCoordsReserve(
         result = GeoArrowBuilderReserveBuffer(builder, i,
                                               additional_size_coords * sizeof(double));
         if (result != GEOARROW_OK) {
+          writable_view->capacity_coords = 0;
+          for (int j = 0; j < n_values; j++) {
+            writable_view->values[j] =
+                builder->view.buffers[last_buffer - n_values + 1 + j].data.as_double;
+          }
           return result;
         }
       }

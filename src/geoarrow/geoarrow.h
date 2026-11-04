@@ -430,7 +430,7 @@ GeoArrowErrorCode GeoArrowArrayViewVisitNative(const struct GeoArrowArrayView* a
 /// \brief GeoArrow native array writer
 ///
 /// This writer writes the "native" memory layouts (i.e., nested lists of
-/// coordinates) implemented as a visitor.
+/// coordinates), either directly from geometry views or through a visitor.
 struct GeoArrowNativeWriter {
   /// \brief Implementation-specific details
   void* private_data;
@@ -447,7 +447,19 @@ GeoArrowErrorCode GeoArrowNativeWriterInit(struct GeoArrowNativeWriter* writer,
 GeoArrowErrorCode GeoArrowNativeWriterInitVisitor(struct GeoArrowNativeWriter* writer,
                                                   struct GeoArrowVisitor* v);
 
-/// \brief Append a GeoArrowGeometryView to this writer
+/// \brief Copy a GeoArrowGeometryView into this writer
+///
+/// Coordinates may be unaligned, strided, or endian-swapped doubles. Missing
+/// output dimensions are filled with NaN; extra input dimensions are discarded.
+/// Empty parts are preserved for matching types and supported single/multi
+/// conversions. Otherwise, geometries with no coordinates become an empty value
+/// of the output type. An output POINT accepts any geometry with at most one
+/// coordinate. Geometry parts must be non-null; use GeoArrowNativeWriterAppendNull()
+/// for a null feature. Input memory must not alias the writer's buffers.
+///
+/// Invalid node structure or incompatible types return EINVAL; overflowing native
+/// offsets return EOVERFLOW. Validation and allocation precede appending, so a
+/// failed append leaves the previously appended features intact.
 GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer,
                                              struct GeoArrowGeometryView geom,
                                              struct GeoArrowError* error);
