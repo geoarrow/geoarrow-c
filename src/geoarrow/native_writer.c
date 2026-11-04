@@ -257,8 +257,8 @@ static void GeoArrowNativeWriterPlanEmpty(struct GeoArrowNativeWriterAppendPlan*
   plan->empty_points = type == GEOARROW_GEOMETRY_TYPE_POINT;
 }
 
-// Retain the existing single/multi and one-coordinate-to-point conversions.
-// Any otherwise incompatible geometry with no coordinates still becomes EMPTY.
+// Support matching types and single/multi conversions. Except for POINT output,
+// an otherwise incompatible geometry with no coordinates still becomes EMPTY.
 static GeoArrowErrorCode GeoArrowNativeWriterPlanConversion(
     struct GeoArrowNativeWriterAppendPlan* plan, enum GeoArrowGeometryType type,
     enum GeoArrowDimensions dimensions, struct GeoArrowError* error) {
@@ -267,15 +267,17 @@ static GeoArrowErrorCode GeoArrowNativeWriterPlanConversion(
   int unwrap = 0;
   switch (type) {
     case GEOARROW_GEOMETRY_TYPE_POINT:
-      if (plan->coord_count > 1) {
-        GeoArrowErrorSet(
-            error, "Can't append geometry with coord count >1 to array of type POINT");
-        return EINVAL;
+      if (compatible) {
+        return GEOARROW_OK;
       }
-      if (plan->coord_count == 0) {
-        GeoArrowNativeWriterPlanEmpty(plan, type, dimensions);
+      if (node->geometry_type == GEOARROW_GEOMETRY_TYPE_MULTIPOINT && node->size == 1) {
+        plan->geom.root++;
+        plan->geom.size_nodes--;
+        return GEOARROW_OK;
       }
-      return GEOARROW_OK;
+      GeoArrowErrorSet(
+          error, "Expected POINT or MULTIPOINT with exactly one point for POINT output");
+      return EINVAL;
     case GEOARROW_GEOMETRY_TYPE_LINESTRING:
       unwrap = node->geometry_type == GEOARROW_GEOMETRY_TYPE_MULTILINESTRING;
       break;

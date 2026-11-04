@@ -452,10 +452,11 @@ GeoArrowErrorCode GeoArrowNativeWriterInitVisitor(struct GeoArrowNativeWriter* w
 /// Coordinates may be unaligned, strided, or endian-swapped doubles. Missing
 /// output dimensions are filled with NaN; extra input dimensions are discarded.
 /// Empty parts are preserved for matching types and supported single/multi
-/// conversions. Otherwise, geometries with no coordinates become an empty value
-/// of the output type. An output POINT accepts any geometry with at most one
-/// coordinate. Geometry parts must be non-null; use GeoArrowNativeWriterAppendNull()
-/// for a null feature. Input memory must not alias the writer's buffers.
+/// conversions. An output POINT accepts only POINT or MULTIPOINT with exactly one
+/// point (which may be empty). For other output types, otherwise incompatible
+/// geometries with no coordinates become an empty value of the output type.
+/// Geometry parts must be non-null; use GeoArrowNativeWriterAppendNull() for a null
+/// feature. Input memory must not alias the writer's buffers.
 ///
 /// Invalid node structure or incompatible types return EINVAL; overflowing native
 /// offsets return EOVERFLOW. Validation and allocation precede appending, so a

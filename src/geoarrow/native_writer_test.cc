@@ -689,10 +689,10 @@ TEST(NativeWriterTest, WritePointGeometry) {
   ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
             GEOARROW_OK);
 
-  // An EMPTY of a different type
+  // An EMPTY of a different type is not a POINT
   geom = tester.AsGeometry("GEOMETRYCOLLECTION EMPTY");
   ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
-            GEOARROW_OK);
+            EINVAL);
 
   // A MULTIPOINT with exactly one child
   geom = tester.AsGeometry("MULTIPOINT ((3 4))");
@@ -704,14 +704,14 @@ TEST(NativeWriterTest, WritePointGeometry) {
   ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
             EINVAL);
   ASSERT_STREQ(error.message,
-               "Can't append geometry with coord count >1 to array of type POINT");
+               "Expected POINT or MULTIPOINT with exactly one point for POINT output");
 
   struct ArrowArray array_out;
   struct GeoArrowArrayView array_view;
   EXPECT_EQ(GeoArrowNativeWriterFinish(&builder, &array_out, nullptr), GEOARROW_OK);
   GeoArrowNativeWriterReset(&builder);
 
-  EXPECT_EQ(array_out.length, 5);
+  EXPECT_EQ(array_out.length, 4);
   EXPECT_EQ(array_out.null_count, 1);
 
   ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, GEOARROW_TYPE_POINT), GEOARROW_OK);
@@ -722,12 +722,11 @@ TEST(NativeWriterTest, WritePointGeometry) {
       GEOARROW_OK);
 
   auto values = tester.WKTValues("<null value>");
-  ASSERT_EQ(values.size(), 5);
+  ASSERT_EQ(values.size(), 4);
   EXPECT_EQ(values[0], "POINT (1 2)");
   EXPECT_EQ(values[1], "<null value>");
   EXPECT_EQ(values[2], "POINT EMPTY");
-  EXPECT_EQ(values[3], "POINT EMPTY");
-  EXPECT_EQ(values[4], "POINT (3 4)");
+  EXPECT_EQ(values[3], "POINT (3 4)");
 
   ArrowArrayRelease(&array_out);
 }
@@ -1365,10 +1364,9 @@ TEST(NativeWriterTest, AppendGeometryEmptyConversions) {
         Case{"POLYGON (EMPTY)", GEOARROW_TYPE_MULTIPOLYGON, "MULTIPOLYGON ((EMPTY))"},
         Case{"MULTIPOLYGON ((EMPTY))", GEOARROW_TYPE_POLYGON, "POLYGON (EMPTY)"},
         Case{"MULTILINESTRING (EMPTY)", GEOARROW_TYPE_LINESTRING, "LINESTRING EMPTY"},
-        Case{"GEOMETRYCOLLECTION EMPTY", GEOARROW_TYPE_POINT, "POINT EMPTY"},
+        Case{"MULTIPOINT (EMPTY)", GEOARROW_TYPE_POINT, "POINT EMPTY"},
         Case{"MULTILINESTRING (EMPTY, EMPTY)", GEOARROW_TYPE_LINESTRING,
-             "LINESTRING EMPTY"},
-        Case{"GEOMETRYCOLLECTION (POINT (1 2))", GEOARROW_TYPE_POINT, "POINT (1 2)"}}) {
+             "LINESTRING EMPTY"}}) {
     SCOPED_TRACE(item.input);
     auto wkb = tester.AsWKB(item.input);
     GeoArrowWKBReader reader;
@@ -1394,6 +1392,78 @@ TEST(NativeWriterTest, AppendGeometryEmptyConversions) {
     array.release(&array);
     GeoArrowNativeWriterReset(&writer);
     GeoArrowWKBReaderReset(&reader);
+  }
+}
+
+TEST(NativeWriterTest, AppendGeometryPointConversions) {
+  for (auto type : NativeAppendTypes()) {
+    GeoArrowSchemaView schema;
+    ASSERT_EQ(GeoArrowSchemaViewInitFromType(&schema, type), GEOARROW_OK);
+    if (schema.geometry_type != GEOARROW_GEOMETRY_TYPE_POINT) continue;
+    SCOPED_TRACE(type);
+
+    GeoArrowNativeWriter writer;
+    ASSERT_EQ(GeoArrowNativeWriterInit(&writer, type), GEOARROW_OK);
+    WKXTester tester;
+    GeoArrowWKBReader reader;
+    ASSERT_EQ(GeoArrowWKBReaderInit(&reader), GEOARROW_OK);
+    auto append = [&](const char* wkt, int expected) {
+      SCOPED_TRACE(wkt);
+      auto wkb = tester.AsWKB(wkt);
+      GeoArrowGeometryView geom;
+      ASSERT_EQ(
+          GeoArrowWKBReaderRead(&reader, {wkb.data(), static_cast<int64_t>(wkb.size())},
+                                &geom, nullptr),
+          GEOARROW_OK);
+      EXPECT_EQ(GeoArrowNativeWriterAppend(&writer, geom, nullptr), expected);
+    };
+
+    append("POINT (1 2)", GEOARROW_OK);
+    for (const char* wkt :
+         {"MULTIPOINT EMPTY", "MULTIPOINT ((1 2), (3 4))", "MULTIPOINT (EMPTY, (1 2))",
+          "MULTIPOINT (EMPTY, EMPTY)", "LINESTRING EMPTY", "LINESTRING (1 2)",
+          "POLYGON EMPTY", "POLYGON ((1 2))", "MULTILINESTRING EMPTY",
+          "MULTILINESTRING ((1 2))", "MULTIPOLYGON EMPTY", "MULTIPOLYGON (((1 2)))",
+          "GEOMETRYCOLLECTION EMPTY", "GEOMETRYCOLLECTION (POINT EMPTY)",
+          "GEOMETRYCOLLECTION (POINT (1 2))"}) {
+      append(wkt, EINVAL);
+    }
+    append("MULTIPOINT ((3 4))", GEOARROW_OK);
+    append("POINT EMPTY", GEOARROW_OK);
+    append("MULTIPOINT (EMPTY)", GEOARROW_OK);
+
+    // Empty points may also be represented by a leaf with no coordinates.
+    GeoArrowGeometryNode nodes[2] = {};
+    nodes[0].geometry_type = GEOARROW_GEOMETRY_TYPE_MULTIPOINT;
+    nodes[0].dimensions = GEOARROW_DIMENSIONS_XY;
+    nodes[0].size = 1;
+    nodes[1].geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
+    nodes[1].dimensions = GEOARROW_DIMENSIONS_XY;
+    nodes[1].level = 1;
+    ASSERT_EQ(GeoArrowNativeWriterAppend(&writer, {nodes, 2}, nullptr), GEOARROW_OK);
+    ASSERT_EQ(GeoArrowNativeWriterAppend(&writer, {nodes + 1, 1}, nullptr), GEOARROW_OK);
+
+    ArrowArray array;
+    ASSERT_EQ(GeoArrowNativeWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+    // Rejected appends add no features and leave preceding coordinates intact.
+    ASSERT_EQ(array.length, 6);
+    EXPECT_EQ(array.null_count, 0);
+    GeoArrowArrayView view;
+    ASSERT_EQ(GeoArrowArrayViewInitFromType(&view, type), GEOARROW_OK);
+    ASSERT_EQ(GeoArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
+    for (int64_t i = 0; i < 6; i++) {
+      for (int dim = 0; dim < view.coords.n_values; dim++) {
+        double value = GEOARROW_COORD_VIEW_VALUE(&view.coords, i, dim);
+        if (i < 2 && dim < 2) {
+          EXPECT_EQ(value, i * 2 + dim + 1);
+        } else {
+          EXPECT_TRUE(std::isnan(value));
+        }
+      }
+    }
+    array.release(&array);
+    GeoArrowWKBReaderReset(&reader);
+    GeoArrowNativeWriterReset(&writer);
   }
 }
 
