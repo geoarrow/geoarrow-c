@@ -277,7 +277,7 @@ if(GEOARROW_BUILD_TESTS)
 
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.23")
+  if(POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
   endif()
 
@@ -285,8 +285,8 @@ if(GEOARROW_BUILD_TESTS)
   if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_VERSION
                                                  VERSION_GREATER_EQUAL "5.0.0")
     fetchcontent_declare(googletest
-                         URL https://github.com/google/googletest/archive/release-1.11.0.zip
-                         URL_HASH SHA256=353571c2440176ded91c2de6d6cd88ddd41401d14692ec1f99e35d013feda55a
+                         URL https://github.com/google/googletest/archive/refs/tags/release-1.12.1.zip
+                         URL_HASH SHA256=24564e3b712d3eb30ac9a85d92f7d720f60cc0173730ac166f27dda7fed76cb2
     )
   else()
     fetchcontent_declare(googletest
