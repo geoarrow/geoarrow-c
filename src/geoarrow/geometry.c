@@ -153,7 +153,7 @@ GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
 }
 
 // We define a maximum nesting to simplify collecting sizes based on levels
-#define GEOARROW_GEOMETRY_VISITOR_MAX_NESTING 31
+#define GEOARROW_GEOMETRY_MAX_NESTING 31
 
 static inline GeoArrowErrorCode GeoArrowGeometryReallocCoords(
     struct GeoArrowGeometry* geom, struct ArrowBuffer* new_coords,
@@ -339,7 +339,7 @@ static int geom_start_geometry(struct GeoArrowVisitor* v,
       break;
   }
 
-  if (private_data->current_level == GEOARROW_GEOMETRY_VISITOR_MAX_NESTING) {
+  if (private_data->current_level == GEOARROW_GEOMETRY_MAX_NESTING) {
     GeoArrowErrorSet(v->error, "Maximum recursion for GeoArrowGeometry visitor reached");
     return EINVAL;
   }
@@ -439,7 +439,7 @@ static int feat_end_geometry(struct GeoArrowVisitor* v) {
   struct GeoArrowGeometryNode* node_begin = geom->root;
   struct GeoArrowGeometryNode* node_end = geom->root + geom->size_nodes;
 
-  uint32_t sizes[GEOARROW_GEOMETRY_VISITOR_MAX_NESTING + 1];
+  uint32_t sizes[GEOARROW_GEOMETRY_MAX_NESTING + 1];
   memset(sizes, 0, sizeof(sizes));
   ptrdiff_t sequence_bytes;
   for (struct GeoArrowGeometryNode* node = (node_end - 1); node >= node_begin; node--) {
@@ -571,7 +571,7 @@ static GeoArrowErrorCode GeoArrowGeometryVisitNode(
   return GEOARROW_OK;
 }
 
-// The stack is bounded by the uint8_t level field; only active entries are touched.
+// Use the same 32-level stack bound as the geometry visitor.
 GeoArrowErrorCode GeoArrowGeometryViewValidate(struct GeoArrowGeometryView geom,
                                                struct GeoArrowError* error) {
   if (geom.root == NULL || geom.size_nodes <= 0) {
@@ -593,8 +593,8 @@ GeoArrowErrorCode GeoArrowGeometryViewValidate(struct GeoArrowGeometryView geom,
     return GEOARROW_OK;
   }
 
-  int64_t remaining[256];
-  uint8_t expected_type[256];
+  int64_t remaining[GEOARROW_GEOMETRY_MAX_NESTING + 1];
+  uint8_t expected_type[GEOARROW_GEOMETRY_MAX_NESTING + 1];
   remaining[0] = 1;
   expected_type[0] = GEOARROW_GEOMETRY_TYPE_GEOMETRY;
   int level = 0;
@@ -617,7 +617,8 @@ GeoArrowErrorCode GeoArrowGeometryViewValidate(struct GeoArrowGeometryView geom,
     remaining[level]--;
     if (node->geometry_type != GEOARROW_GEOMETRY_TYPE_POINT &&
         node->geometry_type != GEOARROW_GEOMETRY_TYPE_LINESTRING && node->size > 0) {
-      if (geom.root->level + level == UINT8_MAX) {
+      if (level == GEOARROW_GEOMETRY_MAX_NESTING ||
+          geom.root->level + level == UINT8_MAX) {
         GeoArrowErrorSet(error, "Geometry nesting exceeds the node level limit");
         return EINVAL;
       }

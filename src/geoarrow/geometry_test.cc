@@ -280,21 +280,32 @@ TEST(GeometryTest, GeometryViewValidateInvalidStructure) {
 }
 
 TEST(GeometryTest, GeometryViewValidateSubtreeAndNestingLimit) {
-  std::vector<GeoArrowGeometryNode> nodes(256);
-  for (int i = 0; i < 256; i++) {
+  std::vector<GeoArrowGeometryNode> nodes(33);
+  for (int i = 0; i < 33; i++) {
     nodes[i].geometry_type = GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION;
     nodes[i].dimensions = GEOARROW_DIMENSIONS_XY;
     nodes[i].level = static_cast<uint8_t>(i);
     nodes[i].size = 1;
   }
-  nodes.back().geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
-  nodes.back().size = 0;
-  EXPECT_EQ(GeoArrowGeometryViewValidate({nodes.data(), 256}, nullptr), GEOARROW_OK);
-  // Nonzero root levels are valid when validating a subtree.
-  EXPECT_EQ(GeoArrowGeometryViewValidate({nodes.data() + 1, 255}, nullptr), GEOARROW_OK);
-  nodes.back().geometry_type = GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION;
-  nodes.back().size = 1;
-  EXPECT_EQ(GeoArrowGeometryViewValidate({nodes.data(), 256}, nullptr), EINVAL);
+  nodes[31].geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
+  nodes[31].size = 0;
+  EXPECT_EQ(GeoArrowGeometryViewValidate({nodes.data(), 32}, nullptr), GEOARROW_OK);
+
+  // A complete tree with one additional level must fail before indexing the stack.
+  nodes[31].geometry_type = GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION;
+  nodes[31].size = 1;
+  nodes[32].geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
+  nodes[32].size = 0;
+  EXPECT_EQ(GeoArrowGeometryViewValidate({nodes.data(), 33}, nullptr), EINVAL);
+  // The limit is relative to the view root, including when it is a subtree.
+  EXPECT_EQ(GeoArrowGeometryViewValidate({nodes.data() + 1, 32}, nullptr), GEOARROW_OK);
+
+  // Absolute node levels still cannot overflow their uint8_t representation.
+  nodes[0].level = UINT8_MAX;
+  nodes[1].geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
+  nodes[1].size = 0;
+  nodes[1].level = 0;
+  EXPECT_EQ(GeoArrowGeometryViewValidate({nodes.data(), 2}, nullptr), EINVAL);
 }
 
 TEST(GeometryTest, GeometryViewValidateDoesNotLimitNativeOffsets) {
