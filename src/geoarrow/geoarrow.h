@@ -38,7 +38,9 @@ int GeoArrowVersionInt(void);
 GeoArrowErrorCode GeoArrowErrorSet(struct GeoArrowError* error, const char* fmt, ...);
 
 /// \brief Parse a string into a double
-GeoArrowErrorCode GeoArrowFromChars(const char* first, const char* last, double* out);
+/// \param end Set to the first unconsumed byte on success.
+GeoArrowErrorCode GeoArrowFromChars(const char* first, const char* last, double* out,
+                                    const char** end);
 
 /// \brief Print a double to a buffer
 int64_t GeoArrowPrintDouble(double f, uint32_t precision, char* result);

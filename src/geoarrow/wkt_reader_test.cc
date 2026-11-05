@@ -123,8 +123,9 @@ TEST(WKTReaderTest, WKTReaderTestNumbersMatchTokenBoundedParser) {
   for (const auto& token : tokens) {
     SCOPED_TRACE(token);
     double expected;
+    const char* end;
     int expected_result =
-        GeoArrowFromChars(token.data(), token.data() + token.size(), &expected);
+        GeoArrowFromChars(token.data(), token.data() + token.size(), &expected, &end);
     int result = tester.Read("POINT(" + token + " 0)");
     ASSERT_EQ(result, expected_result);
     if (result == GEOARROW_OK) {

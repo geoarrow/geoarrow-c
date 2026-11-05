@@ -281,8 +281,6 @@ struct ArrowArrayStream {
 #define GeoArrowArrayWriterReset \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterReset)
 #define GeoArrowFromChars _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowFromChars)
-#define GeoArrowFromCharsPartial \
-  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowFromCharsPartial)
 #define GeoArrowd2sexp_buffered_n \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowd2sexp_buffered_n)
 #define GeoArrowd2sfixed_buffered_n \
