@@ -137,99 +137,45 @@ GeoArrowErrorCode GeoArrowNativeWriterFinish(struct GeoArrowNativeWriter* writer
   return GEOARROW_OK;
 }
 
-// Validate the tree before the offset writers can follow child pointers. The
-// stack is bounded by the uint8_t level field; only active entries are touched.
-static GeoArrowErrorCode GeoArrowNativeWriterValidateGeometry(
-    struct GeoArrowGeometryView geom, int64_t* coord_count, int64_t* empty_points,
-    struct GeoArrowError* error) {
+// Count the storage needed without validating the node tree. Check only fields
+// used to address coordinate memory; structural validation is a separate operation.
+static GeoArrowErrorCode GeoArrowNativeWriterCountCoords(struct GeoArrowGeometryView geom,
+                                                         int64_t* coord_count,
+                                                         int64_t* empty_points,
+                                                         struct GeoArrowError* error) {
   if (geom.root == NULL || geom.size_nodes <= 0) {
     GeoArrowErrorSet(error, "Expected a non-empty geometry node view");
     return EINVAL;
   }
 
-  // Points and linestrings need no tree traversal or nesting stack.
-  if (geom.size_nodes == 1 &&
-      (geom.root->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT ||
-       geom.root->geometry_type == GEOARROW_GEOMETRY_TYPE_LINESTRING)) {
-    const struct GeoArrowGeometryNode* node = geom.root;
-    if (node->dimensions < GEOARROW_DIMENSIONS_XY ||
-        node->dimensions > GEOARROW_DIMENSIONS_XYZM ||
-        (node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT && node->size > 1)) {
-      GeoArrowErrorSet(error, "Invalid geometry node dimensions or size");
-      return EINVAL;
-    }
-    if (node->size > INT32_MAX) {
-      GeoArrowErrorSet(error, "Geometry coordinate count exceeds INT32_MAX");
-      return EOVERFLOW;
-    }
-    *coord_count = node->size;
-    *empty_points =
-        node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT && node->size == 0;
-    return GEOARROW_OK;
-  }
-
-  int64_t remaining[256];
-  uint8_t expected_type[256];
-  remaining[0] = 1;
-  expected_type[0] = GEOARROW_GEOMETRY_TYPE_GEOMETRY;
-  int level = 0;
   *coord_count = 0;
   *empty_points = 0;
   for (int64_t i = 0; i < geom.size_nodes; i++) {
     const struct GeoArrowGeometryNode* node = geom.root + i;
-    while (level > 0 && remaining[level] == 0) {
-      level--;
+    if (node->geometry_type != GEOARROW_GEOMETRY_TYPE_POINT &&
+        node->geometry_type != GEOARROW_GEOMETRY_TYPE_LINESTRING) {
+      continue;
     }
-    if (remaining[level] == 0 || node->level != geom.root->level + level ||
-        node->geometry_type < GEOARROW_GEOMETRY_TYPE_POINT ||
-        node->geometry_type > GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION ||
-        (expected_type[level] != GEOARROW_GEOMETRY_TYPE_GEOMETRY &&
-         node->geometry_type != expected_type[level]) ||
-        node->dimensions < GEOARROW_DIMENSIONS_XY ||
-        node->dimensions > GEOARROW_DIMENSIONS_XYZM ||
-        (node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT && node->size > 1)) {
-      GeoArrowErrorSet(error, "Invalid geometry node type, dimensions, or nesting");
+    if (node->dimensions < GEOARROW_DIMENSIONS_XY ||
+        node->dimensions > GEOARROW_DIMENSIONS_XYZM) {
+      GeoArrowErrorSet(error, "Invalid coordinate dimensions");
       return EINVAL;
     }
-    remaining[level]--;
-    if (node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT ||
-        node->geometry_type == GEOARROW_GEOMETRY_TYPE_LINESTRING) {
-      *coord_count += node->size;
-      *empty_points +=
-          node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT && node->size == 0;
-      if (*coord_count > INT32_MAX) {
-        GeoArrowErrorSet(error, "Geometry coordinate count exceeds INT32_MAX");
-        return EOVERFLOW;
-      }
-    } else if (node->size > 0) {
-      if (geom.root->level + level == UINT8_MAX) {
-        GeoArrowErrorSet(error, "Geometry nesting exceeds the node level limit");
-        return EINVAL;
-      }
-      level++;
-      remaining[level] = node->size;
-      switch (node->geometry_type) {
-        case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
-          expected_type[level] = GEOARROW_GEOMETRY_TYPE_POINT;
-          break;
-        case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
-          expected_type[level] = GEOARROW_GEOMETRY_TYPE_POLYGON;
-          break;
-        case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
-          expected_type[level] = GEOARROW_GEOMETRY_TYPE_GEOMETRY;
-          break;
-        default:
-          expected_type[level] = GEOARROW_GEOMETRY_TYPE_LINESTRING;
-          break;
+    if (node->size > 0) {
+      for (int j = 0; j < _GeoArrowkNumDimensions[node->dimensions]; j++) {
+        if (node->coords[j] == NULL) {
+          GeoArrowErrorSet(error, "Missing coordinate data");
+          return EINVAL;
+        }
       }
     }
-  }
-  while (level > 0 && remaining[level] == 0) {
-    level--;
-  }
-  if (remaining[level] != 0) {
-    GeoArrowErrorSet(error, "Geometry is missing child nodes");
-    return EINVAL;
+    *coord_count += node->size;
+    *empty_points +=
+        node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT && node->size == 0;
+    if (*coord_count > INT32_MAX || *empty_points > INT32_MAX) {
+      GeoArrowErrorSet(error, "Geometry coordinate count exceeds INT32_MAX");
+      return EOVERFLOW;
+    }
   }
   return GEOARROW_OK;
 }
@@ -267,10 +213,16 @@ static GeoArrowErrorCode GeoArrowNativeWriterPlanConversion(
   int unwrap = 0;
   switch (type) {
     case GEOARROW_GEOMETRY_TYPE_POINT:
+      // POINT storage has room for exactly one coordinate.
+      if (plan->coord_count > 1) {
+        GeoArrowErrorSet(error, "Can't append multiple coordinates to POINT output");
+        return EINVAL;
+      }
       if (compatible) {
         return GEOARROW_OK;
       }
-      if (node->geometry_type == GEOARROW_GEOMETRY_TYPE_MULTIPOINT && node->size == 1) {
+      if (node->geometry_type == GEOARROW_GEOMETRY_TYPE_MULTIPOINT && node->size == 1 &&
+          plan->geom.size_nodes > 1) {
         plan->geom.root++;
         plan->geom.size_nodes--;
         return GEOARROW_OK;
@@ -301,6 +253,10 @@ static GeoArrowErrorCode GeoArrowNativeWriterPlanConversion(
     return GEOARROW_OK;
   }
   if (unwrap && node->size == 1) {
+    if (plan->geom.size_nodes <= 1) {
+      GeoArrowErrorSet(error, "Missing child geometry to unwrap");
+      return EINVAL;
+    }
     plan->geom.root++;
     plan->geom.size_nodes--;
     return GEOARROW_OK;
@@ -356,8 +312,8 @@ static GeoArrowErrorCode GeoArrowNativeWriterAppendInternal(
   if (is_null) {
     GeoArrowNativeWriterPlanEmpty(&plan, type, dimensions);
   } else {
-    GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterValidateGeometry(
-        geom, &plan.coord_count, &plan.empty_points, error));
+    GEOARROW_RETURN_NOT_OK(GeoArrowNativeWriterCountCoords(geom, &plan.coord_count,
+                                                           &plan.empty_points, error));
     GEOARROW_RETURN_NOT_OK(
         GeoArrowNativeWriterPlanConversion(&plan, type, dimensions, error));
   }
@@ -383,8 +339,16 @@ static GeoArrowErrorCode GeoArrowNativeWriterAppendInternal(
   for (int64_t i = 0; i < plan.geom.size_nodes && n_offsets > 1; i++) {
     const struct GeoArrowGeometryNode* node = plan.geom.root + i;
     int level = node->level - plan.geom.root->level + plan.wrap;
+    if (level < 0) {
+      GeoArrowErrorSet(error, "Geometry level would index before offset buffers");
+      return EINVAL;
+    }
     if (level < n_offsets) {
       offset_add[level] += node->size;
+      if (offset_add[level] > INT32_MAX) {
+        GeoArrowErrorSet(error, "Geometry offsets exceed INT32_MAX");
+        return EOVERFLOW;
+      }
       plan.n_offsets[level]++;
     }
   }

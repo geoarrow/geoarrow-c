@@ -703,8 +703,7 @@ TEST(NativeWriterTest, WritePointGeometry) {
   geom = tester.AsGeometry("MULTIPOINT ((5 6), (7 8))");
   ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, GeoArrowGeometryAsView(&geom), &error),
             EINVAL);
-  ASSERT_STREQ(error.message,
-               "Expected POINT or MULTIPOINT with exactly one point for POINT output");
+  ASSERT_STREQ(error.message, "Can't append multiple coordinates to POINT output");
 
   struct ArrowArray array_out;
   struct GeoArrowArrayView array_view;
@@ -1261,7 +1260,7 @@ TEST(NativeWriterTest, AppendGeometryStridesDimensionsAndEndian) {
   GeoArrowNativeWriterReset(&builder);
 }
 
-TEST(NativeWriterTest, AppendGeometryInvalidAndOverflow) {
+TEST(NativeWriterTest, AppendGeometrySafetyAndOverflow) {
   GeoArrowNativeWriter writer;
   ASSERT_EQ(GeoArrowNativeWriterInit(&writer, GEOARROW_TYPE_MULTIPOLYGON), GEOARROW_OK);
   WKXTester tester;
@@ -1275,16 +1274,14 @@ TEST(NativeWriterTest, AppendGeometryInvalidAndOverflow) {
   reject({nullptr, 1}, EINVAL);
   reject({nodes.data(), -1}, EINVAL);
   reject({nodes.data(), 0}, EINVAL);
-  reject({nodes.data(), 2}, EINVAL);
-  nodes.push_back(nodes.back());
-  reject({nodes.data(), 4}, EINVAL);
-  nodes.pop_back();
-  nodes[1].level = 2;
+  // A level before the root would address an offset buffer at a negative index.
+  nodes[0].level = 2;
   reject({nodes.data(), 3}, EINVAL);
-  nodes[1].level = 1;
-  nodes[1].geometry_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
+  nodes[0].level = 0;
+  const uint8_t* saved_coord = nodes[2].coords[0];
+  nodes[2].coords[0] = nullptr;
   reject({nodes.data(), 3}, EINVAL);
-  nodes[1].geometry_type = GEOARROW_GEOMETRY_TYPE_POLYGON;
+  nodes[2].coords[0] = saved_coord;
   nodes[2].dimensions = 0;
   reject({nodes.data(), 3}, EINVAL);
   nodes[2].dimensions = GEOARROW_DIMENSIONS_XYZM + 1;
@@ -1319,10 +1316,48 @@ TEST(NativeWriterTest, AppendGeometryInvalidAndOverflow) {
   GeoArrowNativeWriterReset(&writer);
 
   ASSERT_EQ(GeoArrowNativeWriterInit(&writer, GEOARROW_TYPE_POINT), GEOARROW_OK);
+  nodes[0] = nodes[2];
   nodes[0].geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
   nodes[0].size = 2;
   EXPECT_EQ(GeoArrowNativeWriterAppend(&writer, {nodes.data(), 1}, nullptr), EINVAL);
   GeoArrowNativeWriterReset(&writer);
+}
+
+TEST(NativeWriterTest, AppendGeometryValidationIsSeparate) {
+  WKXTester tester;
+  const auto& geom = tester.AsGeometry("POLYGON ((1 2, 3 4))");
+  std::vector<GeoArrowGeometryNode> nodes(geom.root, geom.root + geom.size_nodes);
+  nodes[0].dimensions = GEOARROW_DIMENSIONS_UNKNOWN;
+  GeoArrowGeometryView input = {nodes.data(), static_cast<int64_t>(nodes.size())};
+  EXPECT_EQ(GeoArrowGeometryViewValidate(input, nullptr), EINVAL);
+
+  // Appending does not validate metadata that isn't used to address memory.
+  GeoArrowNativeWriter writer;
+  ASSERT_EQ(GeoArrowNativeWriterInit(&writer, GEOARROW_TYPE_POLYGON), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowNativeWriterAppend(&writer, input, nullptr), GEOARROW_OK);
+  ArrowArray array;
+  ASSERT_EQ(GeoArrowNativeWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+  GeoArrowArrayView view;
+  ASSERT_EQ(GeoArrowArrayViewInitFromType(&view, GEOARROW_TYPE_POLYGON), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
+  GeoArrowGeometry out;
+  ASSERT_EQ(GeoArrowGeometryInit(&out), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayViewGetGeometry(&view, 0, &out), GEOARROW_OK);
+  EXPECT_EQ(tester.AsWKT(out), "POLYGON ((1 2, 3 4))");
+  GeoArrowGeometryReset(&out);
+  array.release(&array);
+  GeoArrowNativeWriterReset(&writer);
+
+  // Unwrapping must not dereference a child outside the provided node view.
+  nodes[0].dimensions = GEOARROW_DIMENSIONS_XY;
+  for (auto type :
+       {GEOARROW_TYPE_POINT, GEOARROW_TYPE_LINESTRING, GEOARROW_TYPE_POLYGON}) {
+    nodes[0].geometry_type = static_cast<uint8_t>(type + 3);
+    nodes[0].size = 1;
+    ASSERT_EQ(GeoArrowNativeWriterInit(&writer, type), GEOARROW_OK);
+    EXPECT_EQ(GeoArrowNativeWriterAppend(&writer, {nodes.data(), 1}, nullptr), EINVAL);
+    GeoArrowNativeWriterReset(&writer);
+  }
 }
 
 TEST(NativeWriterTest, AppendGeometryCoordinateCountDoesNotWrap) {

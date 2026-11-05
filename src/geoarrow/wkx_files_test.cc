@@ -104,6 +104,9 @@ TEST(WKXFilesTest, WKXFilesTestFiles) {
           ASSERT_EQ(GeoArrowGeometryInit(&geom_from_array), GEOARROW_OK);
           ASSERT_EQ(GeoArrowArrayViewGetGeometry(&array_view, 0, &geom_from_array),
                     GEOARROW_OK);
+          ASSERT_EQ(GeoArrowGeometryViewValidate(GeoArrowGeometryAsView(&geom_from_array),
+                                                 nullptr),
+                    GEOARROW_OK);
           EXPECT_EQ(tester.AsWKT(geom_from_array), line_wkt);
           EXPECT_EQ(tester.AsWKTUsingVisitor(geom_from_array), line_wkt);
 

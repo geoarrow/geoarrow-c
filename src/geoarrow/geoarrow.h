@@ -383,6 +383,18 @@ GeoArrowErrorCode GeoArrowGeometryResizeNodes(struct GeoArrowGeometry* geom,
 GeoArrowErrorCode GeoArrowGeometryAppendNode(struct GeoArrowGeometry* geom,
                                              struct GeoArrowGeometryNode** out);
 
+/// \brief Validate the node structure of a non-null GeoArrowGeometryView
+///
+/// Checks geometry types, dimensions, nesting levels, child counts/types, and POINT
+/// coordinate counts. Returns EINVAL on invalid structure and optionally sets error.
+/// A view of a subtree may begin at a nonzero level. Empty parts are valid; null parts
+/// are not supported. This does not check coordinate values, topology, or buffer
+/// extents, and does not impose the 32-bit offset limits of native arrays. The caller
+/// must provide accessible memory for all size_nodes nodes; coordinate buffer
+/// validity remains the caller's responsibility.
+GeoArrowErrorCode GeoArrowGeometryViewValidate(struct GeoArrowGeometryView geom,
+                                               struct GeoArrowError* error);
+
 /// \brief Export a GeoArrowGeometryView using a GeoArrowVisitor
 GeoArrowErrorCode GeoArrowGeometryViewVisit(struct GeoArrowGeometryView geometry,
                                             struct GeoArrowVisitor* v);
@@ -458,8 +470,11 @@ GeoArrowErrorCode GeoArrowNativeWriterInitVisitor(struct GeoArrowNativeWriter* w
 /// Geometry parts must be non-null; use GeoArrowNativeWriterAppendNull() for a null
 /// feature. Input memory must not alias the writer's buffers.
 ///
-/// Invalid node structure or incompatible types return EINVAL; overflowing native
-/// offsets return EOVERFLOW. Validation and allocation precede appending, so a
+/// The input must have valid node structure; call GeoArrowGeometryViewValidate()
+/// separately when validation is needed. This function checks output compatibility,
+/// native offset limits, and fields used to address memory, but does not perform
+/// full structural validation. Detected invalid inputs return EINVAL and overflowing
+/// native offsets return EOVERFLOW. Checks and allocation precede appending, so a
 /// failed append leaves the previously appended features intact.
 GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer,
                                              struct GeoArrowGeometryView geom,

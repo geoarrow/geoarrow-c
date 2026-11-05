@@ -571,6 +571,84 @@ static GeoArrowErrorCode GeoArrowGeometryVisitNode(
   return GEOARROW_OK;
 }
 
+// The stack is bounded by the uint8_t level field; only active entries are touched.
+GeoArrowErrorCode GeoArrowGeometryViewValidate(struct GeoArrowGeometryView geom,
+                                               struct GeoArrowError* error) {
+  if (geom.root == NULL || geom.size_nodes <= 0) {
+    GeoArrowErrorSet(error, "Expected a non-empty geometry node view");
+    return EINVAL;
+  }
+
+  // Points and linestrings need no tree traversal or nesting stack.
+  if (geom.size_nodes == 1 &&
+      (geom.root->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT ||
+       geom.root->geometry_type == GEOARROW_GEOMETRY_TYPE_LINESTRING)) {
+    const struct GeoArrowGeometryNode* node = geom.root;
+    if (node->dimensions < GEOARROW_DIMENSIONS_XY ||
+        node->dimensions > GEOARROW_DIMENSIONS_XYZM ||
+        (node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT && node->size > 1)) {
+      GeoArrowErrorSet(error, "Invalid geometry node dimensions or size");
+      return EINVAL;
+    }
+    return GEOARROW_OK;
+  }
+
+  int64_t remaining[256];
+  uint8_t expected_type[256];
+  remaining[0] = 1;
+  expected_type[0] = GEOARROW_GEOMETRY_TYPE_GEOMETRY;
+  int level = 0;
+  for (int64_t i = 0; i < geom.size_nodes; i++) {
+    const struct GeoArrowGeometryNode* node = geom.root + i;
+    while (level > 0 && remaining[level] == 0) {
+      level--;
+    }
+    if (remaining[level] == 0 || node->level != geom.root->level + level ||
+        node->geometry_type < GEOARROW_GEOMETRY_TYPE_POINT ||
+        node->geometry_type > GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION ||
+        (expected_type[level] != GEOARROW_GEOMETRY_TYPE_GEOMETRY &&
+         node->geometry_type != expected_type[level]) ||
+        node->dimensions < GEOARROW_DIMENSIONS_XY ||
+        node->dimensions > GEOARROW_DIMENSIONS_XYZM ||
+        (node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT && node->size > 1)) {
+      GeoArrowErrorSet(error, "Invalid geometry node type, dimensions, or nesting");
+      return EINVAL;
+    }
+    remaining[level]--;
+    if (node->geometry_type != GEOARROW_GEOMETRY_TYPE_POINT &&
+        node->geometry_type != GEOARROW_GEOMETRY_TYPE_LINESTRING && node->size > 0) {
+      if (geom.root->level + level == UINT8_MAX) {
+        GeoArrowErrorSet(error, "Geometry nesting exceeds the node level limit");
+        return EINVAL;
+      }
+      level++;
+      remaining[level] = node->size;
+      switch (node->geometry_type) {
+        case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+          expected_type[level] = GEOARROW_GEOMETRY_TYPE_POINT;
+          break;
+        case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+          expected_type[level] = GEOARROW_GEOMETRY_TYPE_POLYGON;
+          break;
+        case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
+          expected_type[level] = GEOARROW_GEOMETRY_TYPE_GEOMETRY;
+          break;
+        default:
+          expected_type[level] = GEOARROW_GEOMETRY_TYPE_LINESTRING;
+          break;
+      }
+    }
+  }
+  while (level > 0 && remaining[level] == 0) {
+    level--;
+  }
+  if (remaining[level] != 0) {
+    GeoArrowErrorSet(error, "Geometry is missing child nodes");
+    return EINVAL;
+  }
+  return GEOARROW_OK;
+}
+
 GeoArrowErrorCode GeoArrowGeometryViewVisit(struct GeoArrowGeometryView geometry,
                                             struct GeoArrowVisitor* v) {
   int64_t n_nodes = geometry.size_nodes;

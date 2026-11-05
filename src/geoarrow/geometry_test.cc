@@ -210,3 +210,98 @@ TEST(GeometryTest, GeometryFromVisitorErrors) {
 
   GeoArrowGeometryReset(&geom);
 }
+
+TEST(GeometryTest, GeometryViewValidate) {
+  WKXTester tester;
+  GeoArrowWKBReader reader;
+  ASSERT_EQ(GeoArrowWKBReaderInit(&reader), GEOARROW_OK);
+  for (const char* wkt :
+       {"POINT (1 2)", "POINT Z (1 2 3)", "POINT M (1 2 3)", "POINT ZM (1 2 3 4)",
+        "POINT EMPTY", "LINESTRING EMPTY", "LINESTRING (1 2)", "POLYGON (EMPTY, (1 2))",
+        "MULTIPOINT (EMPTY, (1 2))", "MULTILINESTRING (EMPTY, (1 2))",
+        "MULTIPOLYGON (EMPTY, ((1 2)))", "GEOMETRYCOLLECTION EMPTY",
+        "GEOMETRYCOLLECTION (POINT EMPTY, GEOMETRYCOLLECTION (LINESTRING (1 2)))"}) {
+    SCOPED_TRACE(wkt);
+    auto wkb = tester.AsWKB(wkt);
+    GeoArrowGeometryView view;
+    ASSERT_EQ(
+        GeoArrowWKBReaderRead(&reader, {wkb.data(), static_cast<int64_t>(wkb.size())},
+                              &view, nullptr),
+        GEOARROW_OK);
+    EXPECT_EQ(GeoArrowGeometryViewValidate(view, nullptr), GEOARROW_OK);
+  }
+  GeoArrowWKBReaderReset(&reader);
+}
+
+TEST(GeometryTest, GeometryViewValidateInvalidStructure) {
+  WKXTester tester;
+  const auto& geom = tester.AsGeometry("MULTIPOLYGON (((1 2, 3 4)))");
+  std::vector<GeoArrowGeometryNode> nodes(geom.root, geom.root + geom.size_nodes);
+  auto reject = [&](GeoArrowGeometryView view) {
+    GeoArrowError error = {};
+    EXPECT_EQ(GeoArrowGeometryViewValidate(view, &error), EINVAL);
+    EXPECT_NE(error.message[0], '\0');
+  };
+  reject({nullptr, 1});
+  reject({nodes.data(), -1});
+  reject({nodes.data(), 0});
+  reject({nodes.data(), 2});
+  nodes.push_back(nodes.back());
+  reject({nodes.data(), 4});
+  nodes.pop_back();
+  nodes[0].size = 0;
+  reject({nodes.data(), 3});
+  nodes[0].size = 1;
+  nodes[1].level = 2;
+  reject({nodes.data(), 3});
+  nodes[1].level = 1;
+  nodes[1].geometry_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
+  reject({nodes.data(), 3});
+  nodes[1].geometry_type = GEOARROW_GEOMETRY_TYPE_POLYGON;
+  nodes[2].dimensions = 0;
+  reject({nodes.data(), 3});
+  nodes[2].dimensions = GEOARROW_DIMENSIONS_XYZM + 1;
+  reject({nodes.data(), 3});
+  nodes[2].dimensions = GEOARROW_DIMENSIONS_XY;
+  nodes[0].dimensions = 0;
+  reject({nodes.data(), 3});
+  nodes[0].dimensions = GEOARROW_DIMENSIONS_XY;
+  nodes[0].geometry_type = GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION + 1;
+  reject({nodes.data(), 3});
+
+  nodes[0] = nodes[2];
+  nodes[0].geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
+  nodes[0].size = 2;
+  reject({nodes.data(), 1});
+  nodes[0].size = 0;
+  EXPECT_EQ(GeoArrowGeometryViewValidate({nodes.data(), 1}, nullptr), GEOARROW_OK);
+  nodes[0].dimensions = GEOARROW_DIMENSIONS_XYZM + 1;
+  reject({nodes.data(), 1});
+}
+
+TEST(GeometryTest, GeometryViewValidateSubtreeAndNestingLimit) {
+  std::vector<GeoArrowGeometryNode> nodes(256);
+  for (int i = 0; i < 256; i++) {
+    nodes[i].geometry_type = GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION;
+    nodes[i].dimensions = GEOARROW_DIMENSIONS_XY;
+    nodes[i].level = static_cast<uint8_t>(i);
+    nodes[i].size = 1;
+  }
+  nodes.back().geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
+  nodes.back().size = 0;
+  EXPECT_EQ(GeoArrowGeometryViewValidate({nodes.data(), 256}, nullptr), GEOARROW_OK);
+  // Nonzero root levels are valid when validating a subtree.
+  EXPECT_EQ(GeoArrowGeometryViewValidate({nodes.data() + 1, 255}, nullptr), GEOARROW_OK);
+  nodes.back().geometry_type = GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION;
+  nodes.back().size = 1;
+  EXPECT_EQ(GeoArrowGeometryViewValidate({nodes.data(), 256}, nullptr), EINVAL);
+}
+
+TEST(GeometryTest, GeometryViewValidateDoesNotLimitNativeOffsets) {
+  GeoArrowGeometryNode node = {};
+  node.geometry_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
+  node.dimensions = GEOARROW_DIMENSIONS_XY;
+  node.size = UINT32_MAX;
+  // Only metadata is inspected: no coordinate buffers are read or allocated.
+  EXPECT_EQ(GeoArrowGeometryViewValidate({&node, 1}, nullptr), GEOARROW_OK);
+}
