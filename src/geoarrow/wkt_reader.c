@@ -131,14 +131,15 @@ static inline int ReadOrdinate(struct WKTReaderPrivate* s, double* out,
   // below so that fast_float cannot consume WKT delimiters.
   if (prefix_result == GEOARROW_OK && *out == *out) {
     GeoArrowWKTAdvanceUnsafe(s, end - start);
-    // Preserve acceptance of numeric prefixes followed by a non-number suffix.
-    // For valid numbers, this only inspects the delimiter, not the number again.
-    GeoArrowWKTSkipUntilSep(s);
+    // Leave the next byte for the caller to validate as a WKT delimiter.
     return GEOARROW_OK;
   }
 #endif
   GeoArrowWKTSkipUntilSep(s);
   int result = GeoArrowFromChars(start, s->data, out, &end);
+  if (result == GEOARROW_OK && end != s->data) {
+    result = EINVAL;
+  }
   if (result != GEOARROW_OK) {
     s->size_bytes += s->data - start;
     s->data = start;
@@ -538,7 +539,7 @@ GeoArrowErrorCode GeoArrowWKTReaderVisit(struct GeoArrowWKTReader* reader,
   NANOARROW_RETURN_NOT_OK(ReadTaggedGeometry(s, v));
   NANOARROW_RETURN_NOT_OK(v->feat_end(v));
   GeoArrowWKTSkipWhitespace(s);
-  if (PeekChar(s) != '\0') {
+  if (s->size_bytes != 0) {
     SetParseErrorAuto("end of input", s, v->error);
     return EINVAL;
   }

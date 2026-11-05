@@ -85,8 +85,7 @@ TEST(WKTReaderTest, WKTReaderTestNumberBits) {
 }
 
 TEST(WKTReaderTest, WKTReaderTestNumbersMatchTokenBoundedParser) {
-  // Exercise the existing backend's acceptance and rounding, including invalid
-  // suffixes accepted by fast_float but rejected by the strtod backend.
+  // Match the backend's rounding and require it to consume the entire token.
   std::vector<std::string> tokens = {
       "1",      "12",      "-12",         "+12",
       "++1",    "1.",      "1e-10",       "1E+10",
@@ -126,11 +125,47 @@ TEST(WKTReaderTest, WKTReaderTestNumbersMatchTokenBoundedParser) {
     const char* end;
     int expected_result =
         GeoArrowFromChars(token.data(), token.data() + token.size(), &expected, &end);
+    if (expected_result == GEOARROW_OK && end != token.data() + token.size()) {
+      expected_result = EINVAL;
+    }
     int result = tester.Read("POINT(" + token + " 0)");
     ASSERT_EQ(result, expected_result);
     if (result == GEOARROW_OK) {
       ASSERT_EQ(tester.values.size(), 2);
       EXPECT_EQ(DoubleBits(tester.values[0]), DoubleBits(expected));
+    }
+  }
+}
+
+TEST(WKTReaderTest, WKTReaderTestRejectNumericSuffixes) {
+  WKTNumberTester tester;
+  for (const char* token : {"1trash", "1e", "1e+", "1.2.3", "1_000", "1.0\xc2\xbe",
+                            "nantrash", "-nantrash", "inftrash", "Infinitytrash"}) {
+    SCOPED_TRACE(token);
+    EXPECT_EQ(tester.Read(std::string("POINT(") + token + " 2)"), EINVAL);
+    EXPECT_EQ(tester.Read(std::string("POINT(1 ") + token + ")"), EINVAL);
+    EXPECT_EQ(tester.Read(std::string("LINESTRING(1 ") + token + ",3 4)"), EINVAL);
+    EXPECT_EQ(tester.Read(std::string("POINT ZM(1 2 ") + token + " 4)"), EINVAL);
+  }
+}
+
+TEST(WKTReaderTest, WKTReaderTestRejectTrailingBytes) {
+  WKTNumberTester tester;
+  for (const char* geometry : {"POINT(1 2)", "POINT EMPTY", "GEOMETRYCOLLECTION EMPTY"}) {
+    for (const char* whitespace : {"", " \t\r\n"}) {
+      std::string wkt = std::string(geometry) + whitespace;
+      SCOPED_TRACE(wkt);
+      ASSERT_EQ(tester.Read(wkt), GEOARROW_OK);
+      const auto valid_size = wkt.size();
+      EXPECT_EQ(tester.Read(wkt + "trash"), EINVAL);
+      wkt.push_back('\0');
+      EXPECT_EQ(tester.Read(wkt), EINVAL);
+      wkt += "trash";
+      EXPECT_EQ(tester.Read(wkt), EINVAL);
+      EXPECT_EQ(tester.error.message,
+                "Expected end of input at byte " + std::to_string(valid_size));
+      // Bytes outside the supplied view must still be ignored.
+      EXPECT_EQ(tester.Read(wkt.data(), valid_size), GEOARROW_OK);
     }
   }
 }
