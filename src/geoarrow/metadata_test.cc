@@ -175,6 +175,14 @@ TEST(MetadataTest, MetadataTestReadJSONCrs) {
       TestMetadata(R"({"crs_type": "gazornenplat", "crs": {}})",
                    GEOARROW_EDGE_TYPE_PLANAR, GEOARROW_CRS_TYPE_UNKNOWN, "{}"));
 
+  // Unrecognized crs_type values that are the same length as a recognized one
+  // must not be mistaken for it
+  for (const std::string crs_type : {"PROJJSON", "wkt2:2015", "AUTHORITY_CODE", "epsg"}) {
+    EXPECT_NO_FATAL_FAILURE(
+        TestMetadata(R"({"crs_type": ")" + crs_type + R"(", "crs": {}})",
+                     GEOARROW_EDGE_TYPE_PLANAR, GEOARROW_CRS_TYPE_UNKNOWN, "{}"));
+  }
+
   // Non-string or object JSON type in crs
   EXPECT_NO_FATAL_FAILURE(TestMetadataError(R"({"crs": []})", EINVAL));
   EXPECT_NO_FATAL_FAILURE(TestMetadataError(R"({"crs": true})", EINVAL));
