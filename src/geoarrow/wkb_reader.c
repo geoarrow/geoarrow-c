@@ -52,7 +52,8 @@ static inline int WKBReaderReadUInt32(struct WKBReaderPrivate* s, uint32_t* out,
 static inline GeoArrowErrorCode WKBReaderReadNodeCoordinates(
     struct WKBReaderPrivate* s, uint32_t n_coords, uint32_t coord_size_elements,
     struct GeoArrowGeometryNode* node, struct GeoArrowError* error) {
-  int64_t bytes_needed = n_coords * coord_size_elements * sizeof(double);
+  int64_t bytes_needed =
+      (int64_t)n_coords * (int64_t)coord_size_elements * (int64_t)sizeof(double);
   if (s->size_bytes < bytes_needed) {
     GeoArrowErrorSet(
         error,
@@ -71,6 +72,7 @@ static inline GeoArrowErrorCode WKBReaderReadNodeCoordinates(
   }
 
   s->data += bytes_needed;
+  s->size_bytes -= bytes_needed;
   return GEOARROW_OK;
 }
 
