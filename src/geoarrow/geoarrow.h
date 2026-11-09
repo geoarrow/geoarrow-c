@@ -674,6 +674,17 @@ GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
                                            int64_t offset, int64_t length,
                                            struct GeoArrowVisitor* v);
 
+/// \brief Read one feature into an initialized GeoArrowGeometry
+///
+/// The offset is relative to the array slice supplied to SetArray(). Nodes are
+/// owned by out. WKB and native coordinates borrow the input array buffers, which
+/// must remain alive while out is used; WKT and box coordinates are owned by out.
+/// A null feature is represented by one zero-initialized node (geometry_type 0).
+/// Returns EINVAL for an offset outside the array. On error, out is unspecified.
+GeoArrowErrorCode GeoArrowArrayReaderRead(struct GeoArrowArrayReader* reader,
+                                          int64_t offset, struct GeoArrowGeometry* out,
+                                          struct GeoArrowError* error);
+
 /// \brief Get a GeoArrowArrayView
 ///
 /// If there is a GeoArrowArrayView underlying this GeoArrowArrayReader, populates
@@ -723,6 +734,20 @@ GeoArrowErrorCode GeoArrowArrayWriterSetFlatMultipoint(struct GeoArrowArrayWrite
 /// \brief Populate a GeoArrowVisitor pointing to this writer
 GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* writer,
                                                  struct GeoArrowVisitor* v);
+
+/// \brief Append one geometry to this writer
+///
+/// Coordinates are copied before returning. A view containing one node with
+/// geometry_type 0 appends a null feature, as returned by GeoArrowArrayReaderRead().
+/// Other inputs must be valid, nonempty node sequences describing one geometry.
+/// Call GeoArrowGeometryViewValidate() first if node structure is not trusted.
+/// WKT/WKB view and large-offset output types remain unsupported.
+GeoArrowErrorCode GeoArrowArrayWriterAppend(struct GeoArrowArrayWriter* writer,
+                                            struct GeoArrowGeometryView geom,
+                                            struct GeoArrowError* error);
+
+/// \brief Append one null feature to this writer
+GeoArrowErrorCode GeoArrowArrayWriterAppendNull(struct GeoArrowArrayWriter* writer);
 
 /// \brief Finish an ArrowArray containing elements from the visited input
 ///

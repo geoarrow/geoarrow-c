@@ -62,6 +62,11 @@ class ArrayReader {
     return GeoArrowArrayReaderVisit(&reader_, offset, length, visitor);
   }
 
+  GeoArrowErrorCode Read(int64_t offset, struct GeoArrowGeometry* out,
+                         struct GeoArrowError* error = nullptr) {
+    return GeoArrowArrayReaderRead(&reader_, offset, out, error);
+  }
+
   ArrayView& View() {
     if (!view_.is_valid()) {
       const struct GeoArrowArrayView* array_view = nullptr;

@@ -270,6 +270,78 @@ GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
   }
 }
 
+GeoArrowErrorCode GeoArrowArrayReaderRead(struct GeoArrowArrayReader* reader,
+                                          int64_t offset, struct GeoArrowGeometry* out,
+                                          struct GeoArrowError* error) {
+  struct GeoArrowArrayReaderPrivate* private_data =
+      (struct GeoArrowArrayReaderPrivate*)reader->private_data;
+  struct GeoArrowBufferView item;
+  int is_null;
+
+  switch (private_data->type) {
+    case GEOARROW_TYPE_LARGE_WKT:
+    case GEOARROW_TYPE_WKT_VIEW:
+    case GEOARROW_TYPE_LARGE_WKB:
+    case GEOARROW_TYPE_WKB_VIEW: {
+      const struct ArrowArrayView* view = &private_data->src.arrow;
+      if (offset < 0 || offset >= view->length) {
+        GeoArrowErrorSet(error, "Array reader offset out of bounds");
+        return EINVAL;
+      }
+      is_null = ArrowArrayViewIsNull(view, offset);
+      if (!is_null) {
+        struct ArrowBufferView bytes = ArrowArrayViewGetBytesUnsafe(view, offset);
+        item.data = bytes.data.as_uint8;
+        item.size_bytes = bytes.size_bytes;
+      }
+      break;
+    }
+    default: {
+      const struct GeoArrowArrayView* view = &private_data->src.geoarrow;
+      if (offset < 0 || offset >= view->length[0]) {
+        GeoArrowErrorSet(error, "Array reader offset out of bounds");
+        return EINVAL;
+      }
+      int64_t index = view->offset[0] + offset;
+      is_null = view->validity_bitmap && !ArrowBitGet(view->validity_bitmap, index);
+      if (!is_null && (private_data->type == GEOARROW_TYPE_WKT ||
+                       private_data->type == GEOARROW_TYPE_WKB)) {
+        item.data = view->data + view->offsets[0][index];
+        item.size_bytes = view->offsets[0][index + 1] - view->offsets[0][index];
+      }
+      break;
+    }
+  }
+
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryResizeNodesInline(out, 0));
+  if (is_null) {
+    struct GeoArrowGeometryNode* node;
+    return GeoArrowGeometryAppendNodeInline(out, &node);
+  }
+
+  switch (private_data->type) {
+    case GEOARROW_TYPE_WKB:
+    case GEOARROW_TYPE_LARGE_WKB:
+    case GEOARROW_TYPE_WKB_VIEW: {
+      struct GeoArrowGeometryView geom;
+      GEOARROW_RETURN_NOT_OK(
+          GeoArrowWKBReaderRead(&private_data->wkb_reader, item, &geom, error));
+      return GeoArrowGeometryShallowCopy(geom, out);
+    }
+    case GEOARROW_TYPE_WKT:
+    case GEOARROW_TYPE_LARGE_WKT:
+    case GEOARROW_TYPE_WKT_VIEW: {
+      struct GeoArrowVisitor v;
+      GeoArrowGeometryInitVisitor(out, &v);
+      v.error = error;
+      struct GeoArrowStringView text = {(const char*)item.data, item.size_bytes};
+      return GeoArrowWKTReaderVisit(&private_data->wkt_reader, text, &v);
+    }
+    default:
+      return GeoArrowArrayViewGetGeometry(&private_data->src.geoarrow, offset, out);
+  }
+}
+
 GeoArrowErrorCode GeoArrowArrayReaderArrayView(struct GeoArrowArrayReader* reader,
                                                const struct GeoArrowArrayView** out) {
   NANOARROW_DCHECK(reader->private_data != NULL);
