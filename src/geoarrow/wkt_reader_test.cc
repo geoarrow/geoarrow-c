@@ -1,12 +1,206 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+
 #include "geoarrow/geoarrow.h"
 #include "nanoarrow/nanoarrow.h"
 
 #include "geoarrow/wkx_testing.hpp"
 
 #define EXPECT_WKT_ROUNDTRIP(tester_, wkt_) EXPECT_EQ(tester_.AsWKT(wkt_), wkt_)
+
+namespace {
+
+class WKTNumberTester {
+ public:
+  WKTNumberTester() {
+    GeoArrowWKTReaderInit(&reader_);
+    GeoArrowVisitorInitVoid(&visitor_);
+    visitor_.private_data = this;
+    visitor_.error = &error;
+    visitor_.coords = [](GeoArrowVisitor* v, const GeoArrowCoordView* coords) {
+      auto* self = static_cast<WKTNumberTester*>(v->private_data);
+      for (int64_t i = 0; i < coords->n_coords; i++) {
+        for (int j = 0; j < coords->n_values; j++) {
+          self->values.push_back(GEOARROW_COORD_VIEW_VALUE(coords, i, j));
+        }
+      }
+      return GEOARROW_OK;
+    };
+  }
+
+  ~WKTNumberTester() { GeoArrowWKTReaderReset(&reader_); }
+
+  int Read(const char* data, int64_t size) {
+    values.clear();
+    return GeoArrowWKTReaderVisit(&reader_, {data, size}, &visitor_);
+  }
+
+  int Read(const std::string& wkt) { return Read(wkt.data(), wkt.size()); }
+
+  std::vector<double> values;
+  GeoArrowError error;
+
+ private:
+  GeoArrowWKTReader reader_;
+  GeoArrowVisitor visitor_;
+};
+
+uint64_t DoubleBits(double value) {
+  uint64_t bits;
+  std::memcpy(&bits, &value, sizeof(bits));
+  return bits;
+}
+
+}  // namespace
+
+TEST(WKTReaderTest, WKTReaderTestNumberBits) {
+  const struct {
+    const char* text;
+    uint64_t bits;
+  } cases[] = {
+      {"0", 0x0000000000000000ULL},
+      {"-0", 0x8000000000000000ULL},
+      {"-00", 0x8000000000000000ULL},
+      {"-0.0e10", 0x8000000000000000ULL},
+      {".5", 0x3fe0000000000000ULL},
+      {"-.5", 0xbfe0000000000000ULL},
+      {"1e+2", 0x4059000000000000ULL},
+      {"1.7976931348623157e308", 0x7fefffffffffffffULL},
+      {"2.2250738585072014e-308", 0x0010000000000000ULL},
+      {"4.9406564584124654e-324", 0x0000000000000001ULL},
+      {"1.00000000000000011102230246251565404236316680908203125", 0x3ff0000000000000ULL},
+      {"1.00000000000000011102230246251565404236316680908203126", 0x3ff0000000000001ULL},
+  };
+  WKTNumberTester tester;
+  for (const auto& item : cases) {
+    SCOPED_TRACE(item.text);
+    ASSERT_EQ(tester.Read(std::string("POINT(") + item.text + " 0)"), GEOARROW_OK);
+    ASSERT_EQ(tester.values.size(), 2);
+    EXPECT_EQ(DoubleBits(tester.values[0]), item.bits);
+  }
+}
+
+TEST(WKTReaderTest, WKTReaderTestNumbersMatchTokenBoundedParser) {
+  // Match the backend's rounding and require it to consume the entire token.
+  std::vector<std::string> tokens = {
+      "1",      "12",      "-12",         "+12",
+      "++1",    "1.",      "1e-10",       "1E+10",
+      "1e",     "1e+",     "1.2.3",       "1suffix",
+      "0x10",   "1_000",   "1e400",       "-1e400",
+      "1e-400", "-1e-400", "nan",         "NaN",
+      "-nan",   "inf",     "-inf",        "Infinity",
+      "+inf",   "+NaN",    "nansuffix",   "-",
+      ".",      "-.",      "1.0\xc2\xbe", "123456789012345678901234567890"};
+
+  for (int i = 0; i <= 110; i++) {
+    std::string integer = std::to_string(i);
+    for (const char* prefix : {"", "-", "0", "-0"}) {
+      tokens.push_back(prefix + integer);
+    }
+    tokens.push_back(integer + ".5");
+    tokens.push_back(integer + "e-1");
+  }
+
+  uint64_t state = 161;
+  for (int i = 0; i < 2000; i++) {
+    state ^= state << 13;
+    state ^= state >> 7;
+    state ^= state << 17;
+    double value;
+    std::memcpy(&value, &state, sizeof(value));
+    if (!std::isfinite(value)) continue;
+    char text[32];
+    std::snprintf(text, sizeof(text), "%.17g", value);
+    tokens.emplace_back(text);
+  }
+
+  WKTNumberTester tester;
+  for (const auto& token : tokens) {
+    SCOPED_TRACE(token);
+    double expected;
+    const char* end;
+    int expected_result =
+        GeoArrowFromChars(token.data(), token.data() + token.size(), &expected, &end);
+    if (expected_result == GEOARROW_OK && end != token.data() + token.size()) {
+      expected_result = EINVAL;
+    }
+    int result = tester.Read("POINT(" + token + " 0)");
+    ASSERT_EQ(result, expected_result);
+    if (result == GEOARROW_OK) {
+      ASSERT_EQ(tester.values.size(), 2);
+      EXPECT_EQ(DoubleBits(tester.values[0]), DoubleBits(expected));
+    }
+  }
+}
+
+TEST(WKTReaderTest, WKTReaderTestRejectNumericSuffixes) {
+  WKTNumberTester tester;
+  for (const char* token : {"1trash", "1e", "1e+", "1.2.3", "1_000", "1.0\xc2\xbe",
+                            "nantrash", "-nantrash", "inftrash", "Infinitytrash"}) {
+    SCOPED_TRACE(token);
+    EXPECT_EQ(tester.Read(std::string("POINT(") + token + " 2)"), EINVAL);
+    EXPECT_EQ(tester.Read(std::string("POINT(1 ") + token + ")"), EINVAL);
+    EXPECT_EQ(tester.Read(std::string("LINESTRING(1 ") + token + ",3 4)"), EINVAL);
+    EXPECT_EQ(tester.Read(std::string("POINT ZM(1 2 ") + token + " 4)"), EINVAL);
+  }
+}
+
+TEST(WKTReaderTest, WKTReaderTestRejectTrailingBytes) {
+  WKTNumberTester tester;
+  for (const char* geometry : {"POINT(1 2)", "POINT EMPTY", "GEOMETRYCOLLECTION EMPTY"}) {
+    for (const char* whitespace : {"", " \t\r\n"}) {
+      std::string wkt = std::string(geometry) + whitespace;
+      SCOPED_TRACE(wkt);
+      ASSERT_EQ(tester.Read(wkt), GEOARROW_OK);
+      const auto valid_size = wkt.size();
+      EXPECT_EQ(tester.Read(wkt + "trash"), EINVAL);
+      wkt.push_back('\0');
+      EXPECT_EQ(tester.Read(wkt), EINVAL);
+      wkt += "trash";
+      EXPECT_EQ(tester.Read(wkt), EINVAL);
+      EXPECT_EQ(tester.error.message,
+                "Expected end of input at byte " + std::to_string(valid_size));
+      // Bytes outside the supplied view must still be ignored.
+      EXPECT_EQ(tester.Read(wkt.data(), valid_size), GEOARROW_OK);
+    }
+  }
+}
+
+TEST(WKTReaderTest, WKTReaderTestNumberBoundaries) {
+  WKTNumberTester tester;
+  EXPECT_EQ(tester.Read("LINESTRING ZM(1\t2\r3\n4,5 6 7 8)"), GEOARROW_OK);
+  EXPECT_EQ(tester.values, (std::vector<double>{1, 2, 3, 4, 5, 6, 7, 8}));
+
+  // A string view need not end at a NUL byte; bytes past its end are not input.
+  const char bounded[] = {'P', 'O', 'I', 'N', 'T', '(', '1', ' ', '2', ')', '3'};
+  EXPECT_EQ(tester.Read(bounded, 10), GEOARROW_OK);
+  EXPECT_EQ(tester.values, (std::vector<double>{1, 2}));
+  EXPECT_EQ(tester.Read(bounded, 7), EINVAL);
+  EXPECT_STREQ(tester.error.message, "Expected whitespace at byte 7");
+  EXPECT_EQ(tester.Read(bounded, 9), EINVAL);
+  EXPECT_STREQ(tester.error.message, "Expected ')' at byte 9");
+
+  const char embedded_nul[] = "POINT(1\0 2)";
+  EXPECT_EQ(tester.Read(embedded_nul, sizeof(embedded_nul) - 1), EINVAL);
+  EXPECT_STREQ(tester.error.message, "Expected whitespace at byte 7");
+
+  for (const char* wkt :
+       {"POINT(nan() 2)", "POINT(nan(payload) 2)", "POINT(NaN(payload) 2)"}) {
+    SCOPED_TRACE(wkt);
+    EXPECT_EQ(tester.Read(wkt), EINVAL);
+    EXPECT_STREQ(tester.error.message, "Expected whitespace at byte 9");
+  }
+  EXPECT_EQ(tester.Read("POINT(-nan(payload) 2)"), EINVAL);
+  EXPECT_STREQ(tester.error.message, "Expected whitespace at byte 10");
+  EXPECT_EQ(tester.Read("POINT(nan nan)"), GEOARROW_OK);
+  ASSERT_EQ(tester.values.size(), 2);
+  EXPECT_TRUE(std::isnan(tester.values[0]));
+  EXPECT_TRUE(std::isnan(tester.values[1]));
+}
 
 TEST(WKTReaderTest, WKTReaderTestBasic) {
   struct GeoArrowWKTReader reader;

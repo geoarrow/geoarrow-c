@@ -7,7 +7,8 @@
 
 #if !defined(GEOARROW_USE_FAST_FLOAT) || !GEOARROW_USE_FAST_FLOAT
 
-GeoArrowErrorCode GeoArrowFromChars(const char* first, const char* last, double* out) {
+GeoArrowErrorCode GeoArrowFromChars(const char* first, const char* last, double* out,
+                                    const char** end) {
   if (first == last) {
     return EINVAL;
   }
@@ -31,6 +32,7 @@ GeoArrowErrorCode GeoArrowFromChars(const char* first, const char* last, double*
     return EINVAL;
   } else {
     *out = result;
+    *end = first + (end_ptr - src_copy);
     return GEOARROW_OK;
   }
 }
