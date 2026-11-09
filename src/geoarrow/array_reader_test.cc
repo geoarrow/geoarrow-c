@@ -245,80 +245,6 @@ TEST(ArrayReaderTest, VisitSerializedGeometry) {
   }
 }
 
-TEST(ArrayReaderTest, VisitNativeGeometry) {
-  WKXTester tester;
-  const char* dim_names[] = {"", " Z", " M", " ZM"};
-  const char* coords[] = {"1 2", "1 2 3", "1 2 3", "1 2 3 4"};
-  for (int dim = 0; dim < 4; dim++) {
-    std::string xy = coords[dim];
-    std::vector<std::string> bodies = {"(" + xy + ")",
-                                       "(" + xy + ", " + xy + ")",
-                                       "((" + xy + ", " + xy + ", " + xy + "))",
-                                       "((" + xy + "), (" + xy + "))",
-                                       "((" + xy + ", " + xy + "), EMPTY)",
-                                       "(((" + xy + ", " + xy + ", " + xy + ")), EMPTY)"};
-    for (int geometry_type = 1; geometry_type <= 6; geometry_type++) {
-      for (auto layout :
-           {GEOARROW_COORD_TYPE_SEPARATE, GEOARROW_COORD_TYPE_INTERLEAVED}) {
-        auto type = GeoArrowMakeType(static_cast<GeoArrowGeometryType>(geometry_type),
-                                     static_cast<GeoArrowDimensions>(dim + 1), layout);
-        SCOPED_TRACE(type);
-        std::string prefix = std::string(GeoArrowGeometryTypeString(
-                                 static_cast<GeoArrowGeometryType>(geometry_type))) +
-                             dim_names[dim];
-        std::string wkt = prefix + " " + bodies[geometry_type - 1];
-        std::string empty = prefix + " EMPTY";
-        GeoArrowArrayWriter writer;
-        GeoArrowVisitor v{};
-        ASSERT_EQ(GeoArrowArrayWriterInitFromType(&writer, type), GEOARROW_OK);
-        ASSERT_EQ(GeoArrowArrayWriterInitVisitor(&writer, &v), GEOARROW_OK);
-        for (const auto& item : {empty, wkt, empty}) {
-          ASSERT_EQ(
-              GeoArrowArrayWriterAppend(
-                  &writer, GeoArrowGeometryAsView(&tester.AsGeometry(item)), nullptr),
-              GEOARROW_OK);
-        }
-        ASSERT_EQ(v.feat_start(&v), GEOARROW_OK);
-        ASSERT_EQ(v.null_feat(&v), GEOARROW_OK);
-        ASSERT_EQ(v.feat_end(&v), GEOARROW_OK);
-        ArrowArray array;
-        ASSERT_EQ(GeoArrowArrayWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
-        GeoArrowArrayWriterReset(&writer);
-        array.offset = 1;
-        array.length = 3;
-        GeoArrowArrayReader reader;
-        ASSERT_EQ(GeoArrowArrayReaderInitFromType(&reader, type), GEOARROW_OK);
-        ASSERT_EQ(GeoArrowArrayReaderSetArray(&reader, &array, nullptr), GEOARROW_OK);
-        const GeoArrowArrayView* view;
-        ASSERT_EQ(GeoArrowArrayReaderArrayView(&reader, &view), GEOARROW_OK);
-        int64_t coord_offset = geometry_type == 1 ? 1 : 0;
-        const uint8_t* expected_coords = reinterpret_cast<const uint8_t*>(
-            view->coords.values[0] + coord_offset * view->coords.coords_stride);
-        auto check_borrowed = [](GeoArrowGeometryView geom, void* data, GeoArrowError*) {
-          const GeoArrowGeometryNode* sequence = geom.root;
-          const GeoArrowGeometryNode* end = geom.root + geom.size_nodes;
-          while (sequence != end &&
-                 sequence->geometry_type != GEOARROW_GEOMETRY_TYPE_POINT &&
-                 sequence->geometry_type != GEOARROW_GEOMETRY_TYPE_LINESTRING) {
-            sequence++;
-          }
-          EXPECT_NE(sequence, end);
-          if (sequence != end) {
-            EXPECT_EQ(sequence->coords[0], *static_cast<const uint8_t**>(data));
-          }
-          return GEOARROW_OK;
-        };
-        ASSERT_EQ(GeoArrowArrayReaderVisitGeometry(&reader, 0, 1, check_borrowed,
-                                                   &expected_coords, nullptr),
-                  GEOARROW_OK);
-        ExpectGeometryCallbacks(&reader, 3, {wkt, empty, "null"});
-        GeoArrowArrayReaderReset(&reader);
-        ArrowArrayRelease(&array);
-      }
-    }
-  }
-}
-
 TEST(ArrayReaderTest, VisitOppositeEndianWKB) {
   WKXTester tester;
   auto wkb = tester.AsWKB("POINT ZM (1 2 3 4)");
@@ -376,35 +302,6 @@ TEST(ArrayReaderTest, VisitOppositeEndianWKB) {
   }
   GeoArrowArrayReaderReset(&reader);
   ArrowArrayRelease(&array);
-}
-
-TEST(ArrayReaderTest, VisitBoxGeometry) {
-  ArrowSchema schema;
-  ArrowArray array;
-  ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, GEOARROW_TYPE_BOX), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
-  for (int i = 0; i < 4; i++) {
-    ASSERT_EQ(ArrowArrayAppendDouble(array.children[i], i + 1), GEOARROW_OK);
-  }
-  ASSERT_EQ(ArrowArrayFinishElement(&array), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
-  ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
-  GeoArrowArrayReader reader;
-  GeoArrowGeometry geom;
-  ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
-  ASSERT_EQ(GeoArrowArrayReaderInitFromType(&reader, GEOARROW_TYPE_BOX), GEOARROW_OK);
-  ASSERT_EQ(GeoArrowArrayReaderSetArray(&reader, &array, nullptr), GEOARROW_OK);
-  ASSERT_EQ(GeoArrowArrayReaderVisitGeometry(&reader, 0, 1, CopyGeometryCallback, &geom,
-                                             nullptr),
-            GEOARROW_OK);
-  GeoArrowArrayReaderReset(&reader);
-  ArrowArrayRelease(&array);
-  ArrowSchemaRelease(&schema);
-  // Expanded box coordinates must be owned by geom, independent of the input.
-  WKXTester tester;
-  EXPECT_EQ(tester.AsWKT(geom), "POLYGON ((1 2, 3 2, 3 4, 1 4, 1 2))");
-  GeoArrowGeometryReset(&geom);
 }
 
 TEST(ArrayReaderTest, VisitLargeWKTGeometry) {
@@ -553,58 +450,5 @@ TEST(ArrayReaderTest, GeometryCallbackParseError) {
     GeoArrowArrayReaderReset(&reader);
     ArrowArrayRelease(&array);
     ArrowSchemaRelease(&schema);
-  }
-}
-
-TEST(ArrayReaderTest, GeometryCallbackCoordinateOffsets) {
-  WKXTester tester;
-  for (auto type : {GEOARROW_TYPE_POINT, GEOARROW_TYPE_INTERLEAVED_POINT,
-                    GEOARROW_TYPE_LINESTRING, GEOARROW_TYPE_INTERLEAVED_LINESTRING}) {
-    GeoArrowArrayWriter writer;
-    ASSERT_EQ(GeoArrowArrayWriterInitFromType(&writer, type), GEOARROW_OK);
-    bool point = GeoArrowGeometryTypeFromType(type) == GEOARROW_GEOMETRY_TYPE_POINT;
-    if (point) {
-      for (const char* wkt :
-           {"POINT (-2 -2)", "POINT (-1 -1)", "POINT (1 2)", "POINT (3 4)"}) {
-        ASSERT_EQ(GeoArrowArrayWriterAppend(
-                      &writer, GeoArrowGeometryAsView(&tester.AsGeometry(wkt)), nullptr),
-                  GEOARROW_OK);
-      }
-    } else {
-      ASSERT_EQ(GeoArrowArrayWriterAppend(&writer,
-                                          GeoArrowGeometryAsView(&tester.AsGeometry(
-                                              "LINESTRING (-2 -2, -1 -1, 1 2, 3 4)")),
-                                          nullptr),
-                GEOARROW_OK);
-    }
-    ArrowArray array;
-    ASSERT_EQ(GeoArrowArrayWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
-    GeoArrowArrayWriterReset(&writer);
-    ArrowArray* coords = point ? &array : array.children[0];
-    coords->offset = 1;
-    coords->length = point ? 2 : 3;
-    if (GeoArrowCoordTypeFromType(type) == GEOARROW_COORD_TYPE_INTERLEAVED) {
-      coords->children[0]->offset = 2;
-      coords->children[0]->length -= 2;
-    } else {
-      for (int i = 0; i < 2; i++) {
-        coords->children[i]->offset = 1;
-        coords->children[i]->length--;
-      }
-    }
-    if (!point) {
-      // The sliced coordinate array supplies only the two retained coordinates.
-      const_cast<int32_t*>(static_cast<const int32_t*>(array.buffers[1]))[1] = 2;
-    }
-    GeoArrowArrayReader reader;
-    ASSERT_EQ(GeoArrowArrayReaderInitFromType(&reader, type), GEOARROW_OK);
-    ASSERT_EQ(GeoArrowArrayReaderSetArray(&reader, &array, nullptr), GEOARROW_OK);
-    if (point) {
-      ExpectGeometryCallbacks(&reader, 2, {"POINT (1 2)", "POINT (3 4)"});
-    } else {
-      ExpectGeometryCallbacks(&reader, 1, {"LINESTRING (1 2, 3 4)"});
-    }
-    GeoArrowArrayReaderReset(&reader);
-    ArrowArrayRelease(&array);
   }
 }

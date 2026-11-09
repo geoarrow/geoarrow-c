@@ -329,45 +329,6 @@ static GeoArrowErrorCode GeoArrowArrayReaderVisitGeometrySerialized(
   return GEOARROW_OK;
 }
 
-// Points and lines have one node with constant type, dimensions, and strides.
-// Initialize that metadata once for the whole range, including empty sequences.
-static GeoArrowErrorCode GeoArrowArrayReaderVisitGeometrySequence(
-    const struct GeoArrowArrayView* view, int64_t offset, int64_t length,
-    GeoArrowGeometryCallback callback, void* callback_data, struct GeoArrowError* error) {
-  struct GeoArrowGeometryNode node = {0};
-  node.geometry_type = (uint8_t)view->schema_view.geometry_type;
-  node.dimensions = (uint8_t)view->schema_view.dimensions;
-  for (int j = 0; j < 4; j++) {
-    node.coords[j] = _GeoArrowkEmptyPointCoords;
-    node.coord_stride[j] = view->coords.coords_stride * (int32_t)sizeof(double);
-  }
-  const struct GeoArrowGeometryView geom = {&node, 1};
-  const struct GeoArrowGeometryNode null_node = {0};
-  const struct GeoArrowGeometryView null_geom = {&null_node, 1};
-  int64_t begin = view->offset[0] + offset;
-  for (int64_t i = begin; i < begin + length; i++) {
-    if (view->validity_bitmap && !ArrowBitGet(view->validity_bitmap, i)) {
-      GEOARROW_RETURN_NOT_OK(callback(null_geom, callback_data, error));
-      continue;
-    }
-
-    int64_t coord_offset = i;
-    node.size = 1;
-    if (view->n_offsets == 1) {
-      coord_offset = view->offsets[0][i] + view->offset[1];
-      node.size = (uint32_t)(view->offsets[0][i + 1] - view->offsets[0][i]);
-    }
-    for (int j = 0; j < view->coords.n_values; j++) {
-      node.coords[j] = node.size == 0
-                           ? _GeoArrowkEmptyPointCoords
-                           : (const uint8_t*)(view->coords.values[j] +
-                                              coord_offset * view->coords.coords_stride);
-    }
-    GEOARROW_RETURN_NOT_OK(callback(geom, callback_data, error));
-  }
-  return GEOARROW_OK;
-}
-
 GeoArrowErrorCode GeoArrowArrayReaderVisitGeometry(struct GeoArrowArrayReader* reader,
                                                    int64_t offset, int64_t length,
                                                    GeoArrowGeometryCallback callback,
@@ -406,23 +367,12 @@ GeoArrowErrorCode GeoArrowArrayReaderVisitGeometry(struct GeoArrowArrayReader* r
       return GeoArrowArrayReaderVisitGeometrySerialized(
           private_data, offset, length, callback, callback_data, error, 1, 1);
     default:
-      if (private_data->src.geoarrow.schema_view.geometry_type ==
-              GEOARROW_GEOMETRY_TYPE_POINT ||
-          private_data->src.geoarrow.schema_view.geometry_type ==
-              GEOARROW_GEOMETRY_TYPE_LINESTRING) {
-        return GeoArrowArrayReaderVisitGeometrySequence(
-            &private_data->src.geoarrow, offset, length, callback, callback_data, error);
-      }
       if (private_data->geometry.private_data == NULL) {
         GEOARROW_RETURN_NOT_OK(GeoArrowGeometryInit(&private_data->geometry));
       }
-      for (int64_t i = offset; i < offset + length; i++) {
-        GEOARROW_RETURN_NOT_OK(GeoArrowArrayViewGetGeometry(&private_data->src.geoarrow,
-                                                            i, &private_data->geometry));
-        GEOARROW_RETURN_NOT_OK(callback(GeoArrowGeometryAsView(&private_data->geometry),
-                                        callback_data, error));
-      }
-      return GEOARROW_OK;
+      return GeoArrowArrayViewVisitGeometry(&private_data->src.geoarrow, offset, length,
+                                            &private_data->geometry, callback,
+                                            callback_data, error);
   }
 }
 
