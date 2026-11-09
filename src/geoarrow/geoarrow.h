@@ -685,6 +685,32 @@ GeoArrowErrorCode GeoArrowArrayReaderRead(struct GeoArrowArrayReader* reader,
                                           int64_t offset, struct GeoArrowGeometry* out,
                                           struct GeoArrowError* error);
 
+/// \brief Callback consuming one geometry, with caller-supplied context
+///
+/// Return GEOARROW_OK to continue, or any other code to stop iteration.
+/// The error pointer is the one supplied to GeoArrowArrayReaderVisitGeometry().
+typedef GeoArrowErrorCode (*GeoArrowGeometryCallback)(struct GeoArrowGeometryView geom,
+                                                      void* private_data,
+                                                      struct GeoArrowError* error);
+
+/// \brief Visit a range of array elements as geometry views
+///
+/// Calls callback once per element, in order, including nulls represented by one
+/// type-zero node. Offset is relative to the array slice supplied to SetArray().
+/// The view and its coordinates are only guaranteed valid during the callback;
+/// use GeoArrowGeometryDeepCopy() to retain a geometry. The callback must not
+/// use or modify this reader (including SetArray(), Read(), or Reset()).
+///
+/// Stops immediately on a reader or callback error, returning that code without
+/// visiting subsequent elements. Returns EINVAL for an invalid range or a NULL
+/// callback with nonzero length. A zero-length range makes no callbacks.
+/// Reader-owned scratch storage is reused across calls and freed by Reset().
+GeoArrowErrorCode GeoArrowArrayReaderVisitGeometry(struct GeoArrowArrayReader* reader,
+                                                   int64_t offset, int64_t length,
+                                                   GeoArrowGeometryCallback callback,
+                                                   void* private_data,
+                                                   struct GeoArrowError* error);
+
 /// \brief Get a GeoArrowArrayView
 ///
 /// If there is a GeoArrowArrayView underlying this GeoArrowArrayReader, populates

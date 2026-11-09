@@ -22,6 +22,18 @@ struct Geometry {
   ~Geometry() { GeoArrowGeometryReset(&value); }
 };
 
+// Time the C writer API directly. The throwing C++ Append() wrapper creates an
+// error buffer per feature, which can dominate the small-geometry measurements.
+struct Writer {
+  GeoArrowArrayWriter value{};
+  GeoArrowVisitor visitor{};
+  explicit Writer(GeoArrowType type) {
+    Check(GeoArrowArrayWriterInitFromType(&value, type));
+    Check(GeoArrowArrayWriterInitVisitor(&value, &visitor));
+  }
+  ~Writer() { GeoArrowArrayWriterReset(&value); }
+};
+
 struct Shape {
   const char* name;
   GeoArrowGeometryType type;
@@ -36,6 +48,9 @@ const Shape kShapes[] = {
     {"line1024", GEOARROW_GEOMETRY_TYPE_LINESTRING, 1024, 1, 32},
     {"polygon128", GEOARROW_GEOMETRY_TYPE_POLYGON, 128, 1, 128},
     {"multipolygon16x5", GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON, 5, 16, 256}};
+
+enum Strategy { VISITOR, GEOMETRY, CALLBACK };
+const char* kStrategyNames[] = {"visitor", "geometry", "callback"};
 
 enum Encoding { NATIVE, INTERLEAVED, WKB, WKT };
 const char* kEncodingNames[] = {"native", "interleaved", "wkb", "wkt"};
@@ -103,17 +118,25 @@ void MakeInput(const Shape& shape, GeoArrowType type, ArrowArray* out) {
   writer.Finish(out);
 }
 
-void Convert(geoarrow::ArrayReader& reader, geoarrow::ArrayWriter& writer, Geometry& geom,
-             int64_t length, bool geometry, ArrowArray* out) {
-  if (geometry) {
+void Convert(geoarrow::ArrayReader& reader, Writer& writer, Geometry& geom,
+             int64_t length, Strategy strategy, ArrowArray* out) {
+  if (strategy == GEOMETRY) {
     for (int64_t i = 0; i < length; i++) {
       Check(reader.Read(i, &geom.value));
-      writer.Append(GeoArrowGeometryAsView(&geom.value));
+      Check(GeoArrowArrayWriterAppend(&writer.value, GeoArrowGeometryAsView(&geom.value),
+                                      nullptr));
     }
+  } else if (strategy == CALLBACK) {
+    Check(reader.VisitGeometry(
+        [](GeoArrowGeometryView value, void* data, GeoArrowError* error) {
+          return GeoArrowArrayWriterAppend(static_cast<GeoArrowArrayWriter*>(data), value,
+                                           error);
+        },
+        &writer.value, 0, length));
   } else {
-    Check(reader.Visit(writer.visitor(), 0, length));
+    Check(reader.Visit(&writer.visitor, 0, length));
   }
-  writer.Finish(out);
+  Check(GeoArrowArrayWriterFinish(&writer.value, out, nullptr));
 }
 
 void Canonicalize(const ArrowArray* array, GeoArrowType type, ArrowArray* out) {
@@ -144,27 +167,29 @@ void CheckEquivalent(const ArrowArray* left, const ArrowArray* right, GeoArrowTy
 }
 
 void BenchConvert(benchmark::State& state, Shape shape, Encoding source,
-                  Encoding destination, bool geometry) {
+                  Encoding destination, Strategy strategy) {
   auto src_type = Type(shape, source);
   auto dst_type = Type(shape, destination);
   geoarrow::internal::ArrayHolder input;
   MakeInput(shape, src_type, &input.array);
   geoarrow::ArrayReader reader(src_type);
   reader.SetArrayNonOwning(&input.array);
-  geoarrow::ArrayWriter writer(dst_type);
+  Writer writer(dst_type);
   Geometry geom;
   {
-    geoarrow::internal::ArrayHolder direct, visited;
-    Convert(reader, writer, geom, shape.features, true, &direct.array);
-    Convert(reader, writer, geom, shape.features, false, &visited.array);
+    geoarrow::internal::ArrayHolder direct, visited, callback;
+    Convert(reader, writer, geom, shape.features, GEOMETRY, &direct.array);
+    Convert(reader, writer, geom, shape.features, VISITOR, &visited.array);
+    Convert(reader, writer, geom, shape.features, CALLBACK, &callback.array);
     CheckEquivalent(&direct.array, &visited.array, dst_type);
+    CheckEquivalent(&callback.array, &visited.array, dst_type);
   }
 
   // Input creation, reader/writer initialization, and validation are excluded.
   // Feature iteration, output allocation, Finish(), and release are included.
   for (auto _ : state) {
     geoarrow::internal::ArrayHolder output;
-    Convert(reader, writer, geom, shape.features, geometry, &output.array);
+    Convert(reader, writer, geom, shape.features, strategy, &output.array);
     benchmark::DoNotOptimize(output.array.length);
   }
   state.SetItemsProcessed(state.iterations() * shape.features);
@@ -176,23 +201,23 @@ bool RegisterBenchmarks() {
   for (const auto& shape : kShapes) {
     for (auto source : {NATIVE, WKB, WKT}) {
       for (auto destination : {NATIVE, WKB, WKT}) {
-        for (bool geometry : {false, true}) {
+        for (auto strategy : {VISITOR, GEOMETRY, CALLBACK}) {
           std::string name = std::string(shape.name) + "/" + kEncodingNames[source] +
-                             "_to_" + kEncodingNames[destination] +
-                             (geometry ? "/geometry" : "/visitor");
+                             "_to_" + kEncodingNames[destination] + std::string("/") +
+                             kStrategyNames[strategy];
           benchmark::RegisterBenchmark(name.c_str(), BenchConvert, shape, source,
-                                       destination, geometry);
+                                       destination, strategy);
         }
       }
     }
-    for (bool geometry : {false, true}) {
+    for (auto strategy : {VISITOR, GEOMETRY, CALLBACK}) {
       for (auto source : {INTERLEAVED, WKB}) {
         auto destination = source == WKB ? INTERLEAVED : WKB;
         std::string name = std::string(shape.name) + "/" + kEncodingNames[source] +
-                           "_to_" + kEncodingNames[destination] +
-                           (geometry ? "/geometry" : "/visitor");
+                           "_to_" + kEncodingNames[destination] + std::string("/") +
+                           kStrategyNames[strategy];
         benchmark::RegisterBenchmark(name.c_str(), BenchConvert, shape, source,
-                                     destination, geometry);
+                                     destination, strategy);
       }
     }
   }

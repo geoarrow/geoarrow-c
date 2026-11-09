@@ -99,3 +99,24 @@ TEST(GeoArrowHppTest, ArrayReaderWriterGeometry) {
   EXPECT_EQ(tester.WKTValues("null"), (std::vector<std::string>{"POINT (1 2)", "null"}));
   GeoArrowGeometryReset(&geom);
 }
+
+TEST(GeoArrowHppTest, ArrayReaderGeometryCallback) {
+  WKXTester tester;
+  geoarrow::ArrayWriter writer(GEOARROW_TYPE_WKB);
+  writer.Append(GeoArrowGeometryAsView(&tester.AsGeometry("POINT (1 2)")));
+  writer.AppendNull();
+  ArrowArray array;
+  writer.Finish(&array);
+  geoarrow::ArrayReader reader(GEOARROW_TYPE_WKB);
+  reader.SetArray(&array);
+  int calls = 0;
+  auto callback = [](GeoArrowGeometryView geom, void* data, GeoArrowError*) {
+    auto count = static_cast<int*>(data);
+    EXPECT_EQ(geom.root->geometry_type, *count == 0 ? GEOARROW_GEOMETRY_TYPE_POINT
+                                                    : GEOARROW_GEOMETRY_TYPE_GEOMETRY);
+    ++*count;
+    return GEOARROW_OK;
+  };
+  EXPECT_EQ(reader.VisitGeometry(callback, &calls, 0, 2), GEOARROW_OK);
+  EXPECT_EQ(calls, 2);
+}

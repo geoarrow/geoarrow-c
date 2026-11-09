@@ -134,7 +134,8 @@ GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
         n_values = _GeoArrowkNumDimensions[node->dimensions];
         bytes_written =
             GeoArrowGeometryNodeWriteSequence(node, coords_buf, coords_buf_size);
-        // NANOARROW_DCHECK(bytes_written <= coords_buf_size);
+        // NodeWriteSequence normalizes copied coordinates to native byte order.
+        node->flags &= (uint8_t)~GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN;
 
         for (int i = 0; i < n_values; i++) {
           node->coords[i] = coords_buf + (i * sizeof(double));

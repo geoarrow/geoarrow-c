@@ -7,6 +7,36 @@
 
 #include "geoarrow/wkx_testing.hpp"
 
+static int AppendGeometryCallback(GeoArrowGeometryView geom, void* data,
+                                  GeoArrowError* error) {
+  return GeoArrowArrayWriterAppend(static_cast<GeoArrowArrayWriter*>(data), geom, error);
+}
+
+static void ExpectGeometryCallbacks(GeoArrowArrayReader* reader, int64_t length,
+                                    const std::vector<std::string>& expected) {
+  GeoArrowArrayWriter writer;
+  ASSERT_EQ(GeoArrowArrayWriterInitFromType(&writer, GEOARROW_TYPE_WKT), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayWriterSetFlatMultipoint(&writer, 0), GEOARROW_OK);
+  GeoArrowError error{};
+  ASSERT_EQ(GeoArrowArrayReaderVisitGeometry(reader, 0, length, AppendGeometryCallback,
+                                             &writer, &error),
+            GEOARROW_OK)
+      << error.message;
+  ArrowArray result;
+  ASSERT_EQ(GeoArrowArrayWriterFinish(&writer, &result, &error), GEOARROW_OK);
+  GeoArrowArrayWriterReset(&writer);
+  GeoArrowArrayReader result_reader;
+  ASSERT_EQ(GeoArrowArrayReaderInitFromType(&result_reader, GEOARROW_TYPE_WKT),
+            GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayReaderSetArray(&result_reader, &result, &error), GEOARROW_OK);
+  WKXTester tester;
+  ASSERT_EQ(GeoArrowArrayReaderVisit(&result_reader, 0, length, tester.WKTVisitor()),
+            GEOARROW_OK);
+  EXPECT_EQ(tester.WKTValues("null"), expected);
+  GeoArrowArrayReaderReset(&result_reader);
+  ArrowArrayRelease(&result);
+}
+
 TEST(ArrayReaderTest, ArrayReaderTestInit) {
   struct GeoArrowArrayReader reader;
   ASSERT_EQ(GeoArrowArrayReaderInitFromType(&reader, GEOARROW_TYPE_POINT), GEOARROW_OK);
@@ -208,6 +238,10 @@ TEST(ArrayReaderTest, ReadSerializedGeometry) {
               GEOARROW_OK);
     ASSERT_EQ(geom.size_nodes, 1);
     EXPECT_EQ(geom.root->geometry_type, GEOARROW_GEOMETRY_TYPE_GEOMETRY);
+    auto callback_expected = wkts;
+    callback_expected.push_back("null");
+    ExpectGeometryCallbacks(&reader, array.length, callback_expected);
+    ExpectGeometryCallbacks(&reader, array.length, callback_expected);
     GeoArrowArrayReaderReset(&reader);
     // Reading another feature and destroying the reader must not invalidate nodes
     // or WKT coordinates owned by a different output geometry.
@@ -284,6 +318,7 @@ TEST(ArrayReaderTest, ReadNativeGeometry) {
         ASSERT_EQ(GeoArrowArrayReaderRead(&reader, 2, &geom, nullptr), GEOARROW_OK);
         ASSERT_EQ(geom.size_nodes, 1);
         EXPECT_EQ(geom.root->geometry_type, GEOARROW_GEOMETRY_TYPE_GEOMETRY);
+        ExpectGeometryCallbacks(&reader, 3, {wkt, empty, "null"});
         GeoArrowGeometryReset(&geom);
         GeoArrowArrayReaderReset(&reader);
         ArrowArrayRelease(&array);
@@ -340,6 +375,16 @@ TEST(ArrayReaderTest, ReadOppositeEndianWKB) {
   ASSERT_EQ(GeoArrowArrayReaderRead(&reader, 0, &geom, nullptr), GEOARROW_OK);
   EXPECT_EQ(geom.root->coords[0], static_cast<const uint8_t*>(array.buffers[2]) + 5);
   EXPECT_EQ(tester.AsWKT(geom), "POINT ZM (1 2 3 4)");
+  GeoArrowGeometry retained;
+  ASSERT_EQ(GeoArrowGeometryInit(&retained), GEOARROW_OK);
+  auto retain = [](GeoArrowGeometryView value, void* data, GeoArrowError*) {
+    return GeoArrowGeometryDeepCopy(value, static_cast<GeoArrowGeometry*>(data));
+  };
+  ASSERT_EQ(GeoArrowArrayReaderVisitGeometry(&reader, 0, 1, retain, &retained, nullptr),
+            GEOARROW_OK);
+  EXPECT_EQ(retained.root->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN, 0);
+  EXPECT_EQ(tester.AsWKT(retained), "POINT ZM (1 2 3 4)");
+  GeoArrowGeometryReset(&retained);
   for (auto type : {GEOARROW_TYPE_WKT, GEOARROW_TYPE_WKB, GEOARROW_TYPE_POINT_ZM,
                     GEOARROW_TYPE_INTERLEAVED_POINT_ZM}) {
     GeoArrowArrayWriter writer;
@@ -411,4 +456,181 @@ TEST(ArrayReaderTest, ReadLargeWKTGeometry) {
   WKXTester tester;
   EXPECT_EQ(tester.AsWKT(geom), text);
   GeoArrowGeometryReset(&geom);
+}
+
+TEST(ArrayReaderTest, GeometryCallbackControlFlow) {
+  for (auto type : {GEOARROW_TYPE_WKT, GEOARROW_TYPE_WKB, GEOARROW_TYPE_POINT}) {
+    WKXTester tester;
+    GeoArrowArrayWriter writer;
+    ASSERT_EQ(GeoArrowArrayWriterInitFromType(&writer, type), GEOARROW_OK);
+    for (int i = 0; i < 4; i++) {
+      if (i == 2) {
+        ASSERT_EQ(GeoArrowArrayWriterAppendNull(&writer), GEOARROW_OK);
+      } else {
+        ASSERT_EQ(GeoArrowArrayWriterAppend(
+                      &writer, GeoArrowGeometryAsView(&tester.AsGeometry("POINT (1 2)")),
+                      nullptr),
+                  GEOARROW_OK);
+      }
+    }
+    ArrowArray array;
+    ASSERT_EQ(GeoArrowArrayWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+    GeoArrowArrayWriterReset(&writer);
+    array.offset = 1;
+    array.length = 3;
+    GeoArrowArrayReader reader;
+    ASSERT_EQ(GeoArrowArrayReaderInitFromType(&reader, type), GEOARROW_OK);
+    ASSERT_EQ(GeoArrowArrayReaderSetArray(&reader, &array, nullptr), GEOARROW_OK);
+    GeoArrowGeometry saved;
+    ASSERT_EQ(GeoArrowGeometryInit(&saved), GEOARROW_OK);
+    struct Context {
+      int calls = 0;
+      int stop_after = 0;
+      GeoArrowGeometry* saved;
+      GeoArrowError* expected_error;
+    };
+    GeoArrowError error{};
+    Context context{0, 1, &saved, &error};
+    auto callback = [](GeoArrowGeometryView geom, void* data, GeoArrowError* error) {
+      auto ctx = static_cast<Context*>(data);
+      EXPECT_EQ(error, ctx->expected_error);
+      ctx->calls++;
+      if (ctx->calls == ctx->stop_after) {
+        GeoArrowErrorSet(error, "Callback stopped iteration");
+        return EAGAIN;
+      }
+      if (geom.root->geometry_type != GEOARROW_GEOMETRY_TYPE_GEOMETRY) {
+        return GeoArrowGeometryDeepCopy(geom, ctx->saved);
+      }
+      return GEOARROW_OK;
+    };
+    EXPECT_EQ(GeoArrowArrayReaderVisitGeometry(&reader, 1, 2, callback, &context, &error),
+              EAGAIN);
+    EXPECT_EQ(context.calls, 1);
+    EXPECT_STREQ(error.message, "Callback stopped iteration");
+    context.calls = 0;
+    context.stop_after = 0;
+    EXPECT_EQ(GeoArrowArrayReaderVisitGeometry(&reader, 1, 2, callback, &context, &error),
+              GEOARROW_OK);
+    EXPECT_EQ(context.calls, 2);
+    EXPECT_EQ(GeoArrowArrayReaderVisitGeometry(&reader, 3, 0, nullptr, nullptr, &error),
+              GEOARROW_OK);
+    for (auto range : {std::pair<int64_t, int64_t>{-1, 1},
+                       {0, -1},
+                       {2, 2},
+                       {4, 0},
+                       {1, INT64_MAX},
+                       {INT64_MAX, 1}}) {
+      EXPECT_EQ(GeoArrowArrayReaderVisitGeometry(&reader, range.first, range.second,
+                                                 callback, &context, &error),
+                EINVAL);
+    }
+    EXPECT_EQ(GeoArrowArrayReaderVisitGeometry(&reader, 0, 1, nullptr, nullptr, &error),
+              EINVAL);
+    EXPECT_EQ(context.calls, 2);
+    GeoArrowArrayReaderReset(&reader);
+    ArrowArrayRelease(&array);
+    EXPECT_EQ(tester.AsWKT(saved), "POINT (1 2)");
+    GeoArrowGeometryReset(&saved);
+  }
+}
+
+TEST(ArrayReaderTest, GeometryCallbackParseError) {
+  WKXTester tester;
+  for (auto type : {GEOARROW_TYPE_WKT, GEOARROW_TYPE_LARGE_WKT, GEOARROW_TYPE_WKT_VIEW,
+                    GEOARROW_TYPE_WKB, GEOARROW_TYPE_LARGE_WKB, GEOARROW_TYPE_WKB_VIEW}) {
+    bool is_wkt = type == GEOARROW_TYPE_WKT || type == GEOARROW_TYPE_LARGE_WKT ||
+                  type == GEOARROW_TYPE_WKT_VIEW;
+    ArrowSchema schema;
+    ArrowArray array;
+    ASSERT_EQ(GeoArrowSchemaInitExtension(&schema, type), GEOARROW_OK);
+    ASSERT_EQ(ArrowArrayInitFromSchema(&array, &schema, nullptr), GEOARROW_OK);
+    ASSERT_EQ(ArrowArrayStartAppending(&array), GEOARROW_OK);
+    ASSERT_EQ(ArrowArrayAppendNull(&array, 1), GEOARROW_OK);
+    ASSERT_EQ(ArrowArrayAppendString(&array, ArrowCharView("bad")), GEOARROW_OK);
+    if (is_wkt) {
+      ASSERT_EQ(ArrowArrayAppendString(&array, ArrowCharView("POINT (1 2)")),
+                GEOARROW_OK);
+    } else {
+      auto wkb = tester.AsWKB("POINT (1 2)");
+      ArrowBufferView bytes;
+      bytes.data.as_uint8 = wkb.data();
+      bytes.size_bytes = static_cast<int64_t>(wkb.size());
+      ASSERT_EQ(ArrowArrayAppendBytes(&array, bytes), GEOARROW_OK);
+    }
+    ASSERT_EQ(ArrowArrayFinishBuildingDefault(&array, nullptr), GEOARROW_OK);
+    GeoArrowArrayReader reader;
+    ASSERT_EQ(GeoArrowArrayReaderInitFromType(&reader, type), GEOARROW_OK);
+    ASSERT_EQ(GeoArrowArrayReaderSetArray(&reader, &array, nullptr), GEOARROW_OK);
+    auto callback = [](GeoArrowGeometryView, void* data, GeoArrowError*) {
+      ++*static_cast<int*>(data);
+      return GEOARROW_OK;
+    };
+    int calls = 0;
+    GeoArrowError error{};
+    EXPECT_EQ(GeoArrowArrayReaderVisitGeometry(&reader, 0, 3, callback, &calls, &error),
+              EINVAL);
+    EXPECT_EQ(calls, 1);
+    EXPECT_NE(error.message[0], '\0');
+    // Reuse the same reader after a parser error, with an optional error pointer.
+    EXPECT_EQ(GeoArrowArrayReaderVisitGeometry(&reader, 2, 1, callback, &calls, nullptr),
+              GEOARROW_OK);
+    EXPECT_EQ(calls, 2);
+    GeoArrowArrayReaderReset(&reader);
+    ArrowArrayRelease(&array);
+    ArrowSchemaRelease(&schema);
+  }
+}
+
+TEST(ArrayReaderTest, GeometryCallbackCoordinateOffsets) {
+  WKXTester tester;
+  for (auto type : {GEOARROW_TYPE_POINT, GEOARROW_TYPE_INTERLEAVED_POINT,
+                    GEOARROW_TYPE_LINESTRING, GEOARROW_TYPE_INTERLEAVED_LINESTRING}) {
+    GeoArrowArrayWriter writer;
+    ASSERT_EQ(GeoArrowArrayWriterInitFromType(&writer, type), GEOARROW_OK);
+    bool point = GeoArrowGeometryTypeFromType(type) == GEOARROW_GEOMETRY_TYPE_POINT;
+    if (point) {
+      for (const char* wkt :
+           {"POINT (-2 -2)", "POINT (-1 -1)", "POINT (1 2)", "POINT (3 4)"}) {
+        ASSERT_EQ(GeoArrowArrayWriterAppend(
+                      &writer, GeoArrowGeometryAsView(&tester.AsGeometry(wkt)), nullptr),
+                  GEOARROW_OK);
+      }
+    } else {
+      ASSERT_EQ(GeoArrowArrayWriterAppend(&writer,
+                                          GeoArrowGeometryAsView(&tester.AsGeometry(
+                                              "LINESTRING (-2 -2, -1 -1, 1 2, 3 4)")),
+                                          nullptr),
+                GEOARROW_OK);
+    }
+    ArrowArray array;
+    ASSERT_EQ(GeoArrowArrayWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+    GeoArrowArrayWriterReset(&writer);
+    ArrowArray* coords = point ? &array : array.children[0];
+    coords->offset = 1;
+    coords->length = point ? 2 : 3;
+    if (GeoArrowCoordTypeFromType(type) == GEOARROW_COORD_TYPE_INTERLEAVED) {
+      coords->children[0]->offset = 2;
+      coords->children[0]->length -= 2;
+    } else {
+      for (int i = 0; i < 2; i++) {
+        coords->children[i]->offset = 1;
+        coords->children[i]->length--;
+      }
+    }
+    if (!point) {
+      // The sliced coordinate array supplies only the two retained coordinates.
+      const_cast<int32_t*>(static_cast<const int32_t*>(array.buffers[1]))[1] = 2;
+    }
+    GeoArrowArrayReader reader;
+    ASSERT_EQ(GeoArrowArrayReaderInitFromType(&reader, type), GEOARROW_OK);
+    ASSERT_EQ(GeoArrowArrayReaderSetArray(&reader, &array, nullptr), GEOARROW_OK);
+    if (point) {
+      ExpectGeometryCallbacks(&reader, 2, {"POINT (1 2)", "POINT (3 4)"});
+    } else {
+      ExpectGeometryCallbacks(&reader, 1, {"LINESTRING (1 2, 3 4)"});
+    }
+    GeoArrowArrayReaderReset(&reader);
+    ArrowArrayRelease(&array);
+  }
 }

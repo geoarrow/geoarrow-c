@@ -13,6 +13,7 @@ struct GeoArrowArrayReaderPrivate {
   union GeoArrowArrayReaderSrc src;
   struct GeoArrowWKTReader wkt_reader;
   struct GeoArrowWKBReader wkb_reader;
+  struct GeoArrowGeometry geometry;
 };
 
 static GeoArrowErrorCode GeoArrowArrayReaderVisitWKT(
@@ -207,6 +208,10 @@ void GeoArrowArrayReaderReset(struct GeoArrowArrayReader* reader) {
     GeoArrowWKTReaderReset(&private_data->wkt_reader);
   }
 
+  if (private_data->geometry.private_data != NULL) {
+    GeoArrowGeometryReset(&private_data->geometry);
+  }
+
   ArrowFree(reader->private_data);
   reader->private_data = NULL;
 }
@@ -339,6 +344,157 @@ GeoArrowErrorCode GeoArrowArrayReaderRead(struct GeoArrowArrayReader* reader,
     }
     default:
       return GeoArrowArrayViewGetGeometry(&private_data->src.geoarrow, offset, out);
+  }
+}
+
+static GeoArrowErrorCode GeoArrowArrayReaderVisitGeometrySerialized(
+    struct GeoArrowArrayReaderPrivate* private_data, int64_t offset, int64_t length,
+    GeoArrowGeometryCallback callback, void* callback_data, struct GeoArrowError* error,
+    int is_wkt, int is_arrow) {
+  struct GeoArrowVisitor visitor;
+  if (is_wkt) {
+    if (private_data->geometry.private_data == NULL) {
+      GEOARROW_RETURN_NOT_OK(GeoArrowGeometryInit(&private_data->geometry));
+    }
+    GeoArrowGeometryInitVisitor(&private_data->geometry, &visitor);
+    visitor.error = error;
+  }
+
+  const struct GeoArrowGeometryNode null_node = {0};
+  const struct GeoArrowGeometryView null_geom = {&null_node, 1};
+  for (int64_t i = offset; i < offset + length; i++) {
+    struct GeoArrowBufferView item;
+    int is_null;
+    if (is_arrow) {
+      const struct ArrowArrayView* view = &private_data->src.arrow;
+      is_null = ArrowArrayViewIsNull(view, i);
+      if (!is_null) {
+        struct ArrowBufferView bytes = ArrowArrayViewGetBytesUnsafe(view, i);
+        item.data = bytes.data.as_uint8;
+        item.size_bytes = bytes.size_bytes;
+      }
+    } else {
+      const struct GeoArrowArrayView* view = &private_data->src.geoarrow;
+      int64_t index = view->offset[0] + i;
+      is_null = view->validity_bitmap && !ArrowBitGet(view->validity_bitmap, index);
+      if (!is_null) {
+        item.data = view->data + view->offsets[0][index];
+        item.size_bytes = view->offsets[0][index + 1] - view->offsets[0][index];
+      }
+    }
+
+    struct GeoArrowGeometryView geom;
+    if (is_null) {
+      geom = null_geom;
+    } else if (is_wkt) {
+      struct GeoArrowStringView text = {(const char*)item.data, item.size_bytes};
+      GEOARROW_RETURN_NOT_OK(
+          GeoArrowWKTReaderVisit(&private_data->wkt_reader, text, &visitor));
+      geom = GeoArrowGeometryAsView(&private_data->geometry);
+    } else {
+      // The callback can consume the parser's nodes directly: no shallow copy.
+      GEOARROW_RETURN_NOT_OK(
+          GeoArrowWKBReaderRead(&private_data->wkb_reader, item, &geom, error));
+    }
+    GEOARROW_RETURN_NOT_OK(callback(geom, callback_data, error));
+  }
+  return GEOARROW_OK;
+}
+
+// Points and lines have one node with constant type, dimensions, and strides.
+// Initialize that metadata once for the whole range, including empty sequences.
+static GeoArrowErrorCode GeoArrowArrayReaderVisitGeometrySequence(
+    const struct GeoArrowArrayView* view, int64_t offset, int64_t length,
+    GeoArrowGeometryCallback callback, void* callback_data, struct GeoArrowError* error) {
+  struct GeoArrowGeometryNode node = {0};
+  node.geometry_type = (uint8_t)view->schema_view.geometry_type;
+  node.dimensions = (uint8_t)view->schema_view.dimensions;
+  for (int j = 0; j < 4; j++) {
+    node.coords[j] = _GeoArrowkEmptyPointCoords;
+    node.coord_stride[j] = view->coords.coords_stride * (int32_t)sizeof(double);
+  }
+  const struct GeoArrowGeometryView geom = {&node, 1};
+  const struct GeoArrowGeometryNode null_node = {0};
+  const struct GeoArrowGeometryView null_geom = {&null_node, 1};
+  int64_t begin = view->offset[0] + offset;
+  for (int64_t i = begin; i < begin + length; i++) {
+    if (view->validity_bitmap && !ArrowBitGet(view->validity_bitmap, i)) {
+      GEOARROW_RETURN_NOT_OK(callback(null_geom, callback_data, error));
+      continue;
+    }
+
+    int64_t coord_offset = i;
+    node.size = 1;
+    if (view->n_offsets == 1) {
+      coord_offset = view->offsets[0][i] + view->offset[1];
+      node.size = (uint32_t)(view->offsets[0][i + 1] - view->offsets[0][i]);
+    }
+    for (int j = 0; j < view->coords.n_values; j++) {
+      node.coords[j] = node.size == 0
+                           ? _GeoArrowkEmptyPointCoords
+                           : (const uint8_t*)(view->coords.values[j] +
+                                              coord_offset * view->coords.coords_stride);
+    }
+    GEOARROW_RETURN_NOT_OK(callback(geom, callback_data, error));
+  }
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowArrayReaderVisitGeometry(struct GeoArrowArrayReader* reader,
+                                                   int64_t offset, int64_t length,
+                                                   GeoArrowGeometryCallback callback,
+                                                   void* callback_data,
+                                                   struct GeoArrowError* error) {
+  struct GeoArrowArrayReaderPrivate* private_data =
+      (struct GeoArrowArrayReaderPrivate*)reader->private_data;
+  int is_arrow = private_data->type == GEOARROW_TYPE_LARGE_WKB ||
+                 private_data->type == GEOARROW_TYPE_WKB_VIEW ||
+                 private_data->type == GEOARROW_TYPE_LARGE_WKT ||
+                 private_data->type == GEOARROW_TYPE_WKT_VIEW;
+  int64_t array_length =
+      is_arrow ? private_data->src.arrow.length : private_data->src.geoarrow.length[0];
+  if (offset < 0 || length < 0 || offset > array_length ||
+      length > array_length - offset || (length > 0 && callback == NULL)) {
+    GeoArrowErrorSet(error, "Invalid geometry callback or array reader range");
+    return EINVAL;
+  }
+  if (length == 0) {
+    return GEOARROW_OK;
+  }
+
+  switch (private_data->type) {
+    case GEOARROW_TYPE_WKB:
+      return GeoArrowArrayReaderVisitGeometrySerialized(
+          private_data, offset, length, callback, callback_data, error, 0, 0);
+    case GEOARROW_TYPE_WKT:
+      return GeoArrowArrayReaderVisitGeometrySerialized(
+          private_data, offset, length, callback, callback_data, error, 1, 0);
+    case GEOARROW_TYPE_LARGE_WKB:
+    case GEOARROW_TYPE_WKB_VIEW:
+      return GeoArrowArrayReaderVisitGeometrySerialized(
+          private_data, offset, length, callback, callback_data, error, 0, 1);
+    case GEOARROW_TYPE_LARGE_WKT:
+    case GEOARROW_TYPE_WKT_VIEW:
+      return GeoArrowArrayReaderVisitGeometrySerialized(
+          private_data, offset, length, callback, callback_data, error, 1, 1);
+    default:
+      if (private_data->src.geoarrow.schema_view.geometry_type ==
+              GEOARROW_GEOMETRY_TYPE_POINT ||
+          private_data->src.geoarrow.schema_view.geometry_type ==
+              GEOARROW_GEOMETRY_TYPE_LINESTRING) {
+        return GeoArrowArrayReaderVisitGeometrySequence(
+            &private_data->src.geoarrow, offset, length, callback, callback_data, error);
+      }
+      if (private_data->geometry.private_data == NULL) {
+        GEOARROW_RETURN_NOT_OK(GeoArrowGeometryInit(&private_data->geometry));
+      }
+      for (int64_t i = offset; i < offset + length; i++) {
+        GEOARROW_RETURN_NOT_OK(GeoArrowArrayViewGetGeometry(&private_data->src.geoarrow,
+                                                            i, &private_data->geometry));
+        GEOARROW_RETURN_NOT_OK(callback(GeoArrowGeometryAsView(&private_data->geometry),
+                                        callback_data, error));
+      }
+      return GEOARROW_OK;
   }
 }
 
