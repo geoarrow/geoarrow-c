@@ -255,13 +255,13 @@ static GeoArrowErrorCode ParseJSONMetadata(struct GeoArrowMetadataView* metadata
       }
     } else if (k.size_bytes == 10 && strncmp(k.data, "\"crs_type\"", 10) == 0) {
       if (v.data[0] == '\"') {
-        if (v.size_bytes == 10 && strncmp(k.data, "\"projjson\"", 10)) {
+        if (v.size_bytes == 10 && strncmp(v.data, "\"projjson\"", 10) == 0) {
           metadata_view->crs_type = GEOARROW_CRS_TYPE_PROJJSON;
-        } else if (v.size_bytes == 11 && strncmp(k.data, "\"wkt2:2019\"", 11)) {
+        } else if (v.size_bytes == 11 && strncmp(v.data, "\"wkt2:2019\"", 11) == 0) {
           metadata_view->crs_type = GEOARROW_CRS_TYPE_WKT2_2019;
-        } else if (v.size_bytes == 16 && strncmp(k.data, "\"authority_code\"", 16)) {
+        } else if (v.size_bytes == 16 && strncmp(v.data, "\"authority_code\"", 16) == 0) {
           metadata_view->crs_type = GEOARROW_CRS_TYPE_AUTHORITY_CODE;
-        } else if (v.size_bytes == 6 && strncmp(k.data, "\"srid\"", 6)) {
+        } else if (v.size_bytes == 6 && strncmp(v.data, "\"srid\"", 6) == 0) {
           metadata_view->crs_type = GEOARROW_CRS_TYPE_SRID;
         } else {
           // Accept unrecognized string values but ignore them

@@ -124,8 +124,22 @@ static inline int GeoArrowWKTAssertWordEmpty(struct WKTReaderPrivate* s,
 static inline int ReadOrdinate(struct WKTReaderPrivate* s, double* out,
                                struct GeoArrowError* error) {
   const char* start = s->data;
+  const char* end;
+#if defined(GEOARROW_USE_FAST_FLOAT) && GEOARROW_USE_FAST_FLOAT
+  int prefix_result = GeoArrowFromChars(start, start + s->size_bytes, out, &end);
+  // NaN payloads can contain parentheses: keep them on the token-bounded path
+  // below so that fast_float cannot consume WKT delimiters.
+  if (prefix_result == GEOARROW_OK && *out == *out) {
+    GeoArrowWKTAdvanceUnsafe(s, end - start);
+    // Leave the next byte for the caller to validate as a WKT delimiter.
+    return GEOARROW_OK;
+  }
+#endif
   GeoArrowWKTSkipUntilSep(s);
-  int result = GeoArrowFromChars(start, s->data, out);
+  int result = GeoArrowFromChars(start, s->data, out, &end);
+  if (result == GEOARROW_OK && end != s->data) {
+    result = EINVAL;
+  }
   if (result != GEOARROW_OK) {
     s->size_bytes += s->data - start;
     s->data = start;
@@ -525,7 +539,7 @@ GeoArrowErrorCode GeoArrowWKTReaderVisit(struct GeoArrowWKTReader* reader,
   NANOARROW_RETURN_NOT_OK(ReadTaggedGeometry(s, v));
   NANOARROW_RETURN_NOT_OK(v->feat_end(v));
   GeoArrowWKTSkipWhitespace(s);
-  if (PeekChar(s) != '\0') {
+  if (s->size_bytes != 0) {
     SetParseErrorAuto("end of input", s, v->error);
     return EINVAL;
   }

@@ -257,3 +257,93 @@ TEST(WKBReaderTest, WKTReaderTestManyCoordinates) {
   std::vector<uint8_t> big_linestring_wkb = tester.AsWKB(ss.str());
   EXPECT_WKB_ROUNDTRIP(tester, big_linestring_wkb);
 }
+
+TEST(WKBReaderTest, WKBReaderTestTruncatedMultipoint) {
+  WKXTester tester;
+  auto wkb = tester.AsWKB("MULTIPOINT ((1 2), (3 4))");
+  wkb.resize(wkb.size() - sizeof(double));
+
+  struct GeoArrowWKBReader reader;
+  ASSERT_EQ(GeoArrowWKBReaderInit(&reader), GEOARROW_OK);
+  struct GeoArrowGeometryView geometry;
+  struct GeoArrowError error = {};
+  EXPECT_EQ(GeoArrowWKBReaderRead(&reader, {wkb.data(), static_cast<int64_t>(wkb.size())},
+                                  &geometry, &error),
+            EINVAL);
+  EXPECT_STREQ(error.message,
+               "Expected coordinate sequence of 1 coords (16 bytes) but found 8 bytes "
+               "remaining at byte 35");
+  GeoArrowWKBReaderReset(&reader);
+}
+
+TEST(WKBReaderTest, WKBReaderTestTruncatedBuffers) {
+  WKXTester tester;
+  const std::vector<std::string> geometries = {
+      "POINT (1 2)",
+      "POINT Z (1 2 3)",
+      "POINT M (1 2 3)",
+      "POINT ZM (1 2 3 4)",
+      "LINESTRING (1 2, 3 4)",
+      "POLYGON ((0 0, 4 0, 0 4, 0 0), (1 1, 2 1, 1 2, 1 1))",
+      "MULTIPOINT ((1 2), (3 4))",
+      "MULTILINESTRING ((1 2, 3 4), (5 6, 7 8))",
+      "MULTIPOLYGON (((0 0, 4 0, 0 4, 0 0)), ((1 1, 2 1, 1 2, 1 1)))",
+      "GEOMETRYCOLLECTION (POINT (1 2), GEOMETRYCOLLECTION (POINT (3 4)))",
+      "GEOMETRYCOLLECTION (LINESTRING EMPTY, POINT (1 2), POLYGON EMPTY)",
+      "GEOMETRYCOLLECTION EMPTY"};
+
+  struct GeoArrowWKBReader reader;
+  ASSERT_EQ(GeoArrowWKBReaderInit(&reader), GEOARROW_OK);
+  struct GeoArrowGeometryView geometry;
+  for (const auto& wkt : geometries) {
+    SCOPED_TRACE(wkt);
+    auto wkb = tester.AsWKB(wkt);
+    for (size_t size = 0; size < wkb.size(); size++) {
+      SCOPED_TRACE(size);
+      // Give sanitizers an allocation ending exactly at the truncated buffer's end.
+      // Keep a non-null pointer for the empty prefix.
+      std::vector<uint8_t> truncated(size == 0 ? 1 : size);
+      memcpy(truncated.data(), wkb.data(), size);
+      EXPECT_EQ(
+          GeoArrowWKBReaderRead(&reader, {truncated.data(), static_cast<int64_t>(size)},
+                                &geometry, nullptr),
+          EINVAL);
+    }
+
+    // A failed read must not prevent reuse of the reader for a complete geometry.
+    EXPECT_EQ(
+        GeoArrowWKBReaderRead(&reader, {wkb.data(), static_cast<int64_t>(wkb.size())},
+                              &geometry, nullptr),
+        GEOARROW_OK);
+  }
+  GeoArrowWKBReaderReset(&reader);
+}
+
+TEST(WKBReaderTest, WKBReaderTestLargeCoordinateCounts) {
+  struct GeoArrowWKBReader reader;
+  ASSERT_EQ(GeoArrowWKBReaderInit(&reader), GEOARROW_OK);
+  struct GeoArrowGeometryView geometry;
+  for (uint8_t endian : {uint8_t(0), uint8_t(1)}) {
+    SCOPED_TRACE(endian);
+    for (uint32_t type : {2, 1002, 2002, 3002}) {
+      SCOPED_TRACE(type);
+      for (uint32_t count : {0x80000000U, 0xaaaaaaabU, 0x40000000U, UINT32_MAX}) {
+        SCOPED_TRACE(count);
+        // These counts can wrap the product of count and dimension to zero or a
+        // small value if multiplication is performed in 32 bits.
+        std::vector<uint8_t> wkb(9 + 4 * sizeof(double), 0);
+        wkb[0] = endian;
+        for (int i = 0; i < 4; i++) {
+          int shift = (endian == 1 ? i : 3 - i) * 8;
+          wkb[1 + i] = static_cast<uint8_t>(type >> shift);
+          wkb[5 + i] = static_cast<uint8_t>(count >> shift);
+        }
+        EXPECT_EQ(
+            GeoArrowWKBReaderRead(&reader, {wkb.data(), static_cast<int64_t>(wkb.size())},
+                                  &geometry, nullptr),
+            EINVAL);
+      }
+    }
+  }
+  GeoArrowWKBReaderReset(&reader);
+}
