@@ -79,6 +79,9 @@ point conversions faster than the specialized event-visitor path. WKT still
 pays to build an intermediate geometry. The interface also creates room for
 further batch-level specialization without changing caller loops.
 
+For reader/writer component timings and instruction attribution of the remaining
+native-to-native overhead, see [the per-feature profile](array_geometry_profile.md).
+
 ## Workload and timing
 
 Each batch repeats a fixed XY geometry, with every sixteenth feature null:
