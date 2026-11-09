@@ -385,6 +385,19 @@ GeoArrowErrorCode GeoArrowGeometryResizeNodes(struct GeoArrowGeometry* geom,
 GeoArrowErrorCode GeoArrowGeometryAppendNode(struct GeoArrowGeometry* geom,
                                              struct GeoArrowGeometryNode** out);
 
+/// \brief Validate the node structure of a non-null GeoArrowGeometryView
+///
+/// Checks geometry types, dimensions, nesting levels, child counts/types, and POINT
+/// coordinate counts. Returns EINVAL on invalid structure and optionally sets error.
+/// At most 32 levels (including the root) are supported. A view of a subtree may
+/// begin at a nonzero level. Empty parts are valid; null parts are not supported. This
+/// does not check coordinate values, topology, or buffer extents, and does not impose the
+/// 32-bit offset limits of native arrays. The producer must provide accessible memory for
+/// all size_nodes nodes; coordinate buffer validity remains the producer's
+/// responsibility.
+GeoArrowErrorCode GeoArrowGeometryViewValidate(struct GeoArrowGeometryView geom,
+                                               struct GeoArrowError* error);
+
 /// \brief Export a GeoArrowGeometryView using a GeoArrowVisitor
 GeoArrowErrorCode GeoArrowGeometryViewVisit(struct GeoArrowGeometryView geometry,
                                             struct GeoArrowVisitor* v);
@@ -432,7 +445,7 @@ GeoArrowErrorCode GeoArrowArrayViewVisitNative(const struct GeoArrowArrayView* a
 /// \brief GeoArrow native array writer
 ///
 /// This writer writes the "native" memory layouts (i.e., nested lists of
-/// coordinates) implemented as a visitor.
+/// coordinates), either directly from geometry views or through a visitor.
 struct GeoArrowNativeWriter {
   /// \brief Implementation-specific details
   void* private_data;
@@ -449,7 +462,23 @@ GeoArrowErrorCode GeoArrowNativeWriterInit(struct GeoArrowNativeWriter* writer,
 GeoArrowErrorCode GeoArrowNativeWriterInitVisitor(struct GeoArrowNativeWriter* writer,
                                                   struct GeoArrowVisitor* v);
 
-/// \brief Append a GeoArrowGeometryView to this writer
+/// \brief Copy a GeoArrowGeometryView into this writer
+///
+/// Coordinates may be unaligned, strided, or endian-swapped doubles. Missing
+/// output dimensions are filled with NaN; extra input dimensions are discarded.
+/// Empty parts are preserved for matching types and supported single/multi
+/// conversions. An output POINT accepts only POINT or MULTIPOINT with exactly one
+/// point (which may be empty). For other output types, otherwise incompatible
+/// geometries with no coordinates become an empty value of the output type.
+/// Geometry parts must be non-null; use GeoArrowNativeWriterAppendNull() for a null
+/// feature. Input memory must not alias the writer's buffers.
+///
+/// The input must have valid node structure; call GeoArrowGeometryViewValidate()
+/// separately when validation is needed. This function checks output compatibility,
+/// native offset limits, and fields used to address memory, but does not perform
+/// full structural validation. Detected invalid inputs return EINVAL and overflowing
+/// native offsets return EOVERFLOW. Checks and allocation precede appending, so a
+/// failed append leaves the previously appended features intact.
 GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer,
                                              struct GeoArrowGeometryView geom,
                                              struct GeoArrowError* error);

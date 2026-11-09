@@ -194,6 +194,8 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryResizeNodes)
 #define GeoArrowGeometryAppendNode \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryAppendNode)
+#define GeoArrowGeometryViewValidate \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryViewValidate)
 #define GeoArrowGeometryViewVisit \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryViewVisit)
 #define GeoArrowGeometryVisit \

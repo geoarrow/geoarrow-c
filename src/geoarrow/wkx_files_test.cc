@@ -104,8 +104,35 @@ TEST(WKXFilesTest, WKXFilesTestFiles) {
           ASSERT_EQ(GeoArrowGeometryInit(&geom_from_array), GEOARROW_OK);
           ASSERT_EQ(GeoArrowArrayViewGetGeometry(&array_view, 0, &geom_from_array),
                     GEOARROW_OK);
+          ASSERT_EQ(GeoArrowGeometryViewValidate(GeoArrowGeometryAsView(&geom_from_array),
+                                                 nullptr),
+                    GEOARROW_OK);
           EXPECT_EQ(tester.AsWKT(geom_from_array), line_wkt);
           EXPECT_EQ(tester.AsWKTUsingVisitor(geom_from_array), line_wkt);
+
+          // Reverse scalar access into a native writer using the opposite layout.
+          auto out_layout = coord_type == GEOARROW_COORD_TYPE_SEPARATE
+                                ? GEOARROW_COORD_TYPE_INTERLEAVED
+                                : GEOARROW_COORD_TYPE_SEPARATE;
+          auto out_type = GeoArrowMakeType(array_view.schema_view.geometry_type,
+                                           array_view.schema_view.dimensions, out_layout);
+          struct GeoArrowNativeWriter builder;
+          ASSERT_EQ(GeoArrowNativeWriterInit(&builder, out_type), GEOARROW_OK);
+          ASSERT_EQ(GeoArrowNativeWriterAppend(
+                        &builder, GeoArrowGeometryAsView(&geom_from_array), nullptr),
+                    GEOARROW_OK);
+          struct ArrowArray copied_array;
+          ASSERT_EQ(GeoArrowNativeWriterFinish(&builder, &copied_array, nullptr),
+                    GEOARROW_OK);
+          GeoArrowNativeWriterReset(&builder);
+          struct GeoArrowArrayView copied_view;
+          ASSERT_EQ(GeoArrowArrayViewInitFromType(&copied_view, out_type), GEOARROW_OK);
+          ASSERT_EQ(GeoArrowArrayViewSetArray(&copied_view, &copied_array, nullptr),
+                    GEOARROW_OK);
+          ASSERT_EQ(GeoArrowArrayViewGetGeometry(&copied_view, 0, &geom_from_array),
+                    GEOARROW_OK);
+          EXPECT_EQ(tester.AsWKT(geom_from_array), line_wkt);
+          copied_array.release(&copied_array);
 
           GeoArrowGeometryReset(&geom_from_array);
           array.release(&array);
