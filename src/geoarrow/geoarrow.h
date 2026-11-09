@@ -390,8 +390,8 @@ GeoArrowErrorCode GeoArrowGeometryAppendNode(struct GeoArrowGeometry* geom,
 /// At most 32 levels (including the root) are supported. A view of a subtree may
 /// begin at a nonzero level. Empty parts are valid; null parts are not supported. This
 /// does not check coordinate values, topology, or buffer extents, and does not impose the
-/// 32-bit offset limits of native arrays. The caller must provide accessible memory for
-/// all size_nodes nodes; coordinate buffer validity remains the caller's responsibility.
+/// 32-bit offset limits of native arrays. The producer must provide accessible memory for
+/// all size_nodes nodes; coordinate buffer validity remains the producer's responsibility.
 GeoArrowErrorCode GeoArrowGeometryViewValidate(struct GeoArrowGeometryView geom,
                                                struct GeoArrowError* error);
 

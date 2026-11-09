@@ -741,6 +741,7 @@ static inline GeoArrowErrorCode GeoArrowBuilderCoordsReserve(
         result = GeoArrowBuilderReserveBuffer(builder, i,
                                               additional_size_coords * sizeof(double));
         if (result != GEOARROW_OK) {
+          // Prevent stale pointers from leaking in case of a partially failed allocation
           writable_view->capacity_coords = 0;
           for (int j = 0; j < n_values; j++) {
             writable_view->values[j] =
