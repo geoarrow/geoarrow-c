@@ -62,11 +62,6 @@ class ArrayReader {
     return GeoArrowArrayReaderVisit(&reader_, offset, length, visitor);
   }
 
-  GeoArrowErrorCode Read(int64_t offset, struct GeoArrowGeometry* out,
-                         struct GeoArrowError* error = nullptr) {
-    return GeoArrowArrayReaderRead(&reader_, offset, out, error);
-  }
-
   GeoArrowErrorCode VisitGeometry(GeoArrowGeometryCallback callback, void* private_data,
                                   int64_t offset, int64_t length,
                                   struct GeoArrowError* error = nullptr) {

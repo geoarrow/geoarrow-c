@@ -674,17 +674,6 @@ GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
                                            int64_t offset, int64_t length,
                                            struct GeoArrowVisitor* v);
 
-/// \brief Read one feature into an initialized GeoArrowGeometry
-///
-/// The offset is relative to the array slice supplied to SetArray(). Nodes are
-/// owned by out. WKB and native coordinates borrow the input array buffers, which
-/// must remain alive while out is used; WKT and box coordinates are owned by out.
-/// A null feature is represented by one zero-initialized node (geometry_type 0).
-/// Returns EINVAL for an offset outside the array. On error, out is unspecified.
-GeoArrowErrorCode GeoArrowArrayReaderRead(struct GeoArrowArrayReader* reader,
-                                          int64_t offset, struct GeoArrowGeometry* out,
-                                          struct GeoArrowError* error);
-
 /// \brief Callback consuming one geometry, with caller-supplied context
 ///
 /// Return GEOARROW_OK to continue, or any other code to stop iteration.
@@ -699,7 +688,7 @@ typedef GeoArrowErrorCode (*GeoArrowGeometryCallback)(struct GeoArrowGeometryVie
 /// type-zero node. Offset is relative to the array slice supplied to SetArray().
 /// The view and its coordinates are only guaranteed valid during the callback;
 /// use GeoArrowGeometryDeepCopy() to retain a geometry. The callback must not
-/// use or modify this reader (including SetArray(), Read(), or Reset()).
+/// use or modify this reader (including SetArray(), VisitGeometry(), or Reset()).
 ///
 /// Stops immediately on a reader or callback error, returning that code without
 /// visiting subsequent elements. Returns EINVAL for an invalid range or a NULL
@@ -764,10 +753,11 @@ GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* wri
 /// \brief Append one geometry to this writer
 ///
 /// Coordinates are copied before returning. A view containing one node with
-/// geometry_type 0 appends a null feature, as returned by GeoArrowArrayReaderRead().
-/// Other inputs must be valid, nonempty node sequences describing one geometry.
-/// Call GeoArrowGeometryViewValidate() first if node structure is not trusted.
-/// WKT/WKB view and large-offset output types remain unsupported.
+/// geometry_type 0 appends a null feature, as supplied to
+/// GeoArrowArrayReaderVisitGeometry() callbacks. Other inputs must be valid, nonempty
+/// node sequences describing one geometry. Call GeoArrowGeometryViewValidate() first if
+/// node structure is not trusted. WKT/WKB view and large-offset output types remain
+/// unsupported.
 GeoArrowErrorCode GeoArrowArrayWriterAppend(struct GeoArrowArrayWriter* writer,
                                             struct GeoArrowGeometryView geom,
                                             struct GeoArrowError* error);

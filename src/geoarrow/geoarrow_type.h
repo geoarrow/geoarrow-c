@@ -262,8 +262,6 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderInitFromSchema)
 #define GeoArrowArrayReaderSetArray \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderSetArray)
-#define GeoArrowArrayReaderRead \
-  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderRead)
 #define GeoArrowArrayReaderVisit \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderVisit)
 #define GeoArrowArrayReaderVisitGeometry \
