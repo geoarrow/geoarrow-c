@@ -10,12 +10,17 @@
 #define EWKB_M_BIT 0x40000000
 #define EWKB_SRID_BIT 0x20000000
 
+// Used only while parsing; never exposed in a returned geometry view.
+#define WKB_GEOMETRY_NODE_FLAG_SWAP_ENDIAN 0x01
+
 struct WKBReaderPrivate {
   const uint8_t* data;
   int64_t size_bytes;
   const uint8_t* data0;
   int need_swapping;
+  int coords_need_swapping;
   struct GeoArrowGeometry geom;
+  struct GeoArrowGeometry native_geom;
 };
 
 static inline int WKBReaderReadEndian(struct WKBReaderPrivate* s,
@@ -65,6 +70,11 @@ static inline GeoArrowErrorCode WKBReaderReadNodeCoordinates(
   }
 
   if (n_coords > 0) {
+    if (s->need_swapping) {
+      node->flags = WKB_GEOMETRY_NODE_FLAG_SWAP_ENDIAN;
+      s->coords_need_swapping = 1;
+    }
+
     for (uint32_t i = 0; i < coord_size_elements; i++) {
       node->coord_stride[i] = (int32_t)coord_size_elements * sizeof(double);
       node->coords[i] = s->data + (i * sizeof(double));
@@ -146,9 +156,6 @@ static inline GeoArrowErrorCode WKBReaderReadNodeGeometry(
   node->geometry_type = (uint8_t)geometry_type;
   node->dimensions = (uint8_t)dimensions;
   node->size = size;
-  if (s->need_swapping) {
-    node->flags = GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN;
-  }
 
   switch (geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_POINT:
@@ -217,9 +224,17 @@ GeoArrowErrorCode GeoArrowWKBReaderInit(struct GeoArrowWKBReader* reader) {
   s->data = NULL;
   s->size_bytes = 0;
   s->need_swapping = 0;
+  s->coords_need_swapping = 0;
 
   GeoArrowErrorCode result = GeoArrowGeometryInit(&s->geom);
   if (result != GEOARROW_OK) {
+    ArrowFree(s);
+    return result;
+  }
+
+  result = GeoArrowGeometryInit(&s->native_geom);
+  if (result != GEOARROW_OK) {
+    GeoArrowGeometryReset(&s->geom);
     ArrowFree(s);
     return result;
   }
@@ -230,6 +245,7 @@ GeoArrowErrorCode GeoArrowWKBReaderInit(struct GeoArrowWKBReader* reader) {
 
 void GeoArrowWKBReaderReset(struct GeoArrowWKBReader* reader) {
   struct WKBReaderPrivate* s = (struct WKBReaderPrivate*)reader->private_data;
+  GeoArrowGeometryReset(&s->native_geom);
   GeoArrowGeometryReset(&s->geom);
   ArrowFree(reader->private_data);
 }
@@ -251,6 +267,7 @@ GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
   s->data0 = src.data;
   s->data = src.data;
   s->size_bytes = src.size_bytes;
+  s->coords_need_swapping = 0;
 
   // Reset the nodes list
   GEOARROW_RETURN_NOT_OK(GeoArrowGeometryResizeNodesInline(&s->geom, 0));
@@ -263,7 +280,33 @@ GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
   // Read
   GEOARROW_RETURN_NOT_OK(WKBReaderReadNodeGeometry(s, node, error));
 
+  // Keep native-endian input zero-copy. If any sequence needs swapping, copy
+  // all coordinates into reader-owned storage before normalizing those sequences.
+  struct GeoArrowGeometry* result = &s->geom;
+  if (s->coords_need_swapping) {
+    GEOARROW_RETURN_NOT_OK(
+        GeoArrowGeometryDeepCopy(GeoArrowGeometryAsView(&s->geom), &s->native_geom));
+    result = &s->native_geom;
+    for (int64_t i = 0; i < result->size_nodes; i++) {
+      node = result->root + i;
+      if (!(node->flags & WKB_GEOMETRY_NODE_FLAG_SWAP_ENDIAN)) {
+        continue;
+      }
+
+      // DeepCopy produces contiguous interleaved coordinates owned by native_geom.
+      uint8_t* coords = (uint8_t*)node->coords[0];
+      int64_t n_values = (int64_t)node->size * _GeoArrowkNumDimensions[node->dimensions];
+      for (int64_t j = 0; j < n_values; j++, coords += sizeof(double)) {
+        uint64_t value;
+        memcpy(&value, coords, sizeof(value));
+        value = GEOARROW_BSWAP64(value);
+        memcpy(coords, &value, sizeof(value));
+      }
+      node->flags = 0;
+    }
+  }
+
   // Populate output on success
-  *out = GeoArrowGeometryAsView(&s->geom);
+  *out = GeoArrowGeometryAsView(result);
   return GEOARROW_OK;
 }

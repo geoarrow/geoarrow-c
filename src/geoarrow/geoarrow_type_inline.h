@@ -466,7 +466,7 @@ static inline int64_t GeoArrowGeometryNodeWriteSequence(
     const struct GeoArrowGeometryNode* node, uint8_t* dst, int64_t dst_size) {
   uint32_t n_values = _GeoArrowkNumDimensions[node->dimensions];
   uint32_t n_coords = node->size;
-  int64_t bytes_required = n_values * n_coords * sizeof(double);
+  int64_t bytes_required = (int64_t)n_values * n_coords * sizeof(double);
   if (dst_size < bytes_required) {
     return bytes_required;
   }
@@ -479,16 +479,6 @@ static inline int64_t GeoArrowGeometryNodeWriteSequence(
       memcpy(dst, src[j], sizeof(double));
       dst += sizeof(double);
       src[j] += node->coord_stride[j];
-    }
-  }
-
-  if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
-    uint64_t tmp;
-    for (uint8_t* dst_swap = dst - bytes_required; dst_swap < dst;
-         dst_swap += sizeof(double)) {
-      memcpy(&tmp, dst_swap, sizeof(double));
-      tmp = GEOARROW_BSWAP64(tmp);
-      memcpy(dst_swap, &tmp, sizeof(double));
     }
   }
 
@@ -542,19 +532,9 @@ static inline void GeoArrowGeometryViewCopyCoordsGeneric(
           src_stride_mapped = src_strides[map[i] + 1];
           out_stride = out_strides[i];
 
-          // Synthesized missing dimensions already use native-endian NaNs.
-          if (map[i] >= 0 && (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN)) {
-            uint64_t tmp;
-            for (uint32_t j = 0; j < node->size; ++j) {
-              memcpy(&tmp, src_mapped + (int64_t)j * src_stride_mapped, sizeof(double));
-              tmp = GEOARROW_BSWAP64(tmp);
-              memcpy(out[i] + (out_offset + j) * out_stride, &tmp, sizeof(double));
-            }
-          } else {
-            for (uint32_t j = 0; j < node->size; ++j) {
-              memcpy(out[i] + (out_offset + j) * out_stride,
-                     src_mapped + (int64_t)j * src_stride_mapped, sizeof(double));
-            }
+          for (uint32_t j = 0; j < node->size; ++j) {
+            memcpy(out[i] + (out_offset + j) * out_stride,
+                   src_mapped + (int64_t)j * src_stride_mapped, sizeof(double));
           }
         }
 

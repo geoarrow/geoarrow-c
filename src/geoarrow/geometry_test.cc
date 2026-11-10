@@ -316,3 +316,13 @@ TEST(GeometryTest, GeometryViewValidateDoesNotLimitNativeOffsets) {
   // Only metadata is inspected: no coordinate buffers are read or allocated.
   EXPECT_EQ(GeoArrowGeometryViewValidate({&node, 1}, nullptr), GEOARROW_OK);
 }
+
+TEST(GeometryTest, WriteSequenceLargeSize) {
+  GeoArrowGeometryNode node = {};
+  node.geometry_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
+  node.dimensions = GEOARROW_DIMENSIONS_XYZM;
+  node.size = 0x40000000U;
+  // Sizing a sequence must not overflow before allocating the copy buffer.
+  EXPECT_EQ(GeoArrowGeometryNodeWriteSequence(&node, nullptr, 0),
+            int64_t{0x40000000} * 4 * 8);
+}

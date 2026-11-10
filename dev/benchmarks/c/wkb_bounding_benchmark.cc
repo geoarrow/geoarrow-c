@@ -88,10 +88,6 @@ void BenchBoundGeometry(struct GeoArrowGeometryView geom, BoxXY* bounds) {
         dx = geom.root->coord_stride[0];
         dy = geom.root->coord_stride[1];
 
-        if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
-          throw std::runtime_error("big endian not supported");
-        }
-
         for (uint32_t i = 0; i < node->size; i++) {
           std::memcpy(&x, px, sizeof(double));
           std::memcpy(&y, py, sizeof(double));
@@ -260,10 +256,6 @@ BoxXY BoundWKBPointsUsingWkbReader(const std::vector<uint8_t>& wkb, uint32_t num
           py = geom.root->coords[1];
           dx = geom.root->coord_stride[0];
           dy = geom.root->coord_stride[1];
-
-          if (node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN) {
-            throw std::runtime_error("big endian not supported");
-          }
 
           for (uint32_t i = 0; i < node->size; i++) {
             std::memcpy(&x, px, sizeof(double));

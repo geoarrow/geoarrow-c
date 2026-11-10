@@ -1204,47 +1204,42 @@ TEST(NativeWriterTest, AppendGeometryPreservesEmptyParts) {
   }
 }
 
-TEST(NativeWriterTest, AppendGeometryStridesDimensionsAndEndian) {
+TEST(NativeWriterTest, AppendGeometryStridesAndDimensions) {
   for (auto layout : {GEOARROW_COORD_TYPE_SEPARATE, GEOARROW_COORD_TYPE_INTERLEAVED}) {
-    for (int swap : {0, 1}) {
-      // Unaligned reversed X, constant Y, and no Z/M in the source.
-      uint8_t bytes[25];
-      double values[] = {1, 3, 2};
-      for (int i = 0; i < 3; i++) {
-        uint64_t value;
-        memcpy(&value, values + i, sizeof(value));
-        if (swap) value = GEOARROW_BSWAP64(value);
-        memcpy(bytes + 1 + i * sizeof(value), &value, sizeof(value));
-      }
-      GeoArrowGeometryNode node = {};
-      for (auto& coord : node.coords) coord = _GeoArrowkEmptyPointCoords;
-      node.geometry_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
-      node.dimensions = GEOARROW_DIMENSIONS_XY;
-      node.flags =
-          static_cast<uint8_t>(swap ? GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN : 0);
-      node.size = 2;
-      node.coords[0] = bytes + 9;
-      node.coords[1] = bytes + 17;
-      node.coord_stride[0] = -8;
-      GeoArrowNativeWriter builder;
-      auto type = GeoArrowMakeType(GEOARROW_GEOMETRY_TYPE_LINESTRING,
-                                   GEOARROW_DIMENSIONS_XYZM, layout);
-      ASSERT_EQ(GeoArrowNativeWriterInit(&builder, type), GEOARROW_OK);
-      ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, {&node, 1}, nullptr), GEOARROW_OK);
-      ArrowArray array;
-      ASSERT_EQ(GeoArrowNativeWriterFinish(&builder, &array, nullptr), GEOARROW_OK);
-      GeoArrowArrayView view;
-      ASSERT_EQ(GeoArrowArrayViewInitFromType(&view, type), GEOARROW_OK);
-      ASSERT_EQ(GeoArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
-      EXPECT_EQ(GEOARROW_COORD_VIEW_VALUE(&view.coords, 0, 0), 3);
-      EXPECT_EQ(GEOARROW_COORD_VIEW_VALUE(&view.coords, 1, 0), 1);
-      EXPECT_EQ(GEOARROW_COORD_VIEW_VALUE(&view.coords, 0, 1), 2);
-      EXPECT_EQ(GEOARROW_COORD_VIEW_VALUE(&view.coords, 1, 1), 2);
-      EXPECT_TRUE(std::isnan(GEOARROW_COORD_VIEW_VALUE(&view.coords, 0, 2)));
-      EXPECT_TRUE(std::isnan(GEOARROW_COORD_VIEW_VALUE(&view.coords, 1, 3)));
-      array.release(&array);
-      GeoArrowNativeWriterReset(&builder);
+    // Unaligned reversed X, constant Y, and no Z/M in the source.
+    uint8_t bytes[25];
+    double values[] = {1, 3, 2};
+    for (int i = 0; i < 3; i++) {
+      uint64_t value;
+      memcpy(&value, values + i, sizeof(value));
+      memcpy(bytes + 1 + i * sizeof(value), &value, sizeof(value));
     }
+    GeoArrowGeometryNode node = {};
+    for (auto& coord : node.coords) coord = _GeoArrowkEmptyPointCoords;
+    node.geometry_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
+    node.dimensions = GEOARROW_DIMENSIONS_XY;
+    node.size = 2;
+    node.coords[0] = bytes + 9;
+    node.coords[1] = bytes + 17;
+    node.coord_stride[0] = -8;
+    GeoArrowNativeWriter builder;
+    auto type = GeoArrowMakeType(GEOARROW_GEOMETRY_TYPE_LINESTRING,
+                                 GEOARROW_DIMENSIONS_XYZM, layout);
+    ASSERT_EQ(GeoArrowNativeWriterInit(&builder, type), GEOARROW_OK);
+    ASSERT_EQ(GeoArrowNativeWriterAppend(&builder, {&node, 1}, nullptr), GEOARROW_OK);
+    ArrowArray array;
+    ASSERT_EQ(GeoArrowNativeWriterFinish(&builder, &array, nullptr), GEOARROW_OK);
+    GeoArrowArrayView view;
+    ASSERT_EQ(GeoArrowArrayViewInitFromType(&view, type), GEOARROW_OK);
+    ASSERT_EQ(GeoArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
+    EXPECT_EQ(GEOARROW_COORD_VIEW_VALUE(&view.coords, 0, 0), 3);
+    EXPECT_EQ(GEOARROW_COORD_VIEW_VALUE(&view.coords, 1, 0), 1);
+    EXPECT_EQ(GEOARROW_COORD_VIEW_VALUE(&view.coords, 0, 1), 2);
+    EXPECT_EQ(GEOARROW_COORD_VIEW_VALUE(&view.coords, 1, 1), 2);
+    EXPECT_TRUE(std::isnan(GEOARROW_COORD_VIEW_VALUE(&view.coords, 0, 2)));
+    EXPECT_TRUE(std::isnan(GEOARROW_COORD_VIEW_VALUE(&view.coords, 1, 3)));
+    array.release(&array);
+    GeoArrowNativeWriterReset(&builder);
   }
 
   WKXTester tester;

@@ -131,11 +131,13 @@ GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
     switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+        if (node->size == 0) {
+          break;
+        }
+
         n_values = _GeoArrowkNumDimensions[node->dimensions];
         bytes_written =
             GeoArrowGeometryNodeWriteSequence(node, coords_buf, coords_buf_size);
-        // NodeWriteSequence normalizes copied coordinates to native byte order.
-        node->flags &= (uint8_t)~GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN;
 
         for (int i = 0; i < n_values; i++) {
           node->coords[i] = coords_buf + (i * sizeof(double));
