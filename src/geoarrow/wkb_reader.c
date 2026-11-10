@@ -20,7 +20,6 @@ struct WKBReaderPrivate {
   int need_swapping;
   int coords_need_swapping;
   struct GeoArrowGeometry geom;
-  struct GeoArrowGeometry native_geom;
 };
 
 static inline int WKBReaderReadEndian(struct WKBReaderPrivate* s,
@@ -232,20 +231,12 @@ GeoArrowErrorCode GeoArrowWKBReaderInit(struct GeoArrowWKBReader* reader) {
     return result;
   }
 
-  result = GeoArrowGeometryInit(&s->native_geom);
-  if (result != GEOARROW_OK) {
-    GeoArrowGeometryReset(&s->geom);
-    ArrowFree(s);
-    return result;
-  }
-
   reader->private_data = s;
   return GEOARROW_OK;
 }
 
 void GeoArrowWKBReaderReset(struct GeoArrowWKBReader* reader) {
   struct WKBReaderPrivate* s = (struct WKBReaderPrivate*)reader->private_data;
-  GeoArrowGeometryReset(&s->native_geom);
   GeoArrowGeometryReset(&s->geom);
   ArrowFree(reader->private_data);
 }
@@ -281,19 +272,19 @@ GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
   GEOARROW_RETURN_NOT_OK(WKBReaderReadNodeGeometry(s, node, error));
 
   // Keep native-endian input zero-copy. If any sequence needs swapping, copy
-  // all coordinates into reader-owned storage before normalizing those sequences.
-  struct GeoArrowGeometry* result = &s->geom;
+  // all coordinates into geom's stashed storage before normalizing those sequences.
+  // Parsing has repointed every sequence into src, so the old storage can be resized
+  // without invalidating any coordinate pointers.
   if (s->coords_need_swapping) {
     GEOARROW_RETURN_NOT_OK(
-        GeoArrowGeometryDeepCopy(GeoArrowGeometryAsView(&s->geom), &s->native_geom));
-    result = &s->native_geom;
-    for (int64_t i = 0; i < result->size_nodes; i++) {
-      node = result->root + i;
+        GeoArrowGeometryDeepCopy(GeoArrowGeometryAsView(&s->geom), &s->geom));
+    for (int64_t i = 0; i < s->geom.size_nodes; i++) {
+      node = s->geom.root + i;
       if (!(node->flags & WKB_GEOMETRY_NODE_FLAG_SWAP_ENDIAN)) {
         continue;
       }
 
-      // DeepCopy produces contiguous interleaved coordinates owned by native_geom.
+      // DeepCopy produces contiguous interleaved coordinates owned by geom.
       uint8_t* coords = (uint8_t*)node->coords[0];
       int64_t n_values = (int64_t)node->size * _GeoArrowkNumDimensions[node->dimensions];
       for (int64_t j = 0; j < n_values; j++, coords += sizeof(double)) {
@@ -307,6 +298,6 @@ GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
   }
 
   // Populate output on success
-  *out = GeoArrowGeometryAsView(result);
+  *out = GeoArrowGeometryAsView(&s->geom);
   return GEOARROW_OK;
 }

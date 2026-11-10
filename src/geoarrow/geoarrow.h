@@ -383,7 +383,9 @@ GeoArrowErrorCode GeoArrowGeometryShallowCopy(struct GeoArrowGeometryView src,
 /// \brief Populate the coords and nodes of a GeoArrowGeometry from a GeoArrowGeometryView
 ///
 /// Copies nodes and coords from src into a previously initialized GeoArrowGeometry. On
-/// success the destination owns its nodes but and any underlying coordinates.
+/// success the destination owns its nodes and any underlying coordinates.
+/// src may reference dst's nodes, in which case the nodes are reused. The source
+/// coordinates must not reference dst's owned coordinate storage.
 GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
                                            struct GeoArrowGeometry* dst);
 

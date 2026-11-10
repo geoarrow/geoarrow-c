@@ -387,6 +387,7 @@ TEST(WKBReaderTest, NativeEndianCoordinatesAndReaderReuse) {
   GeoArrowWKBReader reader;
   ASSERT_EQ(GeoArrowWKBReaderInit(&reader), GEOARROW_OK);
   GeoArrowGeometryView geom;
+  const GeoArrowGeometryNode* previous_root = nullptr;
   // Alternate byte order and grow/shrink the copied coordinate buffer on one reader.
   for (uint32_t count : {1, 200, 2}) {
     for (uint32_t type : {2, 1002, 2002, 3002}) {
@@ -408,6 +409,11 @@ TEST(WKBReaderTest, NativeEndianCoordinatesAndReaderReuse) {
                                   &geom, nullptr),
             GEOARROW_OK);
         ASSERT_EQ(geom.size_nodes, 1);
+        // Both zero-copy and converted reads reuse the same nodes.
+        if (previous_root != nullptr) {
+          EXPECT_EQ(geom.root, previous_root);
+        }
+        previous_root = geom.root;
         EXPECT_EQ(geom.root->flags, 0);
         EXPECT_EQ(geom.root->size, count);
         if (endian == GEOARROW_NATIVE_ENDIAN) {

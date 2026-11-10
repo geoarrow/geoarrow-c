@@ -326,3 +326,40 @@ TEST(GeometryTest, WriteSequenceLargeSize) {
   EXPECT_EQ(GeoArrowGeometryNodeWriteSequence(&node, nullptr, 0),
             int64_t{0x40000000} * 4 * 8);
 }
+
+TEST(GeometryTest, DeepCopyExternalCoordsInPlace) {
+  GeoArrowGeometry geom;
+  ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
+  GeoArrowGeometryNode* node;
+  ASSERT_EQ(GeoArrowGeometryAppendNodeInline(&geom, &node), GEOARROW_OK);
+  const uint8_t* previous_coords = nullptr;
+  uint32_t previous_count = 0;
+  for (uint32_t count : {1, 256, 2, 2}) {
+    SCOPED_TRACE(count);
+    std::vector<double> coords(count * 4);
+    for (size_t i = 0; i < coords.size(); i++) coords[i] = static_cast<double>(i + 1);
+    GeoArrowGeometryNodeSetInterleaved(
+        node, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XYZM,
+        {reinterpret_cast<const uint8_t*>(coords.data()),
+         static_cast<int64_t>(coords.size() * sizeof(double))});
+    ASSERT_EQ(GeoArrowGeometryDeepCopy(GeoArrowGeometryAsView(&geom), &geom),
+              GEOARROW_OK);
+    EXPECT_EQ(geom.root, node);
+    EXPECT_EQ(geom.size_nodes, 1);
+    EXPECT_NE(node->coords[0], reinterpret_cast<const uint8_t*>(coords.data()));
+    if (count <= previous_count) {
+      EXPECT_EQ(node->coords[0], previous_coords);
+    }
+    previous_coords = node->coords[0];
+    previous_count = count;
+    std::fill(coords.begin(), coords.end(), 0);
+    EXPECT_EQ(GeoArrowGeometryNodeWriteSequence(
+                  node, reinterpret_cast<uint8_t*>(coords.data()),
+                  static_cast<int64_t>(coords.size() * sizeof(double))),
+              static_cast<int64_t>(coords.size() * sizeof(double)));
+    for (size_t i = 0; i < coords.size(); i++) {
+      EXPECT_EQ(coords[i], static_cast<double>(i + 1));
+    }
+  }
+  GeoArrowGeometryReset(&geom);
+}

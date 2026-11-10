@@ -117,8 +117,13 @@ GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
   GEOARROW_RETURN_NOT_OK(
       ArrowBufferResize(&private_data->coords, total_bytes_required, 0));
 
-  // Copy the nodes
-  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryShallowCopy(src, dst));
+  // Reuse nodes when materializing externally owned coordinates in place.
+  // In this case the source coordinates must not refer to dst's coords buffer.
+  if (src.root != dst->root) {
+    GEOARROW_RETURN_NOT_OK(GeoArrowGeometryShallowCopy(src, dst));
+  } else {
+    dst->size_nodes = src.size_nodes;
+  }
 
   // Copy the data and update the nodes to point to the internal data
   uint8_t* coords_buf = private_data->coords.data;
