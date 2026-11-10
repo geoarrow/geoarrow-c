@@ -276,15 +276,14 @@ GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
   // Parsing has repointed every sequence into src, so the old storage can be resized
   // without invalidating any coordinate pointers.
   if (s->coords_need_swapping) {
-    GEOARROW_RETURN_NOT_OK(
-        GeoArrowGeometryDeepCopy(GeoArrowGeometryAsView(&s->geom), &s->geom));
+    GEOARROW_RETURN_NOT_OK(GeoArrowGeometryCopyCoords(&s->geom));
     for (int64_t i = 0; i < s->geom.size_nodes; i++) {
       node = s->geom.root + i;
       if (!(node->flags & WKB_GEOMETRY_NODE_FLAG_SWAP_ENDIAN)) {
         continue;
       }
 
-      // DeepCopy produces contiguous interleaved coordinates owned by geom.
+      // CopyCoords produces contiguous interleaved coordinates owned by geom.
       uint8_t* coords = (uint8_t*)node->coords[0];
       int64_t n_values = (int64_t)node->size * _GeoArrowkNumDimensions[node->dimensions];
       for (int64_t j = 0; j < n_values; j++, coords += sizeof(double)) {

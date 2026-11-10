@@ -384,10 +384,22 @@ GeoArrowErrorCode GeoArrowGeometryShallowCopy(struct GeoArrowGeometryView src,
 ///
 /// Copies nodes and coords from src into a previously initialized GeoArrowGeometry. On
 /// success the destination owns its nodes and any underlying coordinates.
-/// src may reference dst's nodes, in which case the nodes are reused. The source
-/// coordinates must not reference dst's owned coordinate storage.
+/// src must not reference dst's nodes or owned coordinate storage. To copy
+/// external coordinates into an existing geometry, use GeoArrowGeometryCopyCoords().
 GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
                                            struct GeoArrowGeometry* dst);
+
+/// \brief Copy externally owned coordinates into a geometry's internal storage
+///
+/// Copies coordinates for all sequence nodes, including children, into geom's
+/// reusable coordinate buffer and updates their pointers and strides to interleaved
+/// doubles. The nodes themselves are reused. Empty sequences and missing dimensions
+/// use constant NaN values.
+///
+/// geom must have been initialized with GeoArrowGeometryInit(). All source
+/// coordinates must be external to geom's owned coordinate storage, which may be
+/// overwritten or reallocated. This is not an idempotent "ensure owned" operation.
+GeoArrowErrorCode GeoArrowGeometryCopyCoords(struct GeoArrowGeometry* geom);
 
 /// \brief Populate a GeoArrowGeometry from an XY box
 ///
