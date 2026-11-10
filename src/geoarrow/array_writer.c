@@ -104,6 +104,46 @@ GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* wri
   }
 }
 
+GeoArrowErrorCode GeoArrowArrayWriterAppend(struct GeoArrowArrayWriter* writer,
+                                            struct GeoArrowGeometryView geom,
+                                            struct GeoArrowError* error) {
+  struct GeoArrowArrayWriterPrivate* private_data =
+      (struct GeoArrowArrayWriterPrivate*)writer->private_data;
+
+  if (geom.root == NULL || geom.size_nodes <= 0) {
+    GeoArrowErrorSet(error, "Expected a geometry view containing at least one node");
+    return EINVAL;
+  }
+
+  if (geom.size_nodes == 1 &&
+      geom.root->geometry_type == GEOARROW_GEOMETRY_TYPE_GEOMETRY) {
+    return GeoArrowArrayWriterAppendNull(writer);
+  }
+
+  switch (private_data->type) {
+    case GEOARROW_TYPE_WKT:
+      return GeoArrowWKTWriterAppend(&private_data->wkt_writer, geom);
+    case GEOARROW_TYPE_WKB:
+      return GeoArrowWKBWriterAppend(&private_data->wkb_writer, geom);
+    default:
+      return GeoArrowNativeWriterAppend(&private_data->native_writer, geom, error);
+  }
+}
+
+GeoArrowErrorCode GeoArrowArrayWriterAppendNull(struct GeoArrowArrayWriter* writer) {
+  struct GeoArrowArrayWriterPrivate* private_data =
+      (struct GeoArrowArrayWriterPrivate*)writer->private_data;
+
+  switch (private_data->type) {
+    case GEOARROW_TYPE_WKT:
+      return GeoArrowWKTWriterAppendNull(&private_data->wkt_writer);
+    case GEOARROW_TYPE_WKB:
+      return GeoArrowWKBWriterAppendNull(&private_data->wkb_writer);
+    default:
+      return GeoArrowNativeWriterAppendNull(&private_data->native_writer);
+  }
+}
+
 GeoArrowErrorCode GeoArrowArrayWriterFinish(struct GeoArrowArrayWriter* writer,
                                             struct ArrowArray* array,
                                             struct GeoArrowError* error) {

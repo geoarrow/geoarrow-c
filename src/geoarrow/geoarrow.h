@@ -145,6 +145,14 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
                                             const struct ArrowArray* array,
                                             struct GeoArrowError* error);
 
+/// \brief Callback consuming one geometry, with caller-supplied context
+///
+/// Return GEOARROW_OK to continue, or any other code to stop iteration.
+/// The error pointer is the one supplied to the geometry visit function.
+typedef GeoArrowErrorCode (*GeoArrowGeometryCallback)(struct GeoArrowGeometryView geom,
+                                                      void* private_data,
+                                                      struct GeoArrowError* error);
+
 /// \brief View one native array element as a geometry
 ///
 /// The array_view must reference a valid array of points, linestrings, polygons,
@@ -163,6 +171,26 @@ GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view
 /// GEOARROW_GEOMETRY_TYPE_GEOMETRY with size zero.
 GeoArrowErrorCode GeoArrowArrayViewGetGeometry(const struct GeoArrowArrayView* array_view,
                                                int64_t i, struct GeoArrowGeometry* out);
+
+/// \brief Visit a range of native array elements as geometry views
+///
+/// Supports the types and null representation of GeoArrowArrayViewGetGeometry().
+/// Serialized types and non-XY boxes return ENOTSUP. Offset is relative to the
+/// logical array slice. Returns EINVAL for an invalid range, or a NULL scratch or
+/// callback with nonzero length. A zero-length range makes no callbacks.
+///
+/// The caller must initialize scratch with GeoArrowGeometryInit() and eventually
+/// call GeoArrowGeometryReset(). Its node and coordinate capacity is reused across
+/// elements and calls. Points and linestrings use a stack node and leave scratch
+/// unchanged. The callback must not modify array_view, its buffers, or scratch.
+///
+/// Calls callback once per element, in order. Views and coordinates are only
+/// guaranteed valid during the callback; use GeoArrowGeometryDeepCopy() to retain
+/// a geometry. Stops immediately on a read or callback error and returns that code.
+GeoArrowErrorCode GeoArrowArrayViewVisitGeometry(
+    const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
+    struct GeoArrowGeometry* scratch, GeoArrowGeometryCallback callback,
+    void* private_data, struct GeoArrowError* error);
 
 /// @}
 
@@ -674,6 +702,24 @@ GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
                                            int64_t offset, int64_t length,
                                            struct GeoArrowVisitor* v);
 
+/// \brief Visit a range of array elements as geometry views
+///
+/// Calls callback once per element, in order, including nulls represented by one
+/// type-zero node. Offset is relative to the array slice supplied to SetArray().
+/// The view and its coordinates are only guaranteed valid during the callback;
+/// use GeoArrowGeometryDeepCopy() to retain a geometry. The callback must not
+/// use or modify this reader (including SetArray(), VisitGeometry(), or Reset()).
+///
+/// Stops immediately on a reader or callback error, returning that code without
+/// visiting subsequent elements. Returns EINVAL for an invalid range or a NULL
+/// callback with nonzero length. A zero-length range makes no callbacks.
+/// Reader-owned scratch storage is reused across calls and freed by Reset().
+GeoArrowErrorCode GeoArrowArrayReaderVisitGeometry(struct GeoArrowArrayReader* reader,
+                                                   int64_t offset, int64_t length,
+                                                   GeoArrowGeometryCallback callback,
+                                                   void* private_data,
+                                                   struct GeoArrowError* error);
+
 /// \brief Get a GeoArrowArrayView
 ///
 /// If there is a GeoArrowArrayView underlying this GeoArrowArrayReader, populates
@@ -723,6 +769,21 @@ GeoArrowErrorCode GeoArrowArrayWriterSetFlatMultipoint(struct GeoArrowArrayWrite
 /// \brief Populate a GeoArrowVisitor pointing to this writer
 GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* writer,
                                                  struct GeoArrowVisitor* v);
+
+/// \brief Append one geometry to this writer
+///
+/// Coordinates are copied before returning. A view containing one node with
+/// geometry_type 0 appends a null feature, as supplied to
+/// GeoArrowArrayReaderVisitGeometry() callbacks. Other inputs must be valid, nonempty
+/// node sequences describing one geometry. Call GeoArrowGeometryViewValidate() first if
+/// node structure is not trusted. WKT/WKB view and large-offset output types remain
+/// unsupported.
+GeoArrowErrorCode GeoArrowArrayWriterAppend(struct GeoArrowArrayWriter* writer,
+                                            struct GeoArrowGeometryView geom,
+                                            struct GeoArrowError* error);
+
+/// \brief Append one null feature to this writer
+GeoArrowErrorCode GeoArrowArrayWriterAppendNull(struct GeoArrowArrayWriter* writer);
 
 /// \brief Finish an ArrowArray containing elements from the visited input
 ///

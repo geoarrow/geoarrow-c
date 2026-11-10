@@ -163,6 +163,8 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayViewSetArray)
 #define GeoArrowArrayViewGetGeometry \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayViewGetGeometry)
+#define GeoArrowArrayViewVisitGeometry \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayViewVisitGeometry)
 #define GeoArrowBuilderInitFromType \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderInitFromType)
 #define GeoArrowBuilderInitFromSchema \
@@ -264,6 +266,8 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderSetArray)
 #define GeoArrowArrayReaderVisit \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderVisit)
+#define GeoArrowArrayReaderVisitGeometry \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderVisitGeometry)
 #define GeoArrowArrayReaderArrayView \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderArrayView)
 #define GeoArrowArrayReaderReset \
@@ -278,6 +282,10 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterSetFlatMultipoint)
 #define GeoArrowArrayWriterInitVisitor \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterInitVisitor)
+#define GeoArrowArrayWriterAppend \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterAppend)
+#define GeoArrowArrayWriterAppendNull \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterAppendNull)
 #define GeoArrowArrayWriterFinish \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterFinish)
 #define GeoArrowArrayWriterReset \

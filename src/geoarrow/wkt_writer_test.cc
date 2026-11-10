@@ -941,3 +941,51 @@ TEST(WKTWriterTest, WKTWriterTestVeryLongCoords) {
   array.release(&array);
   GeoArrowWKTWriterReset(&writer);
 }
+
+TEST(WKTWriterTest, AppendSwappedEndianGeometry) {
+  WKXTester tester;
+  for (const char* wkt : {"POINT ZM (1 2 3 4)", "POINT EMPTY", "LINESTRING (1 2, 3 4)",
+                          "MULTIPOINT ((1 2), EMPTY, (3 4))"}) {
+    SCOPED_TRACE(wkt);
+    GeoArrowGeometry geom;
+    ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
+    ASSERT_EQ(
+        GeoArrowGeometryDeepCopy(GeoArrowGeometryAsView(&tester.AsGeometry(wkt)), &geom),
+        GEOARROW_OK);
+    // Independently own each sequence so the input can also represent empty NaN points.
+    std::vector<std::vector<uint64_t>> coords(static_cast<size_t>(geom.size_nodes));
+    for (int64_t i = 0; i < geom.size_nodes; i++) {
+      auto node = geom.root + i;
+      if (node->geometry_type != GEOARROW_GEOMETRY_TYPE_POINT &&
+          node->geometry_type != GEOARROW_GEOMETRY_TYPE_LINESTRING)
+        continue;
+      auto& values = coords[static_cast<size_t>(i)];
+      int dims = _GeoArrowkNumDimensions[node->dimensions];
+      // Exercise both size-zero empties and NaN-encoded empty points.
+      if (node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT && node->size == 0) {
+        node->size = 1;
+        values.resize(dims);
+        for (int j = 0; j < dims; j++) {
+          std::memcpy(&values[j], _GeoArrowkEmptyPointCoords, sizeof(double));
+        }
+      } else {
+        values.resize(static_cast<size_t>(node->size) * dims);
+        GeoArrowGeometryNodeWriteSequence(node, reinterpret_cast<uint8_t*>(values.data()),
+                                          static_cast<int64_t>(values.size() * 8));
+      }
+      for (auto& value : values) value = GEOARROW_BSWAP64(value);
+      node->flags = GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN;
+      for (int j = 0; j < dims; j++) {
+        node->coords[j] = reinterpret_cast<const uint8_t*>(values.data() + j);
+        node->coord_stride[j] = dims * 8;
+      }
+    }
+    EXPECT_EQ(tester.AsWKT(geom), wkt);
+    tester.SetFlatMultipoint(true);
+    std::string expected =
+        std::string(wkt).find("MULTIPOINT") == 0 ? "MULTIPOINT (1 2, EMPTY, 3 4)" : wkt;
+    EXPECT_EQ(tester.AsWKT(geom), expected);
+    tester.SetFlatMultipoint(false);
+    GeoArrowGeometryReset(&geom);
+  }
+}

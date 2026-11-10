@@ -136,6 +136,17 @@ static inline int WKTWriterCoordIsEmptyPoint(const struct GeoArrowCoordView* coo
   return 1;
 }
 
+static inline double WKTWriterReadDouble(const uint8_t* src, int swap_endian) {
+  uint64_t bits;
+  memcpy(&bits, src, sizeof(bits));
+  if (swap_endian) {
+    bits = GEOARROW_BSWAP64(bits);
+  }
+  double value;
+  memcpy(&value, &bits, sizeof(value));
+  return value;
+}
+
 static inline int WKTWriterNodeIsEmptyPoint(const struct GeoArrowGeometryNode* node) {
   int n_values = _GeoArrowkNumDimensions[node->dimensions];
   if (node->geometry_type != GEOARROW_GEOMETRY_TYPE_POINT || node->size != 1 ||
@@ -144,8 +155,8 @@ static inline int WKTWriterNodeIsEmptyPoint(const struct GeoArrowGeometryNode* n
   }
 
   for (int j = 0; j < n_values; j++) {
-    double value;
-    memcpy(&value, node->coords[j], sizeof(double));
+    double value = WKTWriterReadDouble(
+        node->coords[j], node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN);
     if (!isnan(value)) {
       return 0;
     }
@@ -394,16 +405,14 @@ static GeoArrowErrorCode GeoArrowWKTWriterAppendValidity(struct GeoArrowWKTWrite
 
 static inline void GeoArrowWKTWriterAppendCoordUnsafe(
     struct WKTWriterPrivate* private_data, const uint8_t** cursor, const int32_t* strides,
-    int n_values) {
-  double value;
-
-  memcpy(&value, cursor[0], sizeof(double));
+    int n_values, int swap_endian) {
+  double value = WKTWriterReadDouble(cursor[0], swap_endian);
   WKTWriterWriteDoubleUnsafe(private_data, value);
   cursor[0] += strides[0];
 
   for (int j = 1; j < n_values; j++) {
     ArrowBufferAppendUnsafe(&private_data->values, " ", 1);
-    memcpy(&value, cursor[j], sizeof(double));
+    value = WKTWriterReadDouble(cursor[j], swap_endian);
     WKTWriterWriteDoubleUnsafe(private_data, value);
     cursor[j] += strides[j];
   }
@@ -419,13 +428,17 @@ static GeoArrowErrorCode GeoArrowWKTWriterAppendCoordsUnsafe(
   memcpy(stride, node->coord_stride, sizeof(stride));
 
   // Append the first coord
-  GeoArrowWKTWriterAppendCoordUnsafe(private_data, cursor, stride, n_values);
+  GeoArrowWKTWriterAppendCoordUnsafe(
+      private_data, cursor, stride, n_values,
+      node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN);
 
   // Append the rest of the coords
   for (uint32_t i = 1; i < node->size; i++) {
     GEOARROW_RETURN_NOT_OK(WKTWriterCheckElementOutputSize(private_data));
     ArrowBufferAppendUnsafe(&private_data->values, ", ", 2);
-    GeoArrowWKTWriterAppendCoordUnsafe(private_data, cursor, stride, n_values);
+    GeoArrowWKTWriterAppendCoordUnsafe(
+        private_data, cursor, stride, n_values,
+        node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN);
   }
 
   return GEOARROW_OK;
@@ -474,7 +487,9 @@ static GeoArrowErrorCode GeoArrowWKTWriterAppendFlatMultipoint(
       GEOARROW_RETURN_NOT_OK(
           WKTWriterReserveCoords(private_data, child_node->size, n_values));
       memcpy(cursor, child_node->coords, sizeof(cursor));
-      GeoArrowWKTWriterAppendCoordUnsafe(private_data, cursor, stride, n_values);
+      GeoArrowWKTWriterAppendCoordUnsafe(
+          private_data, cursor, stride, n_values,
+          child_node->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN);
     }
   }
 
