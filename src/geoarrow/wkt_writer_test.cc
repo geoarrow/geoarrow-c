@@ -36,7 +36,24 @@ std::string WKTEmpty(enum GeoArrowGeometryType geometry_type,
 
 TEST(WKTWriterTest, WKTWriterTestBasic) {
   struct GeoArrowWKTWriter writer;
-  GeoArrowWKTWriterInit(&writer);
+  ASSERT_EQ(GeoArrowWKTWriterInit(&writer), GEOARROW_OK);
+
+  EXPECT_EQ(GeoArrowWKTWriterSetPrecision(&writer, 3), GEOARROW_OK);
+  EXPECT_EQ(writer.precision, 3);
+  EXPECT_EQ(GeoArrowWKTWriterSetPrecision(&writer, -1), EINVAL);
+  EXPECT_EQ(GeoArrowWKTWriterSetPrecision(&writer, 17), EINVAL);
+  EXPECT_EQ(writer.precision, 3);
+
+  EXPECT_EQ(GeoArrowWKTWriterSetFlatMultipoint(&writer, 0), GEOARROW_OK);
+  EXPECT_EQ(writer.use_flat_multipoint, 0);
+  EXPECT_EQ(GeoArrowWKTWriterSetFlatMultipoint(&writer, 2), GEOARROW_OK);
+  EXPECT_EQ(writer.use_flat_multipoint, 1);
+
+  EXPECT_EQ(GeoArrowWKTWriterSetMaxElementSizeBytes(&writer, 100), GEOARROW_OK);
+  EXPECT_EQ(writer.max_element_size_bytes, 100);
+  EXPECT_EQ(GeoArrowWKTWriterSetMaxElementSizeBytes(&writer, -2), EINVAL);
+  EXPECT_EQ(writer.max_element_size_bytes, 100);
+
   GeoArrowWKTWriterReset(&writer);
 }
 

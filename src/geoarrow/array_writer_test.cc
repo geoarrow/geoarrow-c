@@ -38,17 +38,34 @@ TEST(ArrayWriterTest, ArrayWriterTestWKT) {
   struct GeoArrowVisitor v;
   GeoArrowVisitorInitVoid(&v);
   ASSERT_EQ(GeoArrowArrayWriterInitVisitor(&writer, &v), GEOARROW_OK);
-  tester.ReadWKT("POINT (30 10)", &v);
+  tester.ReadWKT("POINT (30.123456 10.123456)", &v);
+
+  // Options can be updated after initializing the visitor so that callers can
+  // select a different precision for every element.
+  ASSERT_EQ(GeoArrowArrayWriterSetPrecision(&writer, 3), GEOARROW_OK);
+  tester.ReadWKT("POINT (30.123456 10.123456)", &v);
 
   struct ArrowArray array;
   ASSERT_EQ(GeoArrowArrayWriterFinish(&writer, &array, NULL), GEOARROW_OK);
-  ASSERT_EQ(array.length, 1);
+  ASSERT_EQ(array.length, 2);
   ASSERT_EQ(array.n_buffers, 3);
   ASSERT_EQ(array.n_children, 0);
+
+  struct ArrowArrayView array_view;
+  ArrowArrayViewInitFromType(&array_view, NANOARROW_TYPE_STRING);
+  ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array, nullptr), NANOARROW_OK);
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&array_view, 0).data,
+                        ArrowArrayViewGetStringUnsafe(&array_view, 0).size_bytes),
+            "POINT (30.123456 10.123456)");
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&array_view, 1).data,
+                        ArrowArrayViewGetStringUnsafe(&array_view, 1).size_bytes),
+            "POINT (30.123 10.123)");
+  ArrowArrayViewReset(&array_view);
   array.release(&array);
 
+  ASSERT_EQ(GeoArrowArrayWriterSetPrecision(&writer, -1), EINVAL);
+  ASSERT_EQ(GeoArrowArrayWriterSetPrecision(&writer, 17), EINVAL);
   ASSERT_EQ(GeoArrowArrayWriterSetPrecision(&writer, 3), GEOARROW_OK);
-  ASSERT_EQ(GeoArrowArrayWriterInitVisitor(&writer, &v), GEOARROW_OK);
   tester.ReadWKT("POINT (30.3333333 10.3333333)", &v);
 
   ASSERT_EQ(GeoArrowArrayWriterFinish(&writer, &array, NULL), GEOARROW_OK);
@@ -60,7 +77,6 @@ TEST(ArrayWriterTest, ArrayWriterTestWKT) {
   array.release(&array);
 
   ASSERT_EQ(GeoArrowArrayWriterSetFlatMultipoint(&writer, false), GEOARROW_OK);
-  ASSERT_EQ(GeoArrowArrayWriterInitVisitor(&writer, &v), GEOARROW_OK);
   tester.ReadWKT("MULTIPOINT ((30 10))", &v);
 
   ASSERT_EQ(GeoArrowArrayWriterFinish(&writer, &array, NULL), GEOARROW_OK);
