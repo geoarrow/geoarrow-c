@@ -96,13 +96,22 @@ GeoArrowErrorCode GeoArrowGeometryAppendNode(struct GeoArrowGeometry* geom,
 
 GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
                                            struct GeoArrowGeometry* dst) {
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryShallowCopy(src, dst));
+  return GeoArrowGeometryCopyCoords(dst);
+}
+
+GeoArrowErrorCode GeoArrowGeometryCopyCoords(struct GeoArrowGeometry* geom) {
   struct GeoArrowGeometryPrivate* private_data =
-      (struct GeoArrowGeometryPrivate*)dst->private_data;
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
+
+  if (geom->size_nodes == 0) {
+    return GEOARROW_OK;
+  }
 
   // Calculate the number of coordinate storage bytes required
   int64_t total_bytes_required = 0;
-  const struct GeoArrowGeometryNode* src_end = src.root + src.size_nodes;
-  for (const struct GeoArrowGeometryNode* node = src.root; node < src_end; ++node) {
+  const struct GeoArrowGeometryNode* src_end = geom->root + geom->size_nodes;
+  for (const struct GeoArrowGeometryNode* node = geom->root; node < src_end; ++node) {
     switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
@@ -117,29 +126,28 @@ GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
   GEOARROW_RETURN_NOT_OK(
       ArrowBufferResize(&private_data->coords, total_bytes_required, 0));
 
-  // Copy the nodes
-  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryShallowCopy(src, dst));
-
   // Copy the data and update the nodes to point to the internal data
   uint8_t* coords_buf = private_data->coords.data;
   int64_t coords_buf_size = private_data->coords.size_bytes;
   int64_t bytes_written;
   int n_values;
 
-  struct GeoArrowGeometryNode* dst_end = dst->root + dst->size_nodes;
-  for (struct GeoArrowGeometryNode* node = dst->root; node < dst_end; ++node) {
+  struct GeoArrowGeometryNode* dst_end = geom->root + geom->size_nodes;
+  for (struct GeoArrowGeometryNode* node = geom->root; node < dst_end; ++node) {
     switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+        if (node->size == 0) {
+          break;
+        }
+
         n_values = _GeoArrowkNumDimensions[node->dimensions];
         bytes_written =
             GeoArrowGeometryNodeWriteSequence(node, coords_buf, coords_buf_size);
-        // NodeWriteSequence normalizes copied coordinates to native byte order.
-        node->flags &= (uint8_t)~GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN;
 
-        for (int i = 0; i < n_values; i++) {
-          node->coords[i] = coords_buf + (i * sizeof(double));
-          node->coord_stride[i] = n_values * sizeof(double);
+        for (int j = 0; j < n_values; j++) {
+          node->coords[j] = coords_buf + (j * sizeof(double));
+          node->coord_stride[j] = n_values * sizeof(double);
         }
 
         coords_buf += bytes_written;

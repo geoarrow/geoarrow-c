@@ -190,6 +190,8 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryShallowCopy)
 #define GeoArrowGeometryDeepCopy \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryDeepCopy)
+#define GeoArrowGeometryCopyCoords \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryCopyCoords)
 #define GeoArrowGeometrySetBox \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometrySetBox)
 #define GeoArrowGeometryResizeNodes \
@@ -467,10 +469,6 @@ enum GeoArrowCrsType {
   GEOARROW_CRS_TYPE_SRID
 };
 
-/// \brief Flag to indicate that coordinates must be endian-swapped before being
-/// interpreted on the current platform
-#define GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN 0x01
-
 /// \brief Generic Geometry node representation
 ///
 /// This structure represents a generic view on a geometry, inspired by DuckDB-spatial's
@@ -497,6 +495,7 @@ struct GeoArrowGeometryNode {
   /// 32-bit integer, communicated by a parent structure. Producers should produce double
   /// coordinates unless absolutely necessary; consumers may choose to only support double
   /// coordinates. Unless specified by a parent structure coordinates are C doubles.
+  /// Coordinates must use native byte order.
   ///
   /// For dimension j, it must be safe to access the range
   /// [coords[j], coords[j] + size * stride[j] + sizeof(T)].
@@ -548,11 +547,7 @@ struct GeoArrowGeometryNode {
   /// \brief The GeoArrowDimensions
   uint8_t dimensions;
 
-  /// \brief Flags
-  ///
-  /// The only currently supported flag is GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN
-  /// to indicate that coords must be endian-swapped before being interpreted
-  /// on the current platform.
+  /// \brief Reserved for future flags; must be zero
   uint8_t flags;
 
   /// \brief The recursion level

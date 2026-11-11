@@ -383,9 +383,24 @@ GeoArrowErrorCode GeoArrowGeometryShallowCopy(struct GeoArrowGeometryView src,
 /// \brief Populate the coords and nodes of a GeoArrowGeometry from a GeoArrowGeometryView
 ///
 /// Copies nodes and coords from src into a previously initialized GeoArrowGeometry. On
-/// success the destination owns its nodes but and any underlying coordinates.
+/// success the destination owns its nodes and any underlying coordinates.
+/// src must not reference dst's nodes or owned coordinate storage. To copy
+/// external coordinates into an existing geometry, use GeoArrowGeometryCopyCoords().
 GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
                                            struct GeoArrowGeometry* dst);
+
+/// \brief Copy externally owned coordinates into a geometry's internal storage
+///
+/// Copies coordinates for all sequence nodes, including children, into geom's
+/// reusable coordinate buffer and updates their pointers and strides to interleaved
+/// doubles. The nodes themselves are reused. Pointers and strides for empty
+/// sequences and missing dimensions are preserved; their NaN sentinel storage
+/// must remain valid for the lifetime of geom.
+///
+/// geom must have been initialized with GeoArrowGeometryInit(). All source
+/// coordinates must be external to geom's owned coordinate storage, which may be
+/// overwritten or reallocated. This is not an idempotent "ensure owned" operation.
+GeoArrowErrorCode GeoArrowGeometryCopyCoords(struct GeoArrowGeometry* geom);
 
 /// \brief Populate a GeoArrowGeometry from an XY box
 ///
@@ -492,7 +507,7 @@ GeoArrowErrorCode GeoArrowNativeWriterInitVisitor(struct GeoArrowNativeWriter* w
 
 /// \brief Copy a GeoArrowGeometryView into this writer
 ///
-/// Coordinates may be unaligned, strided, or endian-swapped doubles. Missing
+/// Coordinates may be unaligned or strided doubles in native byte order. Missing
 /// output dimensions are filled with NaN; extra input dimensions are discarded.
 /// Empty parts are preserved for matching types and supported single/multi
 /// conversions. An output POINT accepts only POINT or MULTIPOINT with exactly one
@@ -661,6 +676,12 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowBufferView src,
                                          struct GeoArrowVisitor* v);
 
+/// \brief Read well-known binary into a geometry view with native-endian coordinates
+///
+/// The view is valid until the next read or reset of reader. Coordinate data may
+/// reference src, which must remain valid while the view is used. If any coordinate
+/// sequence uses non-native byte order, coordinates are copied into reader-owned
+/// storage and converted to native byte order.
 GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
                                         struct GeoArrowBufferView src,
                                         struct GeoArrowGeometryView* out,

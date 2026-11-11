@@ -316,3 +316,136 @@ TEST(GeometryTest, GeometryViewValidateDoesNotLimitNativeOffsets) {
   // Only metadata is inspected: no coordinate buffers are read or allocated.
   EXPECT_EQ(GeoArrowGeometryViewValidate({&node, 1}, nullptr), GEOARROW_OK);
 }
+
+TEST(GeometryTest, WriteSequenceLargeSize) {
+  GeoArrowGeometryNode node = {};
+  node.geometry_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
+  node.dimensions = GEOARROW_DIMENSIONS_XYZM;
+  node.size = 0x40000000U;
+  // Sizing a sequence must not overflow before allocating the copy buffer.
+  EXPECT_EQ(GeoArrowGeometryNodeWriteSequence(&node, nullptr, 0),
+            int64_t{0x40000000} * 4 * 8);
+}
+
+TEST(GeometryTest, CopyCoordsReusesStorage) {
+  GeoArrowGeometry geom;
+  ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
+  GeoArrowGeometryNode* node;
+  ASSERT_EQ(GeoArrowGeometryAppendNodeInline(&geom, &node), GEOARROW_OK);
+  const uint8_t* previous_coords = nullptr;
+  uint32_t previous_count = 0;
+  for (uint32_t count : {1, 256, 2, 2}) {
+    SCOPED_TRACE(count);
+    std::vector<double> coords(count * 4);
+    for (size_t i = 0; i < coords.size(); i++) coords[i] = static_cast<double>(i + 1);
+    GeoArrowGeometryNodeSetInterleaved(
+        node, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XYZM,
+        {reinterpret_cast<const uint8_t*>(coords.data()),
+         static_cast<int64_t>(coords.size() * sizeof(double))});
+    ASSERT_EQ(GeoArrowGeometryCopyCoords(&geom), GEOARROW_OK);
+    EXPECT_EQ(geom.root, node);
+    EXPECT_EQ(geom.size_nodes, 1);
+    EXPECT_NE(node->coords[0], reinterpret_cast<const uint8_t*>(coords.data()));
+    if (count <= previous_count) {
+      EXPECT_EQ(node->coords[0], previous_coords);
+    }
+    previous_coords = node->coords[0];
+    previous_count = count;
+    std::fill(coords.begin(), coords.end(), 0);
+    EXPECT_EQ(GeoArrowGeometryNodeWriteSequence(
+                  node, reinterpret_cast<uint8_t*>(coords.data()),
+                  static_cast<int64_t>(coords.size() * sizeof(double))),
+              static_cast<int64_t>(coords.size() * sizeof(double)));
+    for (size_t i = 0; i < coords.size(); i++) {
+      EXPECT_EQ(coords[i], static_cast<double>(i + 1));
+    }
+  }
+  GeoArrowGeometryReset(&geom);
+}
+
+TEST(GeometryTest, CopyCoordsNestedGeometry) {
+  GeoArrowGeometry geom;
+  ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
+  const std::string wkt =
+      "GEOMETRYCOLLECTION (POINT Z (1 2 3), GEOMETRYCOLLECTION (LINESTRING (4 5, 6 7), "
+      "POLYGON ((0 0, 4 0, 0 4, 0 0), EMPTY), POINT EMPTY))";
+  {
+    WKXTester source;
+    ASSERT_EQ(GeoArrowGeometryShallowCopy(GeoArrowGeometryAsView(&source.AsGeometry(wkt)),
+                                          &geom),
+              GEOARROW_OK);
+    auto root = geom.root;
+    auto size_nodes = geom.size_nodes;
+    std::vector<GeoArrowGeometryNode> nodes(root, root + size_nodes);
+    ASSERT_EQ(GeoArrowGeometryCopyCoords(&geom), GEOARROW_OK);
+    EXPECT_EQ(geom.root, root);
+    EXPECT_EQ(geom.size_nodes, size_nodes);
+    for (int64_t i = 0; i < geom.size_nodes; i++) {
+      EXPECT_EQ(geom.root[i].geometry_type, nodes[i].geometry_type);
+      EXPECT_EQ(geom.root[i].dimensions, nodes[i].dimensions);
+      EXPECT_EQ(geom.root[i].level, nodes[i].level);
+      EXPECT_EQ(geom.root[i].size, nodes[i].size);
+      if (nodes[i].size > 0 &&
+          (nodes[i].geometry_type == GEOARROW_GEOMETRY_TYPE_POINT ||
+           nodes[i].geometry_type == GEOARROW_GEOMETRY_TYPE_LINESTRING)) {
+        EXPECT_NE(geom.root[i].coords[0], nodes[i].coords[0]);
+      }
+    }
+  }
+  // All descendants remain readable after the source coordinate buffers are freed.
+  WKXTester tester;
+  EXPECT_EQ(tester.AsWKT(geom), wkt);
+  EXPECT_EQ(tester.AsWKTUsingVisitor(geom), wkt);
+  GeoArrowGeometryReset(&geom);
+}
+
+TEST(GeometryTest, CopyCoordsEmptyAndStridedSequences) {
+  GeoArrowGeometry geom;
+  ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowGeometryCopyCoords(&geom), GEOARROW_OK);
+  EXPECT_EQ(geom.root, nullptr);
+  EXPECT_EQ(geom.size_nodes, 0);
+
+  GeoArrowGeometryNode* node;
+  ASSERT_EQ(GeoArrowGeometryAppendNodeInline(&geom, &node), GEOARROW_OK);
+  {
+    // A reversed, unaligned X sequence and a constant Y coordinate.
+    uint8_t coords[1 + 3 * sizeof(double)];
+    double values[] = {1, 3, 2};
+    memcpy(coords + 1, values, sizeof(values));
+    node->geometry_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
+    node->dimensions = GEOARROW_DIMENSIONS_XY;
+    node->size = 2;
+    node->coords[0] = coords + 1 + sizeof(double);
+    node->coords[1] = coords + 1 + 2 * sizeof(double);
+    node->coord_stride[0] = -static_cast<int32_t>(sizeof(double));
+    node->coord_stride[1] = 0;
+    node->coords[2] = _GeoArrowkEmptyPointCoords;
+    node->coords[3] = _GeoArrowkEmptyPointCoords;
+    ASSERT_EQ(GeoArrowGeometryCopyCoords(&geom), GEOARROW_OK);
+    for (int i = 2; i < 4; i++) {
+      EXPECT_EQ(node->coords[i], _GeoArrowkEmptyPointCoords);
+      EXPECT_EQ(node->coord_stride[i], 0);
+    }
+    EXPECT_EQ(node->coord_stride[0], 2 * sizeof(double));
+    EXPECT_EQ(node->coord_stride[1], 2 * sizeof(double));
+  }
+  WKXTester tester;
+  EXPECT_EQ(tester.AsWKT(geom), "LINESTRING (3 2, 1 2)");
+
+  {
+    // Preserve the sentinel pointers and strides of empty sequences.
+    node->size = 0;
+    for (int i = 0; i < 4; i++) {
+      node->coords[i] = _GeoArrowkEmptyPointCoords;
+      node->coord_stride[i] = 0;
+    }
+    ASSERT_EQ(GeoArrowGeometryCopyCoords(&geom), GEOARROW_OK);
+    for (int i = 0; i < 4; i++) {
+      EXPECT_EQ(node->coords[i], _GeoArrowkEmptyPointCoords);
+      EXPECT_EQ(node->coord_stride[i], 0);
+    }
+  }
+  EXPECT_EQ(tester.AsWKT(geom), "LINESTRING EMPTY");
+  GeoArrowGeometryReset(&geom);
+}

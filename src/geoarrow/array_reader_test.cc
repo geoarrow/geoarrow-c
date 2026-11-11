@@ -269,7 +269,7 @@ TEST(ArrayReaderTest, VisitOppositeEndianWKB) {
   ASSERT_EQ(GeoArrowArrayReaderVisitGeometry(&reader, 0, 1, CopyGeometryCallback,
                                              &retained, nullptr),
             GEOARROW_OK);
-  EXPECT_EQ(retained.root->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN, 0);
+  EXPECT_EQ(retained.root->flags, 0);
   EXPECT_EQ(tester.AsWKT(retained), "POINT ZM (1 2 3 4)");
   GeoArrowGeometryReset(&retained);
   for (auto type : {GEOARROW_TYPE_WKT, GEOARROW_TYPE_WKB, GEOARROW_TYPE_POINT_ZM,
@@ -283,8 +283,8 @@ TEST(ArrayReaderTest, VisitOppositeEndianWKB) {
     } context{&writer, static_cast<const uint8_t*>(array.buffers[2]) + 5};
     auto append = [](GeoArrowGeometryView geom, void* data, GeoArrowError* error) {
       auto ctx = static_cast<Context*>(data);
-      EXPECT_EQ(geom.root->coords[0], ctx->coords);
-      EXPECT_NE(geom.root->flags & GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN, 0);
+      EXPECT_NE(geom.root->coords[0], ctx->coords);
+      EXPECT_EQ(geom.root->flags, 0);
       return GeoArrowArrayWriterAppend(ctx->writer, geom, error);
     };
     ASSERT_EQ(GeoArrowArrayReaderVisitGeometry(&reader, 0, 1, append, &context, nullptr),

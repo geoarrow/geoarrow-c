@@ -942,7 +942,7 @@ TEST(WKTWriterTest, WKTWriterTestVeryLongCoords) {
   GeoArrowWKTWriterReset(&writer);
 }
 
-TEST(WKTWriterTest, AppendSwappedEndianGeometry) {
+TEST(WKTWriterTest, AppendGeometryWithNaNEmptyPoints) {
   WKXTester tester;
   for (const char* wkt : {"POINT ZM (1 2 3 4)", "POINT EMPTY", "LINESTRING (1 2, 3 4)",
                           "MULTIPOINT ((1 2), EMPTY, (3 4))"}) {
@@ -973,8 +973,6 @@ TEST(WKTWriterTest, AppendSwappedEndianGeometry) {
         GeoArrowGeometryNodeWriteSequence(node, reinterpret_cast<uint8_t*>(values.data()),
                                           static_cast<int64_t>(values.size() * 8));
       }
-      for (auto& value : values) value = GEOARROW_BSWAP64(value);
-      node->flags = GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN;
       for (int j = 0; j < dims; j++) {
         node->coords[j] = reinterpret_cast<const uint8_t*>(values.data() + j);
         node->coord_stride[j] = dims * 8;
