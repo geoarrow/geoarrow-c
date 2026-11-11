@@ -277,20 +277,25 @@ GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
   // without invalidating any coordinate pointers.
   if (s->coords_need_swapping) {
     GEOARROW_RETURN_NOT_OK(GeoArrowGeometryCopyCoords(&s->geom));
-    for (int64_t i = 0; i < s->geom.size_nodes; i++) {
-      node = s->geom.root + i;
+    struct GeoArrowGeometryNode* end = s->geom.root + s->geom.size_nodes;
+    for (node = s->geom.root; node < end; ++node) {
       if (!(node->flags & WKB_GEOMETRY_NODE_FLAG_SWAP_ENDIAN)) {
         continue;
       }
 
-      // CopyCoords produces contiguous interleaved coordinates owned by geom.
-      uint8_t* coords = (uint8_t*)node->coords[0];
-      int64_t n_values = (int64_t)node->size * _GeoArrowkNumDimensions[node->dimensions];
-      for (int64_t j = 0; j < n_values; j++, coords += sizeof(double)) {
-        uint64_t value;
-        memcpy(&value, coords, sizeof(value));
-        value = GEOARROW_BSWAP64(value);
-        memcpy(coords, &value, sizeof(value));
+      // CopyCoords owns the storage; follow each dimension's pointer and stride.
+      int n_values = _GeoArrowkNumDimensions[node->dimensions];
+      uint32_t n_coords = node->size;
+      for (int j = 0; j < n_values; j++) {
+        uint8_t* coords = (uint8_t*)node->coords[j];
+        int32_t stride = node->coord_stride[j];
+        for (uint32_t i = 0; i < n_coords; i++) {
+          uint8_t* coord = coords + (int64_t)i * stride;
+          uint64_t value;
+          memcpy(&value, coord, sizeof(value));
+          value = GEOARROW_BSWAP64(value);
+          memcpy(coord, &value, sizeof(value));
+        }
       }
       node->flags = 0;
     }
