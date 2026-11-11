@@ -54,9 +54,15 @@ TEST(ArrayWriterTest, ArrayWriterTestWKT) {
   struct ArrowArrayView array_view;
   ArrowArrayViewInitFromType(&array_view, NANOARROW_TYPE_STRING);
   ASSERT_EQ(ArrowArrayViewSetArray(&array_view, &array, nullptr), NANOARROW_OK);
+#if defined(GEOARROW_USE_RYU) && GEOARROW_USE_RYU
+  const char* expected_default_precision = "POINT (30.123456 10.123456)";
+#else
+  const char* expected_default_precision =
+      "POINT (30.1234560000000009 10.1234559999999991)";
+#endif
   EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&array_view, 0).data,
                         ArrowArrayViewGetStringUnsafe(&array_view, 0).size_bytes),
-            "POINT (30.123456 10.123456)");
+            expected_default_precision);
   EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&array_view, 1).data,
                         ArrowArrayViewGetStringUnsafe(&array_view, 1).size_bytes),
             "POINT (30.123 10.123)");
