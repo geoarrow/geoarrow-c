@@ -1,8 +1,6 @@
 
 #include <gtest/gtest.h>
 
-#include <cmath>
-
 #include "geoarrow/geoarrow.h"
 #include "geoarrow/wkx_testing.hpp"
 
@@ -422,15 +420,12 @@ TEST(GeometryTest, CopyCoordsEmptyAndStridedSequences) {
     node->coords[1] = coords + 1 + 2 * sizeof(double);
     node->coord_stride[0] = -static_cast<int32_t>(sizeof(double));
     node->coord_stride[1] = 0;
-    double empty = NAN;
-    node->coords[2] = reinterpret_cast<const uint8_t*>(&empty);
-    node->coords[3] = reinterpret_cast<const uint8_t*>(&empty);
+    node->coords[2] = _GeoArrowkEmptyPointCoords;
+    node->coords[3] = _GeoArrowkEmptyPointCoords;
     ASSERT_EQ(GeoArrowGeometryCopyCoords(&geom), GEOARROW_OK);
     for (int i = 2; i < 4; i++) {
-      EXPECT_NE(node->coords[i], reinterpret_cast<const uint8_t*>(&empty));
-      double value;
-      memcpy(&value, node->coords[i], sizeof(value));
-      EXPECT_TRUE(std::isnan(value));
+      EXPECT_EQ(node->coords[i], _GeoArrowkEmptyPointCoords);
+      EXPECT_EQ(node->coord_stride[i], 0);
     }
     EXPECT_EQ(node->coord_stride[0], 2 * sizeof(double));
     EXPECT_EQ(node->coord_stride[1], 2 * sizeof(double));
@@ -439,19 +434,16 @@ TEST(GeometryTest, CopyCoordsEmptyAndStridedSequences) {
   EXPECT_EQ(tester.AsWKT(geom), "LINESTRING (3 2, 1 2)");
 
   {
-    // Even empty and unused dimensions must not retain external pointers.
-    double empty = NAN;
+    // Preserve the sentinel pointers and strides of empty sequences.
     node->size = 0;
     for (int i = 0; i < 4; i++) {
-      node->coords[i] = reinterpret_cast<const uint8_t*>(&empty);
+      node->coords[i] = _GeoArrowkEmptyPointCoords;
       node->coord_stride[i] = 0;
     }
     ASSERT_EQ(GeoArrowGeometryCopyCoords(&geom), GEOARROW_OK);
     for (int i = 0; i < 4; i++) {
-      EXPECT_NE(node->coords[i], reinterpret_cast<const uint8_t*>(&empty));
-      double value;
-      memcpy(&value, node->coords[i], sizeof(value));
-      EXPECT_TRUE(std::isnan(value));
+      EXPECT_EQ(node->coords[i], _GeoArrowkEmptyPointCoords);
+      EXPECT_EQ(node->coord_stride[i], 0);
     }
   }
   EXPECT_EQ(tester.AsWKT(geom), "LINESTRING EMPTY");

@@ -393,8 +393,9 @@ GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
 ///
 /// Copies coordinates for all sequence nodes, including children, into geom's
 /// reusable coordinate buffer and updates their pointers and strides to interleaved
-/// doubles. The nodes themselves are reused. Empty sequences and missing dimensions
-/// use constant NaN values.
+/// doubles. The nodes themselves are reused. Pointers and strides for empty
+/// sequences and missing dimensions are preserved; their NaN sentinel storage
+/// must remain valid for the lifetime of geom.
 ///
 /// geom must have been initialized with GeoArrowGeometryInit(). All source
 /// coordinates must be external to geom's owned coordinate storage, which may be

@@ -104,10 +104,15 @@ GeoArrowErrorCode GeoArrowGeometryCopyCoords(struct GeoArrowGeometry* geom) {
   struct GeoArrowGeometryPrivate* private_data =
       (struct GeoArrowGeometryPrivate*)geom->private_data;
 
+  if (geom->size_nodes == 0) {
+    return GEOARROW_OK;
+  }
+
+  struct GeoArrowGeometryNode* end = geom->root + geom->size_nodes;
+
   // Calculate the number of coordinate storage bytes required
   int64_t total_bytes_required = 0;
-  for (int64_t i = 0; i < geom->size_nodes; ++i) {
-    const struct GeoArrowGeometryNode* node = geom->root + i;
+  for (const struct GeoArrowGeometryNode* node = geom->root; node < end; ++node) {
     switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
@@ -128,16 +133,11 @@ GeoArrowErrorCode GeoArrowGeometryCopyCoords(struct GeoArrowGeometry* geom) {
   int64_t bytes_written;
   int n_values;
 
-  for (int64_t i = 0; i < geom->size_nodes; ++i) {
-    struct GeoArrowGeometryNode* node = geom->root + i;
+  for (struct GeoArrowGeometryNode* node = geom->root; node < end; ++node) {
     switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
         if (node->size == 0) {
-          for (int j = 0; j < 4; j++) {
-            node->coords[j] = _GeoArrowkEmptyPointCoords;
-            node->coord_stride[j] = 0;
-          }
           break;
         }
 
@@ -148,11 +148,6 @@ GeoArrowErrorCode GeoArrowGeometryCopyCoords(struct GeoArrowGeometry* geom) {
         for (int j = 0; j < n_values; j++) {
           node->coords[j] = coords_buf + (j * sizeof(double));
           node->coord_stride[j] = n_values * sizeof(double);
-        }
-
-        for (int j = n_values; j < 4; j++) {
-          node->coords[j] = _GeoArrowkEmptyPointCoords;
-          node->coord_stride[j] = 0;
         }
 
         coords_buf += bytes_written;
