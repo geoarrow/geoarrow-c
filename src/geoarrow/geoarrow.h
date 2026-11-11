@@ -602,6 +602,20 @@ GeoArrowErrorCode GeoArrowWKTWriterAppend(struct GeoArrowWKTWriter* writer,
 /// \brief Append a null element to this writer
 GeoArrowErrorCode GeoArrowWKTWriterAppendNull(struct GeoArrowWKTWriter* writer);
 
+/// \brief Return a view of the most recently appended WKT element
+///
+/// The returned view is owned by the writer and is invalidated by the next call
+/// that modifies or resets the writer. Returns an empty view if no element has
+/// been appended. This function is intended for callers that need WKT output
+/// without building an ArrowArray.
+struct GeoArrowStringView GeoArrowWKTWriterPeek(const struct GeoArrowWKTWriter* writer);
+
+/// \brief Discard the most recently appended WKT element
+///
+/// This operation retains the writer's allocated memory for reuse. Calling this
+/// function when no element has been appended has no effect.
+void GeoArrowWKTWriterRewind(struct GeoArrowWKTWriter* writer);
+
 /// \brief Finish an ArrowArray containing elements from the visited input
 ///
 /// This function can be called more than once to support multiple batches.
@@ -652,6 +666,20 @@ GeoArrowErrorCode GeoArrowWKBWriterAppendNull(struct GeoArrowWKBWriter* writer);
 /// \brief Append a GeoArrowGeometryView to this writer
 GeoArrowErrorCode GeoArrowWKBWriterAppend(struct GeoArrowWKBWriter* writer,
                                           struct GeoArrowGeometryView geom);
+
+/// \brief Return a view of the most recently appended WKB element
+///
+/// The returned view is owned by the writer and is invalidated by the next call
+/// that modifies or resets the writer. Returns an empty view if no element has
+/// been appended. This function is intended for callers that need WKB output
+/// without building an ArrowArray.
+struct GeoArrowBufferView GeoArrowWKBWriterPeek(const struct GeoArrowWKBWriter* writer);
+
+/// \brief Discard the most recently appended WKB element
+///
+/// This operation retains the writer's allocated memory for reuse. Calling this
+/// function when no element has been appended has no effect.
+void GeoArrowWKBWriterRewind(struct GeoArrowWKBWriter* writer);
 
 /// \brief Populate a GeoArrowVisitor pointing to this writer
 void GeoArrowWKBWriterInitVisitor(struct GeoArrowWKBWriter* writer,

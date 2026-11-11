@@ -51,6 +51,57 @@ TEST(WKTWriterTest, WKTWriterTestBasic) {
   GeoArrowWKTWriterReset(&writer);
 }
 
+TEST(WKTWriterTest, PeekAndRewind) {
+  WKXTester tester;
+  struct GeoArrowWKTWriter writer;
+  ASSERT_EQ(GeoArrowWKTWriterInit(&writer), GEOARROW_OK);
+
+  struct GeoArrowStringView value = GeoArrowWKTWriterPeek(&writer);
+  EXPECT_EQ(value.data, nullptr);
+  EXPECT_EQ(value.size_bytes, 0);
+
+  const auto& point1 = tester.AsGeometry("POINT (1 2)");
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&point1)),
+            GEOARROW_OK);
+  value = GeoArrowWKTWriterPeek(&writer);
+  ASSERT_NE(value.data, nullptr);
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "POINT (1 2)");
+
+  ASSERT_EQ(GeoArrowWKTWriterAppendNull(&writer), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowWKTWriterPeek(&writer).size_bytes, 0);
+  GeoArrowWKTWriterRewind(&writer);
+  value = GeoArrowWKTWriterPeek(&writer);
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "POINT (1 2)");
+
+  const auto& point2 = tester.AsGeometry("POINT (3 4)");
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&point2)),
+            GEOARROW_OK);
+  value = GeoArrowWKTWriterPeek(&writer);
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "POINT (3 4)");
+
+  GeoArrowWKTWriterRewind(&writer);
+  value = GeoArrowWKTWriterPeek(&writer);
+  const char* allocation = value.data;
+  GeoArrowWKTWriterRewind(&writer);
+  GeoArrowWKTWriterRewind(&writer);
+  value = GeoArrowWKTWriterPeek(&writer);
+  EXPECT_EQ(value.data, nullptr);
+  EXPECT_EQ(value.size_bytes, 0);
+
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&point2)),
+            GEOARROW_OK);
+  value = GeoArrowWKTWriterPeek(&writer);
+  EXPECT_EQ(value.data, allocation);
+  EXPECT_EQ(std::string(value.data, value.size_bytes), "POINT (3 4)");
+
+  struct ArrowArray array;
+  ASSERT_EQ(GeoArrowWKTWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+  EXPECT_EQ(array.length, 1);
+  EXPECT_EQ(array.null_count, 0);
+  array.release(&array);
+  GeoArrowWKTWriterReset(&writer);
+}
+
 TEST(WKTWriterTest, WKTWriterTestAppendGeometry) {
   WKXTester tester;
   struct GeoArrowWKTWriter writer;

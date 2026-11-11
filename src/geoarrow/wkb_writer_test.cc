@@ -1,4 +1,7 @@
 
+#include <cstring>
+#include <vector>
+
 #include <gtest/gtest.h>
 
 #include "geoarrow/geoarrow.h"
@@ -9,6 +12,59 @@
 TEST(WKBWriterTest, WKBWriterTestBasic) {
   struct GeoArrowWKBWriter writer;
   GeoArrowWKBWriterInit(&writer);
+  GeoArrowWKBWriterReset(&writer);
+}
+
+TEST(WKBWriterTest, PeekAndRewind) {
+  WKXTester tester;
+  struct GeoArrowWKBWriter writer;
+  ASSERT_EQ(GeoArrowWKBWriterInit(&writer), GEOARROW_OK);
+
+  struct GeoArrowBufferView value = GeoArrowWKBWriterPeek(&writer);
+  EXPECT_EQ(value.data, nullptr);
+  EXPECT_EQ(value.size_bytes, 0);
+
+  const auto& point1 = tester.AsGeometry("POINT (1 2)");
+  ASSERT_EQ(GeoArrowWKBWriterAppend(&writer, GeoArrowGeometryAsView(&point1)),
+            GEOARROW_OK);
+  value = GeoArrowWKBWriterPeek(&writer);
+  ASSERT_NE(value.data, nullptr);
+  EXPECT_EQ(value.size_bytes, 21);
+  std::vector<uint8_t> point1_wkb(value.data, value.data + value.size_bytes);
+
+  ASSERT_EQ(GeoArrowWKBWriterAppendNull(&writer), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowWKBWriterPeek(&writer).size_bytes, 0);
+  GeoArrowWKBWriterRewind(&writer);
+  value = GeoArrowWKBWriterPeek(&writer);
+  ASSERT_EQ(value.size_bytes, static_cast<int64_t>(point1_wkb.size()));
+  EXPECT_EQ(memcmp(value.data, point1_wkb.data(), point1_wkb.size()), 0);
+
+  const auto& point2 = tester.AsGeometry("POINT (3 4)");
+  ASSERT_EQ(GeoArrowWKBWriterAppend(&writer, GeoArrowGeometryAsView(&point2)),
+            GEOARROW_OK);
+  value = GeoArrowWKBWriterPeek(&writer);
+  ASSERT_EQ(value.size_bytes, static_cast<int64_t>(point1_wkb.size()));
+  EXPECT_NE(memcmp(value.data, point1_wkb.data(), point1_wkb.size()), 0);
+
+  GeoArrowWKBWriterRewind(&writer);
+  value = GeoArrowWKBWriterPeek(&writer);
+  const uint8_t* allocation = value.data;
+  GeoArrowWKBWriterRewind(&writer);
+  GeoArrowWKBWriterRewind(&writer);
+  value = GeoArrowWKBWriterPeek(&writer);
+  EXPECT_EQ(value.data, nullptr);
+  EXPECT_EQ(value.size_bytes, 0);
+
+  ASSERT_EQ(GeoArrowWKBWriterAppend(&writer, GeoArrowGeometryAsView(&point2)),
+            GEOARROW_OK);
+  value = GeoArrowWKBWriterPeek(&writer);
+  EXPECT_EQ(value.data, allocation);
+
+  struct ArrowArray array;
+  ASSERT_EQ(GeoArrowWKBWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+  EXPECT_EQ(array.length, 1);
+  EXPECT_EQ(array.null_count, 0);
+  array.release(&array);
   GeoArrowWKBWriterReset(&writer);
 }
 
