@@ -108,11 +108,10 @@ GeoArrowErrorCode GeoArrowGeometryCopyCoords(struct GeoArrowGeometry* geom) {
     return GEOARROW_OK;
   }
 
-  struct GeoArrowGeometryNode* end = geom->root + geom->size_nodes;
-
   // Calculate the number of coordinate storage bytes required
   int64_t total_bytes_required = 0;
-  for (const struct GeoArrowGeometryNode* node = geom->root; node < end; ++node) {
+  const struct GeoArrowGeometryNode* src_end = geom->root + geom->size_nodes;
+  for (const struct GeoArrowGeometryNode* node = geom->root; node < src_end; ++node) {
     switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
@@ -133,7 +132,8 @@ GeoArrowErrorCode GeoArrowGeometryCopyCoords(struct GeoArrowGeometry* geom) {
   int64_t bytes_written;
   int n_values;
 
-  for (struct GeoArrowGeometryNode* node = geom->root; node < end; ++node) {
+  struct GeoArrowGeometryNode* dst_end = geom->root + geom->size_nodes;
+  for (struct GeoArrowGeometryNode* node = geom->root; node < dst_end; ++node) {
     switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
