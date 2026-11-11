@@ -29,7 +29,7 @@ class WKXTester {
     GeoArrowWKTWriterInit(&wkt_writer_);
     GeoArrowWKBReaderInit(&wkb_reader_);
     GeoArrowWKBWriterInit(&wkb_writer_);
-    wkt_writer_.use_flat_multipoint = false;
+    GeoArrowWKTWriterSetFlatMultipoint(&wkt_writer_, false);
     v_.error = &error_;
     array_.release = nullptr;
     ArrowArrayViewInitFromType(&wkt_array_view_, NANOARROW_TYPE_STRING);
@@ -51,10 +51,12 @@ class WKXTester {
   }
 
   void SetFlatMultipoint(bool use_flat_multipoint) {
-    wkt_writer_.use_flat_multipoint = use_flat_multipoint;
+    GeoArrowWKTWriterSetFlatMultipoint(&wkt_writer_, use_flat_multipoint);
   }
 
-  void SetPrecision(int precision) { wkt_writer_.precision = precision; }
+  void SetPrecision(int precision) {
+    GeoArrowWKTWriterSetPrecision(&wkt_writer_, precision);
+  }
 
   std::string LastErrorMessage() { return std::string(error_.message); }
 

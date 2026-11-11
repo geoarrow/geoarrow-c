@@ -284,11 +284,8 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer) {
   ArrowBitmapInit(&private->validity);
   ArrowBufferInit(&private->offsets);
   ArrowBufferInit(&private->values);
-  writer->precision = 16;
   private->precision = 16;
-  writer->use_flat_multipoint = 1;
   private->use_flat_multipoint = 1;
-  writer->max_element_size_bytes = -1;
   private->max_element_size_bytes = -1;
   writer->private_data = private;
 
@@ -301,7 +298,6 @@ GeoArrowErrorCode GeoArrowWKTWriterSetPrecision(struct GeoArrowWKTWriter* writer
     return EINVAL;
   }
 
-  writer->precision = precision;
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
   private->precision = precision;
   return GEOARROW_OK;
@@ -309,9 +305,8 @@ GeoArrowErrorCode GeoArrowWKTWriterSetPrecision(struct GeoArrowWKTWriter* writer
 
 GeoArrowErrorCode GeoArrowWKTWriterSetFlatMultipoint(struct GeoArrowWKTWriter* writer,
                                                      int flat_multipoint) {
-  writer->use_flat_multipoint = flat_multipoint != 0;
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
-  private->use_flat_multipoint = writer->use_flat_multipoint;
+  private->use_flat_multipoint = flat_multipoint != 0;
   return GEOARROW_OK;
 }
 
@@ -321,7 +316,6 @@ GeoArrowErrorCode GeoArrowWKTWriterSetMaxElementSizeBytes(
     return EINVAL;
   }
 
-  writer->max_element_size_bytes = max_element_size_bytes;
   struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
   private->max_element_size_bytes = max_element_size_bytes;
   return GEOARROW_OK;
@@ -330,18 +324,6 @@ GeoArrowErrorCode GeoArrowWKTWriterSetMaxElementSizeBytes(
 void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
                                   struct GeoArrowVisitor* v) {
   GeoArrowVisitorInitVoid(v);
-
-  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
-
-  // Clamp writer->precision to a specific range of valid values
-  if (writer->precision < 0 || writer->precision > 16) {
-    private->precision = 16;
-  } else {
-    private->precision = writer->precision;
-  }
-
-  private->use_flat_multipoint = writer->use_flat_multipoint;
-  private->max_element_size_bytes = writer->max_element_size_bytes;
 
   v->private_data = writer->private_data;
   v->feat_start = &feat_start_wkt;

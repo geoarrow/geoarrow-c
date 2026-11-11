@@ -438,32 +438,16 @@ void GeoArrowNativeWriterReset(struct GeoArrowNativeWriter* writer);
 
 /// \brief Well-known text writer
 ///
-/// This struct also contains options for well-known text serialization.
-/// These options can be modified from the defaults using the corresponding
-/// setter functions. Setters may be called after GeoArrowWKTWriterInitVisitor()
-/// to change the formatting of subsequent elements.
+/// Well-known text serialization options can be modified from their defaults
+/// using the corresponding setter functions. Setters may be called after
+/// GeoArrowWKTWriterInitVisitor() to change the formatting of subsequent
+/// elements.
 ///
 /// Note that whether or not GeoArrow was compiled with ryu has a significant
 /// impact on the output: notably, ryu is locale-independent and much faster.
 /// GeoArrow can fall back on using snprintf(); however, this will result in
 /// invalid WKT for locales other than the C locale.
 struct GeoArrowWKTWriter {
-  /// \brief The number of digits after the decimal point (default: 16)
-  int precision;
-
-  /// \brief Set to 0 to use the verbose (but more valid) MULTIPOINT
-  /// representation (i.e., MULTIPOINT((0 1), (2 3)))). Defaults to 1 (because
-  /// this was the default GEOS behaviour at the time this was written).
-  int use_flat_multipoint;
-
-  /// \brief Constrain the maximum size of each element in the returned array
-  ///
-  /// Use -1 to denote an unlimited size for each element. When the limit is
-  /// reached or shortly after, the called handler method will return EAGAIN,
-  /// after which it is safe to call feat_end to end the feature. This ensures
-  /// that a finite amount of input is consumed if this elemtn is set.
-  int64_t max_element_size_bytes;
-
   /// \brief Implementation-specific details
   void* private_data;
 };
@@ -493,9 +477,11 @@ GeoArrowErrorCode GeoArrowWKTWriterSetFlatMultipoint(struct GeoArrowWKTWriter* w
 
 /// \brief Set the maximum size of each WKT element
 ///
-/// Use -1 for no limit. Returns EINVAL for values less than -1. This option may
-/// be changed between elements after GeoArrowWKTWriterInitVisitor() has been
-/// called.
+/// Use -1 for no limit. When the limit is reached or shortly after, the called
+/// visitor handler returns EAGAIN, after which it is safe to call feat_end to
+/// end the feature. This ensures that a finite amount of input is consumed.
+/// Returns EINVAL for values less than -1. This option may be changed between
+/// elements after GeoArrowWKTWriterInitVisitor() has been called.
 GeoArrowErrorCode GeoArrowWKTWriterSetMaxElementSizeBytes(
     struct GeoArrowWKTWriter* writer, int64_t max_element_size_bytes);
 

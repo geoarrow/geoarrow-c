@@ -39,20 +39,14 @@ TEST(WKTWriterTest, WKTWriterTestBasic) {
   ASSERT_EQ(GeoArrowWKTWriterInit(&writer), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowWKTWriterSetPrecision(&writer, 3), GEOARROW_OK);
-  EXPECT_EQ(writer.precision, 3);
   EXPECT_EQ(GeoArrowWKTWriterSetPrecision(&writer, -1), EINVAL);
   EXPECT_EQ(GeoArrowWKTWriterSetPrecision(&writer, 17), EINVAL);
-  EXPECT_EQ(writer.precision, 3);
 
   EXPECT_EQ(GeoArrowWKTWriterSetFlatMultipoint(&writer, 0), GEOARROW_OK);
-  EXPECT_EQ(writer.use_flat_multipoint, 0);
   EXPECT_EQ(GeoArrowWKTWriterSetFlatMultipoint(&writer, 2), GEOARROW_OK);
-  EXPECT_EQ(writer.use_flat_multipoint, 1);
 
   EXPECT_EQ(GeoArrowWKTWriterSetMaxElementSizeBytes(&writer, 100), GEOARROW_OK);
-  EXPECT_EQ(writer.max_element_size_bytes, 100);
   EXPECT_EQ(GeoArrowWKTWriterSetMaxElementSizeBytes(&writer, -2), EINVAL);
-  EXPECT_EQ(writer.max_element_size_bytes, 100);
 
   GeoArrowWKTWriterReset(&writer);
 }
@@ -517,8 +511,7 @@ TEST(WKTWriterTest, WKTWriterTestMultipoint) {
   EXPECT_EQ(v.feat_end(&v), GEOARROW_OK);
 
   // Also check verbose multipoint output
-  writer.use_flat_multipoint = 0;
-  GeoArrowWKTWriterInitVisitor(&writer, &v);
+  EXPECT_EQ(GeoArrowWKTWriterSetFlatMultipoint(&writer, 0), GEOARROW_OK);
 
   // One point
   EXPECT_EQ(v.feat_start(&v), GEOARROW_OK);
@@ -797,7 +790,7 @@ TEST(WKTWriterTest, WKTWriterTestMaxFeatLen) {
   struct GeoArrowWKTWriter writer;
   struct GeoArrowVisitor v;
   GeoArrowWKTWriterInit(&writer);
-  writer.max_element_size_bytes = 6;
+  ASSERT_EQ(GeoArrowWKTWriterSetMaxElementSizeBytes(&writer, 6), GEOARROW_OK);
   GeoArrowWKTWriterInitVisitor(&writer, &v);
 
   TestCoords coords({1, 2}, {2, 3});
