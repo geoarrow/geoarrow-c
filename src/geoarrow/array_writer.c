@@ -69,8 +69,7 @@ GeoArrowErrorCode GeoArrowArrayWriterSetPrecision(struct GeoArrowArrayWriter* wr
     return EINVAL;
   }
 
-  private_data->wkt_writer.precision = precision;
-  return GEOARROW_OK;
+  return GeoArrowWKTWriterSetPrecision(&private_data->wkt_writer, precision);
 }
 
 GeoArrowErrorCode GeoArrowArrayWriterSetFlatMultipoint(struct GeoArrowArrayWriter* writer,
@@ -83,8 +82,7 @@ GeoArrowErrorCode GeoArrowArrayWriterSetFlatMultipoint(struct GeoArrowArrayWrite
     return EINVAL;
   }
 
-  private_data->wkt_writer.use_flat_multipoint = flat_multipoint;
-  return GEOARROW_OK;
+  return GeoArrowWKTWriterSetFlatMultipoint(&private_data->wkt_writer, flat_multipoint);
 }
 
 GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* writer,

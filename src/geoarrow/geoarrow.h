@@ -541,32 +541,16 @@ void GeoArrowNativeWriterReset(struct GeoArrowNativeWriter* writer);
 
 /// \brief Well-known text writer
 ///
-/// This struct also contains options for well-known text serialization.
-/// These options can be modified from the defaults after
-/// GeoArrowWKTWriterInit() and before GeoArrowWKTWriterInitVisitor() or
-/// GeoArrowWKTWriterAppend().
+/// Well-known text serialization options can be modified from their defaults
+/// using the corresponding setter functions. Setters may be called after
+/// GeoArrowWKTWriterInitVisitor() to change the formatting of subsequent
+/// elements.
 ///
 /// Note that whether or not GeoArrow was compiled with ryu has a significant
 /// impact on the output: notably, ryu is locale-independent and much faster.
 /// GeoArrow can fall back on using snprintf(); however, this will result in
 /// invalid WKT for locales other than the C locale.
 struct GeoArrowWKTWriter {
-  /// \brief The number of significant digits to include in the output (default: 16)
-  int precision;
-
-  /// \brief Set to 0 to use the verbose (but more valid) MULTIPOINT
-  /// representation (i.e., MULTIPOINT((0 1), (2 3)))). Defaults to 1 (because
-  /// this was the default GEOS behaviour at the time this was written).
-  int use_flat_multipoint;
-
-  /// \brief Constrain the maximum size of each element in the returned array
-  ///
-  /// Use -1 to denote an unlimited size for each element. When the limit is
-  /// reached or shortly after, the called handler method will return EAGAIN,
-  /// after which it is safe to call feat_end to end the feature. This ensures
-  /// that a finite amount of input is consumed if this element is set.
-  int64_t max_element_size_bytes;
-
   /// \brief Implementation-specific details
   void* private_data;
 };
@@ -576,6 +560,33 @@ struct GeoArrowWKTWriter {
 /// If GEOARROW_OK is returned, the caller is responsible for calling
 /// GeoArrowWKTWriterReset().
 GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer);
+
+/// \brief Set the number of digits after the decimal point in WKT output
+///
+/// Returns EINVAL if precision is outside the range [0, 16]. The default
+/// precision is 16. This option may be changed between elements after
+/// GeoArrowWKTWriterInitVisitor() has been called.
+GeoArrowErrorCode GeoArrowWKTWriterSetPrecision(struct GeoArrowWKTWriter* writer,
+                                                int precision);
+
+/// \brief Set the MULTIPOINT output mode
+///
+/// Set flat_multipoint to a non-zero value to write MULTIPOINT (0 1, 2 3), or
+/// zero to write MULTIPOINT ((0 1), (2 3)). The default is non-zero. This option
+/// may be changed between elements after GeoArrowWKTWriterInitVisitor() has been
+/// called.
+GeoArrowErrorCode GeoArrowWKTWriterSetFlatMultipoint(struct GeoArrowWKTWriter* writer,
+                                                     int flat_multipoint);
+
+/// \brief Set the maximum size of each WKT element
+///
+/// Use -1 for no limit. When the limit is reached or shortly after, the called
+/// visitor handler returns EAGAIN, after which it is safe to call feat_end to
+/// end the feature. This ensures that a finite amount of input is consumed.
+/// Returns EINVAL for values less than -1. This option may be changed between
+/// elements after GeoArrowWKTWriterInitVisitor() has been called.
+GeoArrowErrorCode GeoArrowWKTWriterSetMaxElementSizeBytes(
+    struct GeoArrowWKTWriter* writer, int64_t max_element_size_bytes);
 
 /// \brief Populate a GeoArrowVisitor pointing to this writer
 void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
@@ -774,16 +785,17 @@ GeoArrowErrorCode GeoArrowArrayWriterInitFromSchema(struct GeoArrowArrayWriter* 
 /// \brief Set the precision to use for array writers writing to WKT
 ///
 /// Returns EINVAL for precision values that are not valid or if the writer
-/// is not writing to WKT. Must be called before GeoArrowArrayWriterInitVisitor().
-/// The default precision value is 16. See GeoArrowWKTWriter for details.
+/// is not writing to WKT. This option may be changed between elements after
+/// GeoArrowArrayWriterInitVisitor() has been called. The default precision
+/// value is 16. See GeoArrowWKTWriter for details.
 GeoArrowErrorCode GeoArrowArrayWriterSetPrecision(struct GeoArrowArrayWriter* writer,
                                                   int precision);
 
 /// \brief Set the MULTIPOINT output mode when writing to WKT
 ///
-/// Returns EINVAL if the writer is not writing to WKT. Must be called before
-/// GeoArrowArrayWriterInitVisitor(). The default value is 1. See GeoArrowWKTWriter for
-/// details.
+/// Returns EINVAL if the writer is not writing to WKT. This option may be
+/// changed between elements after GeoArrowArrayWriterInitVisitor() has been
+/// called. The default value is 1. See GeoArrowWKTWriter for details.
 GeoArrowErrorCode GeoArrowArrayWriterSetFlatMultipoint(struct GeoArrowArrayWriter* writer,
                                                        int flat_multipoint);
 

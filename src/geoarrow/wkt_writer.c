@@ -102,19 +102,6 @@ static GeoArrowErrorCode WKTWriterCheckElementOutputSize(
   }
 }
 
-static void WKTWriterUpdateOptions(struct GeoArrowWKTWriter* writer,
-                                   struct WKTWriterPrivate* private_data) {
-  // Clamp writer->precision to a specific range of valid values
-  if (writer->precision < 0 || writer->precision > 16) {
-    private_data->precision = 16;
-  } else {
-    private_data->precision = writer->precision;
-  }
-
-  private_data->use_flat_multipoint = writer->use_flat_multipoint;
-  private_data->max_element_size_bytes = writer->max_element_size_bytes;
-}
-
 static inline void WKTWriterWriteDoubleUnsafe(struct WKTWriterPrivate* private,
                                               double value) {
   // Always ensure that we have at least 40 writable bytes remaining before calling
@@ -555,7 +542,6 @@ GeoArrowErrorCode GeoArrowWKTWriterAppendNull(struct GeoArrowWKTWriter* writer) 
 GeoArrowErrorCode GeoArrowWKTWriterAppend(struct GeoArrowWKTWriter* writer,
                                           struct GeoArrowGeometryView geom) {
   struct WKTWriterPrivate* private_data = (struct WKTWriterPrivate*)writer->private_data;
-  WKTWriterUpdateOptions(writer, private_data);
 
   private_data->values_feat_start = private_data->values.size_bytes;
 
@@ -593,24 +579,46 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer) {
   ArrowBitmapInit(&private->validity);
   ArrowBufferInit(&private->offsets);
   ArrowBufferInit(&private->values);
-  writer->precision = 16;
   private->precision = 16;
-  writer->use_flat_multipoint = 1;
   private->use_flat_multipoint = 1;
-  writer->max_element_size_bytes = -1;
   private->max_element_size_bytes = -1;
   writer->private_data = private;
 
   return GEOARROW_OK;
 }
 
+GeoArrowErrorCode GeoArrowWKTWriterSetPrecision(struct GeoArrowWKTWriter* writer,
+                                                int precision) {
+  if (precision < 0 || precision > 16) {
+    return EINVAL;
+  }
+
+  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
+  private->precision = precision;
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowWKTWriterSetFlatMultipoint(struct GeoArrowWKTWriter* writer,
+                                                     int flat_multipoint) {
+  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
+  private->use_flat_multipoint = flat_multipoint != 0;
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowWKTWriterSetMaxElementSizeBytes(
+    struct GeoArrowWKTWriter* writer, int64_t max_element_size_bytes) {
+  if (max_element_size_bytes < -1) {
+    return EINVAL;
+  }
+
+  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
+  private->max_element_size_bytes = max_element_size_bytes;
+  return GEOARROW_OK;
+}
+
 void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
                                   struct GeoArrowVisitor* v) {
   GeoArrowVisitorInitVoid(v);
-
-  struct WKTWriterPrivate* private = (struct WKTWriterPrivate*)writer->private_data;
-
-  WKTWriterUpdateOptions(writer, private);
 
   v->private_data = writer->private_data;
   v->feat_start = &feat_start_wkt;
