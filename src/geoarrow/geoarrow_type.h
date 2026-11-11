@@ -110,10 +110,18 @@ struct ArrowArrayStream {
     if (NAME) return NAME;                       \
   } while (0)
 
+// __COUNTER__ is not guaranteed to be available and some compiler warnings may occur
+// if we use it (-Wc2y-extensions). We don't strictly need it because of the
+// do { ... } while (0) scoping and because we never need the return value to live
+// outside the temporary scope. Here we define a suffix that is unlikely to collide
+// with anything in EXPR.
+#define _GEOARROW_UNIQUE_SUFFIX _geoarrow_unique_suffix
+
 /// \brief Macro helper for error handling
 /// \ingroup geoarrow-utility
 #define GEOARROW_RETURN_NOT_OK(EXPR) \
-  _GEOARROW_RETURN_NOT_OK_IMPL(_GEOARROW_MAKE_NAME(errno_status_, __COUNTER__), EXPR)
+  _GEOARROW_RETURN_NOT_OK_IMPL(      \
+      _GEOARROW_MAKE_NAME(errno_status_, _GEOARROW_UNIQUE_SUFFIX), EXPR)
 
 #define GEOARROW_UNUSED(expr) ((void)expr)
 
@@ -153,6 +161,10 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayViewInitFromSchema)
 #define GeoArrowArrayViewSetArray \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayViewSetArray)
+#define GeoArrowArrayViewGetGeometry \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayViewGetGeometry)
+#define GeoArrowArrayViewVisitGeometry \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayViewVisitGeometry)
 #define GeoArrowBuilderInitFromType \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowBuilderInitFromType)
 #define GeoArrowBuilderInitFromSchema \
@@ -178,10 +190,16 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryShallowCopy)
 #define GeoArrowGeometryDeepCopy \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryDeepCopy)
+#define GeoArrowGeometryCopyCoords \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryCopyCoords)
+#define GeoArrowGeometrySetBox \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometrySetBox)
 #define GeoArrowGeometryResizeNodes \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryResizeNodes)
 #define GeoArrowGeometryAppendNode \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryAppendNode)
+#define GeoArrowGeometryViewValidate \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryViewValidate)
 #define GeoArrowGeometryViewVisit \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowGeometryViewVisit)
 #define GeoArrowGeometryVisit \
@@ -208,6 +226,10 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterInit)
 #define GeoArrowWKTWriterInitVisitor \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterInitVisitor)
+#define GeoArrowWKTWriterAppend \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterAppend)
+#define GeoArrowWKTWriterAppendNull \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterAppendNull)
 #define GeoArrowWKTWriterFinish \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterFinish)
 #define GeoArrowWKTWriterReset \
@@ -246,6 +268,8 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderSetArray)
 #define GeoArrowArrayReaderVisit \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderVisit)
+#define GeoArrowArrayReaderVisitGeometry \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderVisitGeometry)
 #define GeoArrowArrayReaderArrayView \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayReaderArrayView)
 #define GeoArrowArrayReaderReset \
@@ -260,6 +284,10 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterSetFlatMultipoint)
 #define GeoArrowArrayWriterInitVisitor \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterInitVisitor)
+#define GeoArrowArrayWriterAppend \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterAppend)
+#define GeoArrowArrayWriterAppendNull \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterAppendNull)
 #define GeoArrowArrayWriterFinish \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterFinish)
 #define GeoArrowArrayWriterReset \
@@ -441,10 +469,6 @@ enum GeoArrowCrsType {
   GEOARROW_CRS_TYPE_SRID
 };
 
-/// \brief Flag to indicate that coordinates must be endian-swapped before being
-/// interpreted on the current platform
-#define GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN 0x01
-
 /// \brief Generic Geometry node representation
 ///
 /// This structure represents a generic view on a geometry, inspired by DuckDB-spatial's
@@ -471,6 +495,7 @@ struct GeoArrowGeometryNode {
   /// 32-bit integer, communicated by a parent structure. Producers should produce double
   /// coordinates unless absolutely necessary; consumers may choose to only support double
   /// coordinates. Unless specified by a parent structure coordinates are C doubles.
+  /// Coordinates must use native byte order.
   ///
   /// For dimension j, it must be safe to access the range
   /// [coords[j], coords[j] + size * stride[j] + sizeof(T)].
@@ -522,11 +547,7 @@ struct GeoArrowGeometryNode {
   /// \brief The GeoArrowDimensions
   uint8_t dimensions;
 
-  /// \brief Flags
-  ///
-  /// The only currently supported flag is GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN
-  /// to indicate that coords must be endian-swapped before being interpreted
-  /// on the current platform.
+  /// \brief Reserved for future flags; must be zero
   uint8_t flags;
 
   /// \brief The recursion level

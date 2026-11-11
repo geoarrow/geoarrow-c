@@ -3,6 +3,8 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
+
 #define EXPECT_WKB_ROUNDTRIP(tester_, value_) EXPECT_EQ(tester_.AsWKB(value_), value_)
 
 TEST(WBTReaderTest, WKBReaderTestBasic) {
@@ -33,6 +35,21 @@ TEST(WKBReaderTest, WKBReaderTestPoint) {
   EXPECT_EQ(geometry.root->size, 1);
 
   GeoArrowWKBReaderReset(&reader);
+}
+
+TEST(WKBReaderTest, WKBReaderTestPointEmpty) {
+  WKXTester tester;
+
+  // POINT EMPTY is encoded in WKB using an all-NaN coordinate.
+  std::vector<uint8_t> point_empty({0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                    0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f, 0x00,
+                                    0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f});
+
+  EXPECT_WKB_ROUNDTRIP(tester, point_empty);
+  EXPECT_EQ(tester.AsWKT(point_empty), "POINT EMPTY");
+
+  const auto& geometry = tester.AsGeometry(point_empty);
+  EXPECT_EQ(tester.AsWKT(geometry), "POINT EMPTY");
 }
 
 TEST(WKBReaderTest, WKBReaderTestPointZM) {
@@ -241,4 +258,267 @@ TEST(WKBReaderTest, WKTReaderTestManyCoordinates) {
   WKXTester tester;
   std::vector<uint8_t> big_linestring_wkb = tester.AsWKB(ss.str());
   EXPECT_WKB_ROUNDTRIP(tester, big_linestring_wkb);
+}
+
+TEST(WKBReaderTest, WKBReaderTestTruncatedMultipoint) {
+  WKXTester tester;
+  auto wkb = tester.AsWKB("MULTIPOINT ((1 2), (3 4))");
+  wkb.resize(wkb.size() - sizeof(double));
+
+  struct GeoArrowWKBReader reader;
+  ASSERT_EQ(GeoArrowWKBReaderInit(&reader), GEOARROW_OK);
+  struct GeoArrowGeometryView geometry;
+  struct GeoArrowError error = {};
+  EXPECT_EQ(GeoArrowWKBReaderRead(&reader, {wkb.data(), static_cast<int64_t>(wkb.size())},
+                                  &geometry, &error),
+            EINVAL);
+  EXPECT_STREQ(error.message,
+               "Expected coordinate sequence of 1 coords (16 bytes) but found 8 bytes "
+               "remaining at byte 35");
+  GeoArrowWKBReaderReset(&reader);
+}
+
+TEST(WKBReaderTest, WKBReaderTestTruncatedBuffers) {
+  WKXTester tester;
+  const std::vector<std::string> geometries = {
+      "POINT (1 2)",
+      "POINT Z (1 2 3)",
+      "POINT M (1 2 3)",
+      "POINT ZM (1 2 3 4)",
+      "LINESTRING (1 2, 3 4)",
+      "POLYGON ((0 0, 4 0, 0 4, 0 0), (1 1, 2 1, 1 2, 1 1))",
+      "MULTIPOINT ((1 2), (3 4))",
+      "MULTILINESTRING ((1 2, 3 4), (5 6, 7 8))",
+      "MULTIPOLYGON (((0 0, 4 0, 0 4, 0 0)), ((1 1, 2 1, 1 2, 1 1)))",
+      "GEOMETRYCOLLECTION (POINT (1 2), GEOMETRYCOLLECTION (POINT (3 4)))",
+      "GEOMETRYCOLLECTION (LINESTRING EMPTY, POINT (1 2), POLYGON EMPTY)",
+      "GEOMETRYCOLLECTION EMPTY"};
+
+  struct GeoArrowWKBReader reader;
+  ASSERT_EQ(GeoArrowWKBReaderInit(&reader), GEOARROW_OK);
+  struct GeoArrowGeometryView geometry;
+  for (const auto& wkt : geometries) {
+    SCOPED_TRACE(wkt);
+    auto wkb = tester.AsWKB(wkt);
+    for (size_t size = 0; size < wkb.size(); size++) {
+      SCOPED_TRACE(size);
+      // Give sanitizers an allocation ending exactly at the truncated buffer's end.
+      // Keep a non-null pointer for the empty prefix.
+      std::vector<uint8_t> truncated(size == 0 ? 1 : size);
+      memcpy(truncated.data(), wkb.data(), size);
+      EXPECT_EQ(
+          GeoArrowWKBReaderRead(&reader, {truncated.data(), static_cast<int64_t>(size)},
+                                &geometry, nullptr),
+          EINVAL);
+    }
+
+    // A failed read must not prevent reuse of the reader for a complete geometry.
+    EXPECT_EQ(
+        GeoArrowWKBReaderRead(&reader, {wkb.data(), static_cast<int64_t>(wkb.size())},
+                              &geometry, nullptr),
+        GEOARROW_OK);
+  }
+  GeoArrowWKBReaderReset(&reader);
+}
+
+TEST(WKBReaderTest, WKBReaderTestLargeCoordinateCounts) {
+  struct GeoArrowWKBReader reader;
+  ASSERT_EQ(GeoArrowWKBReaderInit(&reader), GEOARROW_OK);
+  struct GeoArrowGeometryView geometry;
+  for (uint8_t endian : {uint8_t(0), uint8_t(1)}) {
+    SCOPED_TRACE(endian);
+    for (uint32_t type : {2, 1002, 2002, 3002}) {
+      SCOPED_TRACE(type);
+      for (uint32_t count : {0x80000000U, 0xaaaaaaabU, 0x40000000U, UINT32_MAX}) {
+        SCOPED_TRACE(count);
+        // These counts can wrap the product of count and dimension to zero or a
+        // small value if multiplication is performed in 32 bits.
+        std::vector<uint8_t> wkb(9 + 4 * sizeof(double), 0);
+        wkb[0] = endian;
+        for (int i = 0; i < 4; i++) {
+          int shift = (endian == 1 ? i : 3 - i) * 8;
+          wkb[1 + i] = static_cast<uint8_t>(type >> shift);
+          wkb[5 + i] = static_cast<uint8_t>(count >> shift);
+        }
+        EXPECT_EQ(
+            GeoArrowWKBReaderRead(&reader, {wkb.data(), static_cast<int64_t>(wkb.size())},
+                                  &geometry, nullptr),
+            EINVAL);
+      }
+    }
+  }
+  GeoArrowWKBReaderReset(&reader);
+}
+
+namespace {
+
+void AppendWKBUInt32(std::vector<uint8_t>* out, uint32_t value, uint8_t endian) {
+  for (int i = 0; i < 4; i++) {
+    out->push_back(static_cast<uint8_t>(value >> ((endian == 1 ? i : 3 - i) * 8)));
+  }
+}
+
+void AppendWKBHeader(std::vector<uint8_t>* out, uint32_t type, uint8_t endian) {
+  out->push_back(endian);
+  AppendWKBUInt32(out, type, endian);
+}
+
+void AppendWKBCoords(std::vector<uint8_t>* out, const std::vector<double>& coords,
+                     uint8_t endian) {
+  for (double coord : coords) {
+    uint64_t bits;
+    memcpy(&bits, &coord, sizeof(bits));
+    for (int i = 0; i < 8; i++) {
+      out->push_back(static_cast<uint8_t>(bits >> ((endian == 1 ? i : 7 - i) * 8)));
+    }
+  }
+}
+
+double ReadNodeCoord(const GeoArrowGeometryNode& node, uint32_t coord, int dimension) {
+  double value;
+  memcpy(&value, node.coords[dimension] + coord * node.coord_stride[dimension],
+         sizeof(value));
+  return value;
+}
+
+}  // namespace
+
+TEST(WKBReaderTest, NativeEndianCoordinatesAndReaderReuse) {
+  GeoArrowWKBReader reader;
+  ASSERT_EQ(GeoArrowWKBReaderInit(&reader), GEOARROW_OK);
+  GeoArrowGeometryView geom;
+  const GeoArrowGeometryNode* previous_root = nullptr;
+  // Alternate byte order and grow/shrink the copied coordinate buffer on one reader.
+  for (uint32_t count : {1, 200, 2}) {
+    for (uint32_t type : {2, 1002, 2002, 3002}) {
+      int dims = type == 2 ? 2 : (type == 3002 ? 4 : 3);
+      for (uint8_t endian : {uint8_t(0), uint8_t(1), uint8_t(0), uint8_t(1)}) {
+        SCOPED_TRACE(type);
+        SCOPED_TRACE(endian);
+        std::vector<uint8_t> wkb;
+        AppendWKBHeader(&wkb, type, endian);
+        AppendWKBUInt32(&wkb, count, endian);
+        for (uint32_t i = 0; i < count; i++) {
+          std::vector<double> coord;
+          for (int j = 0; j < dims; j++) coord.push_back(i * 10.0 + j + 0.25);
+          AppendWKBCoords(&wkb, coord, endian);
+        }
+        const auto original = wkb;
+        ASSERT_EQ(
+            GeoArrowWKBReaderRead(&reader, {wkb.data(), static_cast<int64_t>(wkb.size())},
+                                  &geom, nullptr),
+            GEOARROW_OK);
+        ASSERT_EQ(geom.size_nodes, 1);
+        // Both zero-copy and converted reads reuse the same nodes.
+        if (previous_root != nullptr) {
+          EXPECT_EQ(geom.root, previous_root);
+        }
+        previous_root = geom.root;
+        EXPECT_EQ(geom.root->flags, 0);
+        EXPECT_EQ(geom.root->size, count);
+        if (endian == GEOARROW_NATIVE_ENDIAN) {
+          EXPECT_EQ(geom.root->coords[0], wkb.data() + 9);
+        } else {
+          EXPECT_NE(geom.root->coords[0], wkb.data() + 9);
+        }
+        for (uint32_t i = 0; i < count; i++) {
+          for (int j = 0; j < dims; j++) {
+            EXPECT_DOUBLE_EQ(ReadNodeCoord(*geom.root, i, j), i * 10.0 + j + 0.25);
+          }
+        }
+        for (int j = dims; j < 4; j++) {
+          EXPECT_TRUE(std::isnan(ReadNodeCoord(*geom.root, 0, j)));
+        }
+        EXPECT_EQ(wkb, original);
+
+        // Failure after reading a swapped sequence must not poison the next read.
+        EXPECT_EQ(GeoArrowWKBReaderRead(
+                      &reader, {wkb.data(), static_cast<int64_t>(wkb.size() - 1)}, &geom,
+                      nullptr),
+                  EINVAL);
+      }
+    }
+  }
+  GeoArrowWKBReaderReset(&reader);
+}
+
+TEST(WKBReaderTest, MixedEndianNestedCollection) {
+  GeoArrowWKBReader reader;
+  ASSERT_EQ(GeoArrowWKBReaderInit(&reader), GEOARROW_OK);
+  GeoArrowGeometry saved;
+  ASSERT_EQ(GeoArrowGeometryInit(&saved), GEOARROW_OK);
+  for (uint8_t endian : {uint8_t(0), uint8_t(1)}) {
+    uint8_t other = !endian;
+    std::vector<uint8_t> wkb;
+    AppendWKBHeader(&wkb, 7, endian);
+    AppendWKBUInt32(&wkb, 2, endian);
+    AppendWKBHeader(&wkb, 1, other);
+    AppendWKBCoords(&wkb, {1, 2}, other);
+    AppendWKBHeader(&wkb, 7, endian);
+    AppendWKBUInt32(&wkb, 3, endian);
+    AppendWKBHeader(&wkb, 3, other);
+    AppendWKBUInt32(&wkb, 2, other);
+    AppendWKBUInt32(&wkb, 4, other);
+    AppendWKBCoords(&wkb, {0, 0, 4, 0, 0, 4, 0, 0}, other);
+    AppendWKBUInt32(&wkb, 0, other);  // Empty ring after a nonempty sequence.
+    AppendWKBHeader(&wkb, 1, endian);
+    AppendWKBCoords(&wkb, {3, 4}, endian);
+    AppendWKBHeader(&wkb, 2, other);
+    AppendWKBUInt32(&wkb, 0, other);  // Empty sequence at the end of copied storage.
+    const auto original = wkb;
+    GeoArrowGeometryView geom;
+    ASSERT_EQ(
+        GeoArrowWKBReaderRead(&reader, {wkb.data(), static_cast<int64_t>(wkb.size())},
+                              &geom, nullptr),
+        GEOARROW_OK);
+    ASSERT_EQ(geom.size_nodes, 8);
+    for (int64_t i = 0; i < geom.size_nodes; i++) EXPECT_EQ(geom.root[i].flags, 0);
+    EXPECT_DOUBLE_EQ(ReadNodeCoord(geom.root[1], 0, 0), 1);
+    EXPECT_DOUBLE_EQ(ReadNodeCoord(geom.root[4], 1, 0), 4);
+    EXPECT_DOUBLE_EQ(ReadNodeCoord(geom.root[6], 0, 1), 4);
+    for (int index : {5, 7}) {
+      for (int j = 0; j < 4; j++) {
+        EXPECT_TRUE(std::isnan(ReadNodeCoord(geom.root[index], 0, j)));
+      }
+    }
+    EXPECT_EQ(wkb, original);
+    ASSERT_EQ(GeoArrowGeometryDeepCopy(geom, &saved), GEOARROW_OK);
+    WKXTester tester;
+    EXPECT_EQ(tester.AsWKT(saved),
+              "GEOMETRYCOLLECTION (POINT (1 2), GEOMETRYCOLLECTION (POLYGON ((0 0, 4 0, "
+              "0 4, 0 0), EMPTY), POINT (3 4), LINESTRING EMPTY))");
+    EXPECT_EQ(tester.AsWKB(saved), tester.AsWKB(wkb));
+    EXPECT_EQ(tester.AsWKTUsingVisitor(saved), tester.AsWKT(saved));
+    // Truncate after a successfully parsed point, including a swapped sequence.
+    EXPECT_EQ(GeoArrowWKBReaderRead(&reader, {wkb.data(), 31}, &geom, nullptr), EINVAL);
+  }
+  GeoArrowWKBReaderReset(&reader);
+  EXPECT_DOUBLE_EQ(ReadNodeCoord(saved.root[1], 0, 0), 1);
+  GeoArrowGeometryReset(&saved);
+}
+
+TEST(WKBReaderTest, OppositeEndianEmptyGeometries) {
+  GeoArrowWKBReader reader;
+  ASSERT_EQ(GeoArrowWKBReaderInit(&reader), GEOARROW_OK);
+  uint8_t endian = !GEOARROW_NATIVE_ENDIAN;
+  for (uint32_t type : {1, 2, 3, 4, 5, 6, 7}) {
+    SCOPED_TRACE(type);
+    std::vector<uint8_t> wkb;
+    AppendWKBHeader(&wkb, type, endian);
+    if (type == 1) {
+      AppendWKBCoords(&wkb, {NAN, NAN}, endian);
+    } else {
+      AppendWKBUInt32(&wkb, 0, endian);
+    }
+    GeoArrowGeometryView geom;
+    ASSERT_EQ(
+        GeoArrowWKBReaderRead(&reader, {wkb.data(), static_cast<int64_t>(wkb.size())},
+                              &geom, nullptr),
+        GEOARROW_OK);
+    EXPECT_EQ(geom.root->flags, 0);
+    for (int j = 0; j < 4; j++) {
+      EXPECT_TRUE(std::isnan(ReadNodeCoord(*geom.root, 0, j)));
+    }
+  }
+  GeoArrowWKBReaderReset(&reader);
 }

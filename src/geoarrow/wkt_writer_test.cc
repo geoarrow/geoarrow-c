@@ -51,6 +51,97 @@ TEST(WKTWriterTest, WKTWriterTestBasic) {
   GeoArrowWKTWriterReset(&writer);
 }
 
+TEST(WKTWriterTest, WKTWriterTestAppendGeometry) {
+  WKXTester tester;
+  struct GeoArrowWKTWriter writer;
+  GeoArrowWKTWriterInit(&writer);
+
+  const auto& point = tester.AsGeometry("POINT (1 2)");
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&point)),
+            GEOARROW_OK);
+  ASSERT_EQ(GeoArrowWKTWriterAppendNull(&writer), GEOARROW_OK);
+
+  const auto& empty_multipoint = tester.AsGeometry("MULTIPOINT EMPTY");
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&empty_multipoint)),
+            GEOARROW_OK);
+
+  const auto& multipoint_with_empty = tester.AsGeometry("MULTIPOINT (EMPTY, (3 4))");
+  ASSERT_EQ(
+      GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&multipoint_with_empty)),
+      GEOARROW_OK);
+
+  struct ArrowArray array;
+  EXPECT_EQ(GeoArrowWKTWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+  EXPECT_EQ(array.length, 4);
+  EXPECT_EQ(array.null_count, 1);
+
+  struct ArrowArrayView view;
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), NANOARROW_OK);
+
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 0).data,
+                        ArrowArrayViewGetStringUnsafe(&view, 0).size_bytes),
+            "POINT (1 2)");
+  EXPECT_TRUE(ArrowArrayViewIsNull(&view, 1));
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 2).data,
+                        ArrowArrayViewGetStringUnsafe(&view, 2).size_bytes),
+            "MULTIPOINT EMPTY");
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 3).data,
+                        ArrowArrayViewGetStringUnsafe(&view, 3).size_bytes),
+            "MULTIPOINT (EMPTY, 3 4)");
+
+  ArrowArrayViewReset(&view);
+  array.release(&array);
+  GeoArrowWKTWriterReset(&writer);
+}
+
+TEST(WKTWriterTest, WKTWriterTestAppendGeometryOptions) {
+  WKXTester tester;
+  struct GeoArrowWKTWriter writer;
+  GeoArrowWKTWriterInit(&writer);
+
+  const auto& point = tester.AsGeometry("POINT (1.2345678901234567 2.3456789012345678)");
+  ASSERT_EQ(GeoArrowWKTWriterSetPrecision(&writer, 100), EINVAL);
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&point)),
+            GEOARROW_OK);
+
+  ASSERT_EQ(GeoArrowWKTWriterSetPrecision(&writer, 3), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&point)),
+            GEOARROW_OK);
+
+  const auto& linestring = tester.AsGeometry("LINESTRING (1 2, 3 4)");
+  ASSERT_EQ(GeoArrowWKTWriterSetMaxElementSizeBytes(&writer, 6), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&linestring)),
+            GEOARROW_OK);
+
+  struct ArrowArray array;
+  EXPECT_EQ(GeoArrowWKTWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+
+  struct ArrowArrayView view;
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), NANOARROW_OK);
+
+#if defined(GEOARROW_USE_RYU) && GEOARROW_USE_RYU
+  const char* expected_default_precision = "POINT (1.2345678901234567 2.345678901234568)";
+#else
+  const char* expected_default_precision =
+      "POINT (1.2345678901234567 2.3456789012345678)";
+#endif
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 0).data,
+                        ArrowArrayViewGetStringUnsafe(&view, 0).size_bytes),
+            expected_default_precision);
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 1).data,
+                        ArrowArrayViewGetStringUnsafe(&view, 1).size_bytes),
+            "POINT (1.235 2.346)");
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 2).data,
+                        ArrowArrayViewGetStringUnsafe(&view, 2).size_bytes),
+            "LINEST");
+
+  ArrowArrayViewReset(&view);
+  array.release(&array);
+  GeoArrowWKTWriterReset(&writer);
+}
+
 int64_t GeoArrowPrintDouble(double f, uint32_t precision, char* result);
 
 TEST(WKTWriterTest, WKTWriterTestPrintDouble) {
@@ -859,4 +950,50 @@ TEST(WKTWriterTest, WKTWriterTestVeryLongCoords) {
 
   array.release(&array);
   GeoArrowWKTWriterReset(&writer);
+}
+
+TEST(WKTWriterTest, AppendGeometryWithNaNEmptyPoints) {
+  WKXTester tester;
+  for (const char* wkt : {"POINT ZM (1 2 3 4)", "POINT EMPTY", "LINESTRING (1 2, 3 4)",
+                          "MULTIPOINT ((1 2), EMPTY, (3 4))"}) {
+    SCOPED_TRACE(wkt);
+    GeoArrowGeometry geom;
+    ASSERT_EQ(GeoArrowGeometryInit(&geom), GEOARROW_OK);
+    ASSERT_EQ(
+        GeoArrowGeometryDeepCopy(GeoArrowGeometryAsView(&tester.AsGeometry(wkt)), &geom),
+        GEOARROW_OK);
+    // Independently own each sequence so the input can also represent empty NaN points.
+    std::vector<std::vector<uint64_t>> coords(static_cast<size_t>(geom.size_nodes));
+    for (int64_t i = 0; i < geom.size_nodes; i++) {
+      auto node = geom.root + i;
+      if (node->geometry_type != GEOARROW_GEOMETRY_TYPE_POINT &&
+          node->geometry_type != GEOARROW_GEOMETRY_TYPE_LINESTRING)
+        continue;
+      auto& values = coords[static_cast<size_t>(i)];
+      int dims = _GeoArrowkNumDimensions[node->dimensions];
+      // Exercise both size-zero empties and NaN-encoded empty points.
+      if (node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT && node->size == 0) {
+        node->size = 1;
+        values.resize(dims);
+        for (int j = 0; j < dims; j++) {
+          std::memcpy(&values[j], _GeoArrowkEmptyPointCoords, sizeof(double));
+        }
+      } else {
+        values.resize(static_cast<size_t>(node->size) * dims);
+        GeoArrowGeometryNodeWriteSequence(node, reinterpret_cast<uint8_t*>(values.data()),
+                                          static_cast<int64_t>(values.size() * 8));
+      }
+      for (int j = 0; j < dims; j++) {
+        node->coords[j] = reinterpret_cast<const uint8_t*>(values.data() + j);
+        node->coord_stride[j] = dims * 8;
+      }
+    }
+    EXPECT_EQ(tester.AsWKT(geom), wkt);
+    tester.SetFlatMultipoint(true);
+    std::string expected =
+        std::string(wkt).find("MULTIPOINT") == 0 ? "MULTIPOINT (1 2, EMPTY, 3 4)" : wkt;
+    EXPECT_EQ(tester.AsWKT(geom), expected);
+    tester.SetFlatMultipoint(false);
+    GeoArrowGeometryReset(&geom);
+  }
 }

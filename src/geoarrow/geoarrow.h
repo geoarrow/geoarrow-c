@@ -38,7 +38,9 @@ int GeoArrowVersionInt(void);
 GeoArrowErrorCode GeoArrowErrorSet(struct GeoArrowError* error, const char* fmt, ...);
 
 /// \brief Parse a string into a double
-GeoArrowErrorCode GeoArrowFromChars(const char* first, const char* last, double* out);
+/// \param end Set to the first unconsumed byte on success.
+GeoArrowErrorCode GeoArrowFromChars(const char* first, const char* last, double* out,
+                                    const char** end);
 
 /// \brief Print a double to a buffer
 int64_t GeoArrowPrintDouble(double f, uint32_t precision, char* result);
@@ -142,6 +144,53 @@ GeoArrowErrorCode GeoArrowArrayViewInitFromSchema(struct GeoArrowArrayView* arra
 GeoArrowErrorCode GeoArrowArrayViewSetArray(struct GeoArrowArrayView* array_view,
                                             const struct ArrowArray* array,
                                             struct GeoArrowError* error);
+
+/// \brief Callback consuming one geometry, with caller-supplied context
+///
+/// Return GEOARROW_OK to continue, or any other code to stop iteration.
+/// The error pointer is the one supplied to the geometry visit function.
+typedef GeoArrowErrorCode (*GeoArrowGeometryCallback)(struct GeoArrowGeometryView geom,
+                                                      void* private_data,
+                                                      struct GeoArrowError* error);
+
+/// \brief View one native array element as a geometry
+///
+/// The array_view must reference a valid array of points, linestrings, polygons,
+/// multipoints, multilinestrings, multipolygons, or XY boxes. Both coordinate layouts
+/// and all dimensions of native geometry arrays are supported. Serialized types and
+/// boxes with non-XY dimensions return ENOTSUP. An XY box is returned as a polygon, or
+/// as two polygons in a multipolygon when xmin > xmax.
+/// The index i is relative to the logical array slice and must be in
+/// [0, array_view->length[0]); otherwise EINVAL is returned.
+///
+/// The caller must initialize out with GeoArrowGeometryInit() and eventually call
+/// GeoArrowGeometryReset(). Its nodes are replaced on success and their allocation
+/// is reused where possible. Coordinate buffers are borrowed from array_view for
+/// native geometry arrays and must remain valid while the result is used. Box polygon
+/// coordinates are owned by out. Null elements produce one node of type
+/// GEOARROW_GEOMETRY_TYPE_GEOMETRY with size zero.
+GeoArrowErrorCode GeoArrowArrayViewGetGeometry(const struct GeoArrowArrayView* array_view,
+                                               int64_t i, struct GeoArrowGeometry* out);
+
+/// \brief Visit a range of native array elements as geometry views
+///
+/// Supports the types and null representation of GeoArrowArrayViewGetGeometry().
+/// Serialized types and non-XY boxes return ENOTSUP. Offset is relative to the
+/// logical array slice. Returns EINVAL for an invalid range, or a NULL scratch or
+/// callback with nonzero length. A zero-length range makes no callbacks.
+///
+/// The caller must initialize scratch with GeoArrowGeometryInit() and eventually
+/// call GeoArrowGeometryReset(). Its node and coordinate capacity is reused across
+/// elements and calls. Points and linestrings use a stack node and leave scratch
+/// unchanged. The callback must not modify array_view, its buffers, or scratch.
+///
+/// Calls callback once per element, in order. Views and coordinates are only
+/// guaranteed valid during the callback; use GeoArrowGeometryDeepCopy() to retain
+/// a geometry. Stops immediately on a read or callback error and returns that code.
+GeoArrowErrorCode GeoArrowArrayViewVisitGeometry(
+    const struct GeoArrowArrayView* array_view, int64_t offset, int64_t length,
+    struct GeoArrowGeometry* scratch, GeoArrowGeometryCallback callback,
+    void* private_data, struct GeoArrowError* error);
 
 /// @}
 
@@ -334,9 +383,34 @@ GeoArrowErrorCode GeoArrowGeometryShallowCopy(struct GeoArrowGeometryView src,
 /// \brief Populate the coords and nodes of a GeoArrowGeometry from a GeoArrowGeometryView
 ///
 /// Copies nodes and coords from src into a previously initialized GeoArrowGeometry. On
-/// success the destination owns its nodes but and any underlying coordinates.
+/// success the destination owns its nodes and any underlying coordinates.
+/// src must not reference dst's nodes or owned coordinate storage. To copy
+/// external coordinates into an existing geometry, use GeoArrowGeometryCopyCoords().
 GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
                                            struct GeoArrowGeometry* dst);
+
+/// \brief Copy externally owned coordinates into a geometry's internal storage
+///
+/// Copies coordinates for all sequence nodes, including children, into geom's
+/// reusable coordinate buffer and updates their pointers and strides to interleaved
+/// doubles. The nodes themselves are reused. Pointers and strides for empty
+/// sequences and missing dimensions are preserved; their NaN sentinel storage
+/// must remain valid for the lifetime of geom.
+///
+/// geom must have been initialized with GeoArrowGeometryInit(). All source
+/// coordinates must be external to geom's owned coordinate storage, which may be
+/// overwritten or reallocated. This is not an idempotent "ensure owned" operation.
+GeoArrowErrorCode GeoArrowGeometryCopyCoords(struct GeoArrowGeometry* geom);
+
+/// \brief Populate a GeoArrowGeometry from an XY box
+///
+/// Replaces the contents of geom with a polygon containing the box bounds. If
+/// xmin > xmax, the box is considered to cross the antimeridian and is represented
+/// by a multipolygon whose X limits are negative and positive infinity. If
+/// ymin > ymax, the result is an empty polygon. The resulting coordinates are owned
+/// by geom.
+GeoArrowErrorCode GeoArrowGeometrySetBox(struct GeoArrowGeometry* geom, double xmin,
+                                         double ymin, double xmax, double ymax);
 
 /// \brief Resize the nodes list
 ///
@@ -353,6 +427,19 @@ GeoArrowErrorCode GeoArrowGeometryResizeNodes(struct GeoArrowGeometry* geom,
 /// when calling this in a loop.
 GeoArrowErrorCode GeoArrowGeometryAppendNode(struct GeoArrowGeometry* geom,
                                              struct GeoArrowGeometryNode** out);
+
+/// \brief Validate the node structure of a non-null GeoArrowGeometryView
+///
+/// Checks geometry types, dimensions, nesting levels, child counts/types, and POINT
+/// coordinate counts. Returns EINVAL on invalid structure and optionally sets error.
+/// At most 32 levels (including the root) are supported. A view of a subtree may
+/// begin at a nonzero level. Empty parts are valid; null parts are not supported. This
+/// does not check coordinate values, topology, or buffer extents, and does not impose the
+/// 32-bit offset limits of native arrays. The producer must provide accessible memory for
+/// all size_nodes nodes; coordinate buffer validity remains the producer's
+/// responsibility.
+GeoArrowErrorCode GeoArrowGeometryViewValidate(struct GeoArrowGeometryView geom,
+                                               struct GeoArrowError* error);
 
 /// \brief Export a GeoArrowGeometryView using a GeoArrowVisitor
 GeoArrowErrorCode GeoArrowGeometryViewVisit(struct GeoArrowGeometryView geometry,
@@ -401,7 +488,7 @@ GeoArrowErrorCode GeoArrowArrayViewVisitNative(const struct GeoArrowArrayView* a
 /// \brief GeoArrow native array writer
 ///
 /// This writer writes the "native" memory layouts (i.e., nested lists of
-/// coordinates) implemented as a visitor.
+/// coordinates), either directly from geometry views or through a visitor.
 struct GeoArrowNativeWriter {
   /// \brief Implementation-specific details
   void* private_data;
@@ -418,7 +505,23 @@ GeoArrowErrorCode GeoArrowNativeWriterInit(struct GeoArrowNativeWriter* writer,
 GeoArrowErrorCode GeoArrowNativeWriterInitVisitor(struct GeoArrowNativeWriter* writer,
                                                   struct GeoArrowVisitor* v);
 
-/// \brief Append a GeoArrowGeometryView to this writer
+/// \brief Copy a GeoArrowGeometryView into this writer
+///
+/// Coordinates may be unaligned or strided doubles in native byte order. Missing
+/// output dimensions are filled with NaN; extra input dimensions are discarded.
+/// Empty parts are preserved for matching types and supported single/multi
+/// conversions. An output POINT accepts only POINT or MULTIPOINT with exactly one
+/// point (which may be empty). For other output types, otherwise incompatible
+/// geometries with no coordinates become an empty value of the output type.
+/// Geometry parts must be non-null; use GeoArrowNativeWriterAppendNull() for a null
+/// feature. Input memory must not alias the writer's buffers.
+///
+/// The input must have valid node structure; call GeoArrowGeometryViewValidate()
+/// separately when validation is needed. This function checks output compatibility,
+/// native offset limits, and fields used to address memory, but does not perform
+/// full structural validation. Detected invalid inputs return EINVAL and overflowing
+/// native offsets return EOVERFLOW. Checks and allocation precede appending, so a
+/// failed append leaves the previously appended features intact.
 GeoArrowErrorCode GeoArrowNativeWriterAppend(struct GeoArrowNativeWriter* writer,
                                              struct GeoArrowGeometryView geom,
                                              struct GeoArrowError* error);
@@ -488,6 +591,16 @@ GeoArrowErrorCode GeoArrowWKTWriterSetMaxElementSizeBytes(
 /// \brief Populate a GeoArrowVisitor pointing to this writer
 void GeoArrowWKTWriterInitVisitor(struct GeoArrowWKTWriter* writer,
                                   struct GeoArrowVisitor* v);
+
+/// \brief Append a geometry view to this writer
+///
+/// The geometry is appended using the current writer options. The caller retains
+/// ownership of the geometry view and its referenced memory.
+GeoArrowErrorCode GeoArrowWKTWriterAppend(struct GeoArrowWKTWriter* writer,
+                                          struct GeoArrowGeometryView geom);
+
+/// \brief Append a null element to this writer
+GeoArrowErrorCode GeoArrowWKTWriterAppendNull(struct GeoArrowWKTWriter* writer);
 
 /// \brief Finish an ArrowArray containing elements from the visited input
 ///
@@ -574,6 +687,12 @@ GeoArrowErrorCode GeoArrowWKBReaderVisit(struct GeoArrowWKBReader* reader,
                                          struct GeoArrowBufferView src,
                                          struct GeoArrowVisitor* v);
 
+/// \brief Read well-known binary into a geometry view with native-endian coordinates
+///
+/// The view is valid until the next read or reset of reader. Coordinate data may
+/// reference src, which must remain valid while the view is used. If any coordinate
+/// sequence uses non-native byte order, coordinates are copied into reader-owned
+/// storage and converted to native byte order.
 GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
                                         struct GeoArrowBufferView src,
                                         struct GeoArrowGeometryView* out,
@@ -614,6 +733,24 @@ GeoArrowErrorCode GeoArrowArrayReaderSetArray(struct GeoArrowArrayReader* reader
 GeoArrowErrorCode GeoArrowArrayReaderVisit(struct GeoArrowArrayReader* reader,
                                            int64_t offset, int64_t length,
                                            struct GeoArrowVisitor* v);
+
+/// \brief Visit a range of array elements as geometry views
+///
+/// Calls callback once per element, in order, including nulls represented by one
+/// type-zero node. Offset is relative to the array slice supplied to SetArray().
+/// The view and its coordinates are only guaranteed valid during the callback;
+/// use GeoArrowGeometryDeepCopy() to retain a geometry. The callback must not
+/// use or modify this reader (including SetArray(), VisitGeometry(), or Reset()).
+///
+/// Stops immediately on a reader or callback error, returning that code without
+/// visiting subsequent elements. Returns EINVAL for an invalid range or a NULL
+/// callback with nonzero length. A zero-length range makes no callbacks.
+/// Reader-owned scratch storage is reused across calls and freed by Reset().
+GeoArrowErrorCode GeoArrowArrayReaderVisitGeometry(struct GeoArrowArrayReader* reader,
+                                                   int64_t offset, int64_t length,
+                                                   GeoArrowGeometryCallback callback,
+                                                   void* private_data,
+                                                   struct GeoArrowError* error);
 
 /// \brief Get a GeoArrowArrayView
 ///
@@ -665,6 +802,21 @@ GeoArrowErrorCode GeoArrowArrayWriterSetFlatMultipoint(struct GeoArrowArrayWrite
 /// \brief Populate a GeoArrowVisitor pointing to this writer
 GeoArrowErrorCode GeoArrowArrayWriterInitVisitor(struct GeoArrowArrayWriter* writer,
                                                  struct GeoArrowVisitor* v);
+
+/// \brief Append one geometry to this writer
+///
+/// Coordinates are copied before returning. A view containing one node with
+/// geometry_type 0 appends a null feature, as supplied to
+/// GeoArrowArrayReaderVisitGeometry() callbacks. Other inputs must be valid, nonempty
+/// node sequences describing one geometry. Call GeoArrowGeometryViewValidate() first if
+/// node structure is not trusted. WKT/WKB view and large-offset output types remain
+/// unsupported.
+GeoArrowErrorCode GeoArrowArrayWriterAppend(struct GeoArrowArrayWriter* writer,
+                                            struct GeoArrowGeometryView geom,
+                                            struct GeoArrowError* error);
+
+/// \brief Append one null feature to this writer
+GeoArrowErrorCode GeoArrowArrayWriterAppendNull(struct GeoArrowArrayWriter* writer);
 
 /// \brief Finish an ArrowArray containing elements from the visited input
 ///

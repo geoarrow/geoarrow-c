@@ -10,11 +10,15 @@
 #define EWKB_M_BIT 0x40000000
 #define EWKB_SRID_BIT 0x20000000
 
+// Used only while parsing; never exposed in a returned geometry view.
+#define WKB_GEOMETRY_NODE_FLAG_SWAP_ENDIAN 0x01
+
 struct WKBReaderPrivate {
   const uint8_t* data;
   int64_t size_bytes;
   const uint8_t* data0;
   int need_swapping;
+  int coords_need_swapping;
   struct GeoArrowGeometry geom;
 };
 
@@ -52,7 +56,8 @@ static inline int WKBReaderReadUInt32(struct WKBReaderPrivate* s, uint32_t* out,
 static inline GeoArrowErrorCode WKBReaderReadNodeCoordinates(
     struct WKBReaderPrivate* s, uint32_t n_coords, uint32_t coord_size_elements,
     struct GeoArrowGeometryNode* node, struct GeoArrowError* error) {
-  int64_t bytes_needed = n_coords * coord_size_elements * sizeof(double);
+  int64_t bytes_needed =
+      (int64_t)n_coords * (int64_t)coord_size_elements * (int64_t)sizeof(double);
   if (s->size_bytes < bytes_needed) {
     GeoArrowErrorSet(
         error,
@@ -64,6 +69,11 @@ static inline GeoArrowErrorCode WKBReaderReadNodeCoordinates(
   }
 
   if (n_coords > 0) {
+    if (s->need_swapping) {
+      node->flags = WKB_GEOMETRY_NODE_FLAG_SWAP_ENDIAN;
+      s->coords_need_swapping = 1;
+    }
+
     for (uint32_t i = 0; i < coord_size_elements; i++) {
       node->coord_stride[i] = (int32_t)coord_size_elements * sizeof(double);
       node->coords[i] = s->data + (i * sizeof(double));
@@ -71,6 +81,7 @@ static inline GeoArrowErrorCode WKBReaderReadNodeCoordinates(
   }
 
   s->data += bytes_needed;
+  s->size_bytes -= bytes_needed;
   return GEOARROW_OK;
 }
 
@@ -144,9 +155,6 @@ static inline GeoArrowErrorCode WKBReaderReadNodeGeometry(
   node->geometry_type = (uint8_t)geometry_type;
   node->dimensions = (uint8_t)dimensions;
   node->size = size;
-  if (s->need_swapping) {
-    node->flags = GEOARROW_GEOMETRY_NODE_FLAG_SWAP_ENDIAN;
-  }
 
   switch (geometry_type) {
     case GEOARROW_GEOMETRY_TYPE_POINT:
@@ -215,6 +223,7 @@ GeoArrowErrorCode GeoArrowWKBReaderInit(struct GeoArrowWKBReader* reader) {
   s->data = NULL;
   s->size_bytes = 0;
   s->need_swapping = 0;
+  s->coords_need_swapping = 0;
 
   GeoArrowErrorCode result = GeoArrowGeometryInit(&s->geom);
   if (result != GEOARROW_OK) {
@@ -249,6 +258,7 @@ GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
   s->data0 = src.data;
   s->data = src.data;
   s->size_bytes = src.size_bytes;
+  s->coords_need_swapping = 0;
 
   // Reset the nodes list
   GEOARROW_RETURN_NOT_OK(GeoArrowGeometryResizeNodesInline(&s->geom, 0));
@@ -260,6 +270,36 @@ GeoArrowErrorCode GeoArrowWKBReaderRead(struct GeoArrowWKBReader* reader,
 
   // Read
   GEOARROW_RETURN_NOT_OK(WKBReaderReadNodeGeometry(s, node, error));
+
+  // Keep native-endian input zero-copy. If any sequence needs swapping, copy
+  // all coordinates into geom's stashed storage before normalizing those sequences.
+  // Parsing has repointed every sequence into src, so the old storage can be resized
+  // without invalidating any coordinate pointers.
+  if (s->coords_need_swapping) {
+    GEOARROW_RETURN_NOT_OK(GeoArrowGeometryCopyCoords(&s->geom));
+    struct GeoArrowGeometryNode* end = s->geom.root + s->geom.size_nodes;
+    for (node = s->geom.root; node < end; ++node) {
+      if (!(node->flags & WKB_GEOMETRY_NODE_FLAG_SWAP_ENDIAN)) {
+        continue;
+      }
+
+      // CopyCoords owns the storage; follow each dimension's pointer and stride.
+      int n_values = _GeoArrowkNumDimensions[node->dimensions];
+      uint32_t n_coords = node->size;
+      for (int j = 0; j < n_values; j++) {
+        uint8_t* coords = (uint8_t*)node->coords[j];
+        int32_t stride = node->coord_stride[j];
+        for (uint32_t i = 0; i < n_coords; i++) {
+          uint8_t* coord = coords + (int64_t)i * stride;
+          uint64_t value;
+          memcpy(&value, coord, sizeof(value));
+          value = GEOARROW_BSWAP64(value);
+          memcpy(coord, &value, sizeof(value));
+        }
+      }
+      node->flags = 0;
+    }
+  }
 
   // Populate output on success
   *out = GeoArrowGeometryAsView(&s->geom);

@@ -117,6 +117,15 @@ class ArrayWriter {
     return &visitor_;
   }
 
+  void Append(struct GeoArrowGeometryView geom) {
+    struct GeoArrowError error {};
+    GEOARROW_THROW_NOT_OK(&error, GeoArrowArrayWriterAppend(&writer_, geom, &error));
+  }
+
+  void AppendNull() {
+    GEOARROW_THROW_NOT_OK(nullptr, GeoArrowArrayWriterAppendNull(&writer_));
+  }
+
   void Finish(struct ArrowArray* out) {
     struct GeoArrowError error {};
     GEOARROW_THROW_NOT_OK(&error, GeoArrowArrayWriterFinish(&writer_, out, &error));

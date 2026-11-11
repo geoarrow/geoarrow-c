@@ -1,11 +1,14 @@
 
 # cython: language_level = 3
 # cython: linetrace=True
+# cython: freethreading_compatible = True
 
 """Low-level geoarrow Python bindings."""
 
 from libc.stdint cimport uint8_t, int32_t, int64_t, uintptr_t
+from libc.stdlib cimport free, malloc
 from cpython cimport Py_buffer, PyObject
+from cpython.pycapsule cimport PyCapsule_GetPointer, PyCapsule_New
 from libcpp cimport bool
 from libcpp.string cimport string
 
@@ -31,6 +34,13 @@ cdef extern from "geoarrow_type.h":
         ArrowArray** children
         ArrowArray* dictionary
         void (*release)(ArrowArray*)
+        void* private_data
+
+    struct ArrowArrayStream:
+        int (*get_schema)(ArrowArrayStream*, ArrowSchema* out)
+        int (*get_next)(ArrowArrayStream*, ArrowArray* out)
+        const char* (*get_last_error)(ArrowArrayStream*)
+        void (*release)(ArrowArrayStream*)
         void* private_data
 
     ctypedef int GeoArrowErrorCode
@@ -218,6 +228,18 @@ cdef extern from "geoarrow.h":
                                             ArrowArray* array,
                                             GeoArrowError* error)
 
+
+cdef extern from "nanoarrow/nanoarrow.h":
+    void ArrowArrayMove(ArrowArray* src, ArrowArray* dst)
+    void ArrowArrayStreamMove(ArrowArrayStream* src, ArrowArrayStream* dst)
+    void ArrowSchemaMove(ArrowSchema* src, ArrowSchema* dst)
+    GeoArrowErrorCode ArrowSchemaDeepCopy(ArrowSchema* schema,
+                                          ArrowSchema* schema_out)
+    GeoArrowErrorCode ArrowBasicArrayStreamInit(
+        ArrowArrayStream* array_stream, ArrowSchema* schema, int64_t n_arrays)
+    void ArrowBasicArrayStreamSetArray(
+        ArrowArrayStream* array_stream, int64_t i, ArrowArray* array)
+
 cdef extern from "geoarrow_python.h":
 
     GeoArrowErrorCode GeoArrowBuilderSetPyBuffer(GeoArrowBuilder* builder, int64_t i, PyObject* obj,
@@ -258,6 +280,10 @@ cdef extern from "geoarrow.hpp" namespace "geoarrow":
                                 const string& metadata) except +ValueError
 
         @staticmethod
+        GeometryDataType MakeType "Make"(GeoArrowType type,
+                                          const string& metadata) except +ValueError
+
+        @staticmethod
         GeometryDataType Make1 "Make"(ArrowSchema* schema) except +ValueError
 
         @staticmethod
@@ -288,6 +314,45 @@ class GeoArrowCException(RuntimeError):
             super().__init__(f"{self.what} failed ({self.code}): {self.message}")
 
 
+cdef void pycapsule_schema_deleter(object schema_capsule) noexcept:
+    cdef ArrowSchema* schema = <ArrowSchema*>PyCapsule_GetPointer(
+        schema_capsule, "arrow_schema"
+    )
+    if schema == NULL:
+        return
+
+    if schema.release != NULL:
+        schema.release(schema)
+
+    free(schema)
+
+
+cdef void pycapsule_array_deleter(object array_capsule) noexcept:
+    cdef ArrowArray* array = <ArrowArray*>PyCapsule_GetPointer(
+        array_capsule, "arrow_array"
+    )
+    if array == NULL:
+        return
+
+    if array.release != NULL:
+        array.release(array)
+
+    free(array)
+
+
+cdef void pycapsule_array_stream_deleter(object stream_capsule) noexcept:
+    cdef ArrowArrayStream* stream = <ArrowArrayStream*>PyCapsule_GetPointer(
+        stream_capsule, "arrow_array_stream"
+    )
+    if stream == NULL:
+        return
+
+    if stream.release != NULL:
+        stream.release(stream)
+
+    free(stream)
+
+
 cdef class Error:
     cdef GeoArrowError c_error
 
@@ -315,6 +380,41 @@ cdef class SchemaHolder:
     def _addr(self):
         return <uintptr_t>&self.c_schema
 
+    def __arrow_c_schema__(self):
+        """Export an independent Arrow schema capsule."""
+        if self.c_schema.release == NULL:
+            raise ValueError("Schema is already released")
+
+        cdef ArrowSchema* schema = <ArrowSchema*>malloc(sizeof(ArrowSchema))
+        if schema == NULL:
+            raise MemoryError()
+
+        schema.release = NULL
+        capsule = PyCapsule_New(
+            schema, "arrow_schema", &pycapsule_schema_deleter
+        )
+        cdef int result = ArrowSchemaDeepCopy(&self.c_schema, schema)
+        if result != GEOARROW_OK:
+            Error.raise_error("ArrowSchemaDeepCopy()", result)
+
+        return capsule
+
+    @staticmethod
+    def from_arrow_c_schema(obj):
+        """Import an Arrow schema capsule or ``__arrow_c_schema__`` provider."""
+        if hasattr(obj, "__arrow_c_schema__"):
+            obj = obj.__arrow_c_schema__()
+
+        cdef ArrowSchema* schema = <ArrowSchema*>PyCapsule_GetPointer(
+            obj, "arrow_schema"
+        )
+        if schema.release == NULL:
+            raise ValueError("Arrow schema is released")
+
+        out = SchemaHolder()
+        ArrowSchemaMove(schema, &out.c_schema)
+        return out
+
     def is_valid(self):
         return self.c_schema.release != NULL
 
@@ -326,9 +426,11 @@ cdef class SchemaHolder:
 
 cdef class ArrayHolder:
     cdef ArrowArray c_array
+    cdef object _schema
 
     def __cinit__(self):
         self.c_array.release = NULL
+        self._schema = None
 
     def __dealloc__(self):
         if self.c_array.release != NULL:
@@ -337,6 +439,57 @@ cdef class ArrayHolder:
     def _addr(self):
         return <uintptr_t>&self.c_array
 
+    def get_schema(self):
+        """Return an independent copy of this array's schema."""
+        if self._schema is None:
+            raise ValueError("Array holder does not have a schema")
+        return SchemaHolder.from_arrow_c_schema(self._schema)
+
+    def __arrow_c_array__(self, requested_schema=None):
+        """Export this array using the Arrow PyCapsule protocol."""
+        if requested_schema is not None:
+            raise ValueError("Requested schema is not supported")
+        if self.c_array.release == NULL:
+            raise ValueError("Array is already released")
+        if self._schema is None:
+            raise ValueError("Array holder does not have a schema")
+
+        cdef ArrowArray* array = <ArrowArray*>malloc(sizeof(ArrowArray))
+        if array == NULL:
+            raise MemoryError()
+
+        array.release = NULL
+        capsule = PyCapsule_New(
+            array, "arrow_array", &pycapsule_array_deleter
+        )
+        ArrowArrayMove(&self.c_array, array)
+        return self._schema.__arrow_c_schema__(), capsule
+
+    @staticmethod
+    def from_arrow_c_array(obj):
+        """Import an ``__arrow_c_array__`` provider."""
+        if not hasattr(obj, "__arrow_c_array__"):
+            raise TypeError("Expected an __arrow_c_array__ provider")
+
+        capsules = obj.__arrow_c_array__()
+        if not isinstance(capsules, tuple) or len(capsules) != 2:
+            raise TypeError(
+                "__arrow_c_array__ must return a schema and array capsule"
+            )
+
+        cdef ArrowArray* array = <ArrowArray*>PyCapsule_GetPointer(
+            capsules[1], "arrow_array"
+        )
+        if array == NULL:
+            raise ValueError("Invalid Arrow array capsule")
+        if array.release == NULL:
+            raise ValueError("Arrow array is released")
+
+        out = ArrayHolder()
+        out._schema = SchemaHolder.from_arrow_c_schema(capsules[0])
+        ArrowArrayMove(array, &out.c_array)
+        return out
+
     def is_valid(self):
         return self.c_array.release != NULL
 
@@ -344,6 +497,133 @@ cdef class ArrayHolder:
         if self.c_array.release == NULL:
             raise ValueError('Array is already released')
         self.c_array.release(&self.c_array)
+
+
+cdef class ArrayStreamHolder:
+    cdef ArrowArrayStream c_stream
+    cdef object _schema
+
+    def __cinit__(self):
+        self.c_stream.release = NULL
+        self._schema = None
+
+    def __dealloc__(self):
+        if self.c_stream.release != NULL:
+            self.c_stream.release(&self.c_stream)
+
+    def __arrow_c_stream__(self, requested_schema=None):
+        """Export this stream using the Arrow PyCapsule protocol."""
+        if requested_schema is not None:
+            raise ValueError("Requested schema is not supported")
+        if self.c_stream.release == NULL:
+            raise ValueError("Array stream is already released")
+
+        cdef ArrowArrayStream* stream = <ArrowArrayStream*>malloc(
+            sizeof(ArrowArrayStream)
+        )
+        if stream == NULL:
+            raise MemoryError()
+
+        stream.release = NULL
+        capsule = PyCapsule_New(
+            stream, "arrow_array_stream", &pycapsule_array_stream_deleter
+        )
+        ArrowArrayStreamMove(&self.c_stream, stream)
+        return capsule
+
+    @staticmethod
+    def from_arrow_c_stream(obj):
+        """Import an ``__arrow_c_stream__`` provider."""
+        if not hasattr(obj, "__arrow_c_stream__"):
+            raise TypeError("Expected an __arrow_c_stream__ provider")
+
+        capsule = obj.__arrow_c_stream__()
+        cdef ArrowArrayStream* stream = <ArrowArrayStream*>PyCapsule_GetPointer(
+            capsule, "arrow_array_stream"
+        )
+        if stream == NULL:
+            raise ValueError("Invalid Arrow array stream capsule")
+        if stream.release == NULL:
+            raise ValueError("Arrow array stream is released")
+
+        out = ArrayStreamHolder()
+        ArrowArrayStreamMove(stream, &out.c_stream)
+        out._schema = out.get_schema()
+        return out
+
+    @staticmethod
+    def from_arrays(SchemaHolder schema, arrays):
+        """Create a stream by consuming a sequence of ``ArrayHolder`` objects."""
+        schema_copy = SchemaHolder()
+        cdef int result = ArrowSchemaDeepCopy(
+            &schema.c_schema, &schema_copy.c_schema
+        )
+        if result != GEOARROW_OK:
+            Error.raise_error("ArrowSchemaDeepCopy()", result)
+
+        out = ArrayStreamHolder()
+        result = ArrowBasicArrayStreamInit(
+            &out.c_stream, &schema_copy.c_schema, len(arrays)
+        )
+        if result != GEOARROW_OK:
+            Error.raise_error("ArrowBasicArrayStreamInit()", result)
+
+        for i, array in enumerate(arrays):
+            if not isinstance(array, ArrayHolder):
+                raise TypeError("Expected an ArrayHolder")
+            ArrowBasicArrayStreamSetArray(
+                &out.c_stream, i, &(<ArrayHolder>array).c_array
+            )
+
+        out._schema = out.get_schema()
+        return out
+
+    def get_schema(self):
+        """Return this stream's schema."""
+        if self.c_stream.release == NULL:
+            raise ValueError("Array stream is already released")
+
+        out = SchemaHolder()
+        cdef int result = self.c_stream.get_schema(
+            &self.c_stream, &out.c_schema
+        )
+        if result != GEOARROW_OK:
+            self._raise_last_error("ArrowArrayStream.get_schema()", result)
+        return out
+
+    def get_next(self):
+        """Return the next ``ArrayHolder``, or ``None`` at end of stream."""
+        if self.c_stream.release == NULL:
+            raise ValueError("Array stream is already released")
+
+        out = ArrayHolder()
+        cdef int result = self.c_stream.get_next(
+            &self.c_stream, &out.c_array
+        )
+        if result != GEOARROW_OK:
+            self._raise_last_error("ArrowArrayStream.get_next()", result)
+        if out.c_array.release == NULL:
+            return None
+
+        out._schema = self._schema
+        return out
+
+    def _raise_last_error(self, what, code):
+        cdef const char* message = NULL
+        if self.c_stream.get_last_error != NULL:
+            message = self.c_stream.get_last_error(&self.c_stream)
+
+        if message == NULL:
+            raise GeoArrowCException(what, code)
+        raise GeoArrowCException(what, code, message.decode("UTF-8"))
+
+    def is_valid(self):
+        return self.c_stream.release != NULL
+
+    def release(self):
+        if self.c_stream.release == NULL:
+            raise ValueError("Array stream is already released")
+        self.c_stream.release(&self.c_stream)
 
 
 cdef class CGeometryDataType:
@@ -471,6 +751,11 @@ cdef class CGeometryDataType:
         return CGeometryDataType._move_from_ctype(&ctype)
 
     @staticmethod
+    def MakeType(GeoArrowType type, metadata=b''):
+        cdef GeometryDataType ctype = GeometryDataType.MakeType(type, metadata)
+        return CGeometryDataType._move_from_ctype(&ctype)
+
+    @staticmethod
     def FromExtension(SchemaHolder schema):
         cdef GeometryDataType ctype = GeometryDataType.Make1(&schema.c_schema)
         return CGeometryDataType._move_from_ctype(&ctype)
@@ -483,6 +768,7 @@ cdef class CGeometryDataType:
 cdef class CKernel:
     cdef GeoArrowKernel c_kernel
     cdef object cname_str
+    cdef object output_schema
 
     def __cinit__(self, const char* name):
         cdef const char* cname = <const char*>name
@@ -503,6 +789,7 @@ cdef class CKernel:
         if result != GEOARROW_OK:
             error.raise_message(f"GeoArrowKernel<{self.cname_str}>::start()", result)
 
+        self.output_schema = out
         return out
 
     def push_batch(self, ArrayHolder array):
@@ -515,6 +802,7 @@ cdef class CKernel:
         if result != GEOARROW_OK:
             error.raise_message(f"GeoArrowKernel<{self.cname_str}>::push_batch()", result)
 
+        out._schema = self.output_schema
         return out
 
     def finish(self):
@@ -540,6 +828,7 @@ cdef class CKernel:
         if result != GEOARROW_OK:
             error.raise_message(f"GeoArrowKernel<{self.cname_str}>::finish()", result)
 
+        out._schema = self.output_schema
         return out
 
 

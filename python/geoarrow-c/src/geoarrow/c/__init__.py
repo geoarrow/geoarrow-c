@@ -10,5 +10,12 @@ Examples
 """
 
 from geoarrow.c._version import __version__, __version_tuple__  # NOQA: F401
+from geoarrow.c.kernel import AggregateFunction, ScalarFunction
+from geoarrow.c.types import arrow_to_type_spec, type_spec_to_arrow
 
-from .lib import GeometryType, Dimensions, CoordType, EdgeType, CrsType
+__all__ = [
+    "AggregateFunction",
+    "ScalarFunction",
+    "arrow_to_type_spec",
+    "type_spec_to_arrow",
+]

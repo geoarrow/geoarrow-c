@@ -1,5 +1,6 @@
 
 #include <errno.h>
+#include <math.h>
 
 #include "geoarrow/geoarrow.h"
 #include "nanoarrow/nanoarrow.h"
@@ -95,13 +96,22 @@ GeoArrowErrorCode GeoArrowGeometryAppendNode(struct GeoArrowGeometry* geom,
 
 GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
                                            struct GeoArrowGeometry* dst) {
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryShallowCopy(src, dst));
+  return GeoArrowGeometryCopyCoords(dst);
+}
+
+GeoArrowErrorCode GeoArrowGeometryCopyCoords(struct GeoArrowGeometry* geom) {
   struct GeoArrowGeometryPrivate* private_data =
-      (struct GeoArrowGeometryPrivate*)dst->private_data;
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
+
+  if (geom->size_nodes == 0) {
+    return GEOARROW_OK;
+  }
 
   // Calculate the number of coordinate storage bytes required
   int64_t total_bytes_required = 0;
-  const struct GeoArrowGeometryNode* src_end = src.root + src.size_nodes;
-  for (const struct GeoArrowGeometryNode* node = src.root; node < src_end; ++node) {
+  const struct GeoArrowGeometryNode* src_end = geom->root + geom->size_nodes;
+  for (const struct GeoArrowGeometryNode* node = geom->root; node < src_end; ++node) {
     switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
@@ -116,28 +126,28 @@ GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
   GEOARROW_RETURN_NOT_OK(
       ArrowBufferResize(&private_data->coords, total_bytes_required, 0));
 
-  // Copy the nodes
-  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryShallowCopy(src, dst));
-
   // Copy the data and update the nodes to point to the internal data
   uint8_t* coords_buf = private_data->coords.data;
   int64_t coords_buf_size = private_data->coords.size_bytes;
   int64_t bytes_written;
   int n_values;
 
-  struct GeoArrowGeometryNode* dst_end = dst->root + dst->size_nodes;
-  for (struct GeoArrowGeometryNode* node = dst->root; node < dst_end; ++node) {
+  struct GeoArrowGeometryNode* dst_end = geom->root + geom->size_nodes;
+  for (struct GeoArrowGeometryNode* node = geom->root; node < dst_end; ++node) {
     switch (node->geometry_type) {
       case GEOARROW_GEOMETRY_TYPE_POINT:
       case GEOARROW_GEOMETRY_TYPE_LINESTRING:
+        if (node->size == 0) {
+          break;
+        }
+
         n_values = _GeoArrowkNumDimensions[node->dimensions];
         bytes_written =
             GeoArrowGeometryNodeWriteSequence(node, coords_buf, coords_buf_size);
-        // NANOARROW_DCHECK(bytes_written <= coords_buf_size);
 
-        for (int i = 0; i < n_values; i++) {
-          node->coords[i] = coords_buf + (i * sizeof(double));
-          node->coord_stride[i] = n_values * sizeof(double);
+        for (int j = 0; j < n_values; j++) {
+          node->coords[j] = coords_buf + (j * sizeof(double));
+          node->coord_stride[j] = n_values * sizeof(double);
         }
 
         coords_buf += bytes_written;
@@ -152,7 +162,7 @@ GeoArrowErrorCode GeoArrowGeometryDeepCopy(struct GeoArrowGeometryView src,
 }
 
 // We define a maximum nesting to simplify collecting sizes based on levels
-#define GEOARROW_GEOMETRY_VISITOR_MAX_NESTING 31
+#define GEOARROW_GEOMETRY_MAX_NESTING 31
 
 static inline GeoArrowErrorCode GeoArrowGeometryReallocCoords(
     struct GeoArrowGeometry* geom, struct ArrowBuffer* new_coords,
@@ -213,6 +223,80 @@ static inline GeoArrowErrorCode GeoArrowGeometryReserveCoords(
   return GEOARROW_OK;
 }
 
+static GeoArrowErrorCode GeoArrowGeometryAppendBoxNode(
+    struct GeoArrowGeometry* geom, enum GeoArrowGeometryType geometry_type, uint8_t level,
+    uint32_t size, struct GeoArrowGeometryNode** out) {
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendNodeInline(geom, out));
+  (*out)->geometry_type = (uint8_t)geometry_type;
+  (*out)->dimensions = GEOARROW_DIMENSIONS_XY;
+  (*out)->level = level;
+  (*out)->size = size;
+  return GEOARROW_OK;
+}
+
+static GeoArrowErrorCode GeoArrowGeometryAppendBoxPolygon(struct GeoArrowGeometry* geom,
+                                                          uint8_t level, double xmin,
+                                                          double ymin, double xmax,
+                                                          double ymax, double** coords) {
+  struct GeoArrowGeometryNode* node;
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendBoxNode(
+      geom, GEOARROW_GEOMETRY_TYPE_POLYGON, level, 1, &node));
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendBoxNode(
+      geom, GEOARROW_GEOMETRY_TYPE_LINESTRING, level + 1, 5, &node));
+
+  double values[10] = {xmin, ymin, xmax, ymin, xmax, ymax, xmin, ymax, xmin, ymin};
+  memcpy(*coords, values, sizeof(values));
+  node->coords[0] = (const uint8_t*)*coords;
+  node->coords[1] = (const uint8_t*)(*coords + 1);
+  node->coord_stride[0] = 2 * sizeof(double);
+  node->coord_stride[1] = 2 * sizeof(double);
+  *coords += 10;
+  return GEOARROW_OK;
+}
+
+GeoArrowErrorCode GeoArrowGeometrySetBox(struct GeoArrowGeometry* geom, double xmin,
+                                         double ymin, double xmax, double ymax) {
+  struct GeoArrowGeometryPrivate* private_data =
+      (struct GeoArrowGeometryPrivate*)geom->private_data;
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryResizeNodesInline(geom, 0));
+  GEOARROW_RETURN_NOT_OK(ArrowBufferResize(&private_data->coords, 0, 0));
+
+  struct GeoArrowGeometryNode* node;
+  if (ymin > ymax) {
+    return GeoArrowGeometryAppendBoxNode(geom, GEOARROW_GEOMETRY_TYPE_POLYGON, 0, 0,
+                                         &node);
+  }
+
+  int n_polygons = xmin > xmax ? 2 : 1;
+  double* coords;
+  GEOARROW_RETURN_NOT_OK(GeoArrowGeometryReserveCoords(geom, n_polygons * 10, &coords));
+
+  if (n_polygons == 1) {
+    GEOARROW_RETURN_NOT_OK(
+        GeoArrowGeometryAppendBoxNode(geom, GEOARROW_GEOMETRY_TYPE_POLYGON, 0, 1, &node));
+    GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendBoxNode(
+        geom, GEOARROW_GEOMETRY_TYPE_LINESTRING, 1, 5, &node));
+
+    double values[10] = {xmin, ymin, xmax, ymin, xmax, ymax, xmin, ymax, xmin, ymin};
+    memcpy(coords, values, sizeof(values));
+    node->coords[0] = (const uint8_t*)coords;
+    node->coords[1] = (const uint8_t*)(coords + 1);
+    node->coord_stride[0] = 2 * sizeof(double);
+    node->coord_stride[1] = 2 * sizeof(double);
+    coords += 10;
+  } else {
+    GEOARROW_RETURN_NOT_OK(GeoArrowGeometryAppendBoxNode(
+        geom, GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON, 0, 2, &node));
+    GEOARROW_RETURN_NOT_OK(
+        GeoArrowGeometryAppendBoxPolygon(geom, 1, xmin, ymin, INFINITY, ymax, &coords));
+    GEOARROW_RETURN_NOT_OK(
+        GeoArrowGeometryAppendBoxPolygon(geom, 1, -INFINITY, ymin, xmax, ymax, &coords));
+  }
+
+  private_data->coords.size_bytes = n_polygons * 10 * sizeof(double);
+  return GEOARROW_OK;
+}
+
 static int feat_start_geometry(struct GeoArrowVisitor* v) {
   struct GeoArrowGeometry* geom = (struct GeoArrowGeometry*)v->private_data;
   struct GeoArrowGeometryPrivate* private_data =
@@ -264,7 +348,7 @@ static int geom_start_geometry(struct GeoArrowVisitor* v,
       break;
   }
 
-  if (private_data->current_level == GEOARROW_GEOMETRY_VISITOR_MAX_NESTING) {
+  if (private_data->current_level == GEOARROW_GEOMETRY_MAX_NESTING) {
     GeoArrowErrorSet(v->error, "Maximum recursion for GeoArrowGeometry visitor reached");
     return EINVAL;
   }
@@ -364,7 +448,7 @@ static int feat_end_geometry(struct GeoArrowVisitor* v) {
   struct GeoArrowGeometryNode* node_begin = geom->root;
   struct GeoArrowGeometryNode* node_end = geom->root + geom->size_nodes;
 
-  uint32_t sizes[GEOARROW_GEOMETRY_VISITOR_MAX_NESTING + 1];
+  uint32_t sizes[GEOARROW_GEOMETRY_MAX_NESTING + 1];
   memset(sizes, 0, sizeof(sizes));
   ptrdiff_t sequence_bytes;
   for (struct GeoArrowGeometryNode* node = (node_end - 1); node >= node_begin; node--) {
@@ -493,6 +577,85 @@ static GeoArrowErrorCode GeoArrowGeometryVisitNode(
   }
 
   GEOARROW_RETURN_NOT_OK(v->geom_end(v));
+  return GEOARROW_OK;
+}
+
+// Use the same 32-level stack bound as the geometry visitor.
+GeoArrowErrorCode GeoArrowGeometryViewValidate(struct GeoArrowGeometryView geom,
+                                               struct GeoArrowError* error) {
+  if (geom.root == NULL || geom.size_nodes <= 0) {
+    GeoArrowErrorSet(error, "Expected a non-empty geometry node view");
+    return EINVAL;
+  }
+
+  // Points and linestrings need no tree traversal or nesting stack.
+  if (geom.size_nodes == 1 &&
+      (geom.root->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT ||
+       geom.root->geometry_type == GEOARROW_GEOMETRY_TYPE_LINESTRING)) {
+    const struct GeoArrowGeometryNode* node = geom.root;
+    if (node->dimensions < GEOARROW_DIMENSIONS_XY ||
+        node->dimensions > GEOARROW_DIMENSIONS_XYZM ||
+        (node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT && node->size > 1)) {
+      GeoArrowErrorSet(error, "Invalid geometry node dimensions or size");
+      return EINVAL;
+    }
+    return GEOARROW_OK;
+  }
+
+  int64_t remaining[GEOARROW_GEOMETRY_MAX_NESTING + 1];
+  uint8_t expected_type[GEOARROW_GEOMETRY_MAX_NESTING + 1];
+  remaining[0] = 1;
+  expected_type[0] = GEOARROW_GEOMETRY_TYPE_GEOMETRY;
+  int level = 0;
+  for (int64_t i = 0; i < geom.size_nodes; i++) {
+    const struct GeoArrowGeometryNode* node = geom.root + i;
+    while (level > 0 && remaining[level] == 0) {
+      level--;
+    }
+    if (remaining[level] == 0 || node->level != geom.root->level + level ||
+        node->geometry_type < GEOARROW_GEOMETRY_TYPE_POINT ||
+        node->geometry_type > GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION ||
+        (expected_type[level] != GEOARROW_GEOMETRY_TYPE_GEOMETRY &&
+         node->geometry_type != expected_type[level]) ||
+        node->dimensions < GEOARROW_DIMENSIONS_XY ||
+        node->dimensions > GEOARROW_DIMENSIONS_XYZM ||
+        (node->geometry_type == GEOARROW_GEOMETRY_TYPE_POINT && node->size > 1)) {
+      GeoArrowErrorSet(error, "Invalid geometry node type, dimensions, or nesting");
+      return EINVAL;
+    }
+    remaining[level]--;
+    if (node->geometry_type != GEOARROW_GEOMETRY_TYPE_POINT &&
+        node->geometry_type != GEOARROW_GEOMETRY_TYPE_LINESTRING && node->size > 0) {
+      if (level == GEOARROW_GEOMETRY_MAX_NESTING ||
+          geom.root->level + level == UINT8_MAX) {
+        GeoArrowErrorSet(error, "Geometry nesting exceeds the node level limit");
+        return EINVAL;
+      }
+      level++;
+      remaining[level] = node->size;
+      switch (node->geometry_type) {
+        case GEOARROW_GEOMETRY_TYPE_MULTIPOINT:
+          expected_type[level] = GEOARROW_GEOMETRY_TYPE_POINT;
+          break;
+        case GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON:
+          expected_type[level] = GEOARROW_GEOMETRY_TYPE_POLYGON;
+          break;
+        case GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION:
+          expected_type[level] = GEOARROW_GEOMETRY_TYPE_GEOMETRY;
+          break;
+        default:
+          expected_type[level] = GEOARROW_GEOMETRY_TYPE_LINESTRING;
+          break;
+      }
+    }
+  }
+  while (level > 0 && remaining[level] == 0) {
+    level--;
+  }
+  if (remaining[level] != 0) {
+    GeoArrowErrorSet(error, "Geometry is missing child nodes");
+    return EINVAL;
+  }
   return GEOARROW_OK;
 }
 

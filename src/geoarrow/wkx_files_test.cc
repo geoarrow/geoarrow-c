@@ -70,16 +70,85 @@ TEST(WKXFilesTest, WKXFilesTestFiles) {
       ASSERT_EQ(GeoArrowGeometryInit(&geom_cloner), GEOARROW_OK);
 
       const GeoArrowGeometry& geom_from_wkt = tester.AsGeometry(line_wkt);
+      EXPECT_EQ(tester.AsWKTUsingVisitor(geom_from_wkt), line_wkt);
       EXPECT_EQ(tester.AsWKT(geom_from_wkt), line_wkt);
+
+      // Geometry collections do not have a native GeoArrow array type. For every
+      // other geometry, exercise scalar access using both native coordinate layouts.
+      if (geom_from_wkt.root->geometry_type !=
+          GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION) {
+        for (auto coord_type :
+             {GEOARROW_COORD_TYPE_SEPARATE, GEOARROW_COORD_TYPE_INTERLEAVED}) {
+          enum GeoArrowType type = GeoArrowMakeType(
+              static_cast<enum GeoArrowGeometryType>(geom_from_wkt.root->geometry_type),
+              static_cast<enum GeoArrowDimensions>(geom_from_wkt.root->dimensions),
+              coord_type);
+          SCOPED_TRACE(coord_type == GEOARROW_COORD_TYPE_SEPARATE ? "separate"
+                                                                  : "interleaved");
+
+          struct GeoArrowNativeWriter writer;
+          ASSERT_EQ(GeoArrowNativeWriterInit(&writer, type), GEOARROW_OK);
+          ASSERT_EQ(GeoArrowNativeWriterAppend(
+                        &writer, GeoArrowGeometryAsView(&geom_from_wkt), nullptr),
+                    GEOARROW_OK);
+
+          struct ArrowArray array;
+          ASSERT_EQ(GeoArrowNativeWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+          GeoArrowNativeWriterReset(&writer);
+
+          struct GeoArrowArrayView array_view;
+          ASSERT_EQ(GeoArrowArrayViewInitFromType(&array_view, type), GEOARROW_OK);
+          ASSERT_EQ(GeoArrowArrayViewSetArray(&array_view, &array, nullptr), GEOARROW_OK);
+
+          struct GeoArrowGeometry geom_from_array;
+          ASSERT_EQ(GeoArrowGeometryInit(&geom_from_array), GEOARROW_OK);
+          ASSERT_EQ(GeoArrowArrayViewGetGeometry(&array_view, 0, &geom_from_array),
+                    GEOARROW_OK);
+          ASSERT_EQ(GeoArrowGeometryViewValidate(GeoArrowGeometryAsView(&geom_from_array),
+                                                 nullptr),
+                    GEOARROW_OK);
+          EXPECT_EQ(tester.AsWKT(geom_from_array), line_wkt);
+          EXPECT_EQ(tester.AsWKTUsingVisitor(geom_from_array), line_wkt);
+
+          // Reverse scalar access into a native writer using the opposite layout.
+          auto out_layout = coord_type == GEOARROW_COORD_TYPE_SEPARATE
+                                ? GEOARROW_COORD_TYPE_INTERLEAVED
+                                : GEOARROW_COORD_TYPE_SEPARATE;
+          auto out_type = GeoArrowMakeType(array_view.schema_view.geometry_type,
+                                           array_view.schema_view.dimensions, out_layout);
+          struct GeoArrowNativeWriter builder;
+          ASSERT_EQ(GeoArrowNativeWriterInit(&builder, out_type), GEOARROW_OK);
+          ASSERT_EQ(GeoArrowNativeWriterAppend(
+                        &builder, GeoArrowGeometryAsView(&geom_from_array), nullptr),
+                    GEOARROW_OK);
+          struct ArrowArray copied_array;
+          ASSERT_EQ(GeoArrowNativeWriterFinish(&builder, &copied_array, nullptr),
+                    GEOARROW_OK);
+          GeoArrowNativeWriterReset(&builder);
+          struct GeoArrowArrayView copied_view;
+          ASSERT_EQ(GeoArrowArrayViewInitFromType(&copied_view, out_type), GEOARROW_OK);
+          ASSERT_EQ(GeoArrowArrayViewSetArray(&copied_view, &copied_array, nullptr),
+                    GEOARROW_OK);
+          ASSERT_EQ(GeoArrowArrayViewGetGeometry(&copied_view, 0, &geom_from_array),
+                    GEOARROW_OK);
+          EXPECT_EQ(tester.AsWKT(geom_from_array), line_wkt);
+          copied_array.release(&copied_array);
+
+          GeoArrowGeometryReset(&geom_from_array);
+          array.release(&array);
+        }
+      }
 
       ASSERT_EQ(GeoArrowGeometryShallowCopy(GeoArrowGeometryAsView(&geom_from_wkt),
                                             &geom_cloner),
                 GEOARROW_OK);
+      EXPECT_EQ(tester.AsWKTUsingVisitor(geom_cloner), line_wkt);
       EXPECT_EQ(tester.AsWKT(geom_cloner), line_wkt);
 
       ASSERT_EQ(
           GeoArrowGeometryDeepCopy(GeoArrowGeometryAsView(&geom_from_wkt), &geom_cloner),
           GEOARROW_OK);
+      EXPECT_EQ(tester.AsWKTUsingVisitor(geom_cloner), line_wkt);
       EXPECT_EQ(tester.AsWKT(geom_cloner), line_wkt);
 
       GeoArrowGeometryReset(&geom_cloner);
@@ -87,24 +156,8 @@ TEST(WKXFilesTest, WKXFilesTestFiles) {
       const GeoArrowGeometry& geom_from_wkb = tester.AsGeometry(line_wkb);
       EXPECT_EQ(tester.AsWKB(geom_from_wkb), line_wkb);
 
-      // Special case the empty point, which translates from WKB to
-      // WKT as POINT [Z[M]] (nan nan [nan [nan]]) instead of EMPTY
-      if (line_wkt == "POINT EMPTY") {
-        EXPECT_EQ(tester.AsWKT(line_wkb), "POINT (nan nan)");
-        EXPECT_EQ(tester.AsWKT(line_ewkb), "POINT (nan nan)");
-      } else if (line_wkt == "POINT Z EMPTY") {
-        EXPECT_EQ(tester.AsWKT(line_wkb), "POINT Z (nan nan nan)");
-        EXPECT_EQ(tester.AsWKT(line_ewkb), "POINT Z (nan nan nan)");
-      } else if (line_wkt == "POINT M EMPTY") {
-        EXPECT_EQ(tester.AsWKT(line_wkb), "POINT M (nan nan nan)");
-        EXPECT_EQ(tester.AsWKT(line_ewkb), "POINT M (nan nan nan)");
-      } else if (line_wkt == "POINT ZM EMPTY") {
-        EXPECT_EQ(tester.AsWKT(line_wkb), "POINT ZM (nan nan nan nan)");
-        EXPECT_EQ(tester.AsWKT(line_ewkb), "POINT ZM (nan nan nan nan)");
-      } else {
-        EXPECT_EQ(tester.AsWKT(line_wkb), line_wkt);
-        EXPECT_EQ(tester.AsWKT(line_ewkb), line_wkt);
-      }
+      EXPECT_EQ(tester.AsWKT(line_wkb), line_wkt);
+      EXPECT_EQ(tester.AsWKT(line_ewkb), line_wkt);
     }
 
     n_tested++;

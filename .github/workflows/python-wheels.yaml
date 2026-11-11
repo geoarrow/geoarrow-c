@@ -1,7 +1,8 @@
 name: Build Python Wheels
 
-# Build wheels only on a release branch or when requested since it's expensive
+# Build wheels on release branches, when requested, or from the release workflow.
 on:
+  workflow_call:
   workflow_dispatch:
     inputs:
       version:
@@ -19,6 +20,8 @@ on:
       - main
       - 'maint-**'
 
+permissions:
+  contents: read
 
 jobs:
   sdist:
@@ -26,8 +29,10 @@ jobs:
     steps:
     - uses: actions/checkout@v7
       with:
+        ref: ${{ github.ref }}
         fetch-depth: 0
         fetch-tags: true
+        persist-credentials: false
 
     - uses: actions/setup-python@v7
       with:
@@ -36,6 +41,15 @@ jobs:
     - name: Install packaging tools
       run: |
         pip install build twine
+
+    - name: Verify checked-out tag
+      if: github.ref_type == 'tag'
+      run: |
+        actual_tag="$(git describe --exact-match --tags --match='geoarrow-c-python-*')"
+        if [[ "$actual_tag" != "$GITHUB_REF_NAME" ]]; then
+          echo "::error::HEAD is tagged as $actual_tag, expected $GITHUB_REF_NAME"
+          exit 1
+        fi
 
     - name: Build sdist
       run: |
@@ -59,34 +73,48 @@ jobs:
       with:
         name: release-sdist
         path: ./python/geoarrow-c/dist/geoarrow_c-*.tar.gz
+        if-no-files-found: error
 
   wheels:
     needs: ["sdist"]
     name: ${{ matrix.config.label }}
     runs-on: ${{ matrix.config.os }}
     strategy:
+      fail-fast: false
       matrix:
         config:
-          - {os: "ubuntu-latest", label: "pyodide", platform: "pyodide", arch: "auto"}
-          - {os: "ubuntu-latest", label: "linux", platform: "auto", arch: "auto"}
-          - {os: "windows-latest", label: "windows-x86", platform: "auto", arch: "x86"}
-          - {os: "windows-latest", label: "windows-amd64", platform: "auto", arch: "AMD64"}
-          - {os: "windows-latest", label: "windows-arm64", platform: "auto", arch: "ARM64"}
-          - {os: "macOS-15-intel", label: "macOS", platform: "auto", arch: "auto"}
-          - {os: "macOS-latest", label: "macOS-arm64", platform: "auto", arch: "auto"}
-          - {os: "ubuntu-24.04-arm", label: "linux-arm64", platform: "auto", arch: "auto"}
+          - {os: "ubuntu-latest", label: "pyodide", platform: "pyodide", arch: "auto", legacy_build: "cp312-*"}
+          - {os: "ubuntu-latest", label: "linux", platform: "auto", arch: "auto", legacy_build: "cp313t-*"}
+          - {os: "windows-latest", label: "windows-x86", platform: "auto", arch: "x86", legacy_build: "cp313t-*" }
+          - {os: "windows-latest", label: "windows-amd64", platform: "auto", arch: "AMD64", legacy_build: "cp313t-*" }
+          - {os: "windows-latest", label: "windows-arm64", platform: "auto", arch: "ARM64", legacy_build: "cp313t-*" }
+          - {os: "macOS-15-intel", label: "macOS", platform: "auto", arch: "auto", legacy_build: "cp313t-*"}
+          - {os: "macOS-latest", label: "macOS-arm64", platform: "auto", arch: "auto", legacy_build: "cp313t-*"}
+          - {os: "ubuntu-24.04-arm", label: "linux-arm64", platform: "auto", arch: "auto", legacy_build: "cp313t-*"}
 
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.ref }}
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==3.4.0
+        run: python -m pip install cibuildwheel==4.2.1
+
+      - name: Verify checked-out tag
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          actual_tag="$(git describe --exact-match --tags --match='geoarrow-c-python-*')"
+          if [[ "$actual_tag" != "$GITHUB_REF_NAME" ]]; then
+            echo "::error::HEAD is tagged as $actual_tag, expected $GITHUB_REF_NAME"
+            exit 1
+          fi
 
       - name: Build wheels
         run: |
@@ -97,9 +125,10 @@ jobs:
           CIBW_PLATFORM: ${{ matrix.config.platform }}
           CIBW_ARCHS: ${{ matrix.config.arch }}
           CIBW_SKIP: pp*
-          CIBW_ENABLE: cpython-freethreading
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""
 
       - uses: actions/upload-artifact@v7
         with:
           name: release-wheels-${{ matrix.config.label }}
           path: ./wheelhouse/*.whl
+          if-no-files-found: error

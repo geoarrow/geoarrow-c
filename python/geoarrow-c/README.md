@@ -27,27 +27,57 @@ import geoarrow.c
 
 Most users should use the higher-level
 [geoarrow-python](https://github.com/geoarrow/geoarrow-python) bindings.
-If you would like to use the compute kernels exposed via `geoarrow-c`
-directly, you will have to use the Arrow C Data interface to pass and
-retrieve values.
+The Python package also provides thin Arrow PyCapsule protocol wrappers around
+the compute kernels exposed by `geoarrow-c`:
 
 ```python
 import geoarrow.pyarrow as ga
-from geoarrow.c import lib
+from geoarrow.c import AggregateFunction, ScalarFunction
 
 input_pyarrow = ga.array(["POINT (0 1)"])
+format_wkt = ScalarFunction("format_wkt", precision=3)
+formatted = format_wkt(input_pyarrow)
 
-type_in = lib.SchemaHolder()
-input_pyarrow.type._export_to_c(type_in._addr())
-array_in = lib.ArrayHolder()
-input_pyarrow._export_to_c(array_in._addr())
+box_agg = AggregateFunction("box_agg")
+result = box_agg(input_pyarrow)
+```
 
-kernel = lib.CKernel("box_agg".encode("UTF-8"))
-type_out = kernel.start(type_in, bytes())
-kernel.push_batch_agg(array_in)
-array_out = kernel.finish_agg()
+Each call infers the input type from the array or stream and creates a fresh
+kernel. Scalar functions preserve stream batch boundaries; aggregate functions
+combine all batches into a single result array. Results implement the Arrow
+PyCapsule protocol and can be imported into an Arrow implementation.
 
-result = pyarrow.Array._import_from_c(array_out._addr(), type_out._addr())
+## Type specification integration
+
+The `arrow_to_type_spec()` and `type_spec_to_arrow()` functions bridge
+`geoarrow.types.TypeSpec` objects and the Arrow C Data Interface. This
+integration requires the `geoarrow-types` package but does not require a
+particular Arrow implementation.
+
+`type_spec_to_arrow()` returns a `SchemaHolder` implementing
+`__arrow_c_schema__`:
+
+```python
+import geoarrow.types as gt
+from geoarrow.c import type_spec_to_arrow
+
+type_spec = gt.linestring(
+    dimensions=gt.Dimensions.XYZ,
+    coord_type=gt.CoordType.INTERLEAVED,
+    crs="EPSG:4326",
+)
+schema = type_spec_to_arrow(type_spec)
+schema_capsule = schema.__arrow_c_schema__()
+```
+
+`arrow_to_type_spec()` accepts a `SchemaHolder` or any other
+`__arrow_c_schema__` provider and reconstructs the corresponding `TypeSpec`:
+
+```python
+from geoarrow.c import arrow_to_type_spec
+
+roundtripped = arrow_to_type_spec(schema)
+assert roundtripped == type_spec.with_defaults().canonicalize()
 ```
 
 ## Building
