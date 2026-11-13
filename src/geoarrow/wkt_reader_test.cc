@@ -209,6 +209,21 @@ TEST(WKTReaderTest, WKTReaderTestBasic) {
   GeoArrowWKTReaderReset(&reader);
 }
 
+TEST(WKTReaderTest, WKTReaderTestMixedCaseKeywords) {
+  WKXTester tester;
+
+  EXPECT_EQ(tester.AsWKT("point empty"), "POINT EMPTY");
+  EXPECT_EQ(tester.AsWKT("LineString z (1 2 3, 4 5 6)"), "LINESTRING Z (1 2 3, 4 5 6)");
+  EXPECT_EQ(tester.AsWKT("polygon m empty"), "POLYGON M EMPTY");
+  EXPECT_EQ(tester.AsWKT("multiPoint zm ((1 2 3 4), eMpTy)"),
+            "MULTIPOINT ZM ((1 2 3 4), EMPTY)");
+  EXPECT_EQ(tester.AsWKT("multiLineString (empty, (1 2, 3 4))"),
+            "MULTILINESTRING (EMPTY, (1 2, 3 4))");
+  EXPECT_EQ(tester.AsWKT("MultiPolygon ((EmPtY))"), "MULTIPOLYGON ((EMPTY))");
+  EXPECT_EQ(tester.AsWKT("geometryCollection (point (1 2), LINEstring EMPTY)"),
+            "GEOMETRYCOLLECTION (POINT (1 2), LINESTRING EMPTY)");
+}
+
 TEST(WKTReaderTest, WKTReaderTestPoint) {
   WKXTester tester;
   EXPECT_WKT_ROUNDTRIP(tester, "POINT EMPTY");
