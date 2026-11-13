@@ -236,6 +236,10 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterAppend)
 #define GeoArrowWKTWriterAppendNull \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterAppendNull)
+#define GeoArrowWKTWriterPeek \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterPeek)
+#define GeoArrowWKTWriterRewind \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterRewind)
 #define GeoArrowWKTWriterFinish \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterFinish)
 #define GeoArrowWKTWriterReset \
@@ -254,6 +258,10 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBWriterAppend)
 #define GeoArrowWKBWriterAppendNull \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBWriterAppendNull)
+#define GeoArrowWKBWriterPeek \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBWriterPeek)
+#define GeoArrowWKBWriterRewind \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBWriterRewind)
 #define GeoArrowWKBWriterFinish \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKBWriterFinish)
 #define GeoArrowWKBWriterReset \
