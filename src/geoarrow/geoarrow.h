@@ -605,10 +605,11 @@ GeoArrowErrorCode GeoArrowWKTWriterAppendNull(struct GeoArrowWKTWriter* writer);
 /// \brief Return a view of the most recently appended WKT element
 ///
 /// The returned view is owned by the writer and is invalidated by the next call
-/// that modifies or resets the writer. Returns an empty view if no element has
-/// been appended. This function is intended for callers that need WKT output
-/// without building an ArrowArray.
-struct GeoArrowStringView GeoArrowWKTWriterPeek(const struct GeoArrowWKTWriter* writer);
+/// that modifies or resets the writer. Returns EINVAL if no element has been
+/// appended or out is NULL. This function is intended for callers that need WKT
+/// output without building an ArrowArray.
+GeoArrowErrorCode GeoArrowWKTWriterPeek(const struct GeoArrowWKTWriter* writer,
+                                        struct GeoArrowStringView* out);
 
 /// \brief Discard the most recently appended WKT element
 ///
@@ -670,10 +671,11 @@ GeoArrowErrorCode GeoArrowWKBWriterAppend(struct GeoArrowWKBWriter* writer,
 /// \brief Return a view of the most recently appended WKB element
 ///
 /// The returned view is owned by the writer and is invalidated by the next call
-/// that modifies or resets the writer. Returns an empty view if no element has
-/// been appended. This function is intended for callers that need WKB output
-/// without building an ArrowArray.
-struct GeoArrowBufferView GeoArrowWKBWriterPeek(const struct GeoArrowWKBWriter* writer);
+/// that modifies or resets the writer. Returns EINVAL if no element has been
+/// appended or out is NULL. This function is intended for callers that need WKB
+/// output without building an ArrowArray.
+GeoArrowErrorCode GeoArrowWKBWriterPeek(const struct GeoArrowWKBWriter* writer,
+                                        struct GeoArrowBufferView* out);
 
 /// \brief Discard the most recently appended WKB element
 ///

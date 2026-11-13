@@ -361,12 +361,18 @@ GeoArrowErrorCode GeoArrowWKBWriterAppend(struct GeoArrowWKBWriter* writer,
   return GEOARROW_OK;
 }
 
-struct GeoArrowBufferView GeoArrowWKBWriterPeek(const struct GeoArrowWKBWriter* writer) {
+GeoArrowErrorCode GeoArrowWKBWriterPeek(const struct GeoArrowWKBWriter* writer,
+                                        struct GeoArrowBufferView* out) {
+  if (out == NULL) {
+    return EINVAL;
+  }
+
+  out->data = NULL;
+  out->size_bytes = 0;
   const struct WKBWriterPrivate* private_data =
       (const struct WKBWriterPrivate*)writer->private_data;
-  struct GeoArrowBufferView out = {NULL, 0};
   if (private_data->length == 0) {
-    return out;
+    return EINVAL;
   }
 
   int32_t offset;
@@ -375,10 +381,10 @@ struct GeoArrowBufferView GeoArrowWKBWriterPeek(const struct GeoArrowWKBWriter* 
              ((private_data->length - 1) * (int64_t)sizeof(int32_t)),
          sizeof(int32_t));
   if (private_data->values.data != NULL) {
-    out.data = private_data->values.data + offset;
+    out->data = private_data->values.data + offset;
   }
-  out.size_bytes = private_data->values.size_bytes - offset;
-  return out;
+  out->size_bytes = private_data->values.size_bytes - offset;
+  return GEOARROW_OK;
 }
 
 void GeoArrowWKBWriterRewind(struct GeoArrowWKBWriter* writer) {

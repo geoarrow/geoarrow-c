@@ -56,41 +56,44 @@ TEST(WKTWriterTest, PeekAndRewind) {
   struct GeoArrowWKTWriter writer;
   ASSERT_EQ(GeoArrowWKTWriterInit(&writer), GEOARROW_OK);
 
-  struct GeoArrowStringView value = GeoArrowWKTWriterPeek(&writer);
+  struct GeoArrowStringView value;
+  EXPECT_EQ(GeoArrowWKTWriterPeek(&writer, &value), EINVAL);
   EXPECT_EQ(value.data, nullptr);
   EXPECT_EQ(value.size_bytes, 0);
+  EXPECT_EQ(GeoArrowWKTWriterPeek(&writer, nullptr), EINVAL);
 
   const auto& point1 = tester.AsGeometry("POINT (1 2)");
   ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&point1)),
             GEOARROW_OK);
-  value = GeoArrowWKTWriterPeek(&writer);
+  ASSERT_EQ(GeoArrowWKTWriterPeek(&writer, &value), GEOARROW_OK);
   ASSERT_NE(value.data, nullptr);
   EXPECT_EQ(std::string(value.data, value.size_bytes), "POINT (1 2)");
 
   ASSERT_EQ(GeoArrowWKTWriterAppendNull(&writer), GEOARROW_OK);
-  EXPECT_EQ(GeoArrowWKTWriterPeek(&writer).size_bytes, 0);
+  ASSERT_EQ(GeoArrowWKTWriterPeek(&writer, &value), GEOARROW_OK);
+  EXPECT_EQ(value.size_bytes, 0);
   GeoArrowWKTWriterRewind(&writer);
-  value = GeoArrowWKTWriterPeek(&writer);
+  ASSERT_EQ(GeoArrowWKTWriterPeek(&writer, &value), GEOARROW_OK);
   EXPECT_EQ(std::string(value.data, value.size_bytes), "POINT (1 2)");
 
   const auto& point2 = tester.AsGeometry("POINT (3 4)");
   ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&point2)),
             GEOARROW_OK);
-  value = GeoArrowWKTWriterPeek(&writer);
+  ASSERT_EQ(GeoArrowWKTWriterPeek(&writer, &value), GEOARROW_OK);
   EXPECT_EQ(std::string(value.data, value.size_bytes), "POINT (3 4)");
 
   GeoArrowWKTWriterRewind(&writer);
-  value = GeoArrowWKTWriterPeek(&writer);
+  ASSERT_EQ(GeoArrowWKTWriterPeek(&writer, &value), GEOARROW_OK);
   const char* allocation = value.data;
   GeoArrowWKTWriterRewind(&writer);
   GeoArrowWKTWriterRewind(&writer);
-  value = GeoArrowWKTWriterPeek(&writer);
+  EXPECT_EQ(GeoArrowWKTWriterPeek(&writer, &value), EINVAL);
   EXPECT_EQ(value.data, nullptr);
   EXPECT_EQ(value.size_bytes, 0);
 
   ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&point2)),
             GEOARROW_OK);
-  value = GeoArrowWKTWriterPeek(&writer);
+  ASSERT_EQ(GeoArrowWKTWriterPeek(&writer, &value), GEOARROW_OK);
   EXPECT_EQ(value.data, allocation);
   EXPECT_EQ(std::string(value.data, value.size_bytes), "POINT (3 4)");
 
