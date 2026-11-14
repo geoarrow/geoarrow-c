@@ -78,6 +78,31 @@ static inline struct ArrowStringView GeoArrowWKTPeekUntilSep(struct WKTReaderPri
   return out;
 }
 
+static inline int GeoArrowWKTWordEquals(struct ArrowStringView word, const char* expected,
+                                        int64_t size_bytes) {
+  if (word.size_bytes != size_bytes) {
+    return 0;
+  }
+
+  // Keep the common uppercase spelling on the shortest path.
+  if (memcmp(word.data, expected, size_bytes) == 0) {
+    return 1;
+  }
+
+  for (int64_t i = 0; i < size_bytes; i++) {
+    char c = word.data[i];
+    if (c >= 'a' && c <= 'z') {
+      c -= 'a' - 'A';
+    }
+
+    if (c != expected[i]) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
 static inline void SetParseErrorAuto(const char* expected, struct WKTReaderPrivate* s,
                                      struct GeoArrowError* error) {
   long pos = s->data - s->data0;
@@ -112,7 +137,7 @@ static inline int GeoArrowWKTAssertWhitespace(struct WKTReaderPrivate* s,
 static inline int GeoArrowWKTAssertWordEmpty(struct WKTReaderPrivate* s,
                                              struct GeoArrowError* error) {
   struct ArrowStringView word = GeoArrowWKTPeekUntilSep(s, 6);
-  if (word.size_bytes == 5 && strncmp(word.data, "EMPTY", 5) == 0) {
+  if (GeoArrowWKTWordEquals(word, "EMPTY", 5)) {
     GeoArrowWKTAdvanceUnsafe(s, 5);
     return GEOARROW_OK;
   }
@@ -298,7 +323,7 @@ static inline int ReadMultipoint(struct WKTReaderPrivate* s, struct GeoArrowVisi
 
     // Both MULTIPOINT (1 2, 2 3) and MULTIPOINT ((1 2), (2 3)) have to parse here
     // if it doesn't look like the verbose version, try the flat version
-    if (PeekChar(s) != '(' && PeekChar(s) != 'E') {
+    if (PeekChar(s) != '(' && PeekChar(s) != 'E' && PeekChar(s) != 'e') {
       s->data--;
       s->size_bytes++;
       return ReadMultipointFlat(s, v, dimensions);
@@ -430,19 +455,19 @@ static inline int ReadTaggedGeometry(struct WKTReaderPrivate* s,
 
   struct ArrowStringView word = GeoArrowWKTPeekUntilSep(s, 19);
   enum GeoArrowGeometryType geometry_type;
-  if (word.size_bytes == 5 && strncmp(word.data, "POINT", 5) == 0) {
+  if (GeoArrowWKTWordEquals(word, "POINT", 5)) {
     geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
-  } else if (word.size_bytes == 10 && strncmp(word.data, "LINESTRING", 10) == 0) {
+  } else if (GeoArrowWKTWordEquals(word, "LINESTRING", 10)) {
     geometry_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
-  } else if (word.size_bytes == 7 && strncmp(word.data, "POLYGON", 7) == 0) {
+  } else if (GeoArrowWKTWordEquals(word, "POLYGON", 7)) {
     geometry_type = GEOARROW_GEOMETRY_TYPE_POLYGON;
-  } else if (word.size_bytes == 10 && strncmp(word.data, "MULTIPOINT", 10) == 0) {
+  } else if (GeoArrowWKTWordEquals(word, "MULTIPOINT", 10)) {
     geometry_type = GEOARROW_GEOMETRY_TYPE_MULTIPOINT;
-  } else if (word.size_bytes == 15 && strncmp(word.data, "MULTILINESTRING", 15) == 0) {
+  } else if (GeoArrowWKTWordEquals(word, "MULTILINESTRING", 15)) {
     geometry_type = GEOARROW_GEOMETRY_TYPE_MULTILINESTRING;
-  } else if (word.size_bytes == 12 && strncmp(word.data, "MULTIPOLYGON", 12) == 0) {
+  } else if (GeoArrowWKTWordEquals(word, "MULTIPOLYGON", 12)) {
     geometry_type = GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON;
-  } else if (word.size_bytes == 18 && strncmp(word.data, "GEOMETRYCOLLECTION", 18) == 0) {
+  } else if (GeoArrowWKTWordEquals(word, "GEOMETRYCOLLECTION", 18)) {
     geometry_type = GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION;
   } else {
     SetParseErrorAuto("geometry type", s, v->error);
@@ -455,15 +480,15 @@ static inline int ReadTaggedGeometry(struct WKTReaderPrivate* s,
   enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY;
   s->coord_view.n_values = 2;
   word = GeoArrowWKTPeekUntilSep(s, 3);
-  if (word.size_bytes == 1 && strncmp(word.data, "Z", 1) == 0) {
+  if (GeoArrowWKTWordEquals(word, "Z", 1)) {
     dimensions = GEOARROW_DIMENSIONS_XYZ;
     s->coord_view.n_values = 3;
     GeoArrowWKTAdvanceUnsafe(s, 1);
-  } else if (word.size_bytes == 1 && strncmp(word.data, "M", 1) == 0) {
+  } else if (GeoArrowWKTWordEquals(word, "M", 1)) {
     dimensions = GEOARROW_DIMENSIONS_XYM;
     s->coord_view.n_values = 3;
     GeoArrowWKTAdvanceUnsafe(s, 1);
-  } else if (word.size_bytes == 2 && strncmp(word.data, "ZM", 2) == 0) {
+  } else if (GeoArrowWKTWordEquals(word, "ZM", 2)) {
     dimensions = GEOARROW_DIMENSIONS_XYZM;
     s->coord_view.n_values = 4;
     GeoArrowWKTAdvanceUnsafe(s, 2);
