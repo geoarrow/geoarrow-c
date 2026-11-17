@@ -39,6 +39,7 @@ TEST(WKTWriterTest, WKTWriterTestBasic) {
   ASSERT_EQ(GeoArrowWKTWriterInit(&writer), GEOARROW_OK);
 
   EXPECT_EQ(GeoArrowWKTWriterSetPrecision(&writer, 3), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowWKTWriterSetPrecisionUnlimited(&writer), GEOARROW_OK);
   EXPECT_EQ(GeoArrowWKTWriterSetPrecision(&writer, -1), EINVAL);
   EXPECT_EQ(GeoArrowWKTWriterSetPrecision(&writer, 17), EINVAL);
 
@@ -163,6 +164,12 @@ TEST(WKTWriterTest, WKTWriterTestAppendGeometryOptions) {
   ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&point)),
             GEOARROW_OK);
 
+  const auto& roundtrip_point = tester.AsGeometry(
+      "POINT (0.00012345678901234567 0.00000000000000012345678901234567)");
+  ASSERT_EQ(GeoArrowWKTWriterSetPrecisionUnlimited(&writer), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&roundtrip_point)),
+            GEOARROW_OK);
+
   const auto& linestring = tester.AsGeometry("LINESTRING (1 2, 3 4)");
   ASSERT_EQ(GeoArrowWKTWriterSetMaxElementSizeBytes(&writer, 6), GEOARROW_OK);
   ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&linestring)),
@@ -189,6 +196,9 @@ TEST(WKTWriterTest, WKTWriterTestAppendGeometryOptions) {
             "POINT (1.235 2.346)");
   EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 2).data,
                         ArrowArrayViewGetStringUnsafe(&view, 2).size_bytes),
+            "POINT (0.00012345678901234567 1.2345678901234568e-16)");
+  EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&view, 3).data,
+                        ArrowArrayViewGetStringUnsafe(&view, 3).size_bytes),
             "LINEST");
 
   ArrowArrayViewReset(&view);
@@ -238,6 +248,26 @@ TEST(WKTWriterTest, WKTWriterTestPrintDouble) {
   n_chars = GeoArrowPrintDouble(M_PI * 100, 16, out.data());
   EXPECT_GE(n_chars, 17);
   EXPECT_EQ(std::string(out.data(), 17), "314.1592653589793");
+}
+
+TEST(WKTWriterTest, WKTWriterTestPrintDoubleRoundtrip) {
+  std::array<char, 40> out{};
+  const double values[] = {1.2345678901234567,
+                           0.00012345678901234567,
+                           1.2345678901234567e-20,
+                           std::numeric_limits<double>::min(),
+                           std::numeric_limits<double>::denorm_min(),
+                           std::numeric_limits<double>::max()};
+
+  for (double value : values) {
+    int64_t n_chars = GeoArrowPrintDouble(value, UINT32_MAX, out.data());
+    double roundtripped;
+    const char* end;
+    ASSERT_EQ(GeoArrowFromChars(out.data(), out.data() + n_chars, &roundtripped, &end),
+              GEOARROW_OK);
+    EXPECT_EQ(end, out.data() + n_chars);
+    EXPECT_EQ(roundtripped, value);
+  }
 }
 
 TEST(WKTWriterTest, WKTWriterTestOneNull) {

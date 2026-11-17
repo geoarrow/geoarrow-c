@@ -69,6 +69,7 @@ TEST(ArrayWriterTest, ArrayWriterTestWKT) {
   ArrowArrayViewReset(&array_view);
   array.release(&array);
 
+  ASSERT_EQ(GeoArrowArrayWriterSetPrecisionUnlimited(&writer), GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayWriterSetPrecision(&writer, -1), EINVAL);
   ASSERT_EQ(GeoArrowArrayWriterSetPrecision(&writer, 17), EINVAL);
   ASSERT_EQ(GeoArrowArrayWriterSetPrecision(&writer, 3), GEOARROW_OK);

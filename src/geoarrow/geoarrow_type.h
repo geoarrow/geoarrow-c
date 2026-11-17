@@ -226,6 +226,8 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterInit)
 #define GeoArrowWKTWriterSetPrecision \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterSetPrecision)
+#define GeoArrowWKTWriterSetPrecisionUnlimited \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterSetPrecisionUnlimited)
 #define GeoArrowWKTWriterSetFlatMultipoint \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowWKTWriterSetFlatMultipoint)
 #define GeoArrowWKTWriterSetMaxElementSizeBytes \
@@ -294,6 +296,8 @@ struct ArrowArrayStream {
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterInitFromSchema)
 #define GeoArrowArrayWriterSetPrecision \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterSetPrecision)
+#define GeoArrowArrayWriterSetPrecisionUnlimited \
+  _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterSetPrecisionUnlimited)
 #define GeoArrowArrayWriterSetFlatMultipoint \
   _GEOARROW_MAKE_NAME(GEOARROW_NAMESPACE, GeoArrowArrayWriterSetFlatMultipoint)
 #define GeoArrowArrayWriterInitVisitor \

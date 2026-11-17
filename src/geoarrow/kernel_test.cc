@@ -339,6 +339,9 @@ TEST(KernelTest, KernelTestFormatWKTFromWKB) {
 
   struct ArrowBuffer buffer;
   ASSERT_EQ(ArrowMetadataBuilderInit(&buffer, nullptr), GEOARROW_OK);
+  ASSERT_EQ(ArrowMetadataBuilderAppend(&buffer, ArrowCharView("precision"),
+                                       ArrowCharView("unlimited")),
+            GEOARROW_OK);
   ASSERT_EQ(ArrowMetadataBuilderAppend(&buffer, ArrowCharView("max_element_size_bytes"),
                                        ArrowCharView("14")),
             GEOARROW_OK);

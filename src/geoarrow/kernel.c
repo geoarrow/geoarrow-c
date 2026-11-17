@@ -281,14 +281,23 @@ static int finish_start_format_wkt(struct GeoArrowVisitorKernelPrivate* private_
   NANOARROW_UNUSED(schema);
   NANOARROW_UNUSED(options);
 
-  long precision = 16;
+  struct ArrowStringView precision_arg;
   NANOARROW_RETURN_NOT_OK(
-      kernel_get_arg_long(options, "precision", &precision, 0, error));
-  if (precision < 0 || precision > 16) {
-    return EINVAL;
+      ArrowMetadataGetValue(options, ArrowCharView("precision"), &precision_arg));
+  if (precision_arg.data != NULL && precision_arg.size_bytes == 9 &&
+      memcmp(precision_arg.data, "unlimited", 9) == 0) {
+    NANOARROW_RETURN_NOT_OK(
+        GeoArrowWKTWriterSetPrecisionUnlimited(&private_data->wkt_writer));
+  } else {
+    long precision = 16;
+    NANOARROW_RETURN_NOT_OK(
+        kernel_get_arg_long(options, "precision", &precision, 0, error));
+    if (precision < 0 || precision > 16) {
+      return EINVAL;
+    }
+    NANOARROW_RETURN_NOT_OK(
+        GeoArrowWKTWriterSetPrecision(&private_data->wkt_writer, (int)precision));
   }
-  NANOARROW_RETURN_NOT_OK(
-      GeoArrowWKTWriterSetPrecision(&private_data->wkt_writer, (int)precision));
 
   long max_element_size_bytes = -1;
   NANOARROW_RETURN_NOT_OK(kernel_get_arg_long(options, "max_element_size_bytes",

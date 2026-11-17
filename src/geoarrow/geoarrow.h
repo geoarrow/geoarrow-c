@@ -569,6 +569,15 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer);
 GeoArrowErrorCode GeoArrowWKTWriterSetPrecision(struct GeoArrowWKTWriter* writer,
                                                 int precision);
 
+/// \brief Set round-trip-safe precision in WKT output
+///
+/// Coordinates are written using enough significant digits that reading the
+/// output recovers the identical double value. The representation may use
+/// scientific notation for very small or very large values. This option may be
+/// changed between elements after GeoArrowWKTWriterInitVisitor() has been called.
+GeoArrowErrorCode GeoArrowWKTWriterSetPrecisionUnlimited(
+    struct GeoArrowWKTWriter* writer);
+
 /// \brief Set the MULTIPOINT output mode
 ///
 /// Set flat_multipoint to a non-zero value to write MULTIPOINT (0 1, 2 3), or
@@ -820,6 +829,13 @@ GeoArrowErrorCode GeoArrowArrayWriterInitFromSchema(struct GeoArrowArrayWriter* 
 /// value is 16. See GeoArrowWKTWriter for details.
 GeoArrowErrorCode GeoArrowArrayWriterSetPrecision(struct GeoArrowArrayWriter* writer,
                                                   int precision);
+
+/// \brief Set round-trip-safe precision for array writers writing to WKT
+///
+/// Returns EINVAL if the writer is not writing to WKT. See
+/// GeoArrowWKTWriterSetPrecisionUnlimited() for details.
+GeoArrowErrorCode GeoArrowArrayWriterSetPrecisionUnlimited(
+    struct GeoArrowArrayWriter* writer);
 
 /// \brief Set the MULTIPOINT output mode when writing to WKT
 ///
