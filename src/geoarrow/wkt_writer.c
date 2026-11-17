@@ -244,10 +244,9 @@ static int coords_wkt(struct GeoArrowVisitor* v, const struct GeoArrowCoordView*
 
   GEOARROW_RETURN_NOT_OK(WKTWriterReserveCoords(private, n_coords, n_dims));
 
-  int max_chars_estimated_per_value =
-      private->precision == WKT_WRITER_PRECISION_UNLIMITED
-          ? 24
-          : private->precision + 1 + 8;
+  int max_chars_estimated_per_value = private->precision == WKT_WRITER_PRECISION_UNLIMITED
+                                          ? 24
+                                          : private->precision + 1 + 8;
 
   int64_t max_chars_per_coord_theoretical =
       // space + comma after coordinate

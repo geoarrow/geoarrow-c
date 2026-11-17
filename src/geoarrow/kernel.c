@@ -286,9 +286,8 @@ static int finish_start_format_wkt(struct GeoArrowVisitorKernelPrivate* private_
   precision_arg.size_bytes = 0;
   NANOARROW_RETURN_NOT_OK(
       ArrowMetadataGetValue(options, ArrowCharView("precision"), &precision_arg));
-  if (precision_arg.data == NULL ||
-      (precision_arg.size_bytes == 9 &&
-       memcmp(precision_arg.data, "unlimited", 9) == 0)) {
+  if (precision_arg.data == NULL || (precision_arg.size_bytes == 9 &&
+                                     memcmp(precision_arg.data, "unlimited", 9) == 0)) {
     NANOARROW_RETURN_NOT_OK(
         GeoArrowWKTWriterSetPrecisionUnlimited(&private_data->wkt_writer));
   } else {
