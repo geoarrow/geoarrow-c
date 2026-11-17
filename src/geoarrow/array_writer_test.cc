@@ -58,7 +58,7 @@ TEST(ArrayWriterTest, ArrayWriterTestWKT) {
   const char* expected_default_precision = "POINT (30.123456 10.123456)";
 #else
   const char* expected_default_precision =
-      "POINT (30.1234560000000009 10.1234559999999991)";
+      "POINT (30.123456000000001 10.123455999999999)";
 #endif
   EXPECT_EQ(std::string(ArrowArrayViewGetStringUnsafe(&array_view, 0).data,
                         ArrowArrayViewGetStringUnsafe(&array_view, 0).size_bytes),
@@ -71,7 +71,8 @@ TEST(ArrayWriterTest, ArrayWriterTestWKT) {
 
   ASSERT_EQ(GeoArrowArrayWriterSetPrecisionUnlimited(&writer), GEOARROW_OK);
   ASSERT_EQ(GeoArrowArrayWriterSetPrecision(&writer, -1), EINVAL);
-  ASSERT_EQ(GeoArrowArrayWriterSetPrecision(&writer, 17), EINVAL);
+  ASSERT_EQ(GeoArrowArrayWriterSetPrecision(&writer, 17), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowArrayWriterSetPrecision(&writer, 18), EINVAL);
   ASSERT_EQ(GeoArrowArrayWriterSetPrecision(&writer, 3), GEOARROW_OK);
   tester.ReadWKT("POINT (30.3333333 10.3333333)", &v);
 

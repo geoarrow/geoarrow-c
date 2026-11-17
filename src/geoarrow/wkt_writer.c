@@ -640,7 +640,7 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer) {
   ArrowBitmapInit(&private->validity);
   ArrowBufferInit(&private->offsets);
   ArrowBufferInit(&private->values);
-  private->precision = 16;
+  private->precision = WKT_WRITER_PRECISION_UNLIMITED;
   private->use_flat_multipoint = 1;
   private->max_element_size_bytes = -1;
   writer->private_data = private;
@@ -650,7 +650,7 @@ GeoArrowErrorCode GeoArrowWKTWriterInit(struct GeoArrowWKTWriter* writer) {
 
 GeoArrowErrorCode GeoArrowWKTWriterSetPrecision(struct GeoArrowWKTWriter* writer,
                                                 int precision) {
-  if (precision < 0 || precision > 16) {
+  if (precision < 0 || precision > 17) {
     return EINVAL;
   }
 

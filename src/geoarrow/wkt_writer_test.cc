@@ -41,7 +41,8 @@ TEST(WKTWriterTest, WKTWriterTestBasic) {
   EXPECT_EQ(GeoArrowWKTWriterSetPrecision(&writer, 3), GEOARROW_OK);
   EXPECT_EQ(GeoArrowWKTWriterSetPrecisionUnlimited(&writer), GEOARROW_OK);
   EXPECT_EQ(GeoArrowWKTWriterSetPrecision(&writer, -1), EINVAL);
-  EXPECT_EQ(GeoArrowWKTWriterSetPrecision(&writer, 17), EINVAL);
+  EXPECT_EQ(GeoArrowWKTWriterSetPrecision(&writer, 17), GEOARROW_OK);
+  EXPECT_EQ(GeoArrowWKTWriterSetPrecision(&writer, 18), EINVAL);
 
   EXPECT_EQ(GeoArrowWKTWriterSetFlatMultipoint(&writer, 0), GEOARROW_OK);
   EXPECT_EQ(GeoArrowWKTWriterSetFlatMultipoint(&writer, 2), GEOARROW_OK);
