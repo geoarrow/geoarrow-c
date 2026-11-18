@@ -8,6 +8,17 @@
 #include "ryu/ryu.h"
 
 int64_t GeoArrowPrintDouble(double f, uint32_t precision, char* result) {
+  if (precision == UINT32_MAX) {
+    // Use fixed notation where 20 decimal places are sufficient for all 17
+    // significant digits, and scientific notation outside that range. Ryu's
+    // conversion emits the shortest representation that round-trips.
+    if ((f != 0 && f > -1.0e-4 && f < 1.0e-4) || f > 1.0e17 || f < -1.0e17) {
+      return GeoArrowd2sexp_buffered_n(f, 17, result);
+    } else {
+      return GeoArrowd2sfixed_buffered_n(f, 20, result);
+    }
+  }
+
   // Use exponential to serialize very large numbers in scientific notation
   // and ignore user precision for these cases.
   if (f > 1.0e17 || f < -1.0e17) {
@@ -22,6 +33,12 @@ int64_t GeoArrowPrintDouble(double f, uint32_t precision, char* result) {
 #else
 
 int64_t GeoArrowPrintDouble(double f, uint32_t precision, char* result) {
+  if (precision == UINT32_MAX) {
+    // Seventeen significant decimal digits are sufficient to round-trip an
+    // IEEE-754 double. %g also avoids wasting precision on leading zeroes.
+    return snprintf(result, 40, "%.17g", f);
+  }
+
   // For very large numbers, use scientific notation ignoring user precision
   if (f > 1.0e17 || f < -1.0e17) {
     return snprintf(result, 40, "%0.*e", 16, f);
