@@ -1037,6 +1037,67 @@ TEST(WKTWriterTest, WKTWriterTestVeryLongCoords) {
   GeoArrowWKTWriterReset(&writer);
 }
 
+TEST(WKTWriterTest, WKTWriterTestCoordinateReservation) {
+  // These values format to more characters than the batch reservation heuristic
+  // estimates at precision zero.
+  std::vector<double> long_coords(1024, -1e17);
+  TestCoords coords(long_coords, long_coords);
+
+  struct GeoArrowWKTWriter writer;
+  struct GeoArrowVisitor v;
+  ASSERT_EQ(GeoArrowWKTWriterInit(&writer), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowWKTWriterSetPrecision(&writer, 0), GEOARROW_OK);
+  GeoArrowWKTWriterInitVisitor(&writer, &v);
+
+  ASSERT_EQ(v.feat_start(&v), GEOARROW_OK);
+  ASSERT_EQ(v.geom_start(&v, GEOARROW_GEOMETRY_TYPE_LINESTRING, GEOARROW_DIMENSIONS_XY),
+            GEOARROW_OK);
+  ASSERT_EQ(v.coords(&v, coords.view()), GEOARROW_OK);
+  ASSERT_EQ(v.geom_end(&v), GEOARROW_OK);
+  ASSERT_EQ(v.feat_end(&v), GEOARROW_OK);
+
+  struct ArrowArray array;
+  ASSERT_EQ(GeoArrowWKTWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+
+  struct ArrowArrayView view;
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
+  struct ArrowStringView value = ArrowArrayViewGetStringUnsafe(&view, 0);
+  std::string visitor_wkt(value.data, value.size_bytes);
+  ArrowArrayViewReset(&view);
+  array.release(&array);
+  GeoArrowWKTWriterReset(&writer);
+
+  struct GeoArrowGeometry geometry;
+  ASSERT_EQ(GeoArrowGeometryInit(&geometry), GEOARROW_OK);
+  struct GeoArrowGeometryNode* node;
+  ASSERT_EQ(GeoArrowGeometryAppendNodeInline(&geometry, &node), GEOARROW_OK);
+
+  std::vector<double> interleaved_coords(2048, -1e17);
+  struct GeoArrowBufferView coords_view = {
+      reinterpret_cast<const uint8_t*>(interleaved_coords.data()),
+      static_cast<int64_t>(interleaved_coords.size() * sizeof(double))};
+  GeoArrowGeometryNodeSetInterleaved(node, GEOARROW_GEOMETRY_TYPE_LINESTRING,
+                                     GEOARROW_DIMENSIONS_XY, coords_view);
+
+  ASSERT_EQ(GeoArrowWKTWriterInit(&writer), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowWKTWriterSetPrecision(&writer, 0), GEOARROW_OK);
+  ASSERT_EQ(GeoArrowWKTWriterAppend(&writer, GeoArrowGeometryAsView(&geometry)),
+            GEOARROW_OK);
+  ASSERT_EQ(GeoArrowWKTWriterFinish(&writer, &array, nullptr), GEOARROW_OK);
+
+  ArrowArrayViewInitFromType(&view, NANOARROW_TYPE_STRING);
+  ASSERT_EQ(ArrowArrayViewSetArray(&view, &array, nullptr), GEOARROW_OK);
+  value = ArrowArrayViewGetStringUnsafe(&view, 0);
+  EXPECT_EQ(value.size_bytes, visitor_wkt.size());
+  EXPECT_TRUE(visitor_wkt == std::string(value.data, value.size_bytes));
+
+  ArrowArrayViewReset(&view);
+  array.release(&array);
+  GeoArrowWKTWriterReset(&writer);
+  GeoArrowGeometryReset(&geometry);
+}
+
 TEST(WKTWriterTest, AppendGeometryWithNaNEmptyPoints) {
   WKXTester tester;
   for (const char* wkt : {"POINT ZM (1 2 3 4)", "POINT EMPTY", "LINESTRING (1 2, 3 4)",
