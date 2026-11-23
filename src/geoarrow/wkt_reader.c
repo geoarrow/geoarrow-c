@@ -239,7 +239,7 @@ static inline int ReadEmptyOrCoordinates(struct WKTReaderPrivate* s,
 static inline int ReadMultipointFlat(struct WKTReaderPrivate* s,
                                      struct GeoArrowVisitor* v,
                                      enum GeoArrowDimensions dimensions) {
-  NANOARROW_RETURN_NOT_OK(GeoArrowWKTAssertChar(s, '(', v->error));
+  // The opening parenthesis and whitespace have been consumed by ReadMultipoint.
 
   // Read the first coordinate (there must always be one)
   NANOARROW_RETURN_NOT_OK(v->geom_start(v, GEOARROW_GEOMETRY_TYPE_POINT, dimensions));
@@ -324,8 +324,6 @@ static inline int ReadMultipoint(struct WKTReaderPrivate* s, struct GeoArrowVisi
     // Both MULTIPOINT (1 2, 2 3) and MULTIPOINT ((1 2), (2 3)) have to parse here
     // if it doesn't look like the verbose version, try the flat version
     if (PeekChar(s) != '(' && PeekChar(s) != 'E' && PeekChar(s) != 'e') {
-      s->data--;
-      s->size_bytes++;
       return ReadMultipointFlat(s, v, dimensions);
     }
 
@@ -453,7 +451,22 @@ static inline int ReadTaggedGeometry(struct WKTReaderPrivate* s,
                                      struct GeoArrowVisitor* v) {
   GeoArrowWKTSkipWhitespace(s);
 
-  struct ArrowStringView word = GeoArrowWKTPeekUntilSep(s, 19);
+  // Include the longest geometry name, an attached ZM, and one extra byte
+  // so that invalid suffixes cannot be mistaken for a complete keyword.
+  struct ArrowStringView word = GeoArrowWKTPeekUntilSep(s, 21);
+  if (word.size_bytes > 0) {
+    struct ArrowStringView suffix = {word.data + word.size_bytes - 1, 1};
+    if (GeoArrowWKTWordEquals(suffix, "M", 1)) {
+      word.size_bytes--;
+    }
+  }
+  if (word.size_bytes > 0) {
+    struct ArrowStringView suffix = {word.data + word.size_bytes - 1, 1};
+    if (GeoArrowWKTWordEquals(suffix, "Z", 1)) {
+      word.size_bytes--;
+    }
+  }
+
   enum GeoArrowGeometryType geometry_type;
   if (GeoArrowWKTWordEquals(word, "POINT", 5)) {
     geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;

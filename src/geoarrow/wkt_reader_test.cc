@@ -458,3 +458,48 @@ TEST(WKTReaderTest, WKTReaderTestLongCoordinates) {
   tester.SetPrecision(15);
   EXPECT_WKT_ROUNDTRIP(tester, ss.str());
 }
+
+TEST(WKTReaderTest, FlatMultipointWhitespace) {
+  WKXTester tester;
+  tester.SetFlatMultipoint(true);
+  for (const std::string whitespace : {" ", "  ", "\t\r\n "}) {
+    EXPECT_EQ(tester.AsWKT("MULTIPOINT (" + whitespace + "1 2, 3 4)"),
+              "MULTIPOINT (1 2, 3 4)");
+    EXPECT_EQ(tester.AsWKT("MULTIPOINT ZM (" + whitespace + "1 2 3 4)"),
+              "MULTIPOINT ZM (1 2 3 4)");
+  }
+}
+
+TEST(WKTReaderTest, LeadingPlus) {
+  WKXTester tester;
+  EXPECT_EQ(tester.AsWKT("POINT (+1 +2)"), "POINT (1 2)");
+  EXPECT_EQ(tester.AsWKT("POINT (+.5 +1e+2)"), "POINT (0.5 100)");
+  WKTNumberTester numbers;
+  for (const std::string token : {"+", "++1", "+-1", "+ 1", "+1x"}) {
+    SCOPED_TRACE(token);
+    EXPECT_EQ(numbers.Read("POINT (" + token + " 2)"), EINVAL);
+  }
+}
+
+TEST(WKTReaderTest, AttachedDimensions) {
+  WKXTester tester;
+  for (const std::string type :
+       {"POINT", "LINESTRING", "POLYGON", "MULTIPOINT", "MULTILINESTRING", "MULTIPOLYGON",
+        "GEOMETRYCOLLECTION"}) {
+    for (const std::string dims : {"Z", "M", "ZM"}) {
+      SCOPED_TRACE(type + dims);
+      EXPECT_EQ(tester.AsWKT(type + dims + " EMPTY"), type + " " + dims + " EMPTY");
+    }
+  }
+  EXPECT_EQ(tester.AsWKT("POINTZ (1 2 3)"), "POINT Z (1 2 3)");
+  EXPECT_EQ(tester.AsWKT("Pointm(1 2 3)"), "POINT M (1 2 3)");
+  EXPECT_EQ(tester.AsWKT("pointZm(1 2 3 4)"), "POINT ZM (1 2 3 4)");
+  EXPECT_EQ(tester.AsWKT("GEOMETRYCOLLECTIONZM (POINTZM (1 2 3 4))"),
+            "GEOMETRYCOLLECTION ZM (POINT ZM (1 2 3 4))");
+  WKTNumberTester numbers;
+  for (const std::string type :
+       {"POINTZZ", "POINTMZ", "POINTZMM", "POINTXYZ", "GEOMETRYCOLLECTIONZMX"}) {
+    SCOPED_TRACE(type);
+    EXPECT_EQ(numbers.Read(type + " EMPTY"), EINVAL);
+  }
+}
