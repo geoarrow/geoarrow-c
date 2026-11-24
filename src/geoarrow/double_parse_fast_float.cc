@@ -8,13 +8,10 @@
 extern "C" GeoArrowErrorCode GeoArrowFromChars(const char* first, const char* last,
                                                double* out, const char** end) {
 #ifdef GEOARROW_NAMESPACE
-  namespace ff = GEOARROW_NAMESPACE::fast_float;
+  auto answer = GEOARROW_NAMESPACE::fast_float::from_chars(first, last, *out);
 #else
-  namespace ff = fast_float;
+  auto answer = fast_float::from_chars(first, last, *out);
 #endif
-  auto answer =
-      ff::from_chars(first, last, *out,
-                     ff::chars_format::general | ff::chars_format::allow_leading_plus);
   if (answer.ec != std::errc()) {
     return EINVAL;
   }

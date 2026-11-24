@@ -447,6 +447,27 @@ static inline int ReadGeometryCollection(struct WKTReaderPrivate* s,
   return GeoArrowWKTAssertWordEmpty(s, v->error);
 }
 
+static inline enum GeoArrowGeometryType GeoArrowWKTGeometryType(
+    struct ArrowStringView word) {
+  if (GeoArrowWKTWordEquals(word, "POINT", 5)) {
+    return GEOARROW_GEOMETRY_TYPE_POINT;
+  } else if (GeoArrowWKTWordEquals(word, "LINESTRING", 10)) {
+    return GEOARROW_GEOMETRY_TYPE_LINESTRING;
+  } else if (GeoArrowWKTWordEquals(word, "POLYGON", 7)) {
+    return GEOARROW_GEOMETRY_TYPE_POLYGON;
+  } else if (GeoArrowWKTWordEquals(word, "MULTIPOINT", 10)) {
+    return GEOARROW_GEOMETRY_TYPE_MULTIPOINT;
+  } else if (GeoArrowWKTWordEquals(word, "MULTILINESTRING", 15)) {
+    return GEOARROW_GEOMETRY_TYPE_MULTILINESTRING;
+  } else if (GeoArrowWKTWordEquals(word, "MULTIPOLYGON", 12)) {
+    return GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON;
+  } else if (GeoArrowWKTWordEquals(word, "GEOMETRYCOLLECTION", 18)) {
+    return GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION;
+  } else {
+    return GEOARROW_GEOMETRY_TYPE_GEOMETRY;
+  }
+}
+
 static inline int ReadTaggedGeometry(struct WKTReaderPrivate* s,
                                      struct GeoArrowVisitor* v) {
   GeoArrowWKTSkipWhitespace(s);
@@ -454,45 +475,39 @@ static inline int ReadTaggedGeometry(struct WKTReaderPrivate* s,
   // Include the longest geometry name, an attached ZM, and one extra byte
   // so that invalid suffixes cannot be mistaken for a complete keyword.
   struct ArrowStringView word = GeoArrowWKTPeekUntilSep(s, 21);
-  if (word.size_bytes > 0) {
-    struct ArrowStringView suffix = {word.data + word.size_bytes - 1, 1};
-    if (GeoArrowWKTWordEquals(suffix, "M", 1)) {
+  enum GeoArrowGeometryType geometry_type = GeoArrowWKTGeometryType(word);
+  int64_t suffix_size = 0;
+  if (geometry_type == GEOARROW_GEOMETRY_TYPE_GEOMETRY) {
+    // Ordinary geometry names need no suffix checks. For attached dimensions,
+    // retain the suffix so that it does not need to be scanned again.
+    int64_t word_size = word.size_bytes;
+    if (word.size_bytes > 0 && (word.data[word.size_bytes - 1] == 'M' ||
+                                word.data[word.size_bytes - 1] == 'm')) {
       word.size_bytes--;
     }
-  }
-  if (word.size_bytes > 0) {
-    struct ArrowStringView suffix = {word.data + word.size_bytes - 1, 1};
-    if (GeoArrowWKTWordEquals(suffix, "Z", 1)) {
+    if (word.size_bytes > 0 && (word.data[word.size_bytes - 1] == 'Z' ||
+                                word.data[word.size_bytes - 1] == 'z')) {
       word.size_bytes--;
     }
-  }
-
-  enum GeoArrowGeometryType geometry_type;
-  if (GeoArrowWKTWordEquals(word, "POINT", 5)) {
-    geometry_type = GEOARROW_GEOMETRY_TYPE_POINT;
-  } else if (GeoArrowWKTWordEquals(word, "LINESTRING", 10)) {
-    geometry_type = GEOARROW_GEOMETRY_TYPE_LINESTRING;
-  } else if (GeoArrowWKTWordEquals(word, "POLYGON", 7)) {
-    geometry_type = GEOARROW_GEOMETRY_TYPE_POLYGON;
-  } else if (GeoArrowWKTWordEquals(word, "MULTIPOINT", 10)) {
-    geometry_type = GEOARROW_GEOMETRY_TYPE_MULTIPOINT;
-  } else if (GeoArrowWKTWordEquals(word, "MULTILINESTRING", 15)) {
-    geometry_type = GEOARROW_GEOMETRY_TYPE_MULTILINESTRING;
-  } else if (GeoArrowWKTWordEquals(word, "MULTIPOLYGON", 12)) {
-    geometry_type = GEOARROW_GEOMETRY_TYPE_MULTIPOLYGON;
-  } else if (GeoArrowWKTWordEquals(word, "GEOMETRYCOLLECTION", 18)) {
-    geometry_type = GEOARROW_GEOMETRY_TYPE_GEOMETRYCOLLECTION;
-  } else {
-    SetParseErrorAuto("geometry type", s, v->error);
-    return EINVAL;
+    suffix_size = word_size - word.size_bytes;
+    geometry_type = GeoArrowWKTGeometryType(word);
+    if (geometry_type == GEOARROW_GEOMETRY_TYPE_GEOMETRY) {
+      SetParseErrorAuto("geometry type", s, v->error);
+      return EINVAL;
+    }
   }
 
   GeoArrowWKTAdvanceUnsafe(s, word.size_bytes);
-  GeoArrowWKTSkipWhitespace(s);
+  if (suffix_size > 0) {
+    word.data = s->data;
+    word.size_bytes = suffix_size;
+  } else {
+    GeoArrowWKTSkipWhitespace(s);
+    word = GeoArrowWKTPeekUntilSep(s, 3);
+  }
 
   enum GeoArrowDimensions dimensions = GEOARROW_DIMENSIONS_XY;
   s->coord_view.n_values = 2;
-  word = GeoArrowWKTPeekUntilSep(s, 3);
   if (GeoArrowWKTWordEquals(word, "Z", 1)) {
     dimensions = GEOARROW_DIMENSIONS_XYZ;
     s->coord_view.n_values = 3;
