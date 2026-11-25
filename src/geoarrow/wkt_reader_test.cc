@@ -472,9 +472,16 @@ TEST(WKTReaderTest, FlatMultipointWhitespace) {
 
 TEST(WKTReaderTest, LeadingPlus) {
   WKXTester tester;
+  WKTNumberTester numbers;
+#if defined(GEOARROW_USE_FAST_FLOAT) && GEOARROW_USE_FAST_FLOAT
+  // fast_float uses its default from_chars grammar (no leading plus sign).
+  EXPECT_EQ(numbers.Read("POINT (+1 +2)"), EINVAL);
+  EXPECT_EQ(numbers.Read("POINT (+.5 +1e+2)"), EINVAL);
+#else
   EXPECT_EQ(tester.AsWKT("POINT (+1 +2)"), "POINT (1 2)");
   EXPECT_EQ(tester.AsWKT("POINT (+.5 +1e+2)"), "POINT (0.5 100)");
-  WKTNumberTester numbers;
+#endif
+  EXPECT_EQ(tester.AsWKT("POINT (1e+2 -1e+2)"), "POINT (100 -100)");
   for (const std::string token : {"+", "++1", "+-1", "+ 1", "+1x"}) {
     SCOPED_TRACE(token);
     EXPECT_EQ(numbers.Read("POINT (" + token + " 2)"), EINVAL);
@@ -502,4 +509,35 @@ TEST(WKTReaderTest, AttachedDimensions) {
     SCOPED_TRACE(type);
     EXPECT_EQ(numbers.Read(type + " EMPTY"), EINVAL);
   }
+}
+
+TEST(WKTReaderTest, AttachedDimensionBoundaries) {
+  WKTNumberTester numbers;
+  WKXTester tester;
+  for (const std::string type :
+       {"POINT", "LINESTRING", "POLYGON", "MULTIPOINT", "MULTILINESTRING", "MULTIPOLYGON",
+        "GEOMETRYCOLLECTION"}) {
+    for (const std::string dims : {"Z", "M", "ZM"}) {
+      std::string wkt = type + dims + " EMPTY";
+      SCOPED_TRACE(wkt);
+      for (size_t size = 0; size < wkt.size(); size++) {
+        EXPECT_EQ(numbers.Read(wkt.data(), size), EINVAL);
+      }
+      std::vector<char> bounded(wkt.begin(), wkt.end());
+      EXPECT_EQ(numbers.Read(bounded.data(), bounded.size()), GEOARROW_OK);
+      std::string lower = wkt;
+      for (size_t i = 0; i < type.size() + dims.size(); i++) {
+        lower[i] += 'a' - 'A';
+      }
+      EXPECT_EQ(tester.AsWKT(lower), type + " " + dims + " EMPTY");
+      EXPECT_EQ(numbers.Read(type + dims + "X EMPTY"), EINVAL);
+      EXPECT_EQ(numbers.Read(type + dims + " Z EMPTY"), EINVAL);
+    }
+    for (const std::string dims : {"ZZ", "MM", "MZ", "ZMM", "ZMZ"}) {
+      EXPECT_EQ(numbers.Read(type + dims + " EMPTY"), EINVAL);
+    }
+  }
+  EXPECT_EQ(tester.AsWKT("POINTZ(1 2 3)"), "POINT Z (1 2 3)");
+  EXPECT_EQ(tester.AsWKT("POINTM(1 2 3)"), "POINT M (1 2 3)");
+  EXPECT_EQ(tester.AsWKT("POINTZM(1 2 3 4)"), "POINT ZM (1 2 3 4)");
 }
